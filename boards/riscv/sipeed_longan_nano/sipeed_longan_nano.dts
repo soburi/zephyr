@@ -1,0 +1,74 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/dts-v1/;
+#include <gigadevice-gd32vf103Xb.dtsi>
+
+/ {
+	model = "Sipeed Longan Nano";
+	compatible = "sipeed,longan_nano";
+
+	chosen {
+		zephyr,console = &usart0;
+		zephyr,shell-uart = &usart0;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+/*
+	leds {
+		compatible = "gpio-leds";
+		led: led {
+			gpios = <&gpioc 13 GPIO_INT_ACTIVE_HIGH>;
+			label = "LD";
+		};
+	};
+
+	aliases {
+		led0 = &led;
+	};
+*/
+};
+
+&usart0 {
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&usart1 {
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&usart2 {
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&i2c0 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
+&i2c1 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
+&spi0 {
+	status = "okay";
+};
+
+&spi1 {
+	status = "okay";
+};
+
+&timers0 {
+	status = "okay";
+
+	pwm {
+		status = "okay";
+	};
+};
+
+&usb {
+	status = "okay";
+};
