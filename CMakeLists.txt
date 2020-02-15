@@ -204,7 +204,7 @@ endif()
 zephyr_compile_options("SHELL: $<TARGET_PROPERTY:compiler,imacros> ${AUTOCONF_H}")
 
 # @Intent: Set compiler specific flag for bare metal freestanding option
-zephyr_compile_options($<TARGET_PROPERTY:compiler,freestanding>)
+#zephyr_compile_options($<TARGET_PROPERTY:compiler,freestanding>)
 
 # @Intent: Set compiler specific flag for tentative definitions, no-common
 zephyr_compile_options($<TARGET_PROPERTY:compiler,no_common>)
@@ -286,10 +286,10 @@ zephyr_compile_options($<$<COMPILE_LANGUAGE:CXX>:$<TARGET_PROPERTY:compiler-cpp,
 # 'cmake -DEXTRA_CFLAGS="-Werror -Wno-deprecated-declarations" ..'
 include(cmake/extra_flags.cmake)
 
-zephyr_cc_option(-fno-asynchronous-unwind-tables)
-zephyr_cc_option(-fno-pie)
-zephyr_cc_option(-fno-pic)
-zephyr_cc_option(-fno-strict-overflow)
+#zephyr_cc_option(-fno-asynchronous-unwind-tables)
+#zephyr_cc_option(-fno-pie)
+#zephyr_cc_option(-fno-pic)
+#zephyr_cc_option(-fno-strict-overflow)
 
 if(CONFIG_THREAD_LOCAL_STORAGE)
 # Only support local exec TLS model at this point.
@@ -311,10 +311,10 @@ zephyr_compile_options(${COMPILER_OPT_AS_LIST})
 
 if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
   # GCC assumed
-  zephyr_cc_option(-fno-reorder-functions)
+  #zephyr_cc_option(-fno-reorder-functions)
 
   if(NOT ${ZEPHYR_TOOLCHAIN_VARIANT} STREQUAL "xcc")
-    zephyr_cc_option(-fno-defer-pop)
+	  #zephyr_cc_option(-fno-defer-pop)
   endif()
 endif()
 
@@ -1381,7 +1381,7 @@ endif()
 # Done at the very end, so any other system includes which may
 # be added by Zephyr components were first in list.
 # Note, the compile flags are moved, but the system include is still present here.
-zephyr_compile_options($<TARGET_PROPERTY:compiler,nostdinc>)
+#zephyr_compile_options($<TARGET_PROPERTY:compiler,nostdinc>)
 target_include_directories(zephyr_interface SYSTEM INTERFACE $<TARGET_PROPERTY:compiler,nostdinc_include>)
 
 # Finally export all build flags from Zephyr
