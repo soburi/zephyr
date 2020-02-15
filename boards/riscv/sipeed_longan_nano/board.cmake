@@ -1,14 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
-set(EMU_PLATFORM qemu)
+board_runner_args(openocd "--cmd-pre-load=gd32vf103-pre-load")
+board_runner_args(openocd "--cmd-load=gd32vf103-load")
+board_runner_args(openocd "--cmd-post-verify=gd32vf103-post-verify")
 
-set(QEMU_CPU_TYPE_${ARCH} riscv32)
-
-set(QEMU_FLAGS_${ARCH}
-  -nographic
-  -machine sifive_e
-  )
-
-board_set_debugger_ifnset(qemu)
-board_set_flasher_ifnset(hifive1)
-board_finalize_runner_args(hifive1)
+include(${ZEPHYR_BASE}/boards/common/openocd.board.cmake)
