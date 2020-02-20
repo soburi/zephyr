@@ -40,17 +40,10 @@ MEMORY
     IDT_LIST  (wx)      : ORIGIN = 0xFFFFF7FF, LENGTH = 2K
 }
 
-ENTRY( _start )
+ENTRY(CONFIG_KERNEL_ENTRY)
 
 SECTIONS
     {
-
-  __stack_size = DEFINED(__stack_size) ? __stack_size : 1K;
-
-  .init           :
-  {
-    KEEP (*(SORT_NONE(.init)))
-  } >ROM
 
 #include <linker/rel-sections.ld>
 
@@ -70,6 +63,11 @@ SECTIONS
 
     GROUP_START(ROMABLE_REGION)
     _image_rom_start = .;
+
+  .init           :
+  {
+    KEEP (*(SORT_NONE(.init)))
+  } >ROM
 
     SECTION_PROLOGUE(_VECTOR_SECTION_NAME,,)
     {
@@ -221,9 +219,7 @@ SECTIONS
 
 	} GROUP_LINK_IN(RAMABLE_REGION)
 
-  . = ALIGN(8);
-  PROVIDE( _end = . ); /*0X2000,0340*/
-  PROVIDE( end = . );
+  __stack_size = DEFINED(__stack_size) ? __stack_size : 1K;
 
   .stack ORIGIN(RAM) + LENGTH(RAM) - __stack_size :
   {

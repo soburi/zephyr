@@ -234,7 +234,7 @@ _start0800:
 	/* Call global constructors */
 	//la a0, __libc_fini_array
 	//call atexit
-	call _init
+	//call _init
 
 
 	/* argc = argv = 0 */
