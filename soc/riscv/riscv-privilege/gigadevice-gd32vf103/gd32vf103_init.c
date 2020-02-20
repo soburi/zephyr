@@ -7,7 +7,6 @@
 #include "n200_func.h"
 #include <init.h>
 
-extern uint32_t disable_mcycle_minstret();
 static int _init(struct device* dev)
 {
 	ARG_UNUSED(dev);
