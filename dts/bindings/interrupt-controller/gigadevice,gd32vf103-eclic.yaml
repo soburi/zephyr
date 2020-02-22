@@ -1,0 +1,17 @@
+# Copyright (c) 2020, Tokita, Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: GigaDevice GD32VF103 enhancled core-local interrupt controller
+
+compatible: "gigadevice,gd32vf103-eclic"
+
+include: [interrupt-controller.yaml, base.yaml]
+
+properties:
+  "#interrupt-cells":
+      const: 2
+
+interrupt-cells:
+  - irq
+  - priority
+

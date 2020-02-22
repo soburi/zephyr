@@ -1,0 +1,16 @@
+description: GD32 RCU (Reset and Clock Controller Unit)
+
+compatible: "gigadevice,gd32-rcu"
+
+include: [clock-controller.yaml, base.yaml]
+
+properties:
+    reg:
+      required: true
+
+    "#clock-cells":
+      const: 2
+
+clock-cells:
+  - bus
+  - bits

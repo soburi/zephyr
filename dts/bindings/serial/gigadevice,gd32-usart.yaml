@@ -1,0 +1,12 @@
+description: GD32 USART
+
+compatible: "gigadevice,gd32-usart"
+
+include: uart-controller.yaml
+
+properties:
+    reg:
+      required: true
+
+    interrupts:
+      required: true

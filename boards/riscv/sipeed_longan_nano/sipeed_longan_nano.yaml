@@ -1,0 +1,12 @@
+identifier: sipeed_longan_nano
+name: Sipeed Longan Nano
+type: mcu
+arch: riscv32
+toolchain:
+  - zephyr
+  - xtools
+ram: 32
+supported:
+  - i2c
+  - pwm
+  - spi

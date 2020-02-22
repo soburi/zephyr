@@ -1,0 +1,419 @@
+/*
+ * Copyright (c) 2018 Linaro Limited
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+
+#include <dt-bindings/clock/gd32_clock.h>
+#include <dt-bindings/i2c/i2c.h>
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			clock-frequency = <0>;
+			device_type = "cpu";
+			compatible = "nuclei,bumblebee", "riscv";
+			reg = <0>;
+			riscv,isa = "rv32imac";
+			eclic: interrupt-controller {
+				#interrupt-cells = <2>;
+				compatible = "gigadevice,gd32vf103-eclic";
+				interrupt-controller;
+			};
+		};
+	};
+
+	flash0: flash@8000000 {
+		compatible = "soc-nv-flash";
+		label = "FLASH_GD32";
+	};
+
+	sram0: memory@20000000 {
+		compatible = "mmio-sram";
+	};
+
+	soc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "gigadevice,gd32vf103-soc", "simple-bus";
+		ranges;
+
+		rcu: rcu@40021000 {
+			compatible = "gigadevice,gd32-rcu";
+			#clock-cells = <2>;
+			reg = <0x40021000 0x400>;
+			label = "GD32_CLK_RCU";
+		};
+
+		pinctrl: pin-controller@40010800 {
+			compatible = "gigadevice,gd32-pinmux";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x40010800 0x1C00>;
+
+			gpioa: gpio@40010800 {
+				compatible = "gigadevice,gd32-gpio";
+				gpio-controller;
+				#gpio-cells = <2>;
+				reg = <0x40010800 0x400>;
+				clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000004>;
+				label = "GPIOA";
+			};
+
+			gpiob: gpio@40010c00 {
+				compatible = "gigadevice,gd32-gpio";
+				gpio-controller;
+				#gpio-cells = <2>;
+				reg = <0x40010c00 0x400>;
+				clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000008>;
+				label = "GPIOB";
+			};
+
+			gpioc: gpio@40011000 {
+				compatible = "gigadevice,gd32-gpio";
+				gpio-controller;
+				#gpio-cells = <2>;
+				reg = <0x40011000 0x400>;
+				clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000010>;
+				label = "GPIOC";
+			};
+
+			gpiod: gpio@40011400 {
+				compatible = "gigadevice,gd32-gpio";
+				gpio-controller;
+				#gpio-cells = <2>;
+				reg = <0x40011400 0x400>;
+				clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000020>;
+				label = "GPIOD";
+			};
+
+			gpioe: gpio@40011800 {
+				compatible = "gigadevice,gd32-gpio";
+				gpio-controller;
+				#gpio-cells = <2>;
+				reg = <0x40011800 0x400>;
+				clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000040>;
+				label = "GPIOE";
+			};
+		};
+
+		usart0: serial@40013800 {
+			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
+			reg = <0x40013800 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00004000>;
+			interrupts = <56 0>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "UART_0";
+		};
+
+		usart1: serial@40004400 {
+			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
+			reg = <0x40004400 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00020000>;
+			interrupts = <57 0>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "UART_1";
+		};
+
+		usart2: serial@40004800 {
+			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
+			reg = <0x40004800 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00040000>;
+			interrupts = <58 0>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "UART_2";
+		};
+
+		uart3: serial@40004c00 {
+			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
+			reg = <0x40004c00 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00080000>;
+			interrupts = <71 0>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "UART_3";
+		};
+
+		uart4: serial@40005000 {
+			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
+			reg = <0x40005000 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00100000>;
+			interrupts = <72 0>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "UART_4";
+		};
+
+		i2c0: i2c@40005400 {
+			compatible = "gigadevice,gd32-i2c-v1";
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x40005400 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00200000>;
+			interrupts = <31 0>, <32 0>;
+			interrupt-parent = <&eclic>;
+			interrupt-names = "event", "error";
+			status = "disabled";
+			label= "I2C_1";
+		};
+
+		i2c1: i2c@40005800 {
+			compatible = "gigadevice,gd32-i2c-v1";
+			clock-frequency = <I2C_BITRATE_STANDARD>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x40005800 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00400000>;
+			interrupts = <33 0>, <34 0>;
+			interrupt-parent = <&eclic>;
+			interrupt-names = "event", "error";
+			status = "disabled";
+			label= "I2C_2";
+		};
+
+		spi0: spi@40013000 {
+			compatible = "gigadevice,gd32-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x40013000 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00001000>;
+			interrupts = <54 5>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "SPI_0";
+		};
+
+		spi1: spi@40003800 {
+			compatible = "gigadevice,gd32-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x40003800 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00004000>;
+			interrupts = <55 5>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "SPI_1";
+		};
+
+		spi2: spi@40003c00 {
+			compatible = "gigadevice,gd32-spi";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x40003c00 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00008000>;
+			interrupts = <70 5>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "SPI_2";
+		};
+
+		fwdg: watchdog@40003000 {
+			compatible = "gigadevice,gd32-watchdog";
+			reg = <0x40003000 0x400>;
+			label = "FWDG";
+			status = "disabled";
+		};
+
+		wwdg: watchdog@40002c00 {
+			compatible = "gigadevice,gd32-window-watchdog";
+			reg = <0x40002C00 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00000800>;
+			label = "WWDG";
+			interrupts = <0 7>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+		};
+
+		timers0: timer@40012c00 {
+			compatible = "gigadevice,gd32-timer";
+			reg = <0x40012c00 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000800>;
+			status = "disabled";
+			label = "TIMERS_0";
+
+			pwm {
+				compatible = "gigadevice,gd32-pwm";
+				status = "disabled";
+				st,prescaler = <10000>;
+				label = "PWM_0";
+				#pwm-cells = <2>;
+			};
+		};
+
+		timers1: timers@40000000 {
+			compatible = "gigadevice,gd32-timers";
+			reg = <0x40000000 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00000001>;
+			status = "disabled";
+			label = "TIMERS_1";
+
+			pwm {
+				compatible = "gigadevice,gd32-pwm";
+				status = "disabled";
+				st,prescaler = <0>;
+				label = "PWM_1";
+				#pwm-cells = <2>;
+			};
+		};
+
+		timers2: timers@40000400 {
+			compatible = "gigadevice,gd32-timers";
+			reg = <0x40000400 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00000002>;
+			status = "disabled";
+			label = "TIMERS_2";
+
+			pwm {
+				compatible = "gigadevice,gd32-pwm";
+				status = "disabled";
+				st,prescaler = <10000>;
+				label = "PWM_2";
+				#pwm-cells = <2>;
+			};
+		};
+
+		timers3: timers@40000800 {
+			compatible = "gigadevice,gd32-timers";
+			reg = <0x40000800 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00000004>;
+			status = "disabled";
+			label = "TIMERS_3";
+
+			pwm {
+				compatible = "gigadevice,gd32-pwm";
+				status = "disabled";
+				st,prescaler = <10000>;
+				label = "PWM_3";
+				#pwm-cells = <2>;
+			};
+		};
+
+		timers4: timers@40000c00 {
+			compatible = "gigadevice,gd32-timers";
+			reg = <0x40000c00 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00000004>;
+			status = "disabled";
+			label = "TIMERS_4";
+
+			pwm {
+				compatible = "gigadevice,gd32-pwm";
+				status = "disabled";
+				st,prescaler = <10000>;
+				label = "PWM_4";
+				#pwm-cells = <2>;
+			};
+		};
+
+		timers5: timers@40001000 {
+			compatible = "gigadevice,gd32-timers";
+			reg = <0x40001000 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00000004>;
+			status = "disabled";
+			label = "TIMERS_5";
+
+			pwm {
+				compatible = "gigadevice,gd32-pwm";
+				status = "disabled";
+				st,prescaler = <10000>;
+				label = "PWM_5";
+				#pwm-cells = <2>;
+			};
+		};
+
+		timers6: timers@40001400 {
+			compatible = "gigadevice,gd32-timers";
+			reg = <0x40001400 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00000004>;
+			status = "disabled";
+			label = "TIMERS_6";
+
+			pwm {
+				compatible = "gigadevice,gd32-pwm";
+				status = "disabled";
+				st,prescaler = <10000>;
+				label = "PWM_6";
+				#pwm-cells = <2>;
+			};
+		};
+
+		adc0: adc@40012400 {
+			compatible = "gigadevice,gd32-adc";
+			reg = <0x40012400 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000200>;
+			interrupts = <18 0>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "ADC_0";
+			#io-channel-cells = <1>;
+		};
+
+		adc1: adc@40012800 {
+			compatible = "gigadevice,gd32-adc";
+			reg = <0x40012800 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000200>;
+			interrupts = <18 0>;
+			interrupt-parent = <&eclic>;
+			status = "disabled";
+			label = "ADC_1";
+			#io-channel-cells = <1>;
+		};
+
+		dma0: dma@40020000 {
+			compatible = "gigadevice,gd32-dma";
+			#dma-cells = <4>;
+			reg = <0x40020000 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_AHB 0x1>;
+			interrupts = <11 0 12 0 13 0 14 0 15 0 16 0 17 0>;
+			interrupt-parent = <&eclic>;
+			st,mem2mem;
+			status = "disabled";
+			label = "DMA_0";
+		};
+
+		dma1: dma@40020400 {
+			compatible = "gigadevice,gd32-dma";
+			#dma-cells = <4>;
+			reg = <0x40020400 0x400>;
+			clocks = <&rcu GD32_CLOCK_BUS_AHB 0x1>;
+			interrupts = <11 0 12 0 13 0 14 0 15 0 16 0 17 0>;
+			interrupt-parent = <&eclic>;
+			st,mem2mem;
+			status = "disabled";
+			label = "DMA_1";
+		};
+
+		usb: usb@40005c00 {
+			compatible = "gd,gd32-usb";
+			reg = <0x40005c00 0x400>;
+			interrupts = <20 0>;
+			interrupt-parent = <&eclic>;
+			interrupt-names = "usb";
+			num-bidir-endpoints = <8>;
+			ram-size = <512>;
+			status = "disabled";
+			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00800000>;
+			phys = <&usb_fs_phy>;
+			label= "USB";
+		};
+	};
+
+	usb_fs_phy: usbphy {
+		compatible = "usb-nop-xceiv";
+		#phy-cells = <0>;
+		label = "USB_FS_PHY";
+	};
+
+};
+
