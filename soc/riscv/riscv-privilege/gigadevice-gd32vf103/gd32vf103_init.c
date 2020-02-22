@@ -2,9 +2,7 @@
 #include <gd32vf103.h>
 #include <stdint.h>
 #include <stdio.h>
-//#include <unistd.h>
 #include "riscv_encoding.h"
-#include "n200_func.h"
 #include <init.h>
 
 static int _init(struct device* dev)
@@ -14,8 +12,8 @@ static int _init(struct device* dev)
 	SystemInit();
 
 	//ECLIC init
-	eclic_init(ECLIC_NUM_INTERRUPTS);
-	eclic_mode_enable();
+	//eclic_init(ECLIC_NUM_INTERRUPTS);
+	//eclic_mode_enable();
 
 	//printf("After ECLIC mode enabled, the mtvec value is %x \n\n\r", read_csr(mtvec));
 
