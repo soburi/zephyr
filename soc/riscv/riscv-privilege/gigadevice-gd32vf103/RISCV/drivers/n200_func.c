@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 #include "riscv_encoding.h"
 #include "n200_func.h"
@@ -393,6 +393,5 @@ void eclic_set_negedge_trig(uint32_t source) {
 //void wfe() {
 //  core_wfe();
 //}
-
 
 

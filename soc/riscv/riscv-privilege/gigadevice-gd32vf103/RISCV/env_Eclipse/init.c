@@ -2,7 +2,7 @@
 #include <gd32vf103.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include "riscv_encoding.h"
 #include "n200_func.h"
 

@@ -1,3 +1,4 @@
+#if 0
 /* See LICENSE of license details. */
 
 #include <stdint.h>
@@ -45,3 +46,4 @@ int _put_char(int ch)
     return ch;
 }
 
+#endif

@@ -1,3 +1,4 @@
+#if 0
 /* See LICENSE of license details. */
 
 #include <errno.h>
@@ -14,3 +15,4 @@ int _fstat(int fd, struct stat* st)
 
   return _stub(EBADF);
 }
+#endif

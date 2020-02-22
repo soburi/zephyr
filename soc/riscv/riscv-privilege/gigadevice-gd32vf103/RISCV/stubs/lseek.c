@@ -1,3 +1,4 @@
+#if 0
 /* See LICENSE of license details. */
 
 #include <errno.h>
@@ -12,3 +13,4 @@ off_t _lseek(int fd, off_t ptr, int dir)
 
   return _stub(EBADF);
 }
+#endif

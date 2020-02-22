@@ -1,3 +1,4 @@
+#if 0
 /* See LICENSE of license details. */
 
 #include <unistd.h>
@@ -15,3 +16,4 @@ void _exit(int code)
 
   for (;;);
 }
+#endif

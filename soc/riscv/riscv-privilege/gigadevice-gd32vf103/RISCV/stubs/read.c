@@ -1,3 +1,4 @@
+#if 0
 /* See LICENSE of license details. */
 
 #include <stdint.h>
@@ -11,3 +12,4 @@ ssize_t _read(int fd, void* ptr, size_t len)
 {
   return _stub(EBADF);
 }
+#endif
