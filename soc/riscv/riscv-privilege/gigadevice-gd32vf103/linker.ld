@@ -19,16 +19,25 @@
 #include <linker/linker-defs.h>
 #include <linker/linker-tool.h>
 
-OUTPUT_ARCH( "riscv" )
+#ifdef CONFIG_XIP
+#define ROMABLE_REGION              ROM
+#else
+#define ROMABLE_REGION              RAM
+#endif
+#define RAMABLE_REGION              RAM
+
+#define _VECTOR_SECTION_NAME        vector
+#define _EXCEPTION_SECTION_NAME     exceptions
+#define _RESET_SECTION_NAME         reset
 
 MEMORY
 {
-	/* Run in FLASH */ 
-	flash (rxai!w) : ORIGIN = 0x08000000, LENGTH = 16k
-	ram   (wxa!ri) : ORIGIN = 0x20000000, LENGTH = 6k 
+#ifdef CONFIG_XIP
+    ROM (rx)  : ORIGIN = DT_FLASH_BASE_ADDRESS, LENGTH = KB(DT_FLASH_SIZE)
+#endif
+    RAM (rwx) : ORIGIN = DT_SRAM_BASE_ADDRESS, LENGTH = KB(DT_SRAM_SIZE)
+    /* Used by and documented in include/linker/intlist.ld */
     IDT_LIST  (wx)      : ORIGIN = 0xFFFFF7FF, LENGTH = 2K
-
-	/* Run in RAM */ 
 }
 
 ENTRY( _start )
@@ -36,162 +45,192 @@ ENTRY( _start )
 SECTIONS
     {
 
-#include <linker/rel-sections.ld>
-
   __stack_size = DEFINED(__stack_size) ? __stack_size : 1K;
 
   .init           :
   {
     KEEP (*(SORT_NONE(.init)))
-  } >flash AT>flash 
+  } >ROM
 
-  .ilalign         :
-  {
-    . = ALIGN(4);
-    PROVIDE( _ilm_lma = . );
-  } >flash AT>flash 
+#include <linker/rel-sections.ld>
 
-  .ialign         :
-  {
-    PROVIDE( _ilm = . );
-  } >flash AT>flash 
+    /*
+     * The .plt and .iplt are here according to
+     * 'riscv32-zephyr-elf-ld --verbose', before text section.
+     */
+    SECTION_PROLOGUE(.plt,,)
+	{
+		*(.plt)
+	}
 
-  .text           :
-  {
-    *(.rodata .rodata.*)
-    *(.text.unlikely .text.unlikely.*)
-    *(.text.startup .text.startup.*)
-    *(.text .text.*)
-    *(.gnu.linkonce.t.*)
-  } >flash AT>flash 
+    SECTION_PROLOGUE(.iplt,,)
+	{
+		*(.iplt)
+	}
 
-  .fini           :
-  {
-    KEEP (*(SORT_NONE(.fini)))
-  } >flash AT>flash 
+    GROUP_START(ROMABLE_REGION)
+    _image_rom_start = .;
 
-  . = ALIGN(4);
+    SECTION_PROLOGUE(_VECTOR_SECTION_NAME,,)
+    {
+		. = ALIGN(4);
+		KEEP(*(.vectors.*))
+    } GROUP_LINK_IN(ROMABLE_REGION)
 
-  PROVIDE (__etext = .);
-  PROVIDE (_etext = .);/*0x80022c8*/
-  PROVIDE (etext = .);/*0x80022c8*/
-  PROVIDE( _eilm = . );
+    SECTION_PROLOGUE(_RESET_SECTION_NAME,,)
+    {
+		KEEP(*(.reset.*))
+    } GROUP_LINK_IN(ROMABLE_REGION)
 
-  .preinit_array  :
-  {
-    PROVIDE_HIDDEN (__preinit_array_start = .);
-    KEEP (*(.preinit_array))
-    PROVIDE_HIDDEN (__preinit_array_end = .);
-  } >flash AT>flash 
+    SECTION_PROLOGUE(_EXCEPTION_SECTION_NAME,,)
+    {
+		 KEEP(*(".exception.entry.*"))
+		 *(".exception.other.*")
+    } GROUP_LINK_IN(ROMABLE_REGION)
 
-  .init_array     :
-  {
-    PROVIDE_HIDDEN (__init_array_start = .);
-    KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-    KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
-    PROVIDE_HIDDEN (__init_array_end = .);
-  } >flash AT>flash 
+    SECTION_PROLOGUE(_TEXT_SECTION_NAME,,)
+	{
+		. = ALIGN(4);
+		KEEP(*(.openocd_debug))
+		KEEP(*(".openocd_debug.*"))
 
-  .fini_array     :
-  {
-    PROVIDE_HIDDEN (__fini_array_start = .);
-    KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
-    KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))
-    PROVIDE_HIDDEN (__fini_array_end = .);
-  } >flash AT>flash 
+		_image_text_start = .;
+		*(.text)
+		*(".text.*")
+		*(.gnu.linkonce.t.*)
+		*(.eh_frame)
+	} GROUP_LINK_IN(ROMABLE_REGION)
 
-  .ctors          :
-  {
-    /* gcc uses crtbegin.o to find the start of
-       the constructors, so we make sure it is
-       first.  Because this is a wildcard, it
-       doesn't matter if the user does not
-       actually link against crtbegin.o; the
-       linker won't look for a file to match a
-       wildcard.  The wildcard also means that it
-       doesn't matter which directory crtbegin.o
-       is in.  */
-    KEEP (*crtbegin.o(.ctors))
-    KEEP (*crtbegin?.o(.ctors))
-    /* We don't want to include the .ctor section from
-       the crtend.o file until after the sorted ctors.
-       The .ctor section from the crtend file contains the
-       end of ctors marker and it must be last */
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
-    KEEP (*(SORT(.ctors.*)))
-    KEEP (*(.ctors))
-  } >flash AT>flash 
+    _image_text_end = .;
 
-  .dtors          :
-  {
-    KEEP (*crtbegin.o(.dtors))
-    KEEP (*crtbegin?.o(.dtors))
-    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))
-    KEEP (*(SORT(.dtors.*)))
-    KEEP (*(.dtors))
-  } >flash AT>flash 
+#include <linker/common-rom.ld>
 
-    . = ALIGN(4);
-    PROVIDE( _eilm = . );
+    SECTION_PROLOGUE(_RODATA_SECTION_NAME,,)
+	{
+		 . = ALIGN(4);
+		 *(.srodata)
+		 *(".srodata.*")
+		 *(.rodata)
+		 *(".rodata.*")
+		 *(.gnu.linkonce.r.*)
+
+/* Located in generated directory. This file is populated by the
+ * zephyr_linker_sources() Cmake function.
+ */
+#include <snippets-rodata.ld>
+#ifdef CONFIG_SOC_RODATA_LD
+#include <soc-rodata.ld>
+#endif
+
+	} GROUP_LINK_IN(ROMABLE_REGION)
+
+#include <linker/cplusplus-rom.ld>
+
+    _image_rom_end = .;
+    __data_rom_start = .;
+
+    GROUP_END(ROMABLE_REGION)
+
+    GROUP_START(RAMABLE_REGION)
 
   .lalign         :
   {
     . = ALIGN(4);
     PROVIDE( _data_lma = . );
-  } >flash AT>flash 
+  } >ROM AT>ROM
 
   .dalign         :
   {
     . = ALIGN(4);
     PROVIDE( _data = . );
-  } >ram AT>flash 
+  } >RAM AT>ROM
   
-  
-  .data          :
-  {
-    *(.rdata) 
-   
-    *(.gnu.linkonce.r.*)
-    *(.data .data.*)
-    *(.gnu.linkonce.d.*)
+    SECTION_DATA_PROLOGUE(_DATA_SECTION_NAME,,)
+	{
+		 . = ALIGN(4);
+		 _image_ram_start = .;
+		 __data_ram_start = .;
+
+		 *(.data)
+		 *(".data.*")
+
     . = ALIGN(8);
     PROVIDE( __global_pointer$ = . + 0x800); 
-    *(.sdata .sdata.*)
-    *(.gnu.linkonce.s.*)
-    . = ALIGN(8);
-    *(.srodata.cst16)
-    *(.srodata.cst8)
-    *(.srodata.cst4)
-    *(.srodata.cst2)
-    *(.srodata .srodata.*)
-  } >ram AT>flash 
+
+		 *(.sdata .sdata.* .gnu.linkonce.s.*)
+		 *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
+
+/* Located in generated directory. This file is populated by the
+ * zephyr_linker_sources() Cmake function.
+ */
+#include <snippets-rwdata.ld>
+#ifdef CONFIG_SOC_RWDATA_LD
+#include <soc-rwdata.ld>
+#endif
+
+	}  GROUP_DATA_LINK_IN(RAMABLE_REGION, ROMABLE_REGION)
+
+#include <linker/common-ram.ld>
+
+/* Located in generated directory. This file is populated by the
+ * zephyr_linker_sources() Cmake function.
+ */
+#include <snippets-ram-sections.ld>
+    __data_ram_end = .;
 
   . = ALIGN(4);
   PROVIDE( _edata = . );
   PROVIDE( edata = . );
 
-  PROVIDE( _fbss = . ); /*0X200052A0  0X200002A0*/
-  PROVIDE( __bss_start = . );
-  .bss            :
-  {
-    *(.sbss*)
-    *(.gnu.linkonce.sb.*)
-    *(.bss .bss.*)
-    *(.gnu.linkonce.b.*)
-    *(COMMON)
-    . = ALIGN(4);
-  } >ram AT>ram 
+    SECTION_DATA_PROLOGUE(_BSS_SECTION_NAME,(NOLOAD),)
+	{
+		/*
+		 * For performance, BSS section is assumed to be 4 byte aligned and
+		 * a multiple of 4 bytes
+		 */
+		 . = ALIGN(4);
+		 __bss_start = .;
+		 *(.sbss)
+		 *(".sbss.*")
+		 *(.bss)
+		 *(".bss.*")
+		 COMMON_SYMBOLS
+		 /*
+		  * As memory is cleared in words only, it is simpler to ensure the BSS
+		  * section ends on a 4 byte boundary. This wastes a maximum of 3 bytes.
+		  */
+		  __bss_end = ALIGN(4);
+	}  GROUP_DATA_LINK_IN(RAMABLE_REGION, RAMABLE_REGION)
+
+    SECTION_PROLOGUE(_NOINIT_SECTION_NAME,(NOLOAD),)
+	{
+		/*
+		 * This section is used for non-initialized objects that
+		 * will not be cleared during the boot process.
+		 */
+		 *(.noinit)
+		 *(".noinit.*")
+
+/* Located in generated directory. This file is populated by the
+ * zephyr_linker_sources() Cmake function.
+ */
+#include <snippets-noinit.ld>
+#ifdef CONFIG_SOC_NOINIT_LD
+#include <soc-noinit.ld>
+#endif
+
+	} GROUP_LINK_IN(RAMABLE_REGION)
 
   . = ALIGN(8);
   PROVIDE( _end = . ); /*0X2000,0340*/
   PROVIDE( end = . );
 
-  .stack ORIGIN(ram) + LENGTH(ram) - __stack_size :
+  .stack ORIGIN(RAM) + LENGTH(RAM) - __stack_size :
   {
-    PROVIDE( _heap_end = . ); 
+    /*PROVIDE( _heap_end = . ); */
     . = __stack_size;  
     PROVIDE( _sp = . ); 
-  } >ram AT>ram 
+  } >RAM AT>RAM
 
 #include <linker/cplusplus-ram.ld>
 
