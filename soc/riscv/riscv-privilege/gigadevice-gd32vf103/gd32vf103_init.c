@@ -26,7 +26,7 @@ static int _init(struct device* dev)
 	
     /* Before enter into main, add the cycle/instret disable by default to save power,
     only use them when needed to measure the cycle/instret */
-	asm("csrsi " STRINGIFY(CSR_MCOUNTINHIBIT) ",0x5");
+	__asm__("csrsi " STRINGIFY(CSR_MCOUNTINHIBIT) ",0x5");
 	return 0;
 }
 

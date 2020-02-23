@@ -11,21 +11,21 @@
     // Configure PMP to make all the address space accesable and executable
 void pmp_open_all_space(){
     // Config entry0 addr to all 1s to make the range cover all space
-    asm volatile ("li x6, 0xffffffff":::"x6");
-    asm volatile ("csrw pmpaddr0, x6":::);
+    __asm__ volatile ("li x6, 0xffffffff":::"x6");
+    __asm__ volatile ("csrw pmpaddr0, x6":::);
     // Config entry0 cfg to make it NAPOT address mode, and R/W/X okay
-    asm volatile ("li x6, 0x7f":::"x6");
-    asm volatile ("csrw pmpcfg0, x6":::);
+    __asm__ volatile ("li x6, 0x7f":::"x6");
+    __asm__ volatile ("csrw pmpcfg0, x6":::);
 }
 
 void switch_m2u_mode(){
     clear_csr (mstatus,MSTATUS_MPP);
     //printf("\nIn the m2u function, the mstatus is 0x%x\n", read_csr(mstatus));
     //printf("\nIn the m2u function, the mepc is 0x%x\n", read_csr(mepc));
-    asm volatile ("la x6, 1f    ":::"x6");
-    asm volatile ("csrw mepc, x6":::);
-    asm volatile ("mret":::);
-    asm volatile ("1:":::);
+    __asm__ volatile ("la x6, 1f    ":::"x6");
+    __asm__ volatile ("csrw mepc, x6":::);
+    __asm__ volatile ("mret":::);
+    __asm__ volatile ("1:":::);
 } 
 
 uint32_t mtime_lo(void)
