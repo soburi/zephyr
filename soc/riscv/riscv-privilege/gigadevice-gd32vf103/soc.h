@@ -14,6 +14,8 @@
 #include <soc_common.h>
 #include <generated_dts_board.h>
 
+#include "n200_timer.h"
+
 /* PINMUX Configuration */
 #define SIFIVE_PINMUX_0_BASE_ADDR     (DT_INST_0_SIFIVE_GPIO0_BASE_ADDRESS + 0x38)
 
@@ -28,8 +30,8 @@
 #define PRCI_BASE_ADDR               0x10008000
 
 /* Timer configuration */
-#define RISCV_MTIME_BASE             0x0200BFF8
-#define RISCV_MTIMECMP_BASE          0x02004000
+#define RISCV_MTIME_BASE             (TIMER_CTRL_ADDR + TIMER_MTIME)
+#define RISCV_MTIMECMP_BASE          (TIMER_CTRL_ADDR + TIMER_MTIMECMP)
 
 /* Always ON Domain */
 #define SIFIVE_PMUIE		     0x10000140
