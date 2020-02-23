@@ -17,6 +17,7 @@ zephyr_compile_definitions(HXTAL_VALUE=8000000U)
 
 zephyr_sources()
 zephyr_sources(empty.c)
+zephyr_sources(entry.S)
 zephyr_sources(gd32vf103_init.c)
 
 zephyr_sources(GD32VF103_standard_peripheral/Source/gd32vf103_adc.c)
