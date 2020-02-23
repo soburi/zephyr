@@ -35,6 +35,7 @@ OF SUCH DAMAGE.
 #include "gd32vf103.h"
 #include "systick.h"
 #include <stdio.h>
+#include <zephyr.h>
 
 /* BUILTIN LED OF LONGAN BOARDS IS PIN PC13 */
 #define LED_PIN GPIO_PIN_13
@@ -73,9 +74,11 @@ int main(void)
     while(1){
         /* turn on builtin led */
         longan_led_on();
-        delay_1ms(1000);
+        //delay_1ms(1000);
+	k_sleep(1000);
         /* turn off uiltin led */
         longan_led_off();
-        delay_1ms(1000);
+        //delay_1ms(1000);
+	k_sleep(1000);
     }
 }
