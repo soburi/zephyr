@@ -32,4 +32,26 @@ config NUM_IRQS
 config XIP
 	default y
 
+if GPIO
+
+config GPIO_GD32
+	default y
+
+config GPIO_GD32_PORTA
+	default y
+
+config GPIO_GD32_PORTB
+	default y
+
+config GPIO_GD32_PORTC
+	default y
+
+config GPIO_GD32_PORTD
+	default y
+
+config GPIO_GD32_PORTE
+	default y
+
+endif # GPIO
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32VF103

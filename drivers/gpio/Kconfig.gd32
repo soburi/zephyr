@@ -1,0 +1,71 @@
+# GD32 GPIO configuration
+
+# Copyright (c) 2016 Open-RnD Sp. z o.o.
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig GPIO_GD32
+	bool "GPIO Driver for GD32 family of MCUs"
+	depends on SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
+	select HAS_DTS_GPIO
+	help
+	  Enable GPIO driver for GD32 line of MCUs
+
+if GPIO_GD32
+
+config GPIO_GD32_PORTA
+	bool "Enable GPIO port A support"
+
+config GPIO_GD32_PORTB
+	bool "Enable GPIO port B support"
+
+config GPIO_GD32_PORTC
+	bool "Enable GPIO port C support"
+
+config GPIO_GD32_PORTD
+	bool "Enable GPIO port D support"
+
+config GPIO_GD32_PORTE
+	bool "Enable GPIO port E support"
+
+config GPIO_GD32_PORTF
+	bool "Enable GPIO port F support"
+
+config GPIO_GD32_PORTG
+	bool "Enable GPIO port G support"
+
+config GPIO_GD32_PORTH
+	bool "Enable GPIO port H support"
+
+config GPIO_GD32_PORTI
+	bool "Enable GPIO port I support"
+
+config GPIO_GD32_PORTJ
+	bool "Enable GPIO port J support"
+
+config GPIO_GD32_PORTK
+	bool "Enable GPIO port K support"
+
+if SOC_SERIES_GD32F1X
+
+choice GPIO_GD32_SWJ
+	prompt "Serial wire JTAG configuration"
+
+config GPIO_GD32_SWJ_ENABLE
+	depends on !(SOC_GD32F103XE && SPI_3)
+	bool "Full SWJ (JTAG-DP + SW-DP): Reset State"
+
+config GPIO_GD32_SWJ_NONJTRST
+	depends on !(SOC_GD32F103XE && SPI_3)
+	bool "Full SWJ (JTAG-DP + SW-DP) but without NJTRST"
+
+config GPIO_GD32_SWJ_NOJTAG
+	bool "JTAG-DP Disabled and SW-DP Enabled"
+
+config GPIO_GD32_SWJ_DISABLE
+	bool "JTAG-DP Disabled and SW-DP Disabled"
+
+endchoice
+
+endif # SOC_SERIES_GD32F1X
+
+endif # GPIO_GD32
