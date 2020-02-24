@@ -381,7 +381,7 @@ static int gpio_gd32_read(struct device *dev, int access_op,
 		return -ENOTSUP;
 	}
 
-	*value = gpio_input_port_get(cfg->port) >> pin) & 0x1;
+	*value = (gpio_input_port_get(cfg->port) >> pin) & 0x1;
 
 	return 0;
 }
