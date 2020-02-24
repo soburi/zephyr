@@ -54,4 +54,12 @@ config GPIO_GD32_PORTE
 
 endif # GPIO
 
+
+if SERIAL
+
+config UART_GD32
+	default y
+
+endif
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32VF103

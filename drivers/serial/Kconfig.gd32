@@ -1,0 +1,98 @@
+# GD32 UART configuration
+
+# Copyright (c) 2016 Open-RnD Sp. z o.o.
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig UART_GD32
+	bool "GD32 MCU serial driver"
+	select SERIAL_HAS_DRIVER
+	select SERIAL_SUPPORT_INTERRUPT
+	depends on SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
+	help
+	  This option enables the UART driver for GD32 family of
+	  processors.
+	  Say y if you wish to use serial port on GD32 MCU.
+
+if UART_GD32
+
+# --- port 0 ---
+
+config UART_0
+	bool "Enable GD32 USART0 Port"
+	help
+	  Enable support for USART0 port in the driver.
+	  Say y here if you want to use USART1 device.
+
+# --- port 1 ---
+
+config UART_1
+	bool "Enable GD32 USART1 Port"
+	help
+	  Enable support for USART1 port in the driver.
+	  Say y here if you want to use USART1 device.
+
+# --- port 2 ---
+
+config UART_2
+	bool "Enable GD32 USART2 Port"
+	help
+	  Enable support for USART2 port in the driver.
+	  Say y here if you want to use USART2 device.
+
+# --- port 3 ---
+
+config UART_3
+	bool "Enable GD32 USART3 Port"
+	help
+	  Enable support for USART3 port in the driver.
+	  Say y here if you want to use USART3 device.
+
+# --- port 4 ---
+
+config UART_4
+	bool "Enable GD32 U(S)ART4 Port"
+	help
+	  Enable support for U(S)ART4 port in the driver.
+	  Say y here if you want to use U(S)ART4 device.
+
+# --- port 5 ---
+
+config UART_5
+	bool "Enable GD32 U(S)ART5 Port"
+	help
+	  Enable support for U(S)ART5 port in the driver.
+	  Say y here if you want to use U(S)ART5 device.
+
+# --- port 6 ---
+
+config UART_6
+	bool "Enable GD32 USART6 Port"
+	help
+	  Enable support for USART6 port in the driver.
+	  Say y here if you want to use USART6 device.
+
+# --- port 7 ---
+
+config UART_7
+	bool "Enable GD32 U(S)ART7 Port"
+	help
+	  Enable support for U(S)ART7 port in the driver.
+	  Say y here if you want to use U(S)ART7 device.
+
+# --- port 8 ---
+
+config UART_8
+	bool "Enable GD32 U(S)ART8 Port"
+	help
+	  Enable support for U(S)ART8 port in the driver.
+	  Say y here if you want to use U(S)ART8 device.
+
+# --- port 9 ---
+
+config UART_9
+	bool "Enable GD32 UART9 Port"
+	help
+	  Enable support for UART9 port in the driver.
+	  Say y here if you want to use UART9 device.
+
+endif # UART_GD32
