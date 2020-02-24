@@ -12,6 +12,9 @@
  *        Please validate for newly added series.
  */
 
+
+#include "gd32vf103.h"
+
 #include <kernel.h>
 #include <arch/cpu.h>
 #include <sys/__assert.h>
@@ -41,7 +44,6 @@ static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 {
 	const struct uart_gd32_config *config = DEV_CFG(dev);
 	struct uart_gd32_data *data = DEV_DATA(dev);
-//TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
 
 	u32_t clock_rate;
 
@@ -53,87 +55,60 @@ static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 //		return;
 //	}
 
-
-#ifdef CONFIG_LPUART_1
-	if (IS_LPUART_INSTANCE(UartInstance)) {
-		LL_LPUART_SetBaudRate(UartInstance,
-				      clock_rate,
-#ifdef USART_PRESC_PRESCALER
-				      LL_USART_PRESCALER_DIV1,
-#endif
-				      baud_rate);
-	} else {
-#endif /* CONFIG_LPUART_1 */
-
-//TODO		LL_USART_SetBaudRate(UartInstance,
-//				     clock_rate,
-#ifdef USART_PRESC_PRESCALER
-				     LL_USART_PRESCALER_DIV1,
-#endif
-#ifdef USART_CR1_OVER8
-				     LL_USART_OVERSAMPLING_16,
-#endif
-//				     baud_rate);
-
-#ifdef CONFIG_LPUART_1
-	}
-#endif /* CONFIG_LPUART_1 */
+	usart_baudrate_set(*config->uconf.base, baud_rate);      
 }
 
 static inline void uart_gd32_set_parity(struct device *dev, u32_t parity)
 {
-//TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
-//TODO	LL_USART_SetParity(UartInstance, parity);
+	const struct uart_gd32_config *config = DEV_CFG(dev);
+	usart_parity_config(*config->uconf.base, parity);
 }
 
 static inline u32_t uart_gd32_get_parity(struct device *dev)
 {
 //TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
 //TODO	return LL_USART_GetParity(UartInstance);
+	return 0;
 }
 
 static inline void uart_gd32_set_stopbits(struct device *dev, u32_t stopbits)
 {
-//TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
-//TODO	LL_USART_SetStopBitsLength(UartInstance, stopbits);
+	const struct uart_gd32_config *config = DEV_CFG(dev);
+	usart_stop_bit_set(*config->uconf.base, stopbits);
 }
 
 static inline u32_t uart_gd32_get_stopbits(struct device *dev)
 {
 //TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
 //TODO	return LL_USART_GetStopBitsLength(UartInstance);
+	return 0;
 }
 
 static inline void uart_gd32_set_databits(struct device *dev, u32_t databits)
 {
-//TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
-//TODO	LL_USART_SetDataWidth(UartInstance, databits);
+	const struct uart_gd32_config *config = DEV_CFG(dev);
+	usart_stop_bit_set(*config->uconf.base, databits);
 }
 
 static inline u32_t uart_gd32_get_databits(struct device *dev)
 {
 //TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
 //TODO	return LL_USART_GetDataWidth(UartInstance);
+	return 0;
 }
 
 static inline void uart_gd32_set_hwctrl(struct device *dev, u32_t hwctrl)
 {
-//TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
-//TODO	LL_USART_SetHWFlowCtrl(UartInstance, hwctrl);
+	const struct uart_gd32_config *config = DEV_CFG(dev);
+	usart_hardware_flow_rts_config(*config->uconf.base, hwctrl);
+	usart_hardware_flow_cts_config(*config->uconf.base, hwctrl);
 }
 
 static inline u32_t uart_gd32_get_hwctrl(struct device *dev)
 {
 //TODO	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
 //TODO	return LL_USART_GetHWFlowCtrl(UartInstance);
+	return 0;
 }
 
 static inline u32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity)
@@ -292,27 +267,13 @@ static int uart_gd32_configure(struct device *dev,
 		return -ENOTSUP;
 	}
 
-#if defined(LL_USART_STOPBITS_0_5) && defined(CONFIG_LPUART_1)
-	if (IS_LPUART_INSTANCE(UartInstance) &&
-	    UART_CFG_STOP_BITS_0_5 == cfg->stop_bits) {
-		return -ENOTSUP;
-	}
-#else
 	if (UART_CFG_STOP_BITS_0_5 == cfg->stop_bits) {
 		return -ENOTSUP;
 	}
-#endif
 
-#if defined(LL_USART_STOPBITS_1_5) && defined(CONFIG_LPUART_1)
-	if (IS_LPUART_INSTANCE(UartInstance) &&
-	    UART_CFG_STOP_BITS_1_5 == cfg->stop_bits) {
-		return -ENOTSUP;
-	}
-#else
 	if (UART_CFG_STOP_BITS_1_5 == cfg->stop_bits) {
 		return -ENOTSUP;
 	}
-#endif
 
 	/* Driver doesn't support 5 or 6 databits and potentially 7 or 9 */
 	if ((UART_CFG_DATA_BITS_5 == cfg->data_bits) ||
@@ -335,7 +296,8 @@ static int uart_gd32_configure(struct device *dev,
 //		}
 	}
 
-//	LL_USART_Disable(UartInstance);
+	const struct uart_gd32_config *config = DEV_CFG(dev);
+	usart_disable(*config->uconf.base);
 
 	if (parity != uart_gd32_get_parity(dev)) {
 		uart_gd32_set_parity(dev, parity);
@@ -358,7 +320,7 @@ static int uart_gd32_configure(struct device *dev,
 		data->baud_rate = cfg->baudrate;
 	}
 
-//	LL_USART_Enable(UartInstance);
+	usart_enable(*config->uconf.base);
 	return 0;
 };
 
@@ -462,7 +424,7 @@ static inline void __uart_gd32_get_clock(struct device *dev)
 }
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
-
+#error
 static int uart_gd32_fifo_fill(struct device *dev, const u8_t *tx_data,
 				  int size)
 {
@@ -667,7 +629,7 @@ static int uart_gd32_init(struct device *dev)
 //		return -EIO;
 //	}
 
-//	LL_USART_Disable(UartInstance);
+	usart_disable(*config->uconf.base);
 
 	/* TX/RX direction */
 //	LL_USART_SetTransferDirection(UartInstance,
@@ -686,7 +648,7 @@ static int uart_gd32_init(struct device *dev)
 	/* Set the default baudrate */
 	uart_gd32_set_baudrate(dev, data->baud_rate);
 
-//	LL_USART_Enable(UartInstance);
+	usart_enable(*config->uconf.base);
 
 #ifdef USART_ISR_TEACK
 	/* Wait until TEACK flag is set */
