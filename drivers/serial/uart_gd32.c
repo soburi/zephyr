@@ -37,10 +37,10 @@ LOG_MODULE_REGISTER(uart_gd32);
 #define UART_STRUCT(dev)					\
 	((USART_TypeDef *)(DEV_CFG(dev))->uconf.base)
 
+#define TIMEOUT 1000
+
 #define DEV_BASE(dev)							\
 	(*(DEV_CFG(dev)->uconf.base))
-
-#define TIMEOUT 1000
 
 /* USART RTS configure */
 #define CLT2_HWFC(regval)             (BITS(8,9) & ((uint32_t)(regval) << 8))
@@ -61,10 +61,11 @@ static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc);
 
 static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 {
+//TODO	const struct uart_gd32_config *config = DEV_CFG(dev);
+//TODO	struct uart_gd32_data *data = DEV_DATA(dev);
 	u32_t base = DEV_BASE(dev);
-	struct uart_gd32_data *data = DEV_DATA(dev);
 
-	u32_t clock_rate;
+//TODO	u32_t clock_rate;
 
 	/* Get clock rate */
 //TODO	if (clock_control_get_rate(data->clock,
@@ -430,7 +431,7 @@ static int uart_gd32_err_check(struct device *dev)
 
 static inline void __uart_gd32_get_clock(struct device *dev)
 {
-	struct uart_gd32_data *data = DEV_DATA(dev);
+//TODO	struct uart_gd32_data *data = DEV_DATA(dev);
 //TODO	struct device *clk =
 //		device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
@@ -713,9 +714,6 @@ static const struct uart_gd32_config uart_gd32_cfg_##name = {		\
 		.base = (u8_t *)DT_UART_GD32_##name##_BASE_ADDRESS,\
 		GD32_UART_IRQ_HANDLER_FUNC(name)			\
 	},								\
-	.pclken = { .bus = DT_UART_GD32_##name##_CLOCK_BUS,	\
-		    .enr = DT_UART_GD32_##name##_CLOCK_BITS	\
-	},								\
 	.hw_flow_control = DT_UART_GD32_##name##_HW_FLOW_CONTROL	\
 };									\
 									\
@@ -731,6 +729,10 @@ DEVICE_AND_API_INIT(uart_gd32_##name, DT_UART_GD32_##name##_NAME,	\
 									\
 GD32_UART_IRQ_HANDLER(name)
 
+
+#ifdef CONFIG_UART_0
+GD32_UART_INIT(USART_0)
+#endif	/* CONFIG_UART_0 */
 
 #ifdef CONFIG_UART_1
 GD32_UART_INIT(USART_1)

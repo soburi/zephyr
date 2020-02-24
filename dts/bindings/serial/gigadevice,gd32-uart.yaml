@@ -1,0 +1,15 @@
+title: GD32 UART
+
+description: |
+    This binding gives a base representation of the STM32 UART
+
+compatible: "gigadevice,gd32-uart"
+
+include: uart-controller.yaml
+
+properties:
+    reg:
+      required: true
+
+    interrupts:
+      required: true
