@@ -65,11 +65,11 @@ static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 
 	/* Get clock rate */
 //TODO	if (clock_control_get_rate(data->clock,
-//			       (clock_control_subsys_t *)&config->pclken,
-//			       &clock_rate) < 0) {
-//		LOG_ERR("Failed call clock_control_get_rate");
-//		return;
-//	}
+//TODO			       (clock_control_subsys_t *)&config->pclken,
+//TODO			       &clock_rate) < 0) {
+//TODO		LOG_ERR("Failed call clock_control_get_rate");
+//TODO		return;
+//TODO	}
 
 	usart_baudrate_set(*config->uconf.base, baud_rate);      
 }
@@ -184,7 +184,7 @@ static inline enum uart_config_stop_bits uart_gd32_ll2cfg_stopbits(u32_t sb)
 #ifdef USART_STB_0_5BIT
 	case USART_STB_0_5BIT:
 		return UART_CFG_STOP_BITS_0_5;
-#endif	/* LL_USART_STOPBITS_0_5 */
+#endif	/* USART_STB_0_5BIT */
 	case USART_STB_1BIT:
 		return UART_CFG_STOP_BITS_1;
 /* Some MCU's don't support 1.5 stop bits */
@@ -205,11 +205,11 @@ static inline u32_t uart_gd32_cfg2ll_databits(enum uart_config_data_bits db)
 #ifdef USART_WL_7BIT
 	case UART_CFG_DATA_BITS_7:
 		return USART_WL_7BIT;
-#endif	/* LL_USART_DATAWIDTH_7B */
+#endif	/* USART_WL_7BIT */
 #ifdef USART_WL_9BIT
 	case UART_CFG_DATA_BITS_9:
 		return USART_WL_9BIT;
-#endif	/* LL_USART_DATAWIDTH_9B */
+#endif	/* USART_WL_9BIT */
 	case UART_CFG_DATA_BITS_8:
 	default:
 		return USART_WL_8BIT;
@@ -223,11 +223,11 @@ static inline enum uart_config_data_bits uart_gd32_ll2cfg_databits(u32_t db)
 #ifdef USART_WL_7BIT
 	case USART_WL_7BIT:
 		return UART_CFG_DATA_BITS_7;
-#endif	/* LL_USART_DATAWIDTH_7B */
+#endif	/* USART_WL_7BIT */
 #ifdef USART_WL_9BIT
 	case USART_WL_9BIT:
 		return UART_CFG_DATA_BITS_9;
-#endif	/* LL_USART_DATAWIDTH_9B */
+#endif	/* USART_WL_9BIT */
 	case USART_WL_8BIT:
 	default:
 		return UART_CFG_DATA_BITS_8;
@@ -293,12 +293,12 @@ static int uart_gd32_configure(struct device *dev,
 	/* Driver doesn't support 5 or 6 databits and potentially 7 or 9 */
 	if ((UART_CFG_DATA_BITS_5 == cfg->data_bits) ||
 	    (UART_CFG_DATA_BITS_6 == cfg->data_bits)
-#ifndef LL_USART_DATAWIDTH_7B
+#ifndef USART_WL_7BIT
 	    || (UART_CFG_DATA_BITS_7 == cfg->data_bits)
-#endif /* LL_USART_DATAWIDTH_7B */
-#ifndef LL_USART_DATAWIDTH_9B
+#endif /* USART_WL_7BIT */
+#ifndef USART_WL_9BIT
 	    || (UART_CFG_DATA_BITS_9 == cfg->data_bits)
-#endif /* LL_USART_DATAWIDTH_9B */
+#endif /* USART_WL_9BIT */
 		) {
 		return -ENOTSUP;
 	}
@@ -636,10 +636,10 @@ static int uart_gd32_init(struct device *dev)
 
 	__uart_gd32_get_clock(dev);
 	/* enable clock */
-//	if (clock_control_on(data->clock,
-//			(clock_control_subsys_t *)&config->pclken) != 0) {
-//		return -EIO;
-//	}
+//TODO	if (clock_control_on(data->clock,
+//TODO			(clock_control_subsys_t *)&config->pclken) != 0) {
+//TODO		return -EIO;
+//TODO	}
 
 	usart_disable(*config->uconf.base);
 
