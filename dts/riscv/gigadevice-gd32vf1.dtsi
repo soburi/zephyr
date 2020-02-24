@@ -25,7 +25,7 @@
 			riscv,isa = "rv32imac";
 			eclic: interrupt-controller {
 				#interrupt-cells = <1>;
-				compatible = "riscv,cpu-intc";
+				compatible = "gigadevice,gd32vf103-eclic";
 				interrupt-controller;
 			};
 		};
@@ -52,13 +52,13 @@
 			reg = <0x40021000 0x400>;
 			label = "GD32_CLK_RCU";
 		};
-/*
+
 		pinctrl: pin-controller@40010800 {
 			compatible = "gigadevice,gd32-pinmux";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x40010800 0x1C00>;
-*/
+
 			gpioa: gpio@40010800 {
 				compatible = "gigadevice,gd32-gpio";
 				gpio-controller;
@@ -103,7 +103,7 @@
 				clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00000041>;
 				label = "GPIOE";
 			};
-//		};
+		};
 
 		usart0: serial@40013800 {
 			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";

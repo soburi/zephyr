@@ -1,0 +1,19 @@
+title: GD32 RCC
+
+description: |
+    This binding gives a base representation of the GD32 Clock control
+
+compatible: "gigadevice,gd32-rcu"
+
+include: [clock-controller.yaml, base.yaml]
+
+properties:
+    reg:
+      required: true
+
+    "#clock-cells":
+      const: 2
+
+clock-cells:
+  - bus
+  - bits

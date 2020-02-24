@@ -506,8 +506,9 @@ static int gpio_gd32_init(struct device *device)
 	return 0;
 }
 
-#define GPIO_DEVICE_INIT(__name, __suffix, __port) \
+#define GPIO_DEVICE_INIT(__name, __suffix, __base_addr, __port, __cenr, __bus) \
 	static const struct gpio_gd32_config gpio_gd32_cfg_## __suffix = {   \
+		.base = (u32_t *)__base_addr,				       \
 		.port = __port,						       \
 	};								       \
 	static struct gpio_gd32_data gpio_gd32_data_## __suffix;	       \
@@ -521,10 +522,12 @@ static int gpio_gd32_init(struct device *device)
 			    &gpio_gd32_driver)
 
 #define GPIO_DEVICE_INIT_GD32(__suffix, __SUFFIX)		      \
-	GPIO_DEVICE_INIT("", \
+	GPIO_DEVICE_INIT(DT_GPIO_GD32_GPIO##__SUFFIX##_LABEL,	      \
 			 __suffix,				      \
-			 GPIO##__SUFFIX)
-
+			 DT_GPIO_GD32_GPIO##__SUFFIX##_BASE_ADDRESS, \
+			 GPIO##__SUFFIX,			      \
+			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BITS,   \
+			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BUS)
 
 #ifdef CONFIG_GPIO_GD32_PORTA
 GPIO_DEVICE_INIT_GD32(a, A);
