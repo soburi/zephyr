@@ -37,6 +37,9 @@ LOG_MODULE_REGISTER(uart_gd32);
 #define UART_STRUCT(dev)					\
 	((USART_TypeDef *)(DEV_CFG(dev))->uconf.base)
 
+#define DEV_BASE(dev)							\
+	(*(DEV_CFG(dev)->uconf.base))
+
 #define TIMEOUT 1000
 
 /* USART RTS configure */
@@ -58,7 +61,7 @@ static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc);
 
 static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 	struct uart_gd32_data *data = DEV_DATA(dev);
 
 	u32_t clock_rate;
@@ -71,63 +74,63 @@ static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 //TODO		return;
 //TODO	}
 
-	usart_baudrate_set(*config->uconf.base, baud_rate);      
+	usart_baudrate_set(base, baud_rate);      
 }
 
 static inline void uart_gd32_set_parity(struct device *dev, u32_t parity)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
-	usart_parity_config(*config->uconf.base, uart_gd32_cfg2ll_parity(parity));
+	usart_parity_config(base, uart_gd32_cfg2ll_parity(parity));
 }
 
 static inline u32_t uart_gd32_get_parity(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
-	return uart_gd32_ll2cfg_parity( (USART_CTL0(config->uconf.base) & USART_CTL0_PM) >> 9);
+	return uart_gd32_ll2cfg_parity( (USART_CTL0(base) & USART_CTL0_PM) >> 9);
 }
 
 static inline void uart_gd32_set_stopbits(struct device *dev, u32_t stopbits)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
-	usart_stop_bit_set(*config->uconf.base, stopbits);
+	usart_stop_bit_set(base, stopbits);
 }
 
 static inline u32_t uart_gd32_get_stopbits(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
-	return uart_gd32_ll2cfg_stopbits( (USART_CTL1(config->uconf.base) & USART_CTL1_STB) >> 12);
+	return uart_gd32_ll2cfg_stopbits( (USART_CTL1(base) & USART_CTL1_STB) >> 12);
 }
 
 static inline void uart_gd32_set_databits(struct device *dev, u32_t databits)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
-	usart_stop_bit_set(*config->uconf.base, databits);
+	usart_stop_bit_set(base, databits);
 }
 
 static inline u32_t uart_gd32_get_databits(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
-	return uart_gd32_ll2cfg_databits( (USART_CTL0(config->uconf.base) & USART_CTL0_WL) >> 12);
+	return uart_gd32_ll2cfg_databits( (USART_CTL0(base) & USART_CTL0_WL) >> 12);
 }
 
 static inline void uart_gd32_set_hwctrl(struct device *dev, u32_t hwctrl)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
-	usart_hardware_flow_rts_config(*config->uconf.base, (hwctrl>>0 & 0x1));
-	usart_hardware_flow_cts_config(*config->uconf.base, (hwctrl>>1 & 0x1));
+	u32_t base = DEV_BASE(dev);
+	usart_hardware_flow_rts_config(base, (hwctrl>>0 & 0x1));
+	usart_hardware_flow_cts_config(base, (hwctrl>>1 & 0x1));
 }
 
 static inline u32_t uart_gd32_get_hwctrl(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
-	return uart_gd32_ll2cfg_hwctrl( (USART_CTL0(config->uconf.base) & USART_CTL2_HWFC) >> 12);
+	return uart_gd32_ll2cfg_hwctrl( (USART_CTL0(base) & USART_CTL2_HWFC) >> 12);
 }
 
 static inline u32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity)
@@ -270,7 +273,7 @@ static int uart_gd32_configure(struct device *dev,
 				const struct uart_config *cfg)
 {
 	struct uart_gd32_data *data = DEV_DATA(dev);
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 	const u32_t parity = uart_gd32_cfg2ll_parity(cfg->parity);
 	const u32_t stopbits = uart_gd32_cfg2ll_stopbits(cfg->stop_bits);
 	const u32_t databits = uart_gd32_cfg2ll_databits(cfg->data_bits);
@@ -310,7 +313,7 @@ static int uart_gd32_configure(struct device *dev,
 		}
 	}
 
-	usart_disable(*config->uconf.base);
+	usart_disable(base);
 
 	if (parity != uart_gd32_get_parity(dev)) {
 		uart_gd32_set_parity(dev, parity);
@@ -333,7 +336,7 @@ static int uart_gd32_configure(struct device *dev,
 		data->baud_rate = cfg->baudrate;
 	}
 
-	usart_enable(*config->uconf.base);
+	usart_enable(base);
 	return 0;
 };
 
@@ -354,18 +357,18 @@ static int uart_gd32_config_get(struct device *dev, struct uart_config *cfg)
 
 static int uart_gd32_poll_in(struct device *dev, unsigned char *c)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 	/* Clear overrun error flag */
-//	if (LL_USART_IsActiveFlag_ORE(UartInstance)) {
-//		LL_USART_ClearFlag_ORE(UartInstance);
-//	}
+	if (usart_flag_get(base, USART_FLAG_ORERR) ) {
+		usart_flag_clear(base, USART_FLAG_ORERR);
+	}
 
-//	if (!LL_USART_IsActiveFlag_RXNE(UartInstance)) {
-//		return -1;
-//	}
+	if (!usart_flag_get(base, USART_FLAG_RBNE) ) {
+		return -1;
+	}
 
-//	*c = (unsigned char)LL_USART_ReceiveData8(UartInstance);
+	*c = (unsigned char)usart_data_receive(base);
 
 	return 0;
 }
@@ -373,20 +376,20 @@ static int uart_gd32_poll_in(struct device *dev, unsigned char *c)
 static void uart_gd32_poll_out(struct device *dev,
 					unsigned char c)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 	/* Wait for TXE flag to be raised */
-//	while (!LL_USART_IsActiveFlag_TXE(UartInstance)) {
-//	}
+	while (!usart_flag_get(base, USART_FLAG_TBE)) {
+	}
 
-//	LL_USART_ClearFlag_TC(UartInstance);
+	usart_flag_clear(base, USART_FLAG_TC);
 
-//	LL_USART_TransmitData8(UartInstance, (u8_t)c);
+	usart_data_transmit(base, c);
 }
 
 static int uart_gd32_err_check(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 	u32_t err = 0U;
 #if 0
 	/* Check for errors, but don't clear them here.
@@ -479,56 +482,56 @@ static int uart_gd32_fifo_read(struct device *dev, u8_t *rx_data,
 
 static void uart_gd32_irq_tx_enable(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 //	LL_USART_EnableIT_TC(UartInstance);
 }
 
 static void uart_gd32_irq_tx_disable(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 //	LL_USART_DisableIT_TC(UartInstance);
 }
 
 static int uart_gd32_irq_tx_ready(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 //	return LL_USART_IsActiveFlag_TXE(UartInstance);
 }
 
 static int uart_gd32_irq_tx_complete(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 //	return LL_USART_IsActiveFlag_TC(UartInstance);
 }
 
 static void uart_gd32_irq_rx_enable(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 //	LL_USART_EnableIT_RXNE(UartInstance);
 }
 
 static void uart_gd32_irq_rx_disable(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 //	LL_USART_DisableIT_RXNE(UartInstance);
 }
 
 static int uart_gd32_irq_rx_ready(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 //	return LL_USART_IsActiveFlag_RXNE(UartInstance);
 }
 
 static void uart_gd32_irq_err_enable(struct device *dev)
 {
-	const struct uart_gd32_config *config = DEV_CFG(dev);
+	u32_t base = DEV_BASE(dev);
 
 	/* Enable FE, ORE interruptions */
 	LL_USART_EnableIT_ERROR(UartInstance);
@@ -633,6 +636,7 @@ static int uart_gd32_init(struct device *dev)
 {
 	const struct uart_gd32_config *config = DEV_CFG(dev);
 	struct uart_gd32_data *data = DEV_DATA(dev);
+	u32_t base = DEV_BASE(dev);
 
 	__uart_gd32_get_clock(dev);
 	/* enable clock */
@@ -641,11 +645,11 @@ static int uart_gd32_init(struct device *dev)
 //TODO		return -EIO;
 //TODO	}
 
-	usart_disable(*config->uconf.base);
+	usart_disable(base);
 
 	/* TX/RX direction */
-	usart_transmit_config(*config->uconf.base, USART_TRANSMIT_ENABLE);
-	usart_receive_config(*config->uconf.base, USART_RECEIVE_ENABLE);
+	usart_transmit_config(base, USART_TRANSMIT_ENABLE);
+	usart_receive_config(base, USART_RECEIVE_ENABLE);
 
 	/* 8 data bit, 1 start bit, 1 stop bit, no parity */
 	uart_gd32_set_databits(dev, USART_WL_8BIT);
@@ -660,18 +664,18 @@ static int uart_gd32_init(struct device *dev)
 	/* Set the default baudrate */
 	uart_gd32_set_baudrate(dev, data->baud_rate);
 
-	usart_enable(*config->uconf.base);
+	usart_enable(base);
 
 #ifdef USART_ISR_TEACK
 	/* Wait until TEACK flag is set */
-//	while (!(LL_USART_IsActiveFlag_TEACK(UartInstance))) {
-//	}
+	while (usart_flag_get() == 0) {
+	}
 #endif /* !USART_ISR_TEACK */
 
 #ifdef USART_ISR_REACK
 	/* Wait until REACK flag is set */
-//	while (!(LL_USART_IsActiveFlag_REACK(UartInstance))) {
-//	}
+	while (usart_flag_get() == 0) {
+	}
 #endif /* !USART_ISR_REACK */
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
