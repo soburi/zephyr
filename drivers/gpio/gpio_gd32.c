@@ -12,7 +12,6 @@
 #include <device.h>
 #include <soc.h>
 #include <drivers/gpio.h>
-
 //#include <clock_control/gd32_clock_control.h>
 //#include <pinmux/gd32/pinmux_gd32.h>
 #include <drivers/pinmux.h>
@@ -21,11 +20,6 @@
 
 #include "gpio_gd32.h"
 #include "gpio_utils.h"
-
-
-typedef struct _GPIO_TypeDef {
-	uint32_t port;
-} GPIO_TypeDef;
 
 /**
  * @brief Common GPIO driver for GD32 MCUs.
@@ -94,7 +88,6 @@ static inline u32_t gd32_pinval_get(int pin)
 	return pinval;
 }
 
-
 /**
  * @brief Configure the hardware.
  */
@@ -102,7 +95,6 @@ int gpio_gd32_configure(u32_t port, int pin, int conf, int altf)
 {
 	int pin_ll = gd32_pinval_get(pin);
 
-#if 1//def CONFIG_SOC_SERIES_GD32F1X
 	ARG_UNUSED(altf);
 
 	u32_t temp = conf & (GD32_MODE_INOUT_MASK << GD32_MODE_INOUT_SHIFT);
@@ -150,41 +142,6 @@ int gpio_gd32_configure(u32_t port, int pin, int conf, int altf)
 
 
 	}
-#else
-	unsigned int mode, otype, ospeed, pupd;
-
-	mode = conf & (GD32_MODER_MASK << GD32_MODER_SHIFT);
-	otype = conf & (GD32_OTYPER_MASK << GD32_OTYPER_SHIFT);
-	ospeed = conf & (GD32_OSPEEDR_MASK << GD32_OSPEEDR_SHIFT);
-	pupd = conf & (GD32_PUPDR_MASK << GD32_PUPDR_SHIFT);
-
-	//TODO LL_GPIO_SetPinMode(gpio, pin_ll, mode >> GD32_MODER_SHIFT);
-
-	if (GD32_MODER_ALT_MODE == mode) {
-		if (pin < 8) {
-			//TODO LL_GPIO_SetAFPin_0_7(gpio, pin_ll, altf);
-		} else {
-			//TODO LL_GPIO_SetAFPin_8_15(gpio, pin_ll, altf);
-		}
-	}
-
-#if defined(CONFIG_SOC_SERIES_GD32L4X) && defined(GPIO_ASCR_ASC0)
-	/*
-	 * For GD32L47xx/48xx, register ASCR should be configured to connect
-	 * analog switch of gpio lines to the ADC.
-	 */
-	if (mode == GD32_MODER_ANALOG_MODE) {
-		//TODO LL_GPIO_EnablePinAnalogControl(gpio, pin_ll);
-	}
-#endif
-
-	//TODO LL_GPIO_SetPinOutputType(gpio, pin_ll, otype >> GD32_OTYPER_SHIFT);
-
-	//TODO LL_GPIO_SetPinSpeed(gpio, pin_ll, ospeed >> GD32_OSPEEDR_SHIFT);
-
-	//TODO LL_GPIO_SetPinPull(gpio, pin_ll, pupd >> GD32_PUPDR_SHIFT);
-
-#endif  /* CONFIG_SOC_SERIES_GD32F1X */
 
 	return 0;
 }
@@ -424,7 +381,7 @@ static int gpio_gd32_read(struct device *dev, int access_op,
 		return -ENOTSUP;
 	}
 
-	//*value = (LL_GPIO_ReadInputPort(gpio) >> pin) & 0x1;
+	*value = gpio_input_port_get(cfg->port) >> pin) & 0x1;
 
 	return 0;
 }
@@ -490,16 +447,7 @@ static int gpio_gd32_init(struct device *device)
 {
 	const struct gpio_gd32_config *cfg = device->config->config_info;
 	rcu_periph_clock_enable(cfg->rcu);
-#if 0
-	/* enable clock for subsystem */
-	struct device *clk =
-		device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
-	if (clock_control_on(clk,
-			     (clock_control_subsys_t *)&cfg->pclken) != 0) {
-		return -EIO;
-	}
-#endif
 	return 0;
 }
 
