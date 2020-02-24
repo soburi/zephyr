@@ -5,24 +5,24 @@
  */
 
 /**
- * @brief Driver for UART port on STM32 family processor.
+ * @brief Driver for UART port on GD32 family processor.
  *
  */
 
-#ifndef ZEPHYR_DRIVERS_SERIAL_UART_STM32_H_
-#define ZEPHYR_DRIVERS_SERIAL_UART_STM32_H_
+#ifndef ZEPHYR_DRIVERS_SERIAL_UART_GD32_H_
+#define ZEPHYR_DRIVERS_SERIAL_UART_GD32_H_
 
 /* device config */
-struct uart_stm32_config {
+struct uart_gd32_config {
 	struct uart_device_config uconf;
 	/* clock subsystem driving this peripheral */
-	struct stm32_pclken pclken;
+//	struct gd32_pclken pclken;
 	/* initial hardware flow control, 1 for RTS/CTS */
 	bool hw_flow_control;
 };
 
 /* driver data */
-struct uart_stm32_data {
+struct uart_gd32_data {
 	/* Baud rate */
 	u32_t baud_rate;
 	/* clock device */
@@ -33,4 +33,4 @@ struct uart_stm32_data {
 #endif
 };
 
-#endif	/* ZEPHYR_DRIVERS_SERIAL_UART_STM32_H_ */
+#endif	/* ZEPHYR_DRIVERS_SERIAL_UART_GD32_H_ */
