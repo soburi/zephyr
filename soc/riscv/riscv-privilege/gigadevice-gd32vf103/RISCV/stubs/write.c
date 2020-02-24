@@ -5,7 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <gd32vf103.h>
-#include <unistd.h>
+//#include <unistd.h>
 #include <sys/types.h>
 
 #include "stub.h"

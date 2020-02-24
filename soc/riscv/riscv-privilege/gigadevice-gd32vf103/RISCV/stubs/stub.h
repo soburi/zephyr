@@ -3,7 +3,7 @@
 #define _NUCLEI_SYS_STUB_H
 
 #include <stdint.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 void write_hex(int fd, unsigned long int hex);
 
