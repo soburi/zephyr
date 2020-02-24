@@ -207,7 +207,7 @@ static inline uint32_t gpio_gd32_pin_to_exti_line(int pin)
 
 static void gpio_gd32_set_exti_source(int port, int pin)
 {
-	uint32_t line = gpio_gd32_pin_to_exti_line(pin);
+	//TODO uint32_t line = gpio_gd32_pin_to_exti_line(pin);
 
 #if defined(CONFIG_SOC_SERIES_GD32L0X) && defined(LL_SYSCFG_EXTI_PORTH)
 	/*
@@ -233,7 +233,7 @@ static void gpio_gd32_set_exti_source(int port, int pin)
 
 static int gpio_gd32_get_exti_source(int pin)
 {
-	uint32_t line = gpio_gd32_pin_to_exti_line(pin);
+	//TODO uint32_t line = gpio_gd32_pin_to_exti_line(pin);
 	int port;
 
 #ifdef CONFIG_SOC_SERIES_GD32F1X
@@ -492,7 +492,7 @@ static const struct gpio_driver_api gpio_gd32_driver = {
  */
 static int gpio_gd32_init(struct device *device)
 {
-	const struct gpio_gd32_config *cfg = device->config->config_info;
+	//TODO const struct gpio_gd32_config *cfg = device->config->config_info;
 #if 0
 	/* enable clock for subsystem */
 	struct device *clk =
@@ -506,11 +506,9 @@ static int gpio_gd32_init(struct device *device)
 	return 0;
 }
 
-#define GPIO_DEVICE_INIT(__name, __suffix, __base_addr, __port, __cenr, __bus) \
+#define GPIO_DEVICE_INIT(__name, __suffix, __port) \
 	static const struct gpio_gd32_config gpio_gd32_cfg_## __suffix = {   \
-		.base = (u32_t *)__base_addr,				       \
 		.port = __port,						       \
-		.pclken = { .bus = __bus, .enr = __cenr }		       \
 	};								       \
 	static struct gpio_gd32_data gpio_gd32_data_## __suffix;	       \
 	DEVICE_AND_API_INIT(gpio_gd32_## __suffix,			       \
@@ -523,13 +521,11 @@ static int gpio_gd32_init(struct device *device)
 			    &gpio_gd32_driver)
 
 #define GPIO_DEVICE_INIT_GD32(__suffix, __SUFFIX)		      \
-	GPIO_DEVICE_INIT(DT_GPIO_GD32_GPIO##__SUFFIX##_LABEL,	      \
+	GPIO_DEVICE_INIT("", \
 			 __suffix,				      \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_BASE_ADDRESS, \
-			 GD32_PORT##__SUFFIX,			      \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BITS,   \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BUS)
-#if 0
+			 GPIO##__SUFFIX)
+
+
 #ifdef CONFIG_GPIO_GD32_PORTA
 GPIO_DEVICE_INIT_GD32(a, A);
 #endif /* CONFIG_GPIO_GD32_PORTA */
@@ -550,6 +546,7 @@ GPIO_DEVICE_INIT_GD32(d, D);
 GPIO_DEVICE_INIT_GD32(e, E);
 #endif /* CONFIG_GPIO_GD32_PORTE */
 
+#if 0
 #ifdef CONFIG_GPIO_GD32_PORTF
 GPIO_DEVICE_INIT_GD32(f, F);
 #endif /* CONFIG_GPIO_GD32_PORTF */
