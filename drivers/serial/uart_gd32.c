@@ -74,7 +74,7 @@ static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 //TODO		return;
 //TODO	}
 
-	usart_baudrate_set(base, baud_rate);      
+	usart_baudrate_set(base, baud_rate);
 }
 
 static inline void uart_gd32_set_parity(struct device *dev, u32_t parity)
@@ -391,47 +391,47 @@ static int uart_gd32_err_check(struct device *dev)
 {
 	u32_t base = DEV_BASE(dev);
 	u32_t err = 0U;
-#if 0
+
 	/* Check for errors, but don't clear them here.
 	 * Some SoC clear all error flags when at least
 	 * one is cleared. (e.g. F4X, F1X, and F2X)
 	 */
-	if (LL_USART_IsActiveFlag_ORE(UartInstance)) {
+	if (usart_flag_get(base, USART_FLAG_ORERR)) {
 		err |= UART_ERROR_OVERRUN;
 	}
 
-	if (LL_USART_IsActiveFlag_PE(UartInstance)) {
+	if (usart_flag_get(base, USART_FLAG_PERR)) {
 		err |= UART_ERROR_PARITY;
 	}
 
-	if (LL_USART_IsActiveFlag_FE(UartInstance)) {
+	if (usart_flag_get(base, USART_FLAG_FERR)) {
 		err |= UART_ERROR_FRAMING;
 	}
 
 	if (err & UART_ERROR_OVERRUN) {
-		LL_USART_ClearFlag_ORE(UartInstance);
+		usart_flag_clear(base, USART_FLAG_ORERR);
 	}
 
 	if (err & UART_ERROR_PARITY) {
-		LL_USART_ClearFlag_PE(UartInstance);
+		usart_flag_clear(base, USART_FLAG_PERR);
 	}
 
 	if (err & UART_ERROR_FRAMING) {
-		LL_USART_ClearFlag_FE(UartInstance);
+		usart_flag_clear(base, USART_FLAG_FERR);
 	}
 
 	/* Clear noise error as well,
 	 * it is not represented by the errors enum
 	 */
-	LL_USART_ClearFlag_NE(UartInstance);
-#endif
+	usart_flag_clear(base, USART_FLAG_NERR);
+
 	return err;
 }
 
 static inline void __uart_gd32_get_clock(struct device *dev)
 {
 	struct uart_gd32_data *data = DEV_DATA(dev);
-//	struct device *clk =
+//TODO	struct device *clk =
 //		device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
 	__ASSERT_NO_MSG(clk);
