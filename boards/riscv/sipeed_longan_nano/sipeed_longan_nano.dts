@@ -13,7 +13,7 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 	};
-/*
+
 	leds {
 		compatible = "gpio-leds";
 		led: led {
@@ -25,7 +25,6 @@
 	aliases {
 		led0 = &led;
 	};
-*/
 };
 
 &usart0 {
