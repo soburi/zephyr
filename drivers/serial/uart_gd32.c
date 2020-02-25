@@ -665,13 +665,6 @@ static int uart_gd32_init(struct device *dev)
     usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
     usart_enable(USART0);
 
-    char* msg = "Hello World!\n";
-
-    for(int i=0; i<strlen(msg); i++) {
-	put_char(msg[i]);
-    }
-
-
 #if 0
 
 	const struct uart_gd32_config *config = DEV_CFG(dev);
