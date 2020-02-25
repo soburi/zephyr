@@ -110,7 +110,7 @@ static inline void uart_gd32_set_databits(struct device *dev, u32_t databits)
 {
 	u32_t base = DEV_BASE(dev);
 
-	usart_stop_bit_set(base, databits);
+	usart_word_length_set(base, databits);
 }
 
 static inline u32_t uart_gd32_get_databits(struct device *dev)
@@ -646,7 +646,18 @@ static int uart_gd32_init(struct device *dev)
 //TODO		return -EIO;
 //TODO	}
 
-	usart_disable(base);
+    /* enable USART clock */
+    rcu_periph_clock_enable(RCU_USART0);
+
+    /* connect port to USARTx_Tx */
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+
+    /* connect port to USARTx_Rx */
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+
+
+	usart_deinit(base);
+    usart_baudrate_set(USART0, 115200U);
 
 	/* TX/RX direction */
 	usart_transmit_config(base, USART_TRANSMIT_ENABLE);
