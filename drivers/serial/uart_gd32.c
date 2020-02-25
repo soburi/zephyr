@@ -270,9 +270,21 @@ static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc)
 	return UART_CFG_PARITY_NONE;
 }
 
+
+/* retarget the C library printf function to the USART */
+int put_char(int ch)
+{
+    usart_data_transmit(USART0, (uint8_t) ch );
+    while ( usart_flag_get(USART0, USART_FLAG_TBE)== RESET){
+    }
+
+    return ch;
+}
 static int uart_gd32_configure(struct device *dev,
 				const struct uart_config *cfg)
 {
+
+#if 0
 	struct uart_gd32_data *data = DEV_DATA(dev);
 	u32_t base = DEV_BASE(dev);
 	const u32_t parity = uart_gd32_cfg2ll_parity(cfg->parity);
@@ -338,6 +350,7 @@ static int uart_gd32_configure(struct device *dev,
 	}
 
 	usart_enable(base);
+#endif
 	return 0;
 };
 
@@ -377,15 +390,7 @@ static int uart_gd32_poll_in(struct device *dev, unsigned char *c)
 static void uart_gd32_poll_out(struct device *dev,
 					unsigned char c)
 {
-	u32_t base = DEV_BASE(dev);
-
-	/* Wait for TXE flag to be raised */
-	while (!usart_flag_get(base, USART_FLAG_TBE)) {
-	}
-
-	usart_flag_clear(base, USART_FLAG_TC);
-
-	usart_data_transmit(base, c);
+	put_char(c);
 }
 
 static int uart_gd32_err_check(struct device *dev)
@@ -435,7 +440,7 @@ static inline void __uart_gd32_get_clock(struct device *dev)
 //TODO	struct device *clk =
 //		device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
-	__ASSERT_NO_MSG(clk);
+//	__ASSERT_NO_MSG(clk);
 
 //	data->clock = clk;
 }
@@ -635,6 +640,40 @@ static const struct uart_driver_api uart_gd32_driver_api = {
  */
 static int uart_gd32_init(struct device *dev)
 {
+
+    /* enable GPIO clock */
+    rcu_periph_clock_enable(RCU_GPIOA);
+
+    /* enable USART clock */
+    rcu_periph_clock_enable(RCU_USART0);
+
+    /* connect port to USARTx_Tx */
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+
+    /* connect port to USARTx_Rx */
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+
+    /* USART configure */
+    usart_deinit(USART0);
+    usart_baudrate_set(USART0, 115200U);
+    usart_word_length_set(USART0, USART_WL_8BIT);
+    usart_stop_bit_set(USART0, USART_STB_1BIT);
+    usart_parity_config(USART0, USART_PM_NONE);
+    usart_hardware_flow_rts_config(USART0, USART_RTS_DISABLE);
+    usart_hardware_flow_cts_config(USART0, USART_CTS_DISABLE);
+    usart_receive_config(USART0, USART_RECEIVE_ENABLE);
+    usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
+    usart_enable(USART0);
+
+    char* msg = "Hello World!\n";
+
+    for(int i=0; i<strlen(msg); i++) {
+	put_char(msg[i]);
+    }
+
+
+#if 0
+
 	const struct uart_gd32_config *config = DEV_CFG(dev);
 	struct uart_gd32_data *data = DEV_DATA(dev);
 	u32_t base = DEV_BASE(dev);
@@ -665,12 +704,15 @@ static int uart_gd32_init(struct device *dev)
 
 	/* 8 data bit, 1 start bit, 1 stop bit, no parity */
 	uart_gd32_set_databits(dev, USART_WL_8BIT);
-	uart_gd32_set_parity(dev, USART_PM_NONE);
 	uart_gd32_set_stopbits(dev, USART_STB_1BIT);
+	uart_gd32_set_parity(dev, USART_PM_NONE);
 
 
 	if (config->hw_flow_control) {
 		uart_gd32_set_hwctrl(dev, USART_HWFC_RTSCTS);
+	}
+	else {
+		uart_gd32_set_hwctrl(dev, USART_HWFC_NONE);
 	}
 
 	/* Set the default baudrate */
@@ -692,6 +734,8 @@ static int uart_gd32_init(struct device *dev)
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
 	config->uconf.irq_config_func(dev);
+#endif
+
 #endif
 	return 0;
 }
