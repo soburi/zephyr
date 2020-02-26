@@ -272,10 +272,8 @@ static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc)
 static int uart_gd32_configure(struct device *dev,
 				const struct uart_config *cfg)
 {
-
-#if 0
 	struct uart_gd32_data *data = DEV_DATA(dev);
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 	const u32_t parity = uart_gd32_cfg2ll_parity(cfg->parity);
 	const u32_t stopbits = uart_gd32_cfg2ll_stopbits(cfg->stop_bits);
 	const u32_t databits = uart_gd32_cfg2ll_databits(cfg->data_bits);
@@ -315,31 +313,30 @@ static int uart_gd32_configure(struct device *dev,
 		}
 	}
 
-	usart_disable(base);
+	usart_disable(regs);
 
 	if (parity != uart_gd32_get_parity(dev)) {
-		uart_gd32_set_parity(dev, parity);
+		uart_gd32_set_parity(regs, parity);
 	}
 
 	if (stopbits != uart_gd32_get_stopbits(dev)) {
-		uart_gd32_set_stopbits(dev, stopbits);
+		uart_gd32_set_stopbits(regs, stopbits);
 	}
 
 	if (databits != uart_gd32_get_databits(dev)) {
-		uart_gd32_set_databits(dev, databits);
+		uart_gd32_set_databits(regs, databits);
 	}
 
 	if (flowctrl != uart_gd32_get_hwctrl(dev)) {
-		uart_gd32_set_hwctrl(dev, flowctrl);
+		uart_gd32_set_hwctrl(regs, flowctrl);
 	}
 
 	if (cfg->baudrate != data->baud_rate) {
-		uart_gd32_set_baudrate(dev, cfg->baudrate);
+		uart_gd32_set_baudrate(regs, cfg->baudrate);
 		data->baud_rate = cfg->baudrate;
 	}
 
-	usart_enable(base);
-#endif
+	usart_enable(regs);
 	return 0;
 };
 
