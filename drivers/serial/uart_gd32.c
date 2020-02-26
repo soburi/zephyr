@@ -34,12 +34,11 @@ LOG_MODULE_REGISTER(uart_gd32);
 	((const struct uart_gd32_config * const)(dev)->config->config_info)
 #define DEV_DATA(dev)							\
 	((struct uart_gd32_data * const)(dev)->driver_data)
-#define UART_STRUCT(dev)					\
-	((USART_TypeDef *)(DEV_CFG(dev))->uconf.base)
+#define DEV_REGS(dev) \
+	(DEV_CFG(dev)->uconf.regs)
 
 #define TIMEOUT 1000
 
-#define DEV_REGS(dev) (DEV_CFG(dev)->uconf.regs)
 
 /* USART RTS configure */
 #define CLT2_HWFC(regval)             (BITS(8,9) & ((uint32_t)(regval) << 8))
@@ -316,23 +315,23 @@ static int uart_gd32_configure(struct device *dev,
 	usart_disable(regs);
 
 	if (parity != uart_gd32_get_parity(dev)) {
-		uart_gd32_set_parity(regs, parity);
+		uart_gd32_set_parity(dev, parity);
 	}
 
 	if (stopbits != uart_gd32_get_stopbits(dev)) {
-		uart_gd32_set_stopbits(regs, stopbits);
+		uart_gd32_set_stopbits(dev, stopbits);
 	}
 
 	if (databits != uart_gd32_get_databits(dev)) {
-		uart_gd32_set_databits(regs, databits);
+		uart_gd32_set_databits(dev, databits);
 	}
 
 	if (flowctrl != uart_gd32_get_hwctrl(dev)) {
-		uart_gd32_set_hwctrl(regs, flowctrl);
+		uart_gd32_set_hwctrl(dev, flowctrl);
 	}
 
 	if (cfg->baudrate != data->baud_rate) {
-		uart_gd32_set_baudrate(regs, cfg->baudrate);
+		uart_gd32_set_baudrate(dev, cfg->baudrate);
 		data->baud_rate = cfg->baudrate;
 	}
 
@@ -444,15 +443,15 @@ static inline void __uart_gd32_get_clock(struct device *dev)
 static int uart_gd32_fifo_fill(struct device *dev, const u8_t *tx_data,
 				  int size)
 {
-	USART_TypeDef *UartInstance = UART_STRUCT(dev);
+	u32_t regs = DEV_REGS(dev);
 	u8_t num_tx = 0U;
 
 	while ((size - num_tx > 0) &&
-	       LL_USART_IsActiveFlag_TXE(UartInstance)) {
+	       usart_interrupt_flag_get(regs, USART_INT_FLAG_TBE)) {
 		/* TXE flag will be cleared with byte write to DR|RDR register */
 
 		/* Send a character (8bit , parity none) */
-		LL_USART_TransmitData8(UartInstance, tx_data[num_tx++]);
+		usart_data_transmit(regs, tx_data[num_tx++]);
 	}
 
 	return num_tx;
@@ -461,19 +460,19 @@ static int uart_gd32_fifo_fill(struct device *dev, const u8_t *tx_data,
 static int uart_gd32_fifo_read(struct device *dev, u8_t *rx_data,
 				  const int size)
 {
-//TODO		USART_TypeDef *UartInstance = UART_STRUCT(dev);
+	u32_t regs = DEV_REGS(dev);
 	u8_t num_rx = 0U;
 
 	while ((size - num_rx > 0) &&
-	       LL_USART_IsActiveFlag_RXNE(UartInstance)) {
+	       usart_interrupt_flag_get(regs, USART_INT_FLAG_RBNE)) {
 		/* RXNE flag will be cleared upon read from DR|RDR register */
 
 		/* Receive a character (8bit , parity none) */
-		rx_data[num_rx++] = LL_USART_ReceiveData8(UartInstance);
+		rx_data[num_rx++] = usart_data_receive(regs);
 
 		/* Clear overrun error flag */
-		if (LL_USART_IsActiveFlag_ORE(UartInstance)) {
-			LL_USART_ClearFlag_ORE(UartInstance);
+		if (usart_interrupt_flag_get(regs, USART_INT_FLAG_ERR_ORERR)) {
+			usart_interrupt_flag_clear(regs, USART_INT_FLAG_ERR_ORERR);
 		}
 	}
 
@@ -482,51 +481,51 @@ static int uart_gd32_fifo_read(struct device *dev, u8_t *rx_data,
 
 static void uart_gd32_irq_tx_enable(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-//	LL_USART_EnableIT_TC(UartInstance);
+	return usart_interrupt_enable(regs, USART_INT_TC);
 }
 
 static void uart_gd32_irq_tx_disable(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-//	LL_USART_DisableIT_TC(UartInstance);
+	return usart_interrupt_disable(regs, USART_INT_TC);
 }
 
 static int uart_gd32_irq_tx_ready(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-//	return LL_USART_IsActiveFlag_TXE(UartInstance);
+	return usart_interrupt_flag_get(regs, USART_INT_FLAG_TBE);
 }
 
 static int uart_gd32_irq_tx_complete(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-//	return LL_USART_IsActiveFlag_TC(UartInstance);
+	return usart_interrupt_flag_get(regs, USART_INT_FLAG_TC);
 }
 
 static void uart_gd32_irq_rx_enable(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-//	LL_USART_EnableIT_RXNE(UartInstance);
+	return usart_interrupt_enable(regs, USART_INT_RBNE);
 }
 
 static void uart_gd32_irq_rx_disable(struct device *dev)
 {
 	u32_t base = DEV_REGS(dev);
 
-//	LL_USART_DisableIT_RXNE(UartInstance);
+	return usart_interrupt_disable(base, USART_INT_RBNE);
 }
 
 static int uart_gd32_irq_rx_ready(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-//	return LL_USART_IsActiveFlag_RXNE(UartInstance);
+	return usart_interrupt_flag_get(regs, USART_INT_FLAG_RBNE);
 }
 
 static void uart_gd32_irq_err_enable(struct device *dev)
@@ -534,41 +533,37 @@ static void uart_gd32_irq_err_enable(struct device *dev)
 	u32_t base = DEV_REGS(dev);
 
 	/* Enable FE, ORE interruptions */
-	LL_USART_EnableIT_ERROR(UartInstance);
+	//LL_USART_EnableIT_ERROR(UartInstance);
 #if !defined(CONFIG_SOC_SERIES_GD32F0X) || defined(USART_LIN_SUPPORT)
 	/* Enable Line break detection */
-	if (IS_UART_LIN_INSTANCE(UartInstance)) {
-		LL_USART_EnableIT_LBD(UartInstance);
-	}
+	//if (IS_UART_LIN_INSTANCE(UartInstance)) {
+	//	LL_USART_EnableIT_LBD(UartInstance);
+	//}
 #endif
 	/* Enable parity error interruption */
-	LL_USART_EnableIT_PE(UartInstance);
+	//LL_USART_EnableIT_PE(UartInstance);
 }
 
 static void uart_gd32_irq_err_disable(struct device *dev)
 {
-	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
 	/* Disable FE, ORE interruptions */
-	LL_USART_DisableIT_ERROR(UartInstance);
+	//LL_USART_DisableIT_ERROR(UartInstance);
 #if !defined(CONFIG_SOC_SERIES_GD32F0X) || defined(USART_LIN_SUPPORT)
 	/* Disable Line break detection */
-	if (IS_UART_LIN_INSTANCE(UartInstance)) {
-		LL_USART_DisableIT_LBD(UartInstance);
-	}
+	//if (IS_UART_LIN_INSTANCE(UartInstance)) {
+	//	LL_USART_DisableIT_LBD(UartInstance);
+	//}
 #endif
 	/* Disable parity error interruption */
-	LL_USART_DisableIT_PE(UartInstance);
+	//LL_USART_DisableIT_PE(UartInstance);
 }
 
 static int uart_gd32_irq_is_pending(struct device *dev)
 {
-	USART_TypeDef *UartInstance = UART_STRUCT(dev);
-
-	return ((LL_USART_IsActiveFlag_RXNE(UartInstance) &&
-		 LL_USART_IsEnabledIT_RXNE(UartInstance)) ||
-		(LL_USART_IsActiveFlag_TC(UartInstance) &&
-		 LL_USART_IsEnabledIT_TC(UartInstance)));
+	//return ((LL_USART_IsActiveFlag_RXNE(UartInstance) &&
+	//	 LL_USART_IsEnabledIT_RXNE(UartInstance)) ||
+	//	(LL_USART_IsActiveFlag_TC(UartInstance) &&
+	//	 LL_USART_IsEnabledIT_TC(UartInstance)));
 }
 
 static int uart_gd32_irq_update(struct device *dev)
