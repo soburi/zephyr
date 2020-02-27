@@ -61,7 +61,7 @@ static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 {
 //TODO	const struct uart_gd32_config *config = DEV_CFG(dev);
 //TODO	struct uart_gd32_data *data = DEV_DATA(dev);
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
 //TODO	u32_t clock_rate;
 
@@ -73,63 +73,63 @@ static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 //TODO		return;
 //TODO	}
 
-	usart_baudrate_set(base, baud_rate);
+	usart_baudrate_set(regs, baud_rate);
 }
 
 static inline void uart_gd32_set_parity(struct device *dev, u32_t parity)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-	usart_parity_config(base, uart_gd32_cfg2ll_parity(parity));
+	usart_parity_config(regs, uart_gd32_cfg2ll_parity(parity));
 }
 
 static inline u32_t uart_gd32_get_parity(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-	return uart_gd32_ll2cfg_parity( (USART_CTL0(base) & USART_CTL0_PM) >> 9);
+	return uart_gd32_ll2cfg_parity( (USART_CTL0(regs) & USART_CTL0_PM) >> 9);
 }
 
 static inline void uart_gd32_set_stopbits(struct device *dev, u32_t stopbits)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-	usart_stop_bit_set(base, stopbits);
+	usart_stop_bit_set(regs, stopbits);
 }
 
 static inline u32_t uart_gd32_get_stopbits(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-	return uart_gd32_ll2cfg_stopbits( (USART_CTL1(base) & USART_CTL1_STB) >> 12);
+	return uart_gd32_ll2cfg_stopbits( (USART_CTL1(regs) & USART_CTL1_STB) >> 12);
 }
 
 static inline void uart_gd32_set_databits(struct device *dev, u32_t databits)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-	usart_word_length_set(base, databits);
+	usart_word_length_set(regs, databits);
 }
 
 static inline u32_t uart_gd32_get_databits(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-	return uart_gd32_ll2cfg_databits( (USART_CTL0(base) & USART_CTL0_WL) >> 12);
+	return uart_gd32_ll2cfg_databits( (USART_CTL0(regs) & USART_CTL0_WL) >> 12);
 }
 
 static inline void uart_gd32_set_hwctrl(struct device *dev, u32_t hwctrl)
 {
-	u32_t base = DEV_REGS(dev);
-	usart_hardware_flow_rts_config(base, (hwctrl>>0 & 0x1));
-	usart_hardware_flow_cts_config(base, (hwctrl>>1 & 0x1));
+	u32_t regs = DEV_REGS(dev);
+	usart_hardware_flow_rts_config(regs, (hwctrl>>0 & 0x1));
+	usart_hardware_flow_cts_config(regs, (hwctrl>>1 & 0x1));
 }
 
 static inline u32_t uart_gd32_get_hwctrl(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-	return uart_gd32_ll2cfg_hwctrl( (USART_CTL0(base) & USART_CTL2_HWFC) >> 12);
+	return uart_gd32_ll2cfg_hwctrl( (USART_CTL0(regs) & USART_CTL2_HWFC) >> 12);
 }
 
 static inline u32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity)
@@ -356,18 +356,18 @@ static int uart_gd32_config_get(struct device *dev, struct uart_config *cfg)
 
 static int uart_gd32_poll_in(struct device *dev, unsigned char *c)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
 	/* Clear overrun error flag */
-	if (usart_flag_get(base, USART_FLAG_ORERR) ) {
-		usart_flag_clear(base, USART_FLAG_ORERR);
+	if (usart_flag_get(regs, USART_FLAG_ORERR) ) {
+		usart_flag_clear(regs, USART_FLAG_ORERR);
 	}
 
-	if (!usart_flag_get(base, USART_FLAG_RBNE) ) {
+	if (!usart_flag_get(regs, USART_FLAG_RBNE) ) {
 		return -1;
 	}
 
-	*c = (unsigned char)usart_data_receive(base);
+	*c = (unsigned char)usart_data_receive(regs);
 
 	return 0;
 }
@@ -375,54 +375,54 @@ static int uart_gd32_poll_in(struct device *dev, unsigned char *c)
 static void uart_gd32_poll_out(struct device *dev,
 					unsigned char c)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
 	/* Wait for TXE flag to be raised */
-	while (!usart_flag_get(base, USART_FLAG_TBE)) {
+	while (!usart_flag_get(regs, USART_FLAG_TBE)) {
 	}
 
-	usart_flag_clear(base, USART_FLAG_TC);
+	usart_flag_clear(regs, USART_FLAG_TC);
 
-	usart_data_transmit(base, (u8_t) c );
+	usart_data_transmit(regs, (u8_t) c );
 }
 
 static int uart_gd32_err_check(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 	u32_t err = 0U;
 
 	/* Check for errors, but don't clear them here.
 	 * Some SoC clear all error flags when at least
 	 * one is cleared. (e.g. F4X, F1X, and F2X)
 	 */
-	if (usart_flag_get(base, USART_FLAG_ORERR)) {
+	if (usart_flag_get(regs, USART_FLAG_ORERR)) {
 		err |= UART_ERROR_OVERRUN;
 	}
 
-	if (usart_flag_get(base, USART_FLAG_PERR)) {
+	if (usart_flag_get(regs, USART_FLAG_PERR)) {
 		err |= UART_ERROR_PARITY;
 	}
 
-	if (usart_flag_get(base, USART_FLAG_FERR)) {
+	if (usart_flag_get(regs, USART_FLAG_FERR)) {
 		err |= UART_ERROR_FRAMING;
 	}
 
 	if (err & UART_ERROR_OVERRUN) {
-		usart_flag_clear(base, USART_FLAG_ORERR);
+		usart_flag_clear(regs, USART_FLAG_ORERR);
 	}
 
 	if (err & UART_ERROR_PARITY) {
-		usart_flag_clear(base, USART_FLAG_PERR);
+		usart_flag_clear(regs, USART_FLAG_PERR);
 	}
 
 	if (err & UART_ERROR_FRAMING) {
-		usart_flag_clear(base, USART_FLAG_FERR);
+		usart_flag_clear(regs, USART_FLAG_FERR);
 	}
 
 	/* Clear noise error as well,
 	 * it is not represented by the errors enum
 	 */
-	usart_flag_clear(base, USART_FLAG_NERR);
+	usart_flag_clear(regs, USART_FLAG_NERR);
 
 	return err;
 }
@@ -483,14 +483,14 @@ static void uart_gd32_irq_tx_enable(struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
-	return usart_interrupt_enable(regs, USART_INT_TC);
+	usart_interrupt_enable(regs, USART_INT_TC);
 }
 
 static void uart_gd32_irq_tx_disable(struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
-	return usart_interrupt_disable(regs, USART_INT_TC);
+	usart_interrupt_disable(regs, USART_INT_TC);
 }
 
 static int uart_gd32_irq_tx_ready(struct device *dev)
@@ -511,14 +511,14 @@ static void uart_gd32_irq_rx_enable(struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
-	return usart_interrupt_enable(regs, USART_INT_RBNE);
+	usart_interrupt_enable(regs, USART_INT_RBNE);
 }
 
 static void uart_gd32_irq_rx_disable(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
-	return usart_interrupt_disable(base, USART_INT_RBNE);
+	usart_interrupt_disable(regs, USART_INT_RBNE);
 }
 
 static int uart_gd32_irq_rx_ready(struct device *dev)
@@ -530,40 +530,41 @@ static int uart_gd32_irq_rx_ready(struct device *dev)
 
 static void uart_gd32_irq_err_enable(struct device *dev)
 {
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
 	/* Enable FE, ORE interruptions */
-	//LL_USART_EnableIT_ERROR(UartInstance);
-#if !defined(CONFIG_SOC_SERIES_GD32F0X) || defined(USART_LIN_SUPPORT)
+	usart_interrupt_enable(regs, USART_INT_ERR);
 	/* Enable Line break detection */
-	//if (IS_UART_LIN_INSTANCE(UartInstance)) {
-	//	LL_USART_EnableIT_LBD(UartInstance);
-	//}
-#endif
+	usart_interrupt_enable(regs, USART_INT_LBD);
 	/* Enable parity error interruption */
-	//LL_USART_EnableIT_PE(UartInstance);
+	usart_interrupt_enable(regs, USART_INT_PERR);
 }
 
 static void uart_gd32_irq_err_disable(struct device *dev)
 {
+	u32_t regs = DEV_REGS(dev);
+
 	/* Disable FE, ORE interruptions */
-	//LL_USART_DisableIT_ERROR(UartInstance);
-#if !defined(CONFIG_SOC_SERIES_GD32F0X) || defined(USART_LIN_SUPPORT)
+	usart_interrupt_disable(regs, USART_INT_ERR);
 	/* Disable Line break detection */
-	//if (IS_UART_LIN_INSTANCE(UartInstance)) {
-	//	LL_USART_DisableIT_LBD(UartInstance);
-	//}
-#endif
+	usart_interrupt_disable(regs, USART_INT_LBD);
 	/* Disable parity error interruption */
-	//LL_USART_DisableIT_PE(UartInstance);
+	usart_interrupt_disable(regs, USART_INT_PERR);
+}
+
+static int usart_interrupt_flag_enabled(uint32_t usart_periph, uint32_t int_flag)
+{
+    return (USART_REG_VAL(usart_periph, int_flag) >> USART_BIT_POS(int_flag)) & 0x1;
 }
 
 static int uart_gd32_irq_is_pending(struct device *dev)
 {
-	//return ((LL_USART_IsActiveFlag_RXNE(UartInstance) &&
-	//	 LL_USART_IsEnabledIT_RXNE(UartInstance)) ||
-	//	(LL_USART_IsActiveFlag_TC(UartInstance) &&
-	//	 LL_USART_IsEnabledIT_TC(UartInstance)));
+	u32_t regs = DEV_REGS(dev);
+
+	return ((usart_interrupt_flag_enabled(regs, USART_INT_FLAG_RBNE) &&
+		 usart_interrupt_flag_get(regs, USART_INT_FLAG_RBNE)) ||
+		(usart_interrupt_flag_enabled(regs, USART_INT_FLAG_TC) &&
+		 usart_interrupt_flag_get(regs, USART_INT_FLAG_TC)));
 }
 
 static int uart_gd32_irq_update(struct device *dev)
@@ -631,7 +632,7 @@ static int uart_gd32_init(struct device *dev)
 {
 	const struct uart_gd32_config *config = DEV_CFG(dev);
 	struct uart_gd32_data *data = DEV_DATA(dev);
-	u32_t base = DEV_REGS(dev);
+	u32_t regs = DEV_REGS(dev);
 
 //TODO	__uart_gd32_get_clock(dev);
 	/* enable clock */
@@ -651,16 +652,16 @@ static int uart_gd32_init(struct device *dev)
 
 
 
-	usart_deinit(base);
+	usart_deinit(regs);
 
 	/* TX/RX direction */
-	usart_transmit_config(base, USART_TRANSMIT_ENABLE);
-	usart_receive_config(base, USART_RECEIVE_ENABLE);
+	usart_transmit_config(regs, USART_TRANSMIT_ENABLE);
+	usart_receive_config(regs, USART_RECEIVE_ENABLE);
 
 	/* 8 data bit, 1 start bit, 1 stop bit, no parity */
-	uart_gd32_set_databits(base, USART_WL_8BIT);
-	uart_gd32_set_stopbits(base, USART_STB_1BIT);
-	uart_gd32_set_parity(base, USART_PM_NONE);
+	uart_gd32_set_databits(dev, USART_WL_8BIT);
+	uart_gd32_set_stopbits(dev, USART_STB_1BIT);
+	uart_gd32_set_parity(dev, USART_PM_NONE);
 
 	if (config->hw_flow_control) {
 		uart_gd32_set_hwctrl(dev, USART_HWFC_RTSCTS);
@@ -669,7 +670,7 @@ static int uart_gd32_init(struct device *dev)
 	/* Set the default baudrate */
 	uart_gd32_set_baudrate(dev, data->baud_rate);
 
-	usart_enable(base);
+	usart_enable(regs);
 
 #ifdef USART_ISR_TEACK
 	/* Wait until TEACK flag is set */
