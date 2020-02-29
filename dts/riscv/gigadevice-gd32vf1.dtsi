@@ -109,7 +109,7 @@
 			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
 			reg = <0x40013800 0x400>;
 			clocks = <&rcu GD32_CLOCK_BUS_APB2 0x00004000>;
-			interrupts = <37 0>;
+			interrupts = <56 0>;
 			interrupt-parent = <&eclic>;
 			status = "disabled";
 			label = "UART_0";
@@ -119,7 +119,7 @@
 			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
 			reg = <0x40004400 0x400>;
 			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00020000>;
-			interrupts = <38 0>;
+			interrupts = <57 0>;
 			interrupt-parent = <&eclic>;
 			status = "disabled";
 			label = "UART_1";
@@ -129,7 +129,7 @@
 			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
 			reg = <0x40004800 0x400>;
 			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00020000>;
-			interrupts = <38 0>;
+			interrupts = <58 0>;
 			interrupt-parent = <&eclic>;
 			status = "disabled";
 			label = "UART_2";
@@ -139,7 +139,7 @@
 			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
 			reg = <0x40004c00 0x400>;
 			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00020000>;
-			interrupts = <38 0>;
+			interrupts = <71 0>;
 			interrupt-parent = <&eclic>;
 			status = "disabled";
 			label = "UART_3";
@@ -149,7 +149,7 @@
 			compatible = "gigadevice,gd32-usart", "gigadevice,gd32-uart";
 			reg = <0x40005000 0x400>;
 			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00040000>;
-			interrupts = <39 0>;
+			interrupts = <72 0>;
 			interrupt-parent = <&eclic>;
 			status = "disabled";
 			label = "UART_4";
