@@ -40,7 +40,7 @@ MEMORY
     IDT_LIST  (wx)      : ORIGIN = 0xFFFFF7FF, LENGTH = 2K
 }
 
-ENTRY(CONFIG_KERNEL_ENTRY)
+ENTRY(__kernel_entry_wrapper)
 
 SECTIONS
     {
@@ -67,7 +67,6 @@ SECTIONS
     SECTION_PROLOGUE(_VECTOR_SECTION_NAME,,)
     {
 		. = ALIGN(4);
-		KEEP(*(.vectors.__kernel_entry_wrapper))
 		KEEP(*(.vectors.*))
     } GROUP_LINK_IN(ROMABLE_REGION)
 
