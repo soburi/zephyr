@@ -12,8 +12,6 @@
  *        Please validate for newly added series.
  */
 
-#include "gd32vf103.h"
-
 #include <kernel.h>
 #include <arch/cpu.h>
 #include <sys/__assert.h>
@@ -21,6 +19,9 @@
 #include <init.h>
 #include <drivers/uart.h>
 #include <drivers/clock_control.h>
+
+#include "gd32vf103_usart.h"
+#include "gd32vf103_gpio.h"
 
 #include <linker/sections.h>
 //#include <clock_control/gd32_clock_control.h>
