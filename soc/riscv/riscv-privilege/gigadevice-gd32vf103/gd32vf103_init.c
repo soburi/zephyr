@@ -15,6 +15,10 @@ static int _init(struct device* dev)
 	eclic_init(ECLIC_NUM_INTERRUPTS);
 	eclic_mode_enable();
 
+
+    eclic_global_interrupt_enable();
+
+
 	//printf("After ECLIC mode enabled, the mtvec value is %x \n\n\r", read_csr(mtvec));
 
 	// // It must be NOTED:
