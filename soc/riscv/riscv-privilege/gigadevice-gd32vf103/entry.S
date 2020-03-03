@@ -3,6 +3,9 @@
 #include <toolchain.h>
 #include "riscv_encoding.h"
 
+SECTION_FUNC(vectors, xxxx)
+    tail __irq_wrapper
+
     .weak  eclic_msip_handler
     .weak  eclic_mtip_handler
     .weak  eclic_bwei_handler
@@ -164,20 +167,20 @@ GTEXT(__irq_wrapper)
 
 SECTION_FUNC(vectors, __kernel_entry_wrapper)
 	.option norvc;
-	csrc CSR_MSTATUS, MSTATUS_MIE
+	//csrc CSR_MSTATUS, MSTATUS_MIE
 
     /* Set the the NMI base to share with mtvec by setting CSR_MMISC_CTL */
-    li t0, 0x200
-    csrs CSR_MMISC_CTL, t0
+    //li t0, 0x200
+    //csrs CSR_MMISC_CTL, t0
 
 	/* Intial the mtvt*/
     la t0, vector_base
     csrw CSR_MTVT, t0
 
 	/* Intial the mtvt2 and enable it*/
-//    la t0, __irq_wrapper
-//    csrw CSR_MTVT2, t0
-//    csrs CSR_MTVT2, 0x1
+    la t0, xxxx
+    csrw CSR_MTVT2, t0
+    csrs CSR_MTVT2, 0x1
 
 
 	/* Jump to logical address first to ensure correct operation of RAM region  */

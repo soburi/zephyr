@@ -12,8 +12,8 @@ static int _init(struct device* dev)
 	SystemInit();
 
 	//ECLIC init
-	//eclic_init(ECLIC_NUM_INTERRUPTS);
-	//eclic_mode_enable();
+	eclic_init(ECLIC_NUM_INTERRUPTS);
+	eclic_mode_enable();
 
 	//printf("After ECLIC mode enabled, the mtvec value is %x \n\n\r", read_csr(mtvec));
 
