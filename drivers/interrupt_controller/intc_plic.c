@@ -23,6 +23,11 @@
 #define PLIC_PRIO	DT_INST_REG_ADDR_BY_NAME(0, prio)
 #define PLIC_IRQ_EN	DT_INST_REG_ADDR_BY_NAME(0, irq_en)
 #define PLIC_REG	DT_INST_REG_ADDR_BY_NAME(0, reg)
+void riscv_plic_irq_enable(u32_t irq);
+void riscv_plic_irq_disable(u32_t irq);
+int riscv_plic_irq_is_enabled(u32_t irq);
+void riscv_plic_set_priority(u32_t irq, u32_t priority);
+int riscv_plic_get_irq(void);
 
 #define PLIC_IRQS        (CONFIG_NUM_IRQS - CONFIG_2ND_LVL_ISR_TBL_OFFSET)
 #define PLIC_EN_SIZE     ((PLIC_IRQS >> 5) + 1)
@@ -217,3 +222,70 @@ static int plic_init(const struct device *dev)
 }
 
 SYS_INIT(plic_init, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
+
+/**
+ * @brief Get an IRQ's level
+ * @param irq The IRQ number in the Zephyr irq.h numbering system
+ * @return IRQ level, either 1 or 2
+ */
+static inline unsigned int _irq_level(unsigned int irq)
+{
+	return ((irq >> 8) & 0xff) == 0U ? 1 : 2;
+}
+
+static inline unsigned int _level2_irq(unsigned int irq)
+{
+	return (irq >> 8) - 1;
+}
+
+void arch_irq_enable(unsigned int irq)
+{
+	unsigned int level = _irq_level(irq);
+
+	if (level == 2) {
+		irq = _level2_irq(irq);
+		riscv_plic_irq_enable(irq);
+		return;
+	}
+
+	riscv_irq_enable(irq);
+}
+
+void arch_irq_disable(unsigned int irq)
+{
+	unsigned int level = _irq_level(irq);
+
+	if (level == 2) {
+		irq = _level2_irq(irq);
+		riscv_plic_irq_disable(irq);
+		return;
+	}
+
+	riscv_irq_disable(irq);
+};
+
+void arch_irq_priority_set(unsigned int irq, unsigned int prio)
+{
+	unsigned int level = _irq_level(irq);
+
+	if (level == 2) {
+		irq = _level2_irq(irq);
+		riscv_plic_set_priority(irq, prio);
+	}
+
+	riscv_irq_priority_set(irq, prio);
+
+	return ;
+}
+
+int arch_irq_is_enabled(unsigned int irq)
+{
+	unsigned int level = _irq_level(irq);
+
+	if (level == 2) {
+		irq = _level2_irq(irq);
+		return riscv_plic_irq_is_enabled(irq);
+	}
+
+	return arch_irq_is_enabled(irq);
+}
