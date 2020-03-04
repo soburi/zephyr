@@ -40,6 +40,11 @@
 
 #ifndef _ASMLANGUAGE
 
+void riscv_irq_enable(unsigned int irq);
+void riscv_irq_disable(unsigned int irq);
+void riscv_irq_priority_set(unsigned int irq, unsigned int prio);
+int riscv_irq_is_enabled(unsigned int irq);
+
 #if defined(CONFIG_RISCV_SOC_INTERRUPT_INIT)
 void soc_interrupt_init(void);
 #endif
@@ -50,6 +55,12 @@ void riscv_plic_irq_disable(uint32_t irq);
 int riscv_plic_irq_is_enabled(uint32_t irq);
 void riscv_plic_set_priority(uint32_t irq, uint32_t priority);
 int riscv_plic_get_irq(void);
+#define ARCH_IRQ_CONNECT(irq_p, priority_p, isr_p, isr_param_p, flags_p) \
+({ \
+	Z_ISR_DECLARE(irq_p, 0, isr_p, isr_param_p); \
+	arch_irq_priority_set(irq_p, priority_p); \
+	irq_p; \
+})
 #endif
 
 #endif /* !_ASMLANGUAGE */

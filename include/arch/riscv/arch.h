@@ -297,10 +297,12 @@ void z_irq_spurious(const void *unused);
 	arch_irq_priority_set(irq_p, priority_p); \
 }
 #else
+#if !defined(ARCH_IRQ_CONNECT)
 #define ARCH_IRQ_CONNECT(irq_p, priority_p, isr_p, isr_param_p, flags_p) \
 { \
 	Z_ISR_DECLARE(irq_p, 0, isr_p, isr_param_p); \
 }
+#endif
 #endif
 
 /*
