@@ -89,7 +89,7 @@ int riscv_irq_is_enabled(unsigned int irq)
 	return !!(mie & (1 << irq));
 }
 
-#if !defined(CONFIG_RISCV_HAS_PLIC)
+#if !defined(CONFIG_RISCV_HAS_INTERRUPT_CONTROLLER)
 
 void arch_irq_enable(unsigned int irq)
 {

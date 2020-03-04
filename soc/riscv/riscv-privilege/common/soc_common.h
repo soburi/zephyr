@@ -40,6 +40,11 @@
 
 #ifndef _ASMLANGUAGE
 
+void riscv_irq_enable(unsigned int irq);
+void riscv_irq_disable(unsigned int irq);
+void riscv_irq_priority_set(unsigned int irq, unsigned int prio);
+int riscv_irq_is_enabled(unsigned int irq);
+
 #if defined(CONFIG_RISCV_SOC_INTERRUPT_INIT)
 void soc_interrupt_init(void);
 #endif
