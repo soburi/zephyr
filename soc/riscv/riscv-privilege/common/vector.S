@@ -8,7 +8,7 @@
 #include <toolchain.h>
 
 /* exports */
-GTEXT(__start)
+WTEXT(__start)
 
 /* imports */
 GTEXT(__initialize)
