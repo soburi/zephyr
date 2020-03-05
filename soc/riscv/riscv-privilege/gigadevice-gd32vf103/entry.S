@@ -3,9 +3,6 @@
 #include <toolchain.h>
 #include "riscv_encoding.h"
 
-SECTION_FUNC(vectors, xxxx)
-    tail __irq_wrapper
-
     .weak  eclic_msip_handler
     .weak  eclic_mtip_handler
     .weak  eclic_bwei_handler
@@ -71,8 +68,8 @@ SECTION_FUNC(vectors, xxxx)
     .weak  CAN1_EWMC_IRQHandler
     .weak  USBFS_IRQHandler
 
-SECTION_FUNC(vectors, vector_base)
-    j __kernel_entry_wrapper
+vector_base:
+    j __start
     .align    2
     .word     0
     .word     0
@@ -161,13 +158,21 @@ SECTION_FUNC(vectors, vector_base)
 	.word     CAN1_EWMC_IRQHandler
 	.word     USBFS_IRQHandler
 
-/* exports */
-GTEXT(__kernel_entry_wrapper)
-GTEXT(__irq_wrapper)
+GTEXT(__start)
+SECTION_FUNC(vectors, __start)
+	csrc CSR_MSTATUS, MSTATUS_MIE
+	/* Jump to logical address first to ensure correct operation of RAM region  */
+    la		a0,	__start
+    li		a1,	1
+	slli	a1,	a1, 29
+    bleu	a1, a0, _start0800
+    srli	a1,	a1, 2
+    bleu	a1, a0, _start0800
+    la		a0,	_start0800
+    add		a0, a0, a1
+	jr      a0
 
-SECTION_FUNC(vectors, __kernel_entry_wrapper)
-	.option norvc;
-	//csrc CSR_MSTATUS, MSTATUS_MIE
+_start0800:
 
     /* Set the the NMI base to share with mtvec by setting CSR_MMISC_CTL */
     //li t0, 0x200
@@ -178,18 +183,27 @@ SECTION_FUNC(vectors, __kernel_entry_wrapper)
     csrw CSR_MTVT, t0
 
 	/* Intial the mtvt2 and enable it*/
-    la t0, xxxx
+    la t0, __irq_wrapper
     csrw CSR_MTVT2, t0
     csrs CSR_MTVT2, 0x1
 
+    /* Intial the CSR MTVEC for the Trap ane NMI base addr*/
+    la t0, trap_entry
+    csrw CSR_MTVEC, t0
 
-	/* Jump to logical address first to ensure correct operation of RAM region  */
-    la		a0,	__start
-    li		a1,	1
-	slli	a1,	a1, 29
-    bleu	a1, a0, CONFIG_KERNEL_ENTRY
-    srli	a1,	a1, 2
-    bleu	a1, a0, CONFIG_KERNEL_ENTRY
-    la		a0,	CONFIG_KERNEL_ENTRY
-    add		a0, a0, a1
-	jr      a0
+#ifdef __riscv_flen
+	/* Enable FPU */
+	li t0, MSTATUS_FS
+	csrs mstatus, t0
+	csrw fcsr, x0
+#endif
+
+	tail __initialize
+	//tail exit
+
+1:
+	j 1b
+	
+.align 6
+trap_entry:
+	tail __irq_wrapper
