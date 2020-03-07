@@ -214,10 +214,10 @@
 #define GD32_CNF_OUT_MASK 0x3
 #define GD32_CNF_OUT_SHIFT 2
 
-#define GD32_CNF_AF_PP  0
-#define GD32_CNF_AF_OD  1
-#define GD32_CNF_OUT_PP 2
-#define GD32_CNF_OUT_OD 3
+#define GD32_CNF_OUT_PP (0x0 << GD32_CNF_OUT_SHIFT)
+#define GD32_CNF_OUT_OD (0x1 << GD32_CNF_OUT_SHIFT)
+#define GD32_CNF_AF_PP  (0x2 << GD32_CNF_OUT_SHIFT)
+#define GD32_CNF_AF_OD  (0x3 << GD32_CNF_OUT_SHIFT)
 
 /**
  * @brief configuration of GPIO device

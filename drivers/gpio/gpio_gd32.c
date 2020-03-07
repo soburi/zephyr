@@ -271,7 +271,7 @@ static int gpio_gd32_config(struct device *dev, int access_op,
 {
 	const struct gpio_gd32_config *cfg = dev->config->config_info;
 	int err = 0;
-	int pincfg;
+	int pincfg = 0;
 	int map_res;
 
 	if (access_op != GPIO_ACCESS_BY_PIN) {
