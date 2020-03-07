@@ -16,14 +16,33 @@
 
 	leds {
 		compatible = "gpio-leds";
-		led: led {
-			gpios = <&gpioc 13 GPIO_INT_ACTIVE_HIGH>;
-			label = "LD";
+		led_red: led_red {
+			gpios = <&gpioc 13 GPIO_INT_ACTIVE_LOW>;
+			label = "LED_R";
+		};
+		led_green: led_green {
+			gpios = <&gpioa 1 GPIO_INT_ACTIVE_LOW>;
+			label = "LED_G";
+		};
+		led_blue: led_blue {
+			gpios = <&gpioa 2 GPIO_INT_ACTIVE_LOW>;
+			label = "LED_B";
+		};
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		button: button {
+			gpios = <&gpioa 8 GPIO_INT_ACTIVE_HIGH>;
+			label = "BUTTON";
 		};
 	};
 
 	aliases {
-		led0 = &led;
+		led0 = &led_red;
+		led1 = &led_green;
+		led2 = &led_blue;
+		sw0 = &button;
 	};
 };
 
