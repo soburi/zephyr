@@ -4,23 +4,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "gd32vf103_gpio.h"
-
 #include <errno.h>
 
 #include <kernel.h>
 #include <device.h>
 #include <soc.h>
 #include <drivers/gpio.h>
-#include <drivers/clock_control.h>
-#include <drivers/clock_control/gd32_clock_control.h>
+#include <clock_control/gd32_clock_control.h>
 //#include <pinmux/gd32/pinmux_gd32.h>
 #include <drivers/pinmux.h>
 #include <sys/util.h>
-//#include <interrupt_controller/exti_gd32.h>
+#include <interrupt_controller/exti_gd32.h>
 
 #include "gpio_gd32.h"
 #include "gpio_utils.h"
+
+#include "gd32vf103_gpio.h"
+
+#define AFIO_EXTI_PORT_MASK	((uint8_t)0x70)
+#define AFIO_EXTI_SOURCE_FIELDS            ((uint8_t)0x04U)         /*!< select AFIO exti source registers */
 
 /**
  * @brief Common GPIO driver for GD32 MCUs.
@@ -76,24 +78,17 @@ static inline u32_t gd32_pinval_get(int pin)
 {
 	u32_t pinval;
 
-#ifdef CONFIG_SOC_SERIES_GD32F1X
-	pinval = (1 << pin) << GPIO_PIN_MASK_POS;
-	if (pin < 8) {
-		pinval |= 1 << pin;
-	} else {
-		pinval |= (1 << (pin % 8)) | 0x04000000;
-	}
-#else
 	pinval = 1 << pin;
-#endif
 	return pinval;
 }
 
 /**
  * @brief Configure the hardware.
  */
-int gpio_gd32_configure(u32_t port, int pin, int conf, int altf)
+int gpio_gd32_configure(u32_t *base_addr, int pin, int conf, int altf)
 {
+	uint32_t gpio = (uint32_t)base_addr;
+
 	int pin_ll = gd32_pinval_get(pin);
 
 	ARG_UNUSED(altf);
@@ -104,16 +99,16 @@ int gpio_gd32_configure(u32_t port, int pin, int conf, int altf)
 		temp = conf & (GD32_CNF_IN_MASK << GD32_CNF_IN_SHIFT);
 
 		if (temp == GD32_CNF_IN_ANALOG) {
-			gpio_init(port, GPIO_MODE_AIN, 0, pin_ll);
+			gpio_init(gpio, GPIO_MODE_AIN, 0, pin_ll);
 		} else if (temp == GD32_CNF_IN_FLOAT) {
-			gpio_init(port, GPIO_MODE_IN_FLOATING, 0, pin_ll);
+			gpio_init(gpio, GPIO_MODE_IN_FLOATING, 0, pin_ll);
 		} else {
 			temp = conf & (GD32_PUPD_MASK << GD32_PUPD_SHIFT);
 
 			if (temp == GD32_PUPD_PULL_UP) {
-				gpio_init(port, GPIO_MODE_IPU, 0, pin_ll);
+				gpio_init(gpio, GPIO_MODE_IPU, 0, pin_ll);
 			} else {
-				gpio_init(port, GPIO_MODE_IPD, 0, pin_ll);
+				gpio_init(gpio, GPIO_MODE_IPD, 0, pin_ll);
 			}
 		}
 
@@ -132,86 +127,37 @@ int gpio_gd32_configure(u32_t port, int pin, int conf, int altf)
 		temp = conf & (GD32_CNF_OUT_MASK << GD32_CNF_OUT_SHIFT);
 
 		if (temp == GD32_CNF_AF_PP) {
-			gpio_init(port, GPIO_MODE_AF_PP, max_hz, pin_ll);
+			gpio_init((uint32_t)base_addr, GPIO_MODE_AF_PP, max_hz, pin_ll);
 		} else if (temp == GD32_CNF_AF_OD) {
-			gpio_init(port, GPIO_MODE_AF_OD, max_hz, pin_ll);
+			gpio_init((uint32_t)base_addr, GPIO_MODE_AF_OD, max_hz, pin_ll);
 		} else if (temp == GD32_CNF_OUT_PP) {
-			gpio_init(port, GPIO_MODE_OUT_PP, max_hz, pin_ll);
+			gpio_init((uint32_t)base_addr, GPIO_MODE_OUT_PP, max_hz, pin_ll);
 		} else {
-			gpio_init(port, GPIO_MODE_OUT_OD, max_hz, pin_ll);
+			gpio_init((uint32_t)base_addr, GPIO_MODE_OUT_OD, max_hz, pin_ll);
 		}
-
-
 	}
 
 	return 0;
 }
 
-static inline uint32_t gpio_gd32_pin_to_exti_line(int pin)
-{
-#if defined(CONFIG_SOC_SERIES_GD32L0X) || \
-	defined(CONFIG_SOC_SERIES_GD32F0X)
-	return ((pin % 4 * 4) << 16) | (pin / 4);
-#elif defined(CONFIG_SOC_SERIES_GD32MP1X)
-	return (((pin * 8) % 32) << 16) | (pin / 4);
-#elif defined(CONFIG_SOC_SERIES_GD32G0X)
-	return ((pin & 0x3) << (16 + 3)) | (pin >> 2);
-#else
-	return (0xF << ((pin % 4 * 4) + 16)) | (pin / 4);
-#endif
-}
-
 static void gpio_gd32_set_exti_source(int port, int pin)
 {
-	//TODO uint32_t line = gpio_gd32_pin_to_exti_line(pin);
-
-#if defined(CONFIG_SOC_SERIES_GD32L0X) && defined(LL_SYSCFG_EXTI_PORTH)
-	/*
-	 * Ports F and G are not present on some GD32L0 parts, so
-	 * for these parts port H external interrupt should be enabled
-	 * by writing value 0x5 instead of 0x7.
-	 */
-	if (port == GD32_PORTH) {
-		port = LL_SYSCFG_EXTI_PORTH;
-	}
-#endif
-
-#ifdef CONFIG_SOC_SERIES_GD32F1X
-	LL_GPIO_AF_SetEXTISource(port, line);
-#elif CONFIG_SOC_SERIES_GD32MP1X
-	LL_EXTI_SetEXTISource(port, line);
-#elif defined(CONFIG_SOC_SERIES_GD32G0X)
-	LL_EXTI_SetEXTISource(port, line);
-#else
-	//TODO LL_SYSCFG_SetEXTISource(port, line);
-#endif
+	gpio_exti_source_select(port, pin);
 }
 
 static int gpio_gd32_get_exti_source(int pin)
 {
-	//TODO uint32_t line = gpio_gd32_pin_to_exti_line(pin);
 	int port;
 
-#ifdef CONFIG_SOC_SERIES_GD32F1X
-	port = LL_GPIO_AF_GetEXTISource(line);
-#elif CONFIG_SOC_SERIES_GD32MP1X
-	port = LL_EXTI_GetEXTISource(line);
-#elif defined(CONFIG_SOC_SERIES_GD32G0X)
-	port = LL_EXTI_GetEXTISource(line);
-#else
-	//TODO port = LL_SYSCFG_GetEXTISource(line);
-#endif
-
-#if defined(CONFIG_SOC_SERIES_GD32L0X) && defined(LL_SYSCFG_EXTI_PORTH)
-	/*
-	 * Ports F and G are not present on some GD32L0 parts, so
-	 * for these parts port H external interrupt is enabled
-	 * by writing value 0x5 instead of 0x7.
-	 */
-	if (port == LL_SYSCFG_EXTI_PORTH) {
-		port = GD32_PORTH;
+	if (GPIO_PIN_SOURCE_4 > pin) {
+		port = ((AFIO_EXTISS0 & AFIO_EXTI_PORT_MASK) >> AFIO_EXTI_SOURCE_FIELDS);
+	} else if (GPIO_PIN_SOURCE_8 > pin) {
+		port = ((AFIO_EXTISS1 & AFIO_EXTI_PORT_MASK) >> AFIO_EXTI_SOURCE_FIELDS);
+	} else if (GPIO_PIN_SOURCE_12 > pin) {
+		port = ((AFIO_EXTISS2 & AFIO_EXTI_PORT_MASK) >> AFIO_EXTI_SOURCE_FIELDS);
+	} else {
+		port = ((AFIO_EXTISS3 & AFIO_EXTI_PORT_MASK) >> AFIO_EXTI_SOURCE_FIELDS);
 	}
-#endif
 
 	return port;
 }
@@ -221,28 +167,6 @@ static int gpio_gd32_get_exti_source(int pin)
  */
 static int gpio_gd32_enable_int(int port, int pin)
 {
-#if defined(CONFIG_SOC_SERIES_GD32F2X) ||     \
-	defined(CONFIG_SOC_SERIES_GD32F3X) || \
-	defined(CONFIG_SOC_SERIES_GD32F4X) || \
-	defined(CONFIG_SOC_SERIES_GD32F7X) || \
-	defined(CONFIG_SOC_SERIES_GD32H7X) || \
-	defined(CONFIG_SOC_SERIES_GD32L1X) || \
-	defined(CONFIG_SOC_SERIES_GD32L4X) || \
-	defined(CONFIG_SOC_SERIES_GD32G4X)
-	struct device *clk = device_get_binding(GD32_CLOCK_CONTROL_NAME);
-	struct gd32_pclken pclken = {
-#ifdef CONFIG_SOC_SERIES_GD32H7X
-		.bus = GD32_CLOCK_BUS_APB4,
-		.enr = LL_APB4_GRP1_PERIPH_SYSCFG
-#else
-		.bus = GD32_CLOCK_BUS_APB2,
-		.enr = LL_APB2_GRP1_PERIPH_SYSCFG
-#endif /* CONFIG_SOC_SERIES_GD32H7X */
-	};
-	/* Enable SYSCFG clock */
-	clock_control_on(clk, (clock_control_subsys_t *) &pclken);
-#endif
-
 	if (pin > 15) {
 		return -EINVAL;
 	}
@@ -293,7 +217,7 @@ static int gpio_gd32_config(struct device *dev, int access_op,
 		goto release_lock;
 	}
 
-	if (gpio_gd32_configure(cfg->port, pin, pincfg, 0) != 0) {
+	if (gpio_gd32_configure(cfg->base, pin, pincfg, 0) != 0) {
 		err = -EIO;
 		goto release_lock;
 	}
@@ -303,7 +227,6 @@ static int gpio_gd32_config(struct device *dev, int access_op,
 	}
 
 	if (flags & GPIO_INT) {
-#if 0
 		if (gd32_exti_set_callback(pin, cfg->port,
 					    gpio_gd32_isr, dev) != 0) {
 			err = -EBUSY;
@@ -335,11 +258,10 @@ static int gpio_gd32_config(struct device *dev, int access_op,
 			err = -EIO;
 			goto release_lock;
 		}
-#endif
 	} else {
 		if (gpio_gd32_int_enabled_port(pin) == cfg->port) {
-//			gd32_exti_disable(pin);
-//			gd32_exti_unset_callback(pin);
+			gd32_exti_disable(pin);
+			gd32_exti_unset_callback(pin);
 		}
 	}
 
@@ -355,6 +277,7 @@ static int gpio_gd32_write(struct device *dev, int access_op,
 			    u32_t pin, u32_t value)
 {
 	const struct gpio_gd32_config *cfg = dev->config->config_info;
+	uint32_t gpio = (uint32_t)cfg->base;
 
 	if (access_op != GPIO_ACCESS_BY_PIN) {
 		return -ENOTSUP;
@@ -362,9 +285,9 @@ static int gpio_gd32_write(struct device *dev, int access_op,
 
 	pin = gd32_pinval_get(pin);
 	if (value != 0U) {
-		gpio_bit_set(cfg->port, pin);
+		gpio_bit_set(gpio, pin);
 	} else {
-		gpio_bit_reset(cfg->port, pin);
+		gpio_bit_reset(gpio, pin);
 	}
 
 	return 0;
@@ -377,12 +300,13 @@ static int gpio_gd32_read(struct device *dev, int access_op,
 			   u32_t pin, u32_t *value)
 {
 	const struct gpio_gd32_config *cfg = dev->config->config_info;
+	uint32_t gpio = (uint32_t)cfg->base;
 
 	if (access_op != GPIO_ACCESS_BY_PIN) {
 		return -ENOTSUP;
 	}
 
-	*value = (gpio_input_port_get(cfg->port) >> pin) & 0x1;
+	*value = (gpio_input_port_get(gpio) >> pin) & 0x1;
 
 	return 0;
 }
@@ -447,16 +371,35 @@ static const struct gpio_driver_api gpio_gd32_driver = {
 static int gpio_gd32_init(struct device *device)
 {
 	const struct gpio_gd32_config *cfg = device->config->config_info;
-	struct device *clk = device_get_binding(GD32_CLOCK_CONTROL_NAME);
-	clock_control_on(clk, (clock_control_subsys_t *) &cfg->pclken);
+
+	/* enable clock for subsystem */
+	struct device *clk =
+		device_get_binding(GD32_CLOCK_CONTROL_NAME);
+
+	if (clock_control_on(clk,
+			     (clock_control_subsys_t *)&cfg->pclken) != 0) {
+		return -EIO;
+	}
 
 	return 0;
 }
 
+#define GD32_PORTA 'A'
+#define GD32_PORTB 'B'
+#define GD32_PORTC 'C'
+#define GD32_PORTD 'D'
+#define GD32_PORTE 'E'
+#define GD32_PORTF 'F'
+#define GD32_PORTG 'G'
+#define GD32_PORTH 'H'
+#define GD32_PORTI 'I'
+#define GD32_PORTJ 'J'
+#define GD32_PORTK 'K'
+
 #define GPIO_DEVICE_INIT(__name, __suffix, __base_addr, __port, __cenr, __bus) \
 	static const struct gpio_gd32_config gpio_gd32_cfg_## __suffix = {   \
 		.base = (u32_t *)__base_addr,				       \
-		.port = __port,						       \
+		.port = __port - 'A',					       \
 		.pclken = {                                                    \
 			.enr = __cenr,                                         \
 			.bus = __bus,                                          \
@@ -476,7 +419,7 @@ static int gpio_gd32_init(struct device *device)
 	GPIO_DEVICE_INIT(DT_GPIO_GD32_GPIO##__SUFFIX##_LABEL,	      \
 			 __suffix,				      \
 			 DT_GPIO_GD32_GPIO##__SUFFIX##_BASE_ADDRESS, \
-			 GPIO##__SUFFIX,			     \
+			 GD32_PORT##__SUFFIX,			      \
 			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BITS,   \
 			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BUS)
 
@@ -500,7 +443,6 @@ GPIO_DEVICE_INIT_GD32(d, D);
 GPIO_DEVICE_INIT_GD32(e, E);
 #endif /* CONFIG_GPIO_GD32_PORTE */
 
-#if 0
 #ifdef CONFIG_GPIO_GD32_PORTF
 GPIO_DEVICE_INIT_GD32(f, F);
 #endif /* CONFIG_GPIO_GD32_PORTF */
@@ -524,32 +466,20 @@ GPIO_DEVICE_INIT_GD32(j, J);
 #ifdef CONFIG_GPIO_GD32_PORTK
 GPIO_DEVICE_INIT_GD32(k, K);
 #endif /* CONFIG_GPIO_GD32_PORTK */
-#endif
-
-#if defined(CONFIG_SOC_SERIES_GD32F1X)
 
 static int gpio_gd32_afio_init(struct device *device)
 {
-	UNUSED(device);
+	//UNUSED(device);
 
-	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_AFIO);
+	struct device *clk = device_get_binding(GD32_CLOCK_CONTROL_NAME);
+	struct gd32_pclken pclken = {
+		.bus = GD32_CLOCK_BUS_APB2,
+		.enr = 0x0,
+	};
 
-#if defined(CONFIG_GPIO_GD32_SWJ_NONJTRST)
-	/* released PB4 */
-	__HAL_AFIO_REMAP_SWJ_NONJTRST();
-#elif defined(CONFIG_GPIO_GD32_SWJ_NOJTAG)
-	/* released PB4 PB3 PA15 */
-	__HAL_AFIO_REMAP_SWJ_NOJTAG();
-#elif defined(CONFIG_GPIO_GD32_SWJ_DISABLE)
-	/* released PB4 PB3 PA13 PA14 PA15 */
-	__HAL_AFIO_REMAP_SWJ_DISABLE();
-#endif
-
-	LL_APB2_GRP1_DisableClock(LL_APB2_GRP1_PERIPH_AFIO);
+	clock_control_on(clk, (clock_control_subsys_t *) &pclken);
 
 	return 0;
 }
 
 DEVICE_INIT(gpio_gd32_afio, "", gpio_gd32_afio_init, NULL, NULL, PRE_KERNEL_2, 0);
-
-#endif /* CONFIG_SOC_SERIES_GD32F1X */

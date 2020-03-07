@@ -227,7 +227,6 @@ struct gpio_gd32_config {
 	u32_t *base;
 	/* IO port */
 	int port;
-	int rcu;
 	struct gd32_pclken pclken;
 };
 
@@ -249,6 +248,6 @@ struct gpio_gd32_data {
  * @param func GPIO mode
  * @param altf Alternate function
  */
-int gpio_gd32_configure(u32_t port, int pin, int conf, int altf);
+int gpio_gd32_configure(u32_t *base_addr, int pin, int conf, int altf);
 
 #endif /* ZEPHYR_DRIVERS_GPIO_GPIO_GD32_H_ */
