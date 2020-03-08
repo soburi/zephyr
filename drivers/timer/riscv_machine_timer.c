@@ -8,6 +8,12 @@
 #include <spinlock.h>
 #include <soc.h>
 
+#if CONFIG_RISCV_MACHINE_TIMER_USE_CUSTOM_CLOCK
+#define MACHINE_TIMER_CLOCK CONFIG_RISCV_MACHINE_TIMER_CLOCK_FREQUENCY
+#else
+#define MACHINE_TIMER_CLOCK sys_clock_hw_cycles_per_sec()
+#endif
+
 #define CYC_PER_TICK ((uint32_t)((uint64_t)sys_clock_hw_cycles_per_sec()	\
 			      / (uint64_t)CONFIG_SYS_CLOCK_TICKS_PER_SEC))
 #define MAX_CYC 0xffffffffu
