@@ -51,7 +51,9 @@ static int gd32_rcu_off(struct device *dev, clock_control_subsys_t sub_system)
 static int gd32_rcu_init(struct device *dev)
 {
 	///rcu_deinit();
-
+#ifdef CONFIG_UART_0
+	rcu_periph_clock_enable(RCU_GPIOA);
+#endif
 	return 0;
 }
 
