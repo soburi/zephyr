@@ -12,11 +12,13 @@
 #ifndef ZEPHYR_DRIVERS_SERIAL_UART_GD32_H_
 #define ZEPHYR_DRIVERS_SERIAL_UART_GD32_H_
 
+#include <clock_control/gd32_clock_control.h>
+
 /* device config */
 struct uart_gd32_config {
 	struct uart_device_config uconf;
 	/* clock subsystem driving this peripheral */
-//	struct gd32_pclken pclken;
+	struct gd32_pclken pclken;
 	/* initial hardware flow control, 1 for RTS/CTS */
 	bool hw_flow_control;
 };

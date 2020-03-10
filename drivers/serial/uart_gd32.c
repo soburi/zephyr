@@ -24,7 +24,7 @@
 #include "gd32vf103_gpio.h"
 
 #include <linker/sections.h>
-//#include <clock_control/gd32_clock_control.h>
+#include <clock_control/gd32_clock_control.h>
 #include "uart_gd32.h"
 
 #include <logging/log.h>
@@ -60,19 +60,19 @@ static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc);
 
 static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 {
-//TODO	const struct uart_gd32_config *config = DEV_CFG(dev);
-//TODO	struct uart_gd32_data *data = DEV_DATA(dev);
+	const struct uart_gd32_config *config = DEV_CFG(dev);
+	struct uart_gd32_data *data = DEV_DATA(dev);
 	u32_t regs = DEV_REGS(dev);
 
-//TODO	u32_t clock_rate;
+//	u32_t clock_rate;
 
 	/* Get clock rate */
 //TODO	if (clock_control_get_rate(data->clock,
 //TODO			       (clock_control_subsys_t *)&config->pclken,
 //TODO			       &clock_rate) < 0) {
-//TODO		LOG_ERR("Failed call clock_control_get_rate");
-//TODO		return;
-//TODO	}
+//		LOG_ERR("Failed call clock_control_get_rate");
+//		return;
+//	}
 
 	usart_baudrate_set(regs, baud_rate);
 }
@@ -430,13 +430,13 @@ static int uart_gd32_err_check(struct device *dev)
 
 static inline void __uart_gd32_get_clock(struct device *dev)
 {
-//TODO	struct uart_gd32_data *data = DEV_DATA(dev);
-//TODO	struct device *clk =
-//		device_get_binding(GD32_CLOCK_CONTROL_NAME);
+	struct uart_gd32_data *data = DEV_DATA(dev);
+	struct device *clk =
+		device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
-//	__ASSERT_NO_MSG(clk);
+	__ASSERT_NO_MSG(clk);
 
-//	data->clock = clk;
+	data->clock = clk;
 }
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
@@ -593,6 +593,9 @@ static void uart_gd32_isr(void *arg)
 	}
 }
 
+void USART0_IRQHandler() {
+	uart_gd32_isr(NULL);
+}
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN */
 
 static const struct uart_driver_api uart_gd32_driver_api = {
@@ -635,15 +638,12 @@ static int uart_gd32_init(struct device *dev)
 	struct uart_gd32_data *data = DEV_DATA(dev);
 	u32_t regs = DEV_REGS(dev);
 
-//TODO	__uart_gd32_get_clock(dev);
+	__uart_gd32_get_clock(dev);
 	/* enable clock */
-//TODO	if (clock_control_on(data->clock,
-//TODO			(clock_control_subsys_t *)&config->pclken) != 0) {
-//TODO		return -EIO;
-//TODO	}
-
-    /* enable USART clock */
-    rcu_periph_clock_enable(RCU_USART0);
+	if (clock_control_on(data->clock,
+			(clock_control_subsys_t *)&config->pclken) != 0) {
+		return -EIO;
+	}
 
     /* connect port to USARTx_Tx */
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
@@ -720,10 +720,14 @@ static const struct uart_gd32_config uart_gd32_cfg_##name = {		\
 		.regs = DT_UART_GD32_##name##_BASE_ADDRESS,             \
 		GD32_UART_IRQ_HANDLER_FUNC(name)			\
 	},								\
-	.hw_flow_control = DT_UART_GD32_##name##_HW_FLOW_CONTROL	\
+	.hw_flow_control = DT_UART_GD32_##name##_HW_FLOW_CONTROL,	\
+	.pclken = {                                                     \
+		.bus =  DT_UART_GD32_##name##_CLOCK_BUS,                \
+		.enr =  DT_UART_GD32_##name##_CLOCK_BITS,               \
+	}                                                               \
 };									\
 									\
-static struct uart_gd32_data uart_gd32_data_##name = {		\
+static struct uart_gd32_data uart_gd32_data_##name = {         		\
 	.baud_rate = DT_UART_GD32_##name##_BAUD_RATE			\
 };									\
 									\
