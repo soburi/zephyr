@@ -38,17 +38,13 @@ LOG_MODULE_REGISTER(uart_gd32);
 #define DEV_REGS(dev) \
 	(DEV_CFG(dev)->uconf.regs)
 
-#define TIMEOUT 1000
 
-
-/* USART RTS configure */
 #define CLT2_HWFC(regval)             (BITS(8,9) & ((uint32_t)(regval) << 8))
 #define USART_HWFC_NONE               CLT2_HWFC(0)                     /*!< HWFC disable */
 #define USART_HWFC_RTS                CLT2_HWFC(1)                     /*!< RTS enable */
 #define USART_HWFC_CTS                CLT2_HWFC(2)                     /*!< CTS enable */
 #define USART_HWFC_RTSCTS             CLT2_HWFC(3)                     /*!< RTS&CTS enable */
 #define USART_CTL2_HWFC               BITS(8,9)                        /*!< RTS&CTS enable */
-
 
 static inline u32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity);
 static inline enum uart_config_parity uart_gd32_ll2cfg_parity(u32_t parity);
@@ -64,15 +60,6 @@ static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
 	struct uart_gd32_data *data = DEV_DATA(dev);
 	u32_t regs = DEV_REGS(dev);
 
-//	u32_t clock_rate;
-
-	/* Get clock rate */
-//TODO	if (clock_control_get_rate(data->clock,
-//TODO			       (clock_control_subsys_t *)&config->pclken,
-//TODO			       &clock_rate) < 0) {
-//		LOG_ERR("Failed call clock_control_get_rate");
-//		return;
-//	}
 
 	usart_baudrate_set(regs, baud_rate);
 }
@@ -237,13 +224,6 @@ static inline enum uart_config_data_bits uart_gd32_ll2cfg_databits(u32_t db)
 	}
 }
 
-/**
- * @brief  Get LL hardware flow control define from
- *         Zephyr hardware flow control option.
- * @note   Supports only UART_CFG_FLOW_CTRL_RTS_CTS.
- * @param  fc: Zephyr hardware flow control option.
- * @retval LL_USART_HWCONTROL_RTS_CTS, or LL_USART_HWCONTROL_NONE.
- */
 static inline u32_t uart_gd32_cfg2ll_hwctrl(enum uart_config_flow_control fc)
 {
 	if (fc == UART_CFG_FLOW_CTRL_RTS_CTS) {
@@ -253,13 +233,6 @@ static inline u32_t uart_gd32_cfg2ll_hwctrl(enum uart_config_flow_control fc)
 	return USART_HWFC_NONE;
 }
 
-/**
- * @brief  Get Zephyr hardware frlow control option from
- *         LL hardware flow control define.
- * @note   Supports only LL_USART_HWCONTROL_RTS_CTS.
- * @param  fc: LL hardware frlow control definition.
- * @retval UART_CFG_FLOW_CTRL_RTS_CTS, or UART_CFG_PARITY_NONE.
- */
 static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc)
 {
 	if (fc == USART_HWFC_RTSCTS) {
@@ -378,13 +351,14 @@ static void uart_gd32_poll_out(struct device *dev,
 {
 	u32_t regs = DEV_REGS(dev);
 
+	usart_flag_clear(regs, USART_FLAG_TC);
+
+	usart_data_transmit(regs, (u8_t) c );
+
 	/* Wait for TXE flag to be raised */
 	while (!usart_flag_get(regs, USART_FLAG_TBE)) {
 	}
 
-	usart_flag_clear(regs, USART_FLAG_TC);
-
-	usart_data_transmit(regs, (u8_t) c );
 }
 
 static int uart_gd32_err_check(struct device *dev)
@@ -449,7 +423,7 @@ static int uart_gd32_fifo_fill(struct device *dev, const u8_t *tx_data,
 
 	while ((size - num_tx > 0) &&
 	       usart_interrupt_flag_get(regs, USART_INT_FLAG_TBE)) {
-		/* TXE flag will be cleared with byte write to DR|RDR register */
+		/* TBE flag will be cleared with byte write to DATA register */
 
 		/* Send a character (8bit , parity none) */
 		usart_data_transmit(regs, tx_data[num_tx++]);
@@ -466,7 +440,7 @@ static int uart_gd32_fifo_read(struct device *dev, u8_t *rx_data,
 
 	while ((size - num_rx > 0) &&
 	       usart_interrupt_flag_get(regs, USART_INT_FLAG_RBNE)) {
-		/* RXNE flag will be cleared upon read from DR|RDR register */
+		/* RBNE flag will be cleared upon read from DATA register */
 
 		/* Receive a character (8bit , parity none) */
 		rx_data[num_rx++] = usart_data_receive(regs);
@@ -484,14 +458,14 @@ static void uart_gd32_irq_tx_enable(struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
-	usart_interrupt_enable(regs, USART_INT_TC);
+	usart_interrupt_enable(regs, USART_INT_TBE);
 }
 
 static void uart_gd32_irq_tx_disable(struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
-	usart_interrupt_disable(regs, USART_INT_TC);
+	usart_interrupt_disable(regs, USART_INT_TBE);
 }
 
 static int uart_gd32_irq_tx_ready(struct device *dev)
@@ -533,7 +507,7 @@ static void uart_gd32_irq_err_enable(struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
-	/* Enable FE, ORE interruptions */
+	/* Enable Error interruptions */
 	usart_interrupt_enable(regs, USART_INT_ERR);
 	/* Enable Line break detection */
 	usart_interrupt_enable(regs, USART_INT_LBD);
@@ -545,7 +519,7 @@ static void uart_gd32_irq_err_disable(struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
-	/* Disable FE, ORE interruptions */
+	/* Disable Error interruptions */
 	usart_interrupt_disable(regs, USART_INT_ERR);
 	/* Disable Line break detection */
 	usart_interrupt_disable(regs, USART_INT_LBD);
@@ -593,9 +567,6 @@ static void uart_gd32_isr(void *arg)
 	}
 }
 
-void USART0_IRQHandler() {
-	uart_gd32_isr(NULL);
-}
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN */
 
 static const struct uart_driver_api uart_gd32_driver_api = {
@@ -646,12 +617,10 @@ static int uart_gd32_init(struct device *dev)
 	}
 
     /* connect port to USARTx_Tx */
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9); //TODO
 
     /* connect port to USARTx_Rx */
-    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
-
-
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10); //TODO
 
 	usart_deinit(regs);
 
@@ -672,18 +641,6 @@ static int uart_gd32_init(struct device *dev)
 	uart_gd32_set_baudrate(dev, data->baud_rate);
 
 	usart_enable(regs);
-
-#ifdef USART_ISR_TEACK
-	/* Wait until TEACK flag is set */
-	while (usart_flag_get() == 0) {
-	}
-#endif /* !USART_ISR_TEACK */
-
-#ifdef USART_ISR_REACK
-	/* Wait until REACK flag is set */
-	while (usart_flag_get() == 0) {
-	}
-#endif /* !USART_ISR_REACK */
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
 	config->uconf.irq_config_func(dev);
@@ -717,17 +674,16 @@ GD32_UART_IRQ_HANDLER_DECL(name);					\
 									\
 static const struct uart_gd32_config uart_gd32_cfg_##name = {		\
 	.uconf = {							\
-		.regs = DT_UART_GD32_##name##_BASE_ADDRESS,             \
+		.regs = DT_UART_GD32_##name##_BASE_ADDRESS,		\
 		GD32_UART_IRQ_HANDLER_FUNC(name)			\
 	},								\
+	.pclken = { .bus = DT_UART_GD32_##name##_CLOCK_BUS,		\
+		    .enr = DT_UART_GD32_##name##_CLOCK_BITS,		\
+	},								\
 	.hw_flow_control = DT_UART_GD32_##name##_HW_FLOW_CONTROL,	\
-	.pclken = {                                                     \
-		.bus =  DT_UART_GD32_##name##_CLOCK_BUS,                \
-		.enr =  DT_UART_GD32_##name##_CLOCK_BITS,               \
-	}                                                               \
 };									\
 									\
-static struct uart_gd32_data uart_gd32_data_##name = {         		\
+static struct uart_gd32_data uart_gd32_data_##name = {			\
 	.baud_rate = DT_UART_GD32_##name##_BAUD_RATE			\
 };									\
 									\
@@ -756,16 +712,6 @@ GD32_UART_INIT(USART_2)
 GD32_UART_INIT(USART_3)
 #endif	/* CONFIG_UART_3 */
 
-#ifdef CONFIG_UART_6
-GD32_UART_INIT(USART_6)
-#endif /* CONFIG_UART_6 */
-
-/*
- * GD32F0 and GD32L0 series differ from other GD32 series by some
- * peripheral names (UART vs USART).
- */
-#if defined(CONFIG_SOC_SERIES_GD32F0X) || defined(CONFIG_SOC_SERIES_GD32L0X)
-
 #ifdef CONFIG_UART_4
 GD32_UART_INIT(USART_4)
 #endif /* CONFIG_UART_4 */
@@ -774,9 +720,9 @@ GD32_UART_INIT(USART_4)
 GD32_UART_INIT(USART_5)
 #endif /* CONFIG_UART_5 */
 
-/* Following devices are not available in L0 series (for now)
- * But keeping them simplifies ifdefery and won't harm
- */
+#ifdef CONFIG_UART_6
+GD32_UART_INIT(USART_6)
+#endif /* CONFIG_UART_6 */
 
 #ifdef CONFIG_UART_7
 GD32_UART_INIT(USART_7)
@@ -786,40 +732,7 @@ GD32_UART_INIT(USART_7)
 GD32_UART_INIT(USART_8)
 #endif /* CONFIG_UART_8 */
 
-#else
-
-#ifdef CONFIG_UART_4
-GD32_UART_INIT(UART_4)
-#endif /* CONFIG_UART_4 */
-
-#ifdef CONFIG_UART_5
-GD32_UART_INIT(UART_5)
-#endif /* CONFIG_UART_5 */
-
-#ifdef CONFIG_UART_7
-GD32_UART_INIT(UART_7)
-#endif /* CONFIG_UART_7 */
-
-#ifdef CONFIG_UART_8
-GD32_UART_INIT(UART_8)
-#endif /* CONFIG_UART_8 */
-
 #ifdef CONFIG_UART_9
 GD32_UART_INIT(UART_9)
 #endif /* CONFIG_UART_9 */
 
-#ifdef CONFIG_UART_10
-GD32_UART_INIT(UART_10)
-#endif /* CONFIG_UART_10 */
-
-#endif
-
-#if defined(CONFIG_SOC_SERIES_GD32H7X) || \
-	defined(CONFIG_SOC_SERIES_GD32L4X) || \
-	defined(CONFIG_SOC_SERIES_GD32L0X) || \
-	defined(CONFIG_SOC_SERIES_GD32WBX) || \
-	defined(CONFIG_SOC_SERIES_GD32G4X)
-#ifdef CONFIG_LPUART_1
-GD32_UART_INIT(LPUART_1)
-#endif /* CONFIG_LPUART_1 */
-#endif
