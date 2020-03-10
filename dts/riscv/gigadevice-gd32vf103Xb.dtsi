@@ -38,7 +38,7 @@
 			reg = <0x40005c00 0x400>;
 			interrupts = <20 0>;
 			interrupt-parent = <&eclic>;
-			interrupt-names = "usb", "x";
+			interrupt-names = "usb";
 			num-bidir-endpoints = <8>;
 			ram-size = <512>;
 			status = "disabled";

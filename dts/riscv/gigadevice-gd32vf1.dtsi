@@ -24,7 +24,7 @@
 			reg = <0>;
 			riscv,isa = "rv32imac";
 			eclic: interrupt-controller {
-				#interrupt-cells = <1>;
+				#interrupt-cells = <2>;
 				compatible = "gigadevice,gd32vf103-eclic";
 				interrupt-controller;
 			};
@@ -164,7 +164,7 @@
 			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00200000>;
 			interrupts = <31 0>, <32 0>;
 			interrupt-parent = <&eclic>;
-			interrupt-names = "event", "error", "x", "y";
+			interrupt-names = "event", "error";
 			status = "disabled";
 			label= "I2C_1";
 		};
@@ -178,7 +178,7 @@
 			clocks = <&rcu GD32_CLOCK_BUS_APB1 0x00400000>;
 			interrupts = <33 0>, <34 0>;
 			interrupt-parent = <&eclic>;
-			interrupt-names = "event", "error", "x", "y";
+			interrupt-names = "event", "error";
 			status = "disabled";
 			label= "I2C_2";
 		};
