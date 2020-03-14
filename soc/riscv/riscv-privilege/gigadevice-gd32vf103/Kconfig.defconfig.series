@@ -26,6 +26,13 @@ config NUM_IRQS
 config XIP
 	default y
 
+if CLOCK_CONTROL
+
+config CLOCK_CONTROL_GD32
+	default y
+
+endif #CLOCK_CONTROL
+
 if GPIO
 
 config GPIO_GD32
