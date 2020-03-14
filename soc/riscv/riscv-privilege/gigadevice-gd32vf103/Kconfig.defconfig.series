@@ -63,4 +63,11 @@ config UART_GD32
 
 endif
 
+if SPI
+
+config SPI_GD32
+	default y
+
+endif #SPI
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
