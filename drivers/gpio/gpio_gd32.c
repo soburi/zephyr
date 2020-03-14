@@ -12,7 +12,8 @@
 #include <device.h>
 #include <soc.h>
 #include <drivers/gpio.h>
-//#include <clock_control/gd32_clock_control.h>
+#include <drivers/clock_control.h>
+#include <drivers/clock_control/gd32_clock_control.h>
 //#include <pinmux/gd32/pinmux_gd32.h>
 #include <drivers/pinmux.h>
 #include <sys/util.h>
@@ -446,16 +447,20 @@ static const struct gpio_driver_api gpio_gd32_driver = {
 static int gpio_gd32_init(struct device *device)
 {
 	const struct gpio_gd32_config *cfg = device->config->config_info;
-	rcu_periph_clock_enable(cfg->rcu);
+	struct device *clk = device_get_binding(GD32_CLOCK_CONTROL_NAME);
+	clock_control_on(clk, (clock_control_subsys_t *) &cfg->pclken);
 
 	return 0;
 }
 
-#define GPIO_DEVICE_INIT(__name, __suffix, __base_addr, __port, __rcu, __cenr, __bus) \
+#define GPIO_DEVICE_INIT(__name, __suffix, __base_addr, __port, __cenr, __bus) \
 	static const struct gpio_gd32_config gpio_gd32_cfg_## __suffix = {   \
 		.base = (u32_t *)__base_addr,				       \
-		.rcu  = __rcu,                                                 \
 		.port = __port,						       \
+		.pclken = {                                                    \
+			.enr = __cenr,                                         \
+			.bus = __bus,                                          \
+		}                                                              \
 	};								       \
 	static struct gpio_gd32_data gpio_gd32_data_## __suffix;	       \
 	DEVICE_AND_API_INIT(gpio_gd32_## __suffix,			       \
@@ -472,7 +477,6 @@ static int gpio_gd32_init(struct device *device)
 			 __suffix,				      \
 			 DT_GPIO_GD32_GPIO##__SUFFIX##_BASE_ADDRESS, \
 			 GPIO##__SUFFIX,			     \
-			 RCU_GPIO##__SUFFIX,                         \
 			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BITS,   \
 			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BUS)
 

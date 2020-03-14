@@ -11,7 +11,7 @@
  * @file header for GD32 GPIO
  */
 
-//#include <clock_control/gd32_clock_control.h>
+#include <clock_control/gd32_clock_control.h>
 //#include <pinmux/gd32/pinmux_gd32.h>
 #include <drivers/gpio.h>
 
@@ -228,7 +228,7 @@ struct gpio_gd32_config {
 	/* IO port */
 	int port;
 	int rcu;
-//	struct gd32_pclken pclken;
+	struct gd32_pclken pclken;
 };
 
 /**
