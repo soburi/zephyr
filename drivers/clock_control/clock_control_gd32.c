@@ -94,10 +94,66 @@ static int gd32_rcu_get_rate(struct device *dev, clock_control_subsys_t sub_syst
 
 static int gd32_rcu_init(struct device *dev)
 {
-	///rcu_deinit();
-#ifdef CONFIG_UART_0
+#if !defined(CONFIG_GPIO_A)  && \
+    (defined(CONFIG_UART_0)  || \
+     defined(CONFIG_UART_1)  || \
+     defined(CONFIG_TIMER_0) || \
+     defined(CONFIG_TIMER_1) || \
+     defined(CONFIG_TIMER_2) || \
+     defined(CONFIG_TIMER_4) || \
+     defined(CONFIG_SPI_0)   || \
+     defined(CONFIG_SPI_2)   || \
+     defined(CONFIG_I2S_2)   || \
+     defined(CONFIG_CK)      || \
+     defined(CONFIG_CAN_0)   || \
+     defined(CONFIG_ADC_01)     \
+    )
 	rcu_periph_clock_enable(RCU_GPIOA);
 #endif
+
+#if !defined(CONFIG_GPIO_B)  && \
+    (defined(CONFIG_UART_2)  || \
+     defined(CONFIG_TIMER_0) || \
+     defined(CONFIG_TIMER_2) || \
+     defined(CONFIG_TIMER_3) || \
+     defined(CONFIG_SPI_1)   || \
+     defined(CONFIG_SPI_2)   || \
+     defined(CONFIG_I2S_1)   || \
+     defined(CONFIG_I2S_2)   || \
+     defined(CONFIG_I2C_0)   || \
+     defined(CONFIG_EXMC)    || \
+     defined(CONFIG_CAN_1)   || \
+     defined(CONFIG_ADC_01)     \
+    )
+	rcu_periph_clock_enable(RCU_GPIOB);
+#endif
+
+#if !defined(CONFIG_GPIO_C)  && \
+    (defined(CONFIG_UART_3)  || \
+     defined(CONFIG_UART_4)  || \
+     defined(CONFIG_I2S_1)   || \
+     defined(CONFIG_I2S_2)   || \
+     defined(CONFIG_ADC_01)     \
+    )
+	rcu_periph_clock_enable(RCU_GPIOC);
+#endif
+
+#if !defined(CONFIG_GPIO_D)  && \
+    (defined(CONFIG_UART_4)  || \
+     defined(CONFIG_TIMER_2) || \
+     defined(CONFIG_EXMC)       \
+    )
+	rcu_periph_clock_enable(RCU_GPIOD);
+#endif
+
+#if !defined(CONFIG_GPIO_E)  && \
+    (defined(CONFIG_TIMER_3) || \
+     defined(CONFIG_EXMC)       \
+    )
+	rcu_periph_clock_enable(RCU_GPIOE);
+#endif
+
+
 	return 0;
 }
 
