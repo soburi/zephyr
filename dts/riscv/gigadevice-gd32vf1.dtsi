@@ -374,7 +374,7 @@
 			compatible = "gigadevice,gd32-dma";
 			#dma-cells = <4>;
 			reg = <0x40020000 0x400>;
-			clocks = <&rcu GD32_CLOCK_BUS_AHB1 0x1>;
+			clocks = <&rcu GD32_CLOCK_BUS_AHB 0x1>;
 			interrupts = <11 0 12 0 13 0 14 0 15 0 16 0 17 0>;
 			interrupt-parent = <&eclic>;
 			st,mem2mem;
@@ -386,7 +386,7 @@
 			compatible = "gigadevice,gd32-dma";
 			#dma-cells = <4>;
 			reg = <0x40020400 0x400>;
-			clocks = <&rcu GD32_CLOCK_BUS_AHB1 0x1>;
+			clocks = <&rcu GD32_CLOCK_BUS_AHB 0x1>;
 			interrupts = <11 0 12 0 13 0 14 0 15 0 16 0 17 0>;
 			interrupt-parent = <&eclic>;
 			st,mem2mem;
