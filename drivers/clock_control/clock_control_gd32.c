@@ -19,9 +19,6 @@ struct gd32_rcu_config {
 #define DEV_CFG(dev)  ((struct gd32_rcu_config *)(dev->config->config_info))
 #define DEV_BASE(dev) (DEV_CFG(dev)->base_address)
 
-static uint32_t  en_offset[] = {0,  AHBEN_REG_OFFSET,  APB1EN_REG_OFFSET,  APB2EN_REG_OFFSET};
-static uint32_t rst_offset[] = {0, AHBRST_REG_OFFSET, APB1RST_REG_OFFSET, APB2RST_REG_OFFSET};
-
 static inline void periph_clock_enable(uint32_t addr, uint32_t bit)
 {
 	*(volatile uint32_t*)(addr) |= bit;
@@ -35,6 +32,7 @@ static inline void periph_clock_disable(uint32_t addr, uint32_t bit)
 
 static int gd32_rcu_on(struct device *dev, clock_control_subsys_t sub_system)
 {
+	const uint32_t  en_offset[] = {0,  AHBEN_REG_OFFSET,  APB1EN_REG_OFFSET,  APB2EN_REG_OFFSET};
 	struct gd32_pclken* pclken = (struct gd32_pclken*)sub_system;
 	periph_clock_enable(((uint32_t)DEV_CFG(dev)->base_address) + en_offset[pclken->bus], pclken->enr);
 
@@ -43,8 +41,54 @@ static int gd32_rcu_on(struct device *dev, clock_control_subsys_t sub_system)
 
 static int gd32_rcu_off(struct device *dev, clock_control_subsys_t sub_system)
 {
+	const uint32_t rst_offset[] = {0, AHBRST_REG_OFFSET, APB1RST_REG_OFFSET, APB2RST_REG_OFFSET};
 	struct gd32_pclken* pclken = (struct gd32_pclken*)sub_system;
 	periph_clock_disable(((uint32_t)DEV_CFG(dev)->base_address) + rst_offset[pclken->bus], pclken->enr);
+	return 0;
+}
+
+static uint32_t rcu_apb1_rate(uint32_t clksrc)
+{
+	uint32_t reg;
+
+	reg = RCU_CFG0;
+	/* reset the APB1PSC and set according to ck_apb1 */
+	uint32_t cfg = (reg & RCU_CFG0_APB1PSC);
+	switch(cfg) {
+		case RCU_APB1_CKAHB_DIV1: return clksrc;
+		case RCU_APB1_CKAHB_DIV2: return clksrc/2;
+		case RCU_APB1_CKAHB_DIV4: return clksrc/4;
+		case RCU_APB1_CKAHB_DIV8: return clksrc/8;
+		case RCU_APB1_CKAHB_DIV16: return clksrc/16;
+	}
+
+	return 0;
+}
+
+static uint32_t rcu_apb2_rate(uint32_t clksrc)
+{
+	uint32_t reg;
+
+	reg = RCU_CFG0;
+	/* reset the APB1PSC and set according to ck_apb1 */
+	uint32_t cfg = (reg & RCU_CFG0_APB2PSC);
+	switch(cfg) {
+		case RCU_APB2_CKAHB_DIV1: return clksrc;
+		case RCU_APB2_CKAHB_DIV2: return clksrc/2;
+		case RCU_APB2_CKAHB_DIV4: return clksrc/4;
+		case RCU_APB2_CKAHB_DIV8: return clksrc/8;
+		case RCU_APB2_CKAHB_DIV16: return clksrc/16;
+	}
+
+	return 0;
+}
+
+static int gd32_rcu_get_rate(struct device *dev, clock_control_subsys_t sub_system, u32_t* rate)
+{
+	const uint32_t rate_[] = {-ENOTSUP, SystemCoreClock,
+		rcu_apb1_rate(SystemCoreClock), rcu_apb2_rate(SystemCoreClock)};
+	struct gd32_pclken* pclken = (struct gd32_pclken*)sub_system;
+	*rate = rate_[pclken->bus];
 	return 0;
 }
 
@@ -60,7 +104,7 @@ static int gd32_rcu_init(struct device *dev)
 static const struct clock_control_driver_api gd32_rcu_api = {
 	.on = gd32_rcu_on,
 	.off = gd32_rcu_off,
-	//.get_rate = gd32_rcu_get_rate,
+	.get_rate = gd32_rcu_get_rate,
 	//.get_status = gd32_rcu_get_status,
 };
 
