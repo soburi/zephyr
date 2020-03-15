@@ -84,6 +84,8 @@
 		cmd-data-gpios = <&gpiob 0 0>;
 		width = <160>;
 		height = <80>;
+		x-offset = <1>;
+		y-offset = <26>;
                 spi-max-frequency = <24000000>;
         };
 };

@@ -391,7 +391,16 @@ DEVICE_AND_API_INIT(st7735s, DT_INST_0_SITRONIX_ST7735S_LABEL, &st7735s_init,
 
 void st7735s_lcd_init(struct st7735s_data *data)
 {
-	st7735s_set_lcd_margins(data, 0, 35);
+	u16_t xoff = 0;
+	u16_t yoff = 0;
+#ifdef DT_INST_0_SITRONIX_ST7735S_X_OFFSET
+	xoff = DT_INST_0_SITRONIX_ST7735S_X_OFFSET;
+#endif
+#ifdef DT_INST_0_SITRONIX_ST7735S_Y_OFFSET
+	yoff = DT_INST_0_SITRONIX_ST7735S_Y_OFFSET;
+#endif
+
+	st7735s_set_lcd_margins(data, xoff, yoff);
 
 	TRANSMIT_CMD(ST7735S_SLEEP_OUT);
 
@@ -437,7 +446,7 @@ void st7735s_lcd_init(struct st7735s_data *data)
 	// define the format of RGB picture data 16-bit/pixel
 	TRANSMIT_CMD(ST7735S_COLOR_MODE, 0x05);
 
-	TRANSMIT_CMD(ST7735S_MEMORY_DATA_ACCESS_CONTROL, 0x78);
+	TRANSMIT_CMD(ST7735S_MEMORY_ACCESS_DATA_CONTROL, 0x78);
 
 	TRANSMIT_CMD(ST7735S_DISPLAY_ON);
 
