@@ -472,16 +472,14 @@ static int spi_gd32_init(struct device *dev)
 	const struct spi_gd32_config *cfg = dev->config->config_info;
 
 	__ASSERT_NO_MSG(device_get_binding(GD32_CLOCK_CONTROL_NAME));
-/*
+
 	if (clock_control_on(device_get_binding(GD32_CLOCK_CONTROL_NAME),
 			       (clock_control_subsys_t) &cfg->pclken) != 0) {
 		LOG_ERR("Could not enable SPI clock");
 		return -EIO;
 	}
-*/
-    
-    rcu_periph_clock_enable(RCU_SPI1);
 
+    
     /* SPI1_SCK(PB13), SPI1_MISO(PB14) and SPI1_MOSI(PB15) GPIO pin configuration */
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_15);
     gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
