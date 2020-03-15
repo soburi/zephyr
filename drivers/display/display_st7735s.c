@@ -104,11 +104,6 @@ int st7735s_init(struct device *dev)
 {
 	struct st7735s_data *data = (struct st7735s_data *)dev->driver_data;
 
-    rcu_periph_clock_enable(RCU_GPIOA);
-    rcu_periph_clock_enable(RCU_GPIOB);
-    rcu_periph_clock_enable(RCU_GPIOC);
-    rcu_periph_clock_enable(RCU_AF);
-    rcu_periph_clock_enable(RCU_SPI0);
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
     gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1|GPIO_PIN_2);
 
