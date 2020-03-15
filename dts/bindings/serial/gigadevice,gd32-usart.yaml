@@ -1,7 +1,7 @@
 title: GD32 USART
 
 description: |
-    This binding gives a base representation of the STM32 USART
+    This binding gives a base representation of the GD32 USART
 
 compatible: "gigadevice,gd32-usart"
 

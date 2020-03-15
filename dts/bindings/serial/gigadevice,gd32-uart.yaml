@@ -1,7 +1,7 @@
 title: GD32 UART
 
 description: |
-    This binding gives a base representation of the STM32 UART
+    This binding gives a base representation of the GD32 UART
 
 compatible: "gigadevice,gd32-uart"
 
