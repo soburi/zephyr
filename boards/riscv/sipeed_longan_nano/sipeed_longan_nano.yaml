@@ -5,7 +5,7 @@ arch: riscv32
 toolchain:
   - zephyr
   - xtools
-ram: 20
+ram: 32
 supported:
   - i2c
   - pwm
