@@ -1,4 +1,4 @@
-# Copyright (c) 2018, SiFive Inc.
+# Copyright (c) 2020, Tokita, Hiroshi
 # SPDX-License-Identifier: Apache-2.0
 
 title: GigaDevice GD32VF103-ECLIC
@@ -16,8 +16,3 @@ interrupt-cells:
   - irq
   - priority
 
-#properties:
-#    riscv,ndev:
-#        type: int
-#        description: Number of external interrupts supported
-#        required: true
