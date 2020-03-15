@@ -1,0 +1,109 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/dts-v1/;
+#include <gigadevice-gd32vf103X8.dtsi>
+
+/ {
+	model = "Sipeed Longan Nano";
+	compatible = "sipeed,longan_nano";
+
+	chosen {
+		zephyr,console = &usart0;
+		zephyr,shell-uart = &usart0;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led_red: led_red {
+			gpios = <&gpioc 13 GPIO_INT_ACTIVE_LOW>;
+			label = "LED_R";
+		};
+		led_green: led_green {
+			gpios = <&gpioa 1 GPIO_INT_ACTIVE_LOW>;
+			label = "LED_G";
+		};
+		led_blue: led_blue {
+			gpios = <&gpioa 2 GPIO_INT_ACTIVE_LOW>;
+			label = "LED_B";
+		};
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		button: button {
+			gpios = <&gpioa 8 GPIO_INT_ACTIVE_HIGH>;
+			label = "BUTTON";
+		};
+	};
+
+	aliases {
+		led0 = &led_red;
+		led1 = &led_green;
+		led2 = &led_blue;
+		sw0 = &button;
+	};
+};
+
+&usart0 {
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&usart1 {
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&usart2 {
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&i2c0 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
+&i2c1 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
+&spi0 {
+	status = "okay";
+        cs-gpios = <&gpiob 2 0>;
+
+        lcd0: lcd@0 {
+                compatible = "sitronix,st7735s";
+                reg = <0>;
+                status = "okay";
+                label = "LCD0";
+		reset-gpios = <&gpiob 1 0>;
+		cmd-data-gpios = <&gpiob 0 0>;
+		width = <160>;
+		height = <80>;
+		x-offset = <1>;
+		y-offset = <26>;
+                spi-max-frequency = <4000000>;
+        };
+};
+
+&spi1 {
+	status = "okay";
+        cs-gpios = <&gpiob 12 0>;
+
+        sdhc0: sdhc@0 {
+                compatible = "zephyr,mmc-spi-slot";
+                reg = <0>;
+                status = "okay";
+                label = "SDHC0";
+                spi-max-frequency = <1000000>;
+        };
+
+};
+
+&usb {
+	status = "okay";
+};
