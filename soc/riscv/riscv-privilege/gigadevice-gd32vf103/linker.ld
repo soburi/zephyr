@@ -5,7 +5,7 @@
  */
 
 /**
- * @brief Linker script for the SiFive Freedom processor
+ * @brief Linker script for the GigaDevice GD32VF103 processor
  */
 
 #include <arch/riscv/common/linker.ld>
