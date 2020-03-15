@@ -1,0 +1,65 @@
+# ST7735S display driver configuration options
+
+# Copyright (c) 2019 Marc Reilly <marc@cpdesign.com.au>
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig ST7735S
+	bool "ST7735S display driver"
+	depends on SPI
+	help
+	  Enable driver for ST7735S display driver.
+
+if ST7735S
+
+choice
+	prompt "LCD"
+	help
+	  Specify the type of LCD connected to the ST7735S display controller.
+
+config ST7735S_LCD_TL019FQV01
+	bool "TDO TL019FQV01"
+
+endchoice
+
+choice
+	prompt "Color pixel format"
+	default ST7735S_RGB565
+	help
+	  Specify the color pixel format for the ST7735S display controller.
+
+config ST7735S_RGB888
+	bool "RGB888"
+
+config ST7735S_RGB565
+	bool "RGB565"
+
+endchoice
+
+if ST7735S_RGB565
+config ST7735S_SWAP_PIXEL_LCD_ENDIANNESS
+	bool "Swap pixel endianness at LCD"
+	help
+	  Pixel data bytes are swapped when being blitted to the LCD.
+	  Note that this isn't just a swap of RGB <--> BGR, (if the endianness is
+	  swapped then the 3 lowest bits of G are sent first/last).
+	  You may want to enable this if you are using lvgl and your colors
+	  don't look right.
+
+config ST7735S_REVERSE_LCD_RGB_ORDER
+	bool "Reverse draw order of controller ram to LCD"
+	help
+	  This reverses the order that the controller draws RGB to the LCD.
+
+config ST7735S_REVERSE_X
+	bool "Reverse X axis"
+	help
+	  Address pixels from right to left.
+
+config ST7735S_REVERSE_Y
+	bool "Reverse Y axis"
+	help
+	  Address pixels from bottom to top.
+
+endif # ST7735S_RGB565
+
+endif # ST7735S
