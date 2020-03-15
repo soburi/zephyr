@@ -16,31 +16,9 @@
 
 #include "n200_timer.h"
 
-/* PINMUX Configuration */
-#define SIFIVE_PINMUX_0_BASE_ADDR     (DT_INST_0_SIFIVE_GPIO0_BASE_ADDRESS + 0x38)
-
-/* PINMUX IO Hardware Functions */
-#define SIFIVE_PINMUX_IOF0            0x00
-#define SIFIVE_PINMUX_IOF1            0x01
-
-/* PINMUX MAX PINS */
-#define SIFIVE_PINMUX_PINS            32
-
-/* Clock controller. */
-#define PRCI_BASE_ADDR               0x10008000
-
 /* Timer configuration */
 #define RISCV_MTIME_BASE             (TIMER_CTRL_ADDR + TIMER_MTIME)
 #define RISCV_MTIMECMP_BASE          (TIMER_CTRL_ADDR + TIMER_MTIMECMP)
-
-/* Always ON Domain */
-#define SIFIVE_PMUIE		     0x10000140
-#define SIFIVE_PMUCAUSE		     0x10000144
-#define SIFIVE_PMUSLEEP		     0x10000148
-#define SIFIVE_PMUKEY		     0x1000014C
-#define SIFIVE_SLEEP_KEY_VAL	     0x0051F15E
-
-#define SIFIVE_BACKUP_REG_BASE	     0x10000080
 
 /* lib-c hooks required RAM defined variables */
 #define RISCV_RAM_BASE               DT_SRAM_BASE_ADDRESS
