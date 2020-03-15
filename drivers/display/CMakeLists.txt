@@ -22,3 +22,8 @@ zephyr_sources_ifdef(CONFIG_MICROBIT_DISPLAY
 	mb_display.c
 	mb_font.c
 )
+
+zephyr_sources_ifdef(CONFIG_ST7735S_LCD_SIPEED_160x80_IPS
+	display_st7735s_sipeed_160x80_ips.c
+)
+

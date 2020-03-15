@@ -40,21 +40,14 @@ struct st7735s_data {
 	u16_t y_offset;
 };
 
-//TODO No definition for RGB444, RGB111
 #ifdef CONFIG_ST7735S_RGB565
 #define ST7735S_PIXEL_SIZE 2u
 #else
 #define ST7735S_PIXEL_SIZE 3u
 #endif
 
-#define TRANSMIT_CMD(cmd, ...) { \
-	uint8_t _cmd = cmd; \
-	uint8_t _data[] = { __VA_ARGS__ }; \
-	st7735s_transmit(data, _cmd, _data, sizeof(_data) ); }
-
 static int st7735s_blanking_off(const struct device *dev);
 static int st7735s_blanking_on(const struct device *dev);
-void st7735s_lcd_init(struct st7735s_data *p_st7735s);
 
 void st7735s_set_lcd_margins(struct st7735s_data *data,
 			     u16_t x_offset, u16_t y_offset)
@@ -87,7 +80,7 @@ void st7735s_transmit(struct st7735s_data *data, u8_t cmd,
 
 static void st7735s_exit_sleep(struct st7735s_data *data)
 {
-	st7735s_transmit(data, ST7735S_SLEEP_OUT, NULL, 0);
+	st7735s_transmit(data, ST7735S_CMD_SLEEP_OUT, NULL, 0);
 	k_sleep(K_MSEC(120));
 }
 
@@ -102,7 +95,7 @@ static void st7735s_reset_display(struct st7735s_data *data)
 	gpio_pin_write(data->reset_gpio, ST7735S_RESET_PIN, 1);
 	k_sleep(K_MSEC(20));
 #else
-	st7735s_transmit(p_st7735s, ST7735S_SW_RESET, NULL, 0);
+	st7735s_transmit(p_st7735s, ST7735S_CMD_SW_RESET, NULL, 0);
 	k_sleep(K_MSEC(5));
 #endif
 }
@@ -223,7 +216,7 @@ static int st7735s_blanking_on(const struct device *dev)
 {
 	struct st7735s_data *driver = (struct st7735s_data *)dev->driver_data;
 
-	st7735s_transmit(driver, ST7735S_DISPLAY_OFF, NULL, 0);
+	st7735s_transmit(driver, ST7735S_CMD_DISP_OFF, NULL, 0);
 	return 0;
 }
 
@@ -231,7 +224,7 @@ static int st7735s_blanking_off(const struct device *dev)
 {
 	struct st7735s_data *driver = (struct st7735s_data *)dev->driver_data;
 
-	st7735s_transmit(driver, ST7735S_DISPLAY_ON, NULL, 0);
+	st7735s_transmit(driver, ST7735S_CMD_DISP_ON, NULL, 0);
 	return 0;
 }
 
@@ -387,67 +380,3 @@ static struct st7735s_data st7735s_data;
 DEVICE_AND_API_INIT(st7735s, DT_INST_0_SITRONIX_ST7735S_LABEL, &st7735s_init,
 		    &st7735s_data, NULL, APPLICATION,
 		    CONFIG_APPLICATION_INIT_PRIORITY, &st7735s_api);
-
-
-void st7735s_lcd_init(struct st7735s_data *data)
-{
-	u16_t xoff = 0;
-	u16_t yoff = 0;
-#ifdef DT_INST_0_SITRONIX_ST7735S_X_OFFSET
-	xoff = DT_INST_0_SITRONIX_ST7735S_X_OFFSET;
-#endif
-#ifdef DT_INST_0_SITRONIX_ST7735S_Y_OFFSET
-	yoff = DT_INST_0_SITRONIX_ST7735S_Y_OFFSET;
-#endif
-
-	st7735s_set_lcd_margins(data, xoff, yoff);
-
-	TRANSMIT_CMD(ST7735S_SLEEP_OUT);
-
-	k_sleep(K_MSEC(100));
-
-	// Set the frame frequency of the full colors normal mode
-	// Frame rate=fosc/((RTNA x 2 + 40) x (LINE + FPA + BPA +2))
-	// fosc = 850kHz
-	TRANSMIT_CMD(ST7735S_FRAME_CONTROL1, 0x05, 0x3A, 0x3A);
-	
-	// Set the frame frequency of the Idle mode
-	// Frame rate=fosc/((RTNB x 2 + 40) x (LINE + FPB + BPB +2))
-	// fosc = 850kHz
-	TRANSMIT_CMD(ST7735S_FRAME_CONTROL2, 0x05, 0x3A, 0x3A);
-
-	// Set the frame frequency of the Partial mode/ full colors
-	TRANSMIT_CMD(ST7735S_FRAME_CONTROL3, 0x05, 0x3A, 0x3A, 0x05, 0x3A, 0x3A);
-
-	TRANSMIT_CMD(ST7735S_POWER_CONTROL1, 0x62, 0x02, 0x04);
-
-	TRANSMIT_CMD(ST7735S_POWER_CONTROL2, 0xC0);
-
-	TRANSMIT_CMD(ST7735S_POWER_CONTROL3, 0x0D, 0x00);
-
-	TRANSMIT_CMD(ST7735S_POWER_CONTROL4, 0x8D, 0x6A);
-
-	TRANSMIT_CMD(ST7735S_POWER_CONTROL5, 0x8D, 0xEE);
-
-	TRANSMIT_CMD(ST7735S_VCOM_CONTROL1,  0x0E);   
-
-	TRANSMIT_CMD(ST7735S_GAMMA_ADJUST_P, 
-		0x10, 0x0E, 0x02, 0x03, 0x0E, 0x07, 0x02, 0x07,
-		0x0A, 0x12, 0x27, 0x37, 0x00, 0x0D, 0x0E, 0x10);
-
-	TRANSMIT_CMD(ST7735S_GAMMA_ADJUST_N, 
-		0x10, 0x0E, 0x03, 0x03, 0x0F, 0x06, 0x02, 0x08,
-		0x0A, 0x13, 0x26, 0x36, 0x00, 0x0D, 0x0E, 0x10);
-
-	TRANSMIT_CMD(ST7735S_INVERT_ON);
-
-	TRANSMIT_CMD(ST7735S_INVERSION_CONTROL, 0x03);
-
-	// define the format of RGB picture data 16-bit/pixel
-	TRANSMIT_CMD(ST7735S_COLOR_MODE, 0x05);
-
-	TRANSMIT_CMD(ST7735S_MEMORY_ACCESS_DATA_CONTROL, 0x78);
-
-	TRANSMIT_CMD(ST7735S_DISPLAY_ON);
-
-}

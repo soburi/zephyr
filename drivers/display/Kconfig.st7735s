@@ -16,8 +16,8 @@ choice
 	help
 	  Specify the type of LCD connected to the ST7735S display controller.
 
-config ST7735S_LCD_TL019FQV01
-	bool "TDO TL019FQV01"
+config ST7735S_LCD_SIPEED_160x80_IPS
+	bool "Sipeed 160x80 IPS LCD"
 
 endchoice
 
