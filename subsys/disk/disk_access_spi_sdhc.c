@@ -70,6 +70,12 @@ static int sdhc_spi_trace(struct sdhc_spi_data *data, int dir, int err,
 	return err;
 }
 
+/* Asserts or deasserts chip select */
+static void sdhc_spi_set_cs(struct sdhc_spi_data *data, int value)
+{
+	gpio_pin_write(data->cs.gpio_dev, data->cs.gpio_pin, value);
+}
+
 /* Receives a fixed number of bytes */
 static int sdhc_spi_rx_bytes(struct sdhc_spi_data *data, uint8_t *buf, int len)
 {
