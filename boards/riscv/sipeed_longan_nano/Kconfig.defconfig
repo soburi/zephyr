@@ -1,4 +1,4 @@
-# STM32 Minimum Development Board Configuration
+# Sipeed longan nano Development Board Configuration
 
 # Copyright (c) 2017, embedjournal.com
 # SPDX-License-Identifier: Apache-2.0
@@ -14,23 +14,6 @@ config UART_0
 	default y
 
 endif # UART_CONSOLE
-
-if I2C
-
-config I2C_1
-	default y
-
-config I2C_2
-	default y
-
-endif # I2C
-
-if PWM
-
-config PWM_STM32_1
-	default y
-
-endif # PWM
 
 if SPI
 
