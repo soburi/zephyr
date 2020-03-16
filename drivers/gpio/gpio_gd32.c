@@ -384,22 +384,10 @@ static int gpio_gd32_init(struct device *device)
 	return 0;
 }
 
-#define GD32_PORTA 'A'
-#define GD32_PORTB 'B'
-#define GD32_PORTC 'C'
-#define GD32_PORTD 'D'
-#define GD32_PORTE 'E'
-#define GD32_PORTF 'F'
-#define GD32_PORTG 'G'
-#define GD32_PORTH 'H'
-#define GD32_PORTI 'I'
-#define GD32_PORTJ 'J'
-#define GD32_PORTK 'K'
-
 #define GPIO_DEVICE_INIT(__name, __suffix, __base_addr, __port, __cenr, __bus) \
 	static const struct gpio_gd32_config gpio_gd32_cfg_## __suffix = {   \
 		.base = (u32_t *)__base_addr,				       \
-		.port = __port - 'A',					       \
+		.port = __port - GD32_PORTA,				       \
 		.pclken = {                                                    \
 			.enr = __cenr,                                         \
 			.bus = __bus,                                          \
