@@ -63,7 +63,15 @@ static int pinmux_gd32_get(struct device *dev, u32_t pin, u32_t *func)
         const struct gpio_gd32_config *config = dev->config->config_info;
         uint32_t base = (uint32_t)config->base;
 
-        //*func = base->PCR[pin];
+	if(pin < 8) {
+		*func = ((GPIO_CTL0(base) >> (4*pin)) & 0xF;
+	}
+	else if(pin < 16) {
+		*func = ((GPIO_CTL1(base) >> (4*(pin-8))) & 0xF;
+	}
+	else {
+		return -EIO;
+	}
 
         return 0;
 }
@@ -116,46 +124,46 @@ static const struct pinmux_driver_api pinmux_gd32_driver_api = {
 			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BITS,   \
 			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BUS)
 
-//#ifdef CONFIG_PINMUX_GD32_PORTA
+#ifdef CONFIG_GPIO_GD32_PORTA
 PINMUX_DEVICE_INIT_GD32(a, A);
-//#endif /* CONFIG_PINMUX_GD32_PORTA */
+#endif /* CONFIG_GPIO_GD32_PORTA */
 
-#ifdef CONFIG_PINMUX_GD32_PORTB
+#ifdef CONFIG_GPIO_GD32_PORTA
 PINMUX_DEVICE_INIT_GD32(b, B);
-#endif /* CONFIG_PINMUX_GD32_PORTB */
+#endif /* CONFIG_GPIO_GD32_PORTB */
 
-#ifdef CONFIG_PINMUX_GD32_PORTC
+#ifdef CONFIG_GPIO_GD32_PORTA
 PINMUX_DEVICE_INIT_GD32(c, C);
-#endif /* CONFIG_PINMUX_GD32_PORTC */
+#endif /* CONFIG_GPIO_GD32_PORTC */
 
-#ifdef CONFIG_PINMUX_GD32_PORTD
+#ifdef CONFIG_GPIO_GD32_PORTD
 PINMUX_DEVICE_INIT_GD32(d, D);
-#endif /* CONFIG_PINMUX_GD32_PORTD */
+#endif /* CONFIG_GPIO_GD32_PORTD */
 
-#ifdef CONFIG_PINMUX_GD32_PORTE
+#ifdef CONFIG_GPIO_GD32_PORTE
 PINMUX_DEVICE_INIT_GD32(e, E);
-#endif /* CONFIG_PINMUX_GD32_PORTE */
+#endif /* CONFIG_GPIO_GD32_PORTE */
 
-#ifdef CONFIG_PINMUX_GD32_PORTF
+#ifdef CONFIG_GPIO_GD32_PORTF
 PINMUX_DEVICE_INIT_GD32(f, F);
-#endif /* CONFIG_PINMUX_GD32_PORTF */
+#endif /* CONFIG_GPIO_GD32_PORTF */
 
-#ifdef CONFIG_PINMUX_GD32_PORTG
+#ifdef CONFIG_GPIO_GD32_PORTG
 PINMUX_DEVICE_INIT_GD32(g, G);
-#endif /* CONFIG_PINMUX_GD32_PORTG */
+#endif /* CONFIG_GPIO_GD32_PORTG */
 
-#ifdef CONFIG_PINMUX_GD32_PORTH
+#ifdef CONFIG_GPIO_GD32_PORTH
 PINMUX_DEVICE_INIT_GD32(h, H);
-#endif /* CONFIG_PINMUX_GD32_PORTH */
+#endif /* CONFIG_GPIO_GD32_PORTH */
 
-#ifdef CONFIG_PINMUX_GD32_PORTI
+#ifdef CONFIG_GPIO_GD32_PORTI
 PINMUX_DEVICE_INIT_GD32(i, I);
-#endif /* CONFIG_PINMUX_GD32_PORTI */
+#endif /* CONFIG_GPIO_GD32_PORTI */
 
-#ifdef CONFIG_PINMUX_GD32_PORTJ
+#ifdef CONFIG_GPIO_GD32_PORTJ
 PINMUX_DEVICE_INIT_GD32(j, J);
-#endif /* CONFIG_PINMUX_GD32_PORTJ */
+#endif /* CONFIG_GPIO_GD32_PORTJ */
 
-#ifdef CONFIG_PINMUX_GD32_PORTK
+#ifdef CONFIG_GPIO_GD32_PORTK
 PINMUX_DEVICE_INIT_GD32(k, K);
-#endif /* CONFIG_PINMUX_GD32_PORTK */
+#endif /* CONFIG_GPIO_GD32_PORTK */
