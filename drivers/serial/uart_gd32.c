@@ -616,12 +616,6 @@ static int uart_gd32_init(struct device *dev)
 		return -EIO;
 	}
 
-    /* connect port to USARTx_Tx */
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9); //TODO
-
-    /* connect port to USARTx_Rx */
-    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10); //TODO
-
 	usart_deinit(regs);
 
 	/* TX/RX direction */
