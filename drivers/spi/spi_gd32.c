@@ -18,10 +18,28 @@ LOG_MODULE_REGISTER(spi_gd32);
 #include <clock_control/gd32_clock_control.h>
 #include <drivers/clock_control.h>
 
-#include "spi_gd32.h"
+#include "spi_context.h"
+
 #include "gd32vf103_spi.h"
 
 #define BASE_ADDR(spi) (uint32_t)(spi)
+
+typedef void (*irq_config_func_t)(struct device *port);
+
+typedef uint32_t SPI_TypeDef;
+
+struct spi_gd32_config {
+	struct gd32_pclken pclken;
+	SPI_TypeDef *spi;
+#ifdef CONFIG_SPI_GD32_INTERRUPT
+	irq_config_func_t irq_config;
+#endif
+};
+
+struct spi_gd32_data {
+	struct spi_context ctx;
+};
+
 
 #define DEV_CFG(dev)						\
 (const struct spi_gd32_config * const)(dev->config->config_info)
