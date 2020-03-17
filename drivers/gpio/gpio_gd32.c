@@ -85,7 +85,7 @@ static inline u32_t gd32_pinval_get(int pin)
 /**
  * @brief Configure the hardware.
  */
-int gpio_gd32_configure(u32_t *base_addr, int pin, int conf, int altf)
+static int gpio_gd32_configure(u32_t *base_addr, int pin, int conf, int altf)
 {
 	uint32_t gpio = (uint32_t)base_addr;
 

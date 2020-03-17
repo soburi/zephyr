@@ -240,14 +240,4 @@ struct gpio_gd32_data {
 	sys_slist_t cb;
 };
 
-/**
- * @brief helper for configuration of GPIO pin
- *
- * @param base_addr GPIO port base address
- * @param pin IO pin
- * @param func GPIO mode
- * @param altf Alternate function
- */
-int gpio_gd32_configure(u32_t *base_addr, int pin, int conf, int altf);
-
 #endif /* ZEPHYR_DRIVERS_GPIO_GPIO_GD32_H_ */
