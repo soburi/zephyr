@@ -477,14 +477,6 @@ static int spi_gd32_init(struct device *dev)
 		return -EIO;
 	}
 
-    
-    /* SPI1_SCK(PB13), SPI1_MISO(PB14) and SPI1_MOSI(PB15) GPIO pin configuration */
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_15);
-    gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
-    /* SPI1_CS(PB12) GPIO pin configuration */
-    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
-
-
 #ifdef CONFIG_SPI_GD32_INTERRUPT
 	cfg->irq_config(dev);
 #endif
