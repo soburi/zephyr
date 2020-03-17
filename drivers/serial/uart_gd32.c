@@ -24,7 +24,6 @@
 #include "gd32vf103_gpio.h"
 
 #include <linker/sections.h>
-#include <clock_control/gd32_clock_control.h>
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(uart_gd32);

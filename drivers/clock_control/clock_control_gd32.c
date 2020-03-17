@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <soc.h>
 #include <drivers/clock_control.h>
-#include <drivers/clock_control/gd32_clock_control.h>
 
 #include "gd32vf103_rcu.h"
 

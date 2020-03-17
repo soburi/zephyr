@@ -40,6 +40,14 @@
 #include "gd32vf103.h"
 #include "n200_func.h"
 
+/* common clock control device name for all GD32 chips */
+#define GD32_CLOCK_CONTROL_NAME "gd32-rcu"
+
+struct gd32_pclken {
+	u32_t bus;
+	u32_t enr;
+};
+
 #define ARCH_IRQ_CONNECT(irq_p, priority_p, isr_p, isr_param_p, flags_p) \
 ({ \
 	Z_ISR_DECLARE(irq_p, 0, isr_p, isr_param_p); \

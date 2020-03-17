@@ -12,12 +12,4 @@
 #include <drivers/clock_control.h>
 #include <dt-bindings/clock/gd32_clock.h>
 
-/* common clock control device name for all GD32 chips */
-#define GD32_CLOCK_CONTROL_NAME "gd32-rcu"
-
-struct gd32_pclken {
-	u32_t bus;
-	u32_t enr;
-};
-
 #endif /* ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_GD32_CLOCK_CONTROL_H_ */

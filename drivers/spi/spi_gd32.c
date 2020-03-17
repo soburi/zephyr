@@ -15,7 +15,6 @@ LOG_MODULE_REGISTER(spi_gd32);
 #include <drivers/spi.h>
 #include <toolchain.h>
 
-#include <clock_control/gd32_clock_control.h>
 #include <drivers/clock_control.h>
 
 #include "spi_context.h"

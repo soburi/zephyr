@@ -16,10 +16,9 @@
 #include <kernel.h>
 #include <device.h>
 #include <soc.h>
+#include <drivers/clock_control.h>
 #include <drivers/pinmux.h>
 #include <gpio/gpio_gd32.h>
-//#include <clock_control/gd32_clock_control.h>
-//#include <pinmux/gd32/pinmux_gd32.h>
 
 #include "gd32vf103_gpio.h"
 
