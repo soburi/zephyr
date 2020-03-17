@@ -10,8 +10,8 @@
 #include <device.h>
 #include <soc.h>
 #include <drivers/gpio.h>
-#include <clock_control/gd32_clock_control.h>
-//#include <pinmux/gd32/pinmux_gd32.h>
+#include <drivers/clock_control.h>
+#include <dt-bindings/clock/gd32_clock.h>
 #include <drivers/pinmux.h>
 #include <sys/util.h>
 #include <interrupt_controller/exti_gd32.h>
