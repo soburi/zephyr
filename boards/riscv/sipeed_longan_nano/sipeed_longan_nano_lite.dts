@@ -4,8 +4,8 @@
 #include <gigadevice-gd32vf103X8.dtsi>
 
 / {
-	model = "Sipeed Longan Nano";
-	compatible = "sipeed,longan_nano";
+	model = "Sipeed Longan Nano Lite";
+	compatible = "sipeed,longan_nano_lite";
 
 	chosen {
 		zephyr,console = &usart0;

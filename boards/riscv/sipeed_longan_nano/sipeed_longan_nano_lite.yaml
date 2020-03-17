@@ -1,5 +1,5 @@
-identifier: sipeed_longan_nano
-name: Sipeed Longan Nano
+identifier: sipeed_longan_nano_lite
+name: Sipeed Longan Nano Lite
 type: mcu
 arch: riscv32
 toolchain:
