@@ -25,7 +25,6 @@
 
 #include <linker/sections.h>
 #include <clock_control/gd32_clock_control.h>
-#include "uart_gd32.h"
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(uart_gd32);
@@ -45,6 +44,27 @@ LOG_MODULE_REGISTER(uart_gd32);
 #define USART_HWFC_CTS                CLT2_HWFC(2)                     /*!< CTS enable */
 #define USART_HWFC_RTSCTS             CLT2_HWFC(3)                     /*!< RTS&CTS enable */
 #define USART_CTL2_HWFC               BITS(8,9)                        /*!< RTS&CTS enable */
+
+/* device config */
+struct uart_gd32_config {
+	struct uart_device_config uconf;
+	/* clock subsystem driving this peripheral */
+	struct gd32_pclken pclken;
+	/* initial hardware flow control, 1 for RTS/CTS */
+	bool hw_flow_control;
+};
+
+/* driver data */
+struct uart_gd32_data {
+	/* Baud rate */
+	u32_t baud_rate;
+	/* clock device */
+	struct device *clock;
+#ifdef CONFIG_UART_INTERRUPT_DRIVEN
+	uart_irq_callback_user_data_t user_cb;
+	void *user_data;
+#endif
+};
 
 static inline u32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity);
 static inline enum uart_config_parity uart_gd32_ll2cfg_parity(u32_t parity);
