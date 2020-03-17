@@ -3,10 +3,11 @@
 # Copyright (c) 2017, embedjournal.com
 # SPDX-License-Identifier: Apache-2.0
 
-if BOARD_SIPEED_LONGAN_NANO
+if BOARD_SIPEED_LONGAN_NANO || BOARD_SIPEED_LONGAN_NANO_LITE
 
 config BOARD
-	default "sipeed_longan_nano"
+	default "sipeed_longan_nano" if BOARD_SIPEED_LONGAN_NANO
+	default "sipeed_longan_nano_lite" if BOARD_SIPEED_LONGAN_NANO_LITE
 
 if UART_CONSOLE
 
