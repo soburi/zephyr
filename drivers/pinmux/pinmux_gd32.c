@@ -64,10 +64,10 @@ static int pinmux_gd32_get(struct device *dev, u32_t pin, u32_t *func)
         uint32_t base = (uint32_t)config->base;
 
 	if(pin < 8) {
-		*func = ((GPIO_CTL0(base) >> (4*pin)) & 0xF;
+		*func = (GPIO_CTL0(base) >> (4*pin)) & 0xF;
 	}
 	else if(pin < 16) {
-		*func = ((GPIO_CTL1(base) >> (4*(pin-8))) & 0xF;
+		*func = (GPIO_CTL1(base) >> (4*(pin-8))) & 0xF;
 	}
 	else {
 		return -EIO;
