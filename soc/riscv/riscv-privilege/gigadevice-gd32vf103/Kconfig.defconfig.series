@@ -55,6 +55,13 @@ config GPIO_GD32_PORTE
 
 endif # GPIO
 
+if PINMUX
+
+config PINMUX_GD32
+	default y
+
+endif # PINMUX
+
 
 if SERIAL
 
