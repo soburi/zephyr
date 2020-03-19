@@ -8,6 +8,8 @@
 #include <drivers/clock_control.h>
 #include <drivers/clock_control/gd32_clock_control.h>
 
+#include "gd32vf103_rcu.h"
+
 #define LOG_LEVEL CONFIG_CLOCK_CONTROL_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(clock_control);
@@ -16,15 +18,53 @@ struct gd32_rcu_config {
 	u32_t base_address;
 };
 
+enum gd32_rcu_reg {
+	AHB_ENABLE =  RCU_BASE + AHBEN_REG_OFFSET,
+	APB1_ENABLE = RCU_BASE + APB1EN_REG_OFFSET,
+	APB2_ENABLE = RCU_BASE + APB2EN_REG_OFFSET,
+	AHB_RESET =  RCU_BASE + AHBRST_REG_OFFSET,
+	APB1_RESET = RCU_BASE + APB1RST_REG_OFFSET,
+	APB2_RESET = RCU_BASE + APB2RST_REG_OFFSET,
+};
+
+enum gd32_rcu_peripherals {
+	DMA0_TIMER1_AF  = (1<<0),
+	DMA1_TIMER2_   = (1<<1),
+	_TIMER3_GPIOA  = (1<<2),
+	_TIMER4_GPIOB  = (1<<3),
+	_TIMER5_GPIOC  = (1<<4),
+	_TIMER5_GPIOD  = (1<<5),
+	CRC_x_GPIOE     = (1<<6),
+	EXMC_x_        = (1<<8),
+	_x_ADC0        = (1<<9),
+	_x_ADC1        = (1<<10),
+	_WWDGT_TIMER0  = (1<<11),
+	USBFS_x_SPI0    = (1<<12),
+	_SPI1_USART0   = (1<<14),
+	_SPI2_        = (1<<15),
+	_USART1_      = (1<<17),
+	_USART2_      = (1<<18),
+	_UART3_       = (1<<19),
+	_UART4_       = (1<<20),
+	_I2C0_        = (1<<21),
+	_I2C1_        = (1<<22),
+	_CAN0_        = (1<<25),
+	_CAN1_        = (1<<26),
+	_BKPI_        = (1<<27),
+	_PMU_         = (1<<28),
+	_DAC_         = (1<<29),
+};
+
+
 #define DEV_CFG(dev)  ((struct gd32_rcu_config *)(dev->config->config_info))
 #define DEV_BASE(dev) (DEV_CFG(dev)->base_address)
 
-static inline void periph_clock_enable(uint32_t addr, uint32_t bit)
+static inline void periph_clock_enable(enum gd32_rcu_reg addr, enum gd32_rcu_peripherals bit)
 {
 	*(volatile uint32_t*)(addr) |= bit;
 }
 
-static inline void periph_clock_disable(uint32_t addr, uint32_t bit)
+static inline void periph_clock_disable(enum gd32_rcu_reg addr, enum gd32_rcu_peripherals bit)
 {
 	*(volatile uint32_t*)(addr) &= ~bit;
 }
@@ -94,66 +134,6 @@ static int gd32_rcu_get_rate(struct device *dev, clock_control_subsys_t sub_syst
 
 static int gd32_rcu_init(struct device *dev)
 {
-#if !defined(CONFIG_GPIO_A)  && \
-    (defined(CONFIG_UART_0)  || \
-     defined(CONFIG_UART_1)  || \
-     defined(CONFIG_TIMER_0) || \
-     defined(CONFIG_TIMER_1) || \
-     defined(CONFIG_TIMER_2) || \
-     defined(CONFIG_TIMER_4) || \
-     defined(CONFIG_SPI_0)   || \
-     defined(CONFIG_SPI_2)   || \
-     defined(CONFIG_I2S_2)   || \
-     defined(CONFIG_CK)      || \
-     defined(CONFIG_CAN_0)   || \
-     defined(CONFIG_ADC_01)     \
-    )
-	rcu_periph_clock_enable(RCU_GPIOA);
-#endif
-
-#if !defined(CONFIG_GPIO_B)  && \
-    (defined(CONFIG_UART_2)  || \
-     defined(CONFIG_TIMER_0) || \
-     defined(CONFIG_TIMER_2) || \
-     defined(CONFIG_TIMER_3) || \
-     defined(CONFIG_SPI_1)   || \
-     defined(CONFIG_SPI_2)   || \
-     defined(CONFIG_I2S_1)   || \
-     defined(CONFIG_I2S_2)   || \
-     defined(CONFIG_I2C_0)   || \
-     defined(CONFIG_EXMC)    || \
-     defined(CONFIG_CAN_1)   || \
-     defined(CONFIG_ADC_01)     \
-    )
-	rcu_periph_clock_enable(RCU_GPIOB);
-#endif
-
-#if !defined(CONFIG_GPIO_C)  && \
-    (defined(CONFIG_UART_3)  || \
-     defined(CONFIG_UART_4)  || \
-     defined(CONFIG_I2S_1)   || \
-     defined(CONFIG_I2S_2)   || \
-     defined(CONFIG_ADC_01)     \
-    )
-	rcu_periph_clock_enable(RCU_GPIOC);
-#endif
-
-#if !defined(CONFIG_GPIO_D)  && \
-    (defined(CONFIG_UART_4)  || \
-     defined(CONFIG_TIMER_2) || \
-     defined(CONFIG_EXMC)       \
-    )
-	rcu_periph_clock_enable(RCU_GPIOD);
-#endif
-
-#if !defined(CONFIG_GPIO_E)  && \
-    (defined(CONFIG_TIMER_3) || \
-     defined(CONFIG_EXMC)       \
-    )
-	rcu_periph_clock_enable(RCU_GPIOE);
-#endif
-
-
 	return 0;
 }
 
