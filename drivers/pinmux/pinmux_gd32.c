@@ -26,20 +26,51 @@
 #define SPEED_MASK 0x03u
 #define INOUT_MASK 0x10u
 
-static inline u32_t gpio_speed(u32_t func)
+static inline u32_t gpio_speed(u32_t flags)
 {
-	return (func & INOUT_MASK) ? (func & SPEED_MASK) : 0;
+	int pincfg = 0;
+
+	gpio_gd32_flags_to_conf(flags, &pincfg);
+	return (pincfg & INOUT_MASK) ? (pincfg & SPEED_MASK) : 0;
 }
 
-static inline u32_t gpio_mode(u32_t func)
+static inline u32_t gpio_mode_with_af(u32_t flags)
 {
-	return (func & MODE_MASK);
+	int pincfg = 0;
+
+	gpio_gd32_flags_to_conf(flags, &pincfg);
+	// Use Higher 16bit in flags to store AF flag
+	return ((pincfg & ~SPEED_MASK) | ((flags & 0xc0000)>>16));
 }
 
-static int pinmux_gd32_set(struct device *dev, u32_t pin, u32_t func)
+
+static inline u32_t pin_to_base(u32_t pin)
 {
+	static const u32_t base[] = {
+		DT_GPIO_GD32_GPIOA_BASE_ADDRESS,
+		DT_GPIO_GD32_GPIOB_BASE_ADDRESS,
+		DT_GPIO_GD32_GPIOC_BASE_ADDRESS,
+		DT_GPIO_GD32_GPIOD_BASE_ADDRESS,
+		DT_GPIO_GD32_GPIOE_BASE_ADDRESS,
+	};
+
+	if((pin/16) >= ARRAY_SIZE(base)) return 0;
+
+	return base[pin/16];
+}
+
+static inline u32_t pin_to_bit(u32_t pin)
+{
+	return 1<<(pin%16);
+}
+
+static int pinmux_gd32_set(struct device *dev, u32_t pin, u32_t flags)
+{
+	int pincfg = 0;
+
+	ARG_UNUSED(dev);
+#if 0
 	const struct gpio_gd32_config *cfg = dev->config->config_info;
-
 	/* enable clock for subsystem */
 	struct device *clk =
 		device_get_binding(GD32_CLOCK_CONTROL_NAME);
@@ -48,19 +79,22 @@ static int pinmux_gd32_set(struct device *dev, u32_t pin, u32_t func)
 			     (clock_control_subsys_t *)&cfg->pclken) != 0) {
 		return -EIO;
 	}
+#endif
 
-        const struct gpio_gd32_config *config = dev->config->config_info;
-        uint32_t base = (uint32_t)config->base;
-
-	gpio_init(base, gpio_mode(func), gpio_speed(func), 1<<pin);
+	gpio_init(pin_to_base(pin), gpio_mode_with_af(flags), gpio_speed(flags), pin_to_bit(pin)) ;
 
         return 0;
 }
 
 static int pinmux_gd32_get(struct device *dev, u32_t pin, u32_t *func)
 {
-        const struct gpio_gd32_config *config = dev->config->config_info;
-        uint32_t base = (uint32_t)config->base;
+        u32_t base = pin_to_base(pin);
+
+	ARG_UNUSED(dev);
+
+	if(base == 0) {
+		return -EINVAL;
+	}
 
 	if(pin < 8) {
 		*func = (GPIO_CTL0(base) >> (4*pin)) & 0xF;
@@ -97,72 +131,7 @@ static const struct pinmux_driver_api pinmux_gd32_driver_api = {
         .input = pinmux_gd32_input,
 };
 
-#define PINMUX_DEVICE_INIT(__name, __suffix, __base_addr, __port, __cenr, __bus) \
-	static const struct gpio_gd32_config pinmux_gd32_cfg_## __suffix = {   \
-		.base = (u32_t *)__base_addr,				       \
-		.port = __port - GD32_PORTA,				       \
-		.pclken = {                                                    \
-			.enr = __cenr,                                         \
-			.bus = __bus,                                          \
-		}                                                              \
-	};								       \
-	DEVICE_AND_API_INIT(pinmux_gd32_## __suffix,			       \
-			    __name,					       \
-			    pinmux_gd32_init,				       \
-			    NULL,					       \
-			    &pinmux_gd32_cfg_## __suffix,		       \
-			    PRE_KERNEL_1,				       \
-			    CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,	       \
-			    &pinmux_gd32_driver_api)
-
-#define PINMUX_DEVICE_INIT_GD32(__suffix, __SUFFIX)		      \
-	PINMUX_DEVICE_INIT(DT_GPIO_GD32_GPIO##__SUFFIX##_LABEL,	      \
-			 __suffix,				      \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_BASE_ADDRESS, \
-			 GD32_PORT##__SUFFIX,			      \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BITS,   \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BUS)
-
-#ifdef CONFIG_GPIO_GD32_PORTA
-PINMUX_DEVICE_INIT_GD32(a, A);
-#endif /* CONFIG_GPIO_GD32_PORTA */
-
-#ifdef CONFIG_GPIO_GD32_PORTA
-PINMUX_DEVICE_INIT_GD32(b, B);
-#endif /* CONFIG_GPIO_GD32_PORTB */
-
-#ifdef CONFIG_GPIO_GD32_PORTA
-PINMUX_DEVICE_INIT_GD32(c, C);
-#endif /* CONFIG_GPIO_GD32_PORTC */
-
-#ifdef CONFIG_GPIO_GD32_PORTD
-PINMUX_DEVICE_INIT_GD32(d, D);
-#endif /* CONFIG_GPIO_GD32_PORTD */
-
-#ifdef CONFIG_GPIO_GD32_PORTE
-PINMUX_DEVICE_INIT_GD32(e, E);
-#endif /* CONFIG_GPIO_GD32_PORTE */
-
-#ifdef CONFIG_GPIO_GD32_PORTF
-PINMUX_DEVICE_INIT_GD32(f, F);
-#endif /* CONFIG_GPIO_GD32_PORTF */
-
-#ifdef CONFIG_GPIO_GD32_PORTG
-PINMUX_DEVICE_INIT_GD32(g, G);
-#endif /* CONFIG_GPIO_GD32_PORTG */
-
-#ifdef CONFIG_GPIO_GD32_PORTH
-PINMUX_DEVICE_INIT_GD32(h, H);
-#endif /* CONFIG_GPIO_GD32_PORTH */
-
-#ifdef CONFIG_GPIO_GD32_PORTI
-PINMUX_DEVICE_INIT_GD32(i, I);
-#endif /* CONFIG_GPIO_GD32_PORTI */
-
-#ifdef CONFIG_GPIO_GD32_PORTJ
-PINMUX_DEVICE_INIT_GD32(j, J);
-#endif /* CONFIG_GPIO_GD32_PORTJ */
-
-#ifdef CONFIG_GPIO_GD32_PORTK
-PINMUX_DEVICE_INIT_GD32(k, K);
-#endif /* CONFIG_GPIO_GD32_PORTK */
+DEVICE_AND_API_INIT(pinmux_gd32_dev, CONFIG_PINMUX_NAME,
+		    &pinmux_gd32_init, NULL, NULL,
+		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
+		    &pinmux_gd32_driver_api);
