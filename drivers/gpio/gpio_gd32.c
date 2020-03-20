@@ -462,7 +462,7 @@ static int gpio_gd32_afio_init(struct device *device)
 	struct device *clk = device_get_binding(GD32_CLOCK_CONTROL_NAME);
 	struct gd32_pclken pclken = {
 		.bus = GD32_CLOCK_BUS_APB2,
-		.enr = 0x0,
+		.enr = 0x1,
 	};
 
 	clock_control_on(clk, (clock_control_subsys_t *) &pclken);

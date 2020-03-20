@@ -238,4 +238,6 @@ struct gpio_gd32_data {
 	sys_slist_t cb;
 };
 
+const int gpio_gd32_flags_to_conf(int flags, int *pincfg);
+
 #endif /* ZEPHYR_DRIVERS_GPIO_GPIO_GD32_H_ */
