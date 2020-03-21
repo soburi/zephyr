@@ -33,4 +33,5 @@ CONFIG_GPIO=y
 # clock configuration
 CONFIG_CLOCK_CONTROL=y
 
+# eclic interrupt controller
 CONFIG_NUCLEI_ECLIC=y

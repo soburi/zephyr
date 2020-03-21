@@ -17,6 +17,9 @@ config RISCV_HAS_CPU_IDLE
 config PLIC
 	default n
 
+config NUCLEI_ECLIC
+	default y
+
 config NUM_IRQS
 	default 64
 

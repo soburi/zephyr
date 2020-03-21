@@ -47,6 +47,14 @@ config LEON_IRQMP
 	help
 	  GRLIB IRQMP and IRQAMP
 
+config NUCLEI_ECLIC
+	bool "Extended Core Interrupt Controller (eclic)"
+	default n
+	depends on SOC_FAMILY_RISCV_PRIVILEGE
+	select RISCV_HAS_INTERRUPT_CONTROLLER
+	help
+	  nuclei-eclic
+
 source "drivers/interrupt_controller/Kconfig.multilevel"
 
 source "drivers/interrupt_controller/Kconfig.loapic"
