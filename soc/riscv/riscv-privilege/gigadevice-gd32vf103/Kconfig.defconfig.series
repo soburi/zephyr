@@ -36,4 +36,11 @@ config CLOCK_CONTROL_GD32
 
 endif #CLOCK_CONTROL
 
+if PINMUX
+
+config PINMUX_GD32
+	default y
+
+endif # PINMUX
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
