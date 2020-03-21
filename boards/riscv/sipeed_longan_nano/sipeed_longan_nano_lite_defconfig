@@ -27,6 +27,9 @@ CONFIG_UART_CONSOLE=y
 # enable pinmux
 CONFIG_PINMUX=y
 
+# enable GPIO
+CONFIG_GPIO=y
+
 # clock configuration
 CONFIG_CLOCK_CONTROL=y
 
