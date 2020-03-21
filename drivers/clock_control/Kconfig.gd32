@@ -1,0 +1,11 @@
+# Copyright (c) 2019 Linaro
+# SPDX-License-Identifier: Apache-2.0
+#
+menuconfig CLOCK_CONTROL_GD32
+	bool "GD32 Clock Control"
+	depends on SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
+	default y if SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
+	help
+	  Enable driver for Reset & Clock Uint found
+	  in GD32 family of MCUs
+

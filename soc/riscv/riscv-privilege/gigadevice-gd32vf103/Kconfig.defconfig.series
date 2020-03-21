@@ -29,4 +29,11 @@ config XIP
 config KERNEL_ENTRY
 	default "__start_gd32vf103"
 
+if CLOCK_CONTROL
+
+config CLOCK_CONTROL_GD32
+	default y
+
+endif #CLOCK_CONTROL
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
