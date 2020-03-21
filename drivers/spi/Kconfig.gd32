@@ -1,0 +1,32 @@
+# GD32 SPI driver configuration options
+
+# Copyright (c) 2015-2016 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig SPI_GD32
+	bool "GD32 MCU SPI controller driver"
+	#depends on SOC_FAMILY_GD32
+	help
+	  Enable SPI support on the GD32 family of processors.
+
+if SPI_GD32
+
+config SPI_GD32_HAS_FIFO
+	bool
+	#depends on (SOC_SERIES_GD32L4X || SOC_SERIES_GD32F0X || \
+	#SOC_SERIES_GD32F3X || SOC_SERIES_GD32F7X || SOC_SERIES_GD32MP1X || \
+	#SOC_SERIES_GD32WBX || SOC_SERIES_GD32G4X)
+	default y
+
+config SPI_GD32_INTERRUPT
+	bool "GD32 MCU SPI Interrupt Support"
+	help
+	  Enable Interrupt support for the SPI Driver of GD32 family.
+
+config SPI_GD32_USE_HW_SS
+	bool "GD32 Hardware Slave Select support"
+	default y
+	help
+	  Use Slave Select pin instead of software Slave Select.
+
+endif # SPI_GD32

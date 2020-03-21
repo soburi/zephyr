@@ -25,4 +25,14 @@ config UART_0
 
 endif # UART_CONSOLE
 
+if SPI
+
+config SPI_0
+	default y
+
+config SPI_1
+	default y
+
+endif # SPI
+
 endif # BOARD_SIPEED_LONGAN_NANO
