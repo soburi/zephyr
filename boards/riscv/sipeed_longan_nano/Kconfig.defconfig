@@ -18,5 +18,11 @@ config FLASH_BASE_ADDRESS
 config FLASH_LOAD_OFFSET
 	default 0x0
 
+if UART_CONSOLE
+
+config UART_0
+	default y
+
+endif # UART_CONSOLE
 
 endif # BOARD_SIPEED_LONGAN_NANO
