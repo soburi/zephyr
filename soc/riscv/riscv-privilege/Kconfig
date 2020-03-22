@@ -12,6 +12,12 @@ config SOC_FAMILY
 	default "riscv-privilege"
 	depends on SOC_FAMILY_RISCV_PRIVILEGE
 
+config RISCV_HAS_INTERRUPT_CONTROLLER
+	bool "Does the SOC provide support for a Interrupt Controller"
+	depends on SOC_FAMILY_RISCV_PRIVILEGE
+	help
+	  Does the SOC provide support for interrupt controller
+
 config RISCV_HAS_PLIC
 	bool "Does the SOC provide support for a Platform Level Interrupt Controller"
 	depends on SOC_FAMILY_RISCV_PRIVILEGE
