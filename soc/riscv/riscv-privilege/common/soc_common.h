@@ -26,24 +26,18 @@
 /* Interrupt Mask */
 #define SOC_MCAUSE_IRQ_MASK          (1 << 63)
 /* Exception code Mask */
+#define SOC_MCAUSE_EXP_MASK          0x7FFFFFFFFFFFFFFF
 #else
 /* Interrupt Mask */
 #define SOC_MCAUSE_IRQ_MASK          (1 << 31)
 /* Exception code Mask */
+#define SOC_MCAUSE_EXP_MASK          0x7FFFFFFF
 #endif
-/* ECALL exception number */
-#define SOC_MCAUSE_ECALL_EXP         RISCV_MACHINE_ECALL_EXP
-#define SOC_MCAUSE_EXP_MASK          CONFIG_RISCV_SOC_MCAUSE_EXCEPTION_MASK
 
 /* SOC-Specific EXIT ISR command */
 #define SOC_ERET                     mret
 
 #ifndef _ASMLANGUAGE
-
-void riscv_irq_enable(unsigned int irq);
-void riscv_irq_disable(unsigned int irq);
-void riscv_irq_priority_set(unsigned int irq, unsigned int prio);
-int riscv_irq_is_enabled(unsigned int irq);
 
 #if defined(CONFIG_RISCV_SOC_INTERRUPT_INIT)
 void soc_interrupt_init(void);
@@ -55,12 +49,6 @@ void riscv_plic_irq_disable(uint32_t irq);
 int riscv_plic_irq_is_enabled(uint32_t irq);
 void riscv_plic_set_priority(uint32_t irq, uint32_t priority);
 int riscv_plic_get_irq(void);
-#define ARCH_IRQ_CONNECT(irq_p, priority_p, isr_p, isr_param_p, flags_p) \
-({ \
-	Z_ISR_DECLARE(irq_p, 0, isr_p, isr_param_p); \
-	arch_irq_priority_set(irq_p, priority_p); \
-	irq_p; \
-})
 #endif
 
 #endif /* !_ASMLANGUAGE */
