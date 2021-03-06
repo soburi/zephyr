@@ -11,7 +11,7 @@
  */
 #include <irq.h>
 
-void riscv_irq_enable(unsigned int irq)
+void arch_irq_enable(unsigned int irq)
 {
 	uint32_t mie;
 
@@ -34,7 +34,7 @@ void riscv_irq_enable(unsigned int irq)
 			  : "r" (1 << irq));
 }
 
-void riscv_irq_disable(unsigned int irq)
+void arch_irq_disable(unsigned int irq)
 {
 	uint32_t mie;
 
@@ -57,7 +57,7 @@ void riscv_irq_disable(unsigned int irq)
 			  : "r" (1 << irq));
 };
 
-void riscv_irq_priority_set(unsigned int irq, unsigned int prio)
+void arch_irq_priority_set(unsigned int irq, unsigned int prio)
 {
 #if defined(CONFIG_RISCV_HAS_PLIC)
 	unsigned int level = irq_get_level(irq);
@@ -71,7 +71,7 @@ void riscv_irq_priority_set(unsigned int irq, unsigned int prio)
 	return ;
 }
 
-int riscv_irq_is_enabled(unsigned int irq)
+int arch_irq_is_enabled(unsigned int irq)
 {
 	uint32_t mie;
 
@@ -88,28 +88,6 @@ int riscv_irq_is_enabled(unsigned int irq)
 
 	return !!(mie & (1 << irq));
 }
-
-#if !defined(CONFIG_RISCV_HAS_INTERRUPT_CONTROLLER)
-
-void arch_irq_enable(unsigned int irq)
-{
-	riscv_irq_enable(irq);
-}
-
-void arch_irq_disable(unsigned int irq)
-{
-	riscv_irq_disable(irq);
-}
-void arch_irq_priority_set(unsigned int irq, unsigned int prio)
-{
-	riscv_irq_priority_set(irq, prio);
-}
-int arch_irq_is_enabled(unsigned int irq)
-{
-	return riscv_irq_is_enabled(irq);
-}
-
-#endif
 
 #if defined(CONFIG_RISCV_SOC_INTERRUPT_INIT)
 void soc_interrupt_init(void)
