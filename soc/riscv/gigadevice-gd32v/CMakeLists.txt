@@ -10,3 +10,11 @@ zephyr_sources()
 zephyr_sources(entry.S)
 zephyr_sources(gd32vf103_init.c)
 
+zephyr_include_directories(.)
+
+zephyr_sources(
+  idle.c
+  soc_irq.S
+  soc_common_irq.c
+  vector.S
+  )
