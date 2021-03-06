@@ -30,7 +30,7 @@ static void set_mtimecmp(uint64_t time)
 #ifdef CONFIG_64BIT
 	*(volatile uint64_t *)RISCV_MTIMECMP_BASE = time;
 #else
-	volatile uint32_t *r = (uint32_t *)RISCV_MTIMECMP_BASE;
+	volatile uint32_t *r = 0;//(uint32_t *)RISCV_MTIMECMP_BASE;
 
 	/* Per spec, the RISC-V MTIME/MTIMECMP registers are 64 bit,
 	 * but are NOT internally latched for multiword transfers.  So
@@ -49,7 +49,7 @@ static uint64_t mtime(void)
 #ifdef CONFIG_64BIT
 	return *(volatile uint64_t *)RISCV_MTIME_BASE;
 #else
-	volatile uint32_t *r = (uint32_t *)RISCV_MTIME_BASE;
+	volatile uint32_t *r = 0;//(uint32_t *)RISCV_MTIME_BASE;
 	uint32_t lo, hi;
 
 	/* Likewise, must guard against rollover when reading */
