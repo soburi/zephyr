@@ -166,7 +166,7 @@ void gd32_exti_trigger(int line, int trigger)
 static void __gd32_exti_isr(int min, int max, void *arg)
 {
 	struct device *dev = arg;
-	struct gd32_exti_data *data = dev->driver_data;
+	struct gd32_exti_data *data = dev->data;
 	int line;
 
 	/* see which bits are set */
@@ -244,7 +244,7 @@ DEVICE_INIT(exti_gd32, GD32_EXTI_NAME, gd32_exti_init,
 int gd32_exti_set_callback(int line, gd32_exti_callback_t cb, void *arg)
 {
 	struct device *dev = DEVICE_GET(exti_gd32);
-	struct gd32_exti_data *data = dev->driver_data;
+	struct gd32_exti_data *data = dev->data;
 
 	if (data->cb[line].cb) {
 		return -EBUSY;
@@ -259,7 +259,7 @@ int gd32_exti_set_callback(int line, gd32_exti_callback_t cb, void *arg)
 void gd32_exti_unset_callback(int line)
 {
 	struct device *dev = DEVICE_GET(exti_gd32);
-	struct gd32_exti_data *data = dev->driver_data;
+	struct gd32_exti_data *data = dev->data;
 
 	data->cb[line].cb = NULL;
 	data->cb[line].data = NULL;
