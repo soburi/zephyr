@@ -20,6 +20,9 @@
 #include <drivers/uart.h>
 #include <drivers/clock_control.h>
 
+typedef uint32_t u32_t;
+typedef uint8_t u8_t;
+
 #include "gd32vf103_usart.h"
 #include "gd32vf103_gpio.h"
 
@@ -30,9 +33,9 @@ LOG_MODULE_REGISTER(uart_gd32);
 
 /* convenience defines */
 #define DEV_CFG(dev)							\
-	((const struct uart_gd32_config * const)(dev)->config->config_info)
+	((const struct uart_gd32_config * const)(dev)->config)
 #define DEV_DATA(dev)							\
-	((struct uart_gd32_data * const)(dev)->driver_data)
+	((struct uart_gd32_data * const)(dev)->data)
 #define DEV_REGS(dev) \
 	(DEV_CFG(dev)->uconf.regs)
 
