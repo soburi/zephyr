@@ -687,20 +687,20 @@ GD32_UART_IRQ_HANDLER_DECL(name);					\
 									\
 static const struct uart_gd32_config uart_gd32_cfg_##name = {		\
 	.uconf = {							\
-		.regs = DT_UART_GD32_##name##_BASE_ADDRESS,		\
+		.regs = 0 /*DT_UART_GD32_##name##_BASE_ADDRESS*/,		\
 		GD32_UART_IRQ_HANDLER_FUNC(name)			\
 	},								\
-	.pclken = { .bus = DT_UART_GD32_##name##_CLOCK_BUS,		\
-		    .enr = DT_UART_GD32_##name##_CLOCK_BITS,		\
+	.pclken = { .bus = 0 /*DT_UART_GD32_##name##_CLOCK_BUS*/,		\
+		    .enr = 0 /*DT_UART_GD32_##name##_CLOCK_BITS*/,		\
 	},								\
-	.hw_flow_control = DT_UART_GD32_##name##_HW_FLOW_CONTROL,	\
+	.hw_flow_control = 0 /*DT_UART_GD32_##name##_HW_FLOW_CONTROL*/,	\
 };									\
 									\
 static struct uart_gd32_data uart_gd32_data_##name = {			\
-	.baud_rate = DT_UART_GD32_##name##_BAUD_RATE			\
+	.baud_rate = 0 /*DT_UART_GD32_##name##_BAUD_RATE*/			\
 };									\
 									\
-DEVICE_AND_API_INIT(uart_gd32_##name, DT_UART_GD32_##name##_NAME,	\
+DEVICE_AND_API_INIT(uart_gd32_##name, "" /*DT_UART_GD32_##name##_NAME*/,	\
 		    &uart_gd32_init,					\
 		    &uart_gd32_data_##name, &uart_gd32_cfg_##name,	\
 		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,	\
