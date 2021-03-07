@@ -3,7 +3,7 @@
 # Copyright (c) 2016 Open-RnD Sp. z o.o.
 # SPDX-License-Identifier: Apache-2.0
 
-menuconfig UART_GD32
+config UART_GD32
 	bool "GD32 MCU serial driver"
 	select SERIAL_HAS_DRIVER
 	select SERIAL_SUPPORT_INTERRUPT

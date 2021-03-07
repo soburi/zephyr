@@ -32,8 +32,8 @@
 /* Exception code Mask */
 #endif
 /* ECALL exception number */
-#define SOC_MCAUSE_ECALL_EXP         RISCV_MACHINE_ECALL_EXP
-#define SOC_MCAUSE_EXP_MASK          CONFIG_RISCV_SOC_MCAUSE_EXCEPTION_MASK
+#define SOC_MCAUSE_ECALL_EXP         0 //RISCV_MACHINE_ECALL_EXP
+#define SOC_MCAUSE_EXP_MASK          0x1 //CONFIG_RISCV_SOC_MCAUSE_EXCEPTION_MASK
 
 /* SOC-Specific EXIT ISR command */
 #define SOC_ERET                     mret
@@ -48,7 +48,7 @@ int riscv_irq_is_enabled(unsigned int irq);
 #if defined(CONFIG_RISCV_SOC_INTERRUPT_INIT)
 void soc_interrupt_init(void);
 #endif
-
+/*
 #if defined(CONFIG_RISCV_HAS_PLIC)
 void riscv_plic_irq_enable(uint32_t irq);
 void riscv_plic_irq_disable(uint32_t irq);
@@ -62,7 +62,7 @@ int riscv_plic_get_irq(void);
 	irq_p; \
 })
 #endif
-
+*/
 #endif /* !_ASMLANGUAGE */
 
 #endif /* __SOC_COMMON_H_ */

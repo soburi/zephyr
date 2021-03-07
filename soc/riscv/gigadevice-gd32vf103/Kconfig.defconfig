@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
-if SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
+if SOC_RISCV_GIGADEVICE_GD32VF103
 
-config SOC_SERIES
+config SOC
 	default "gigadevice-gd32vf103"
 
 config SYS_CLOCK_HW_CYCLES_PER_SEC
