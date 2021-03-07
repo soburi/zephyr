@@ -13,6 +13,8 @@
 
 #include <drivers/gpio.h>
 
+typedef uint32_t u32_t;
+
 /* GPIO buses definitions */
 
 #define GD32_PORT_NOT_AVAILABLE 0xFFFFFFFF
