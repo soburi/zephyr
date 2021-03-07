@@ -7,6 +7,8 @@
 #include <soc.h>
 #include <drivers/clock_control.h>
 
+typedef uint32_t u32_t;
+
 #include "gd32vf103_rcu.h"
 
 #define LOG_LEVEL CONFIG_CLOCK_CONTROL_LOG_LEVEL
@@ -55,7 +57,7 @@ enum gd32_rcu_peripherals {
 };
 
 
-#define DEV_CFG(dev)  ((struct gd32_rcu_config *)(dev->config->config_info))
+#define DEV_CFG(dev)  ((struct gd32_rcu_config *)(dev->config))
 #define DEV_BASE(dev) (DEV_CFG(dev)->base_address)
 
 static inline void periph_clock_enable(enum gd32_rcu_reg addr, enum gd32_rcu_peripherals bit)
@@ -144,7 +146,7 @@ static const struct clock_control_driver_api gd32_rcu_api = {
 };
 
 static struct gd32_rcu_config gd32_rcu_config = {
-	.base_address = DT_INST_0_GIGADEVICE_GD32_RCU_BASE_ADDRESS,
+	.base_address = 0,//DT_TIM_GD32_1_BASE_ADDRESS,
 };
 
 DEVICE_AND_API_INIT(gd32_rcu, GD32_CLOCK_CONTROL_NAME,
