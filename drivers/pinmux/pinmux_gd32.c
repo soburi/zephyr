@@ -21,6 +21,9 @@
 
 #include "gd32vf103_gpio.h"
 
+typedef uint32_t u32_t;
+typedef uint8_t u8_t;
+
 #define MODE_MASK  0x7Cu
 #define SPEED_MASK 0x03u
 #define INOUT_MASK 0x10u
