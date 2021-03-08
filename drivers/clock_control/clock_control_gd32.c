@@ -145,12 +145,27 @@ static const struct clock_control_driver_api gd32_rcu_api = {
 	//.get_status = gd32_rcu_get_status,
 };
 
-static struct gd32_rcu_config gd32_rcu_config = {
-	.base_address = 0,//DT_TIM_GD32_1_BASE_ADDRESS,
-};
+//static struct gd32_rcu_config gd32_rcu_config = {
+//	.base_address = 0,//DT_TIM_GD32_1_BASE_ADDRESS,
+//};
+//
+//DEVICE_AND_API_INIT(gd32_rcu, GD32_CLOCK_CONTROL_NAME,
+//		    &gd32_rcu_init,
+//		    NULL, &gd32_rcu_config,
+//		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS,
+//		    &gd32_rcu_api);
 
-DEVICE_AND_API_INIT(gd32_rcu, GD32_CLOCK_CONTROL_NAME,
-		    &gd32_rcu_init,
-		    NULL, &gd32_rcu_config,
-		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS,
-		    &gd32_rcu_api);
+#define GD32_RCU_INIT(inst)                                                      \
+	static struct gd32_rcu_config gd32_rcu_config = {                        \
+		.base_address = DT_INST_REG_ADDR(inst)                           \
+	};                                                                       \
+                                                                                 \
+	DEVICE_DT_INST_DEFINE(inst,                                              \
+			      &gd32_rcu_init,                                    \
+			      device_pm_control_nop,                             \
+			      NULL, &gd32_rcu##inst##_config,                    \
+			      PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS, \
+			      &gd32_rcu_api);
+
+
+DT_INST_FOREACH_STATUS_OKAY(GD32_RCU_INIT)

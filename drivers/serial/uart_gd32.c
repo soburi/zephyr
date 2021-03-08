@@ -682,70 +682,37 @@ static void uart_gd32_irq_config_func_##name(struct device *dev)	\
 #define GD32_UART_IRQ_HANDLER(name)
 #endif
 
-#define GD32_UART_INIT(name)						\
-GD32_UART_IRQ_HANDLER_DECL(name);					\
-									\
+#define GD32_UART_INIT(index)						\
+GD32_UART_IRQ_HANDLER_DECL(index);					\
+                                                                        \
+static const struct soc_gpio_pinctrl uart_pins_##index[] =		\
+				ST_GD32_DT_INST_PINCTRL(index, 0);	\
+										\
 static const struct uart_gd32_config uart_gd32_cfg_##name = {		\
 	.uconf = {							\
-		.regs = 0 /*DT_UART_GD32_##name##_BASE_ADDRESS*/,		\
-		GD32_UART_IRQ_HANDLER_FUNC(name)			\
+		.regs = DT_INST_REG_ADDR(index),		\
+		GD32_UART_IRQ_HANDLER_FUNC(index)			\
 	},								\
-	.pclken = { .bus = 0 /*DT_UART_GD32_##name##_CLOCK_BUS*/,		\
-		    .enr = 0 /*DT_UART_GD32_##name##_CLOCK_BITS*/,		\
+	.pclken = { .bus = DT_INST_CLOCKS_CELL(index, bus),		\
+		    .enr = DT_INST_CLOCKS_CELL(index, bits),		\
 	},								\
-	.hw_flow_control = 0 /*DT_UART_GD32_##name##_HW_FLOW_CONTROL*/,	\
+	.hw_flow_control = DT_INST_PROP(index, hw_flow_control),	\
+	.parity = DT_INST_PROP_OR(index, parity, UART_CFG_PARITY_NONE), \
+	.pinctrl_list = uart_pins_##index, \
+	.pinctrl_list_size = ARRAY_SIZE(uart_pins_##index),\
 };									\
 									\
 static struct uart_gd32_data uart_gd32_data_##name = {			\
-	.baud_rate = 0 /*DT_UART_GD32_##name##_BAUD_RATE*/			\
+	.baud_rate = DT_INST_PROP(index, current_speed),		\
 };									\
 									\
-DEVICE_AND_API_INIT(uart_gd32_##name, "" /*DT_UART_GD32_##name##_NAME*/,	\
+DEVICE_DT_INST_DEFINE(index,	                                        \
 		    &uart_gd32_init,					\
-		    &uart_gd32_data_##name, &uart_gd32_cfg_##name,	\
+		    device_pm_control_nop,                              \
+		    &uart_gd32_data_##index, &uart_gd32_cfg_##index,	\
 		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,	\
 		    &uart_gd32_driver_api);				\
 									\
-GD32_UART_IRQ_HANDLER(name)
+GD32_UART_IRQ_HANDLER(index)
 
-
-#ifdef CONFIG_UART_0
-GD32_UART_INIT(USART_0)
-#endif	/* CONFIG_UART_0 */
-
-#ifdef CONFIG_UART_1
-GD32_UART_INIT(USART_1)
-#endif	/* CONFIG_UART_1 */
-
-#ifdef CONFIG_UART_2
-GD32_UART_INIT(USART_2)
-#endif	/* CONFIG_UART_2 */
-
-#ifdef CONFIG_UART_3
-GD32_UART_INIT(USART_3)
-#endif	/* CONFIG_UART_3 */
-
-#ifdef CONFIG_UART_4
-GD32_UART_INIT(USART_4)
-#endif /* CONFIG_UART_4 */
-
-#ifdef CONFIG_UART_5
-GD32_UART_INIT(USART_5)
-#endif /* CONFIG_UART_5 */
-
-#ifdef CONFIG_UART_6
-GD32_UART_INIT(USART_6)
-#endif /* CONFIG_UART_6 */
-
-#ifdef CONFIG_UART_7
-GD32_UART_INIT(USART_7)
-#endif /* CONFIG_UART_7 */
-
-#ifdef CONFIG_UART_8
-GD32_UART_INIT(USART_8)
-#endif /* CONFIG_UART_8 */
-
-#ifdef CONFIG_UART_9
-GD32_UART_INIT(UART_9)
-#endif /* CONFIG_UART_9 */
-
+DT_INST_FOREACH_STATUS_OKAY(GD32_UART_INIT)

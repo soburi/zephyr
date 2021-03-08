@@ -390,82 +390,84 @@ static int gpio_gd32_init(struct device *device)
 	return 0;
 }
 
-#define GPIO_DEVICE_INIT(__name, __suffix, __base_addr, __port, __cenr, __bus) \
-	static const struct gpio_gd32_config gpio_gd32_cfg_## __suffix = {   \
+#define GPIO_DEVICE_INIT(__node, __suffix, __base_addr, __port, __cenr, __bus) \
+	static const struct gpio_gd32_config gpio_gd32_cfg_## __suffix = {     \
 		.common = {						       \
-			 .port_pin_mask = GPIO_PORT_PIN_MASK_FROM_NGPIOS(16U),		       \
+			 .port_pin_mask = GPIO_PORT_PIN_MASK_FROM_NGPIOS(16U), \
 		},							       \
 		.base = (u32_t *)__base_addr,				       \
-		.port = __port - GD32_PORTA,				       \
+		.port = __port,				       \
 		.pclken = { .bus = __bus, .enr = __cenr }		       \
 	};								       \
 	static struct gpio_gd32_data gpio_gd32_data_## __suffix;	       \
-	DEVICE_AND_API_INIT(gpio_gd32_## __suffix,			       \
-			    __name,					       \
+	DEVICE_DT_DEFINE(__node,                                               \
 			    gpio_gd32_init,				       \
+			    device_pm_control_nop,                             \
 			    &gpio_gd32_data_## __suffix,		       \
-			    &gpio_gd32_cfg_## __suffix,		       \
+			    &gpio_gd32_cfg_## __suffix,		               \
 			    POST_KERNEL,				       \
 			    CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,	       \
 			    &gpio_gd32_driver)
-/*
-#define GPIO_DEVICE_INIT_GD32(__suffix, __SUFFIX)		      \
-	GPIO_DEVICE_INIT(DT_GPIO_GD32_GPIO##__SUFFIX##_LABEL,	      \
-			 __suffix,				      \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_BASE_ADDRESS, \
-			 GD32_PORT##__SUFFIX,			      \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BITS,   \
-			 DT_GPIO_GD32_GPIO##__SUFFIX##_CLOCK_BUS)
-*/
-#define GPIO_DEVICE_INIT_GD32(__suffix, __SUFFIX)		      \
-	GPIO_DEVICE_INIT("", \
-			 __suffix,				      \
-			 0, \
-			 "", \
-			 0, \
-			 0)
 
-#ifdef CONFIG_GPIO_GD32_PORTA
+
+//	DEVICE_AND_API_INIT(gpio_gd32_## __suffix,			       \
+//			    __name,					       \
+//			    gpio_gd32_init,				       \
+//			    &gpio_gd32_data_## __suffix,		       \
+//			    &gpio_gd32_cfg_## __suffix,		       \
+//			    POST_KERNEL,				       \
+//			    CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,	       \
+//			    &gpio_gd32_driver)
+
+#define GPIO_DEVICE_INIT_GD32(__suffix, __SUFFIX)		               \
+	GPIO_DEVICE_INIT(gpio##__suffix,	                               \
+			 __suffix,				               \
+			 DT_REG_ADDR(DT_NODELABEL(gpio##__suffix)),            \
+			 GD32_PORT##__SUFFIX,			               \
+			 DT_CLOCKS_CELL(DT_NODELABEL(gpio##__suffix), bits),   \
+			 DT_CLOCKS_CELL(DT_NODELABEL(gpio##__suffix), bus))
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioa), okay)
 GPIO_DEVICE_INIT_GD32(a, A);
 #endif /* CONFIG_GPIO_GD32_PORTA */
 
-#ifdef CONFIG_GPIO_GD32_PORTB
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpiob), okay)
 GPIO_DEVICE_INIT_GD32(b, B);
 #endif /* CONFIG_GPIO_GD32_PORTB */
 
-#ifdef CONFIG_GPIO_GD32_PORTC
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioc), okay)
 GPIO_DEVICE_INIT_GD32(c, C);
 #endif /* CONFIG_GPIO_GD32_PORTC */
 
-#ifdef CONFIG_GPIO_GD32_PORTD
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpiod), okay)
 GPIO_DEVICE_INIT_GD32(d, D);
 #endif /* CONFIG_GPIO_GD32_PORTD */
 
-#ifdef CONFIG_GPIO_GD32_PORTE
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioe), okay)
 GPIO_DEVICE_INIT_GD32(e, E);
 #endif /* CONFIG_GPIO_GD32_PORTE */
 
-#ifdef CONFIG_GPIO_GD32_PORTF
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpiof), okay)
 GPIO_DEVICE_INIT_GD32(f, F);
 #endif /* CONFIG_GPIO_GD32_PORTF */
 
-#ifdef CONFIG_GPIO_GD32_PORTG
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpiog), okay)
 GPIO_DEVICE_INIT_GD32(g, G);
 #endif /* CONFIG_GPIO_GD32_PORTG */
 
-#ifdef CONFIG_GPIO_GD32_PORTH
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioh), okay)
 GPIO_DEVICE_INIT_GD32(h, H);
 #endif /* CONFIG_GPIO_GD32_PORTH */
 
-#ifdef CONFIG_GPIO_GD32_PORTI
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioi), okay)
 GPIO_DEVICE_INIT_GD32(i, I);
 #endif /* CONFIG_GPIO_GD32_PORTI */
 
-#ifdef CONFIG_GPIO_GD32_PORTJ
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioj), okay)
 GPIO_DEVICE_INIT_GD32(j, J);
 #endif /* CONFIG_GPIO_GD32_PORTJ */
 
-#ifdef CONFIG_GPIO_GD32_PORTK
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpiok), okay)
 GPIO_DEVICE_INIT_GD32(k, K);
 #endif /* CONFIG_GPIO_GD32_PORTK */
 
