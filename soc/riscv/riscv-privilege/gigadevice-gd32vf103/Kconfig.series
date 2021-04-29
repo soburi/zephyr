@@ -5,7 +5,7 @@
 
 config SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
 	bool "GigaDevice GD32VF103 SOC implementation"
-	depends on RISCV
+	select RISCV
 	select SOC_FAMILY_RISCV_PRIVILEGE
 	help
 	  Enable support for GigaDevice GD32VF103 SOC
