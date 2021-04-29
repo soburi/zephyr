@@ -258,7 +258,7 @@ int gd32_exti_set_callback(int line, gd32_exti_callback_t cb, void *arg)
 
 void gd32_exti_unset_callback(int line)
 {
-	struct device *dev = DEVICE_GET(exti_gd32);
+	const struct device *dev = DEVICE_GET(exti_gd32);
 	struct gd32_exti_data *data = dev->data;
 
 	data->cb[line].cb = NULL;

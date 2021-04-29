@@ -424,8 +424,8 @@ static int uart_gd32_err_check(const struct device *dev)
 static inline void __uart_gd32_get_clock(struct device *dev)
 {
 	struct uart_gd32_data *data = DEV_DATA(dev);
-	const struct device *clk =
-		device_get_binding(GD32_CLOCK_CONTROL_NAME);
+	struct device *clk =
+		(struct device*)device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
 	__ASSERT_NO_MSG(clk);
 
@@ -687,18 +687,18 @@ GD32_UART_IRQ_HANDLER_DECL(index);					\
                                                                         \
 static const struct soc_gpio_pinctrl uart_pins_##index[] =		\
 				ST_GD32_DT_INST_PINCTRL(index, 0);	\
-										\
-static const struct uart_gd32_config uart_gd32_cfg_##name = {		\
+									\
+static const struct uart_gd32_config uart_gd32_cfg_##name = {	\
 	.uconf = {							\
 		.regs = DT_INST_REG_ADDR(index),		\
 		GD32_UART_IRQ_HANDLER_FUNC(index)			\
 	},								\
 	.pclken = { .bus = DT_INST_CLOCKS_CELL(index, bus),		\
-		    .enr = DT_INST_CLOCKS_CELL(index, bits),		\
+		    .enr = DT_INST_CLOCKS_CELL(index, bits)		\
 	},								\
 	.hw_flow_control = DT_INST_PROP(index, hw_flow_control),	\
-	.parity = DT_INST_PROP_OR(index, parity, UART_CFG_PARITY_NONE), \
-	.pinctrl_list = uart_pins_##index, \
+	.parity = DT_INST_PROP_OR(index, parity, UART_CFG_PARITY_NONE),	\
+	.pinctrl_list = uart_pins_##index,				\
 	.pinctrl_list_size = ARRAY_SIZE(uart_pins_##index),\
 };									\
 									\
@@ -706,9 +706,9 @@ static struct uart_gd32_data uart_gd32_data_##name = {			\
 	.baud_rate = DT_INST_PROP(index, current_speed),		\
 };									\
 									\
-DEVICE_DT_INST_DEFINE(index,	                                        \
+DEVICE_DT_INST_DEFINE(index,						\
 		    &uart_gd32_init,					\
-		    device_pm_control_nop,                              \
+		    device_pm_control_nop,				\
 		    &uart_gd32_data_##index, &uart_gd32_cfg_##index,	\
 		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,	\
 		    &uart_gd32_driver_api);				\
