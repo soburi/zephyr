@@ -25,13 +25,11 @@
 #ifdef CONFIG_64BIT
 /* Interrupt Mask */
 #define SOC_MCAUSE_IRQ_MASK          (1 << 63)
-/* Exception code Mask */
 #else
 /* Interrupt Mask */
 #define SOC_MCAUSE_IRQ_MASK          (1 << 31)
-/* Exception code Mask */
 #endif
-/* ECALL exception number */
+/* Exception code Mask */
 #define SOC_MCAUSE_EXP_MASK          CONFIG_RISCV_SOC_MCAUSE_EXCEPTION_MASK
 
 /* SOC-Specific EXIT ISR command */
