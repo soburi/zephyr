@@ -34,14 +34,6 @@ config SWERV_PIC
 	help
 	  Programmable Interrupt Controller for the SweRV EH1 RISC-V CPU;
 
-config NUCLEI_ECLIC
-	bool "Extended Core Interrupt Controller (eclic)"
-	default n
-	depends on SOC_FAMILY_RISCV_PRIVILEGE
-	select RISCV_HAS_INTERRUPT_CONTROLLER
-	help
-	  nuclei-eclic
-
 config VEXRISCV_LITEX_IRQ
 	bool "VexRiscv LiteX Interrupt controller"
 	depends on SOC_RISCV32_LITEX_VEXRISCV
@@ -54,6 +46,14 @@ config LEON_IRQMP
 	depends on SOC_SPARC_LEON
 	help
 	  GRLIB IRQMP and IRQAMP
+
+config NUCLEI_ECLIC
+	bool "Extended Core Interrupt Controller (eclic)"
+	default n
+	depends on SOC_FAMILY_RISCV_PRIVILEGE
+	select RISCV_HAS_INTERRUPT_CONTROLLER
+	help
+	  nuclei-eclic
 
 source "drivers/interrupt_controller/Kconfig.multilevel"
 

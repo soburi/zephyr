@@ -178,23 +178,28 @@ source "drivers/timer/Kconfig.stm32_lptim"
 
 config RISCV_MACHINE_TIMER
 	bool "RISCV Machine Timer"
-	depends on SOC_FAMILY_RISCV_PRIVILEGE
+#	depends on SOC_FAMILY_RISCV_PRIVILEGE
 	select TICKLESS_CAPABLE
 	help
 	  This module implements a kernel device driver for the generic RISCV machine
 	  timer driver. It provides the standard "system clock driver" interfaces.
 
-if RISCV_MACHINE_TIMER
+config RISCV_MACHINE_TIMER_USE_CUSTOM_CLOCK
+	bool "RISCV Machine Timer use custom clock"
+	depends on RISCV_MACHINE_TIMER
+	help
+	  Use custom clock frequency for machine timer.
+
+if RISCV_MACHINE_TIMER_USE_CUSTOM_CLOCK
 
 config RISCV_MACHINE_TIMER_CLOCK_FREQUENCY
 	int "RISCV Machine Timer clock frequency"
-	depends on RISCV_MACHINE_TIMER
+	default 0
 	help
-      Assign clock frequency for RISCV Machine Timer.
-      In generally, Same frequency as core clock supply to the timer.
-      If different clock with core is supplied, set this value.
+          Set clock frequency for RISCV Machine Timer.
+	  The value set 0 to use same frequency as core clock.
 
-endif #RISCV_MACHINE_TIMER
+endif #RISCV_MACHINE_TIMER_USE_CUSTOM_CLOCK
 
 config RV32M1_LPTMR_TIMER
 	bool "RV32M1 LPTMR system timer driver"

@@ -18,9 +18,11 @@
 #include <soc.h>
 #include <drivers/clock_control.h>
 #include <drivers/pinmux.h>
-#include <gpio/gpio_gd32.h>
 
 #include "gd32vf103_gpio.h"
+
+typedef uint32_t u32_t;
+typedef uint8_t u8_t;
 
 #define MODE_MASK  0x7Cu
 #define SPEED_MASK 0x03u
@@ -28,30 +30,23 @@
 
 static inline u32_t gpio_speed(u32_t flags)
 {
-	int pincfg = 0;
-
-	gpio_gd32_flags_to_conf(flags, &pincfg);
-	return (pincfg & INOUT_MASK) ? (pincfg & SPEED_MASK) : 0;
+	return (flags & INOUT_MASK) ? (flags & SPEED_MASK) : 0;
 }
 
-static inline u32_t gpio_mode_with_af(u32_t flags)
+static inline u32_t gpio_mode(u32_t flags)
 {
-	int pincfg = 0;
-
-	gpio_gd32_flags_to_conf(flags, &pincfg);
-	// Use Higher 16bit in flags to store AF flag
-	return ((pincfg & ~SPEED_MASK) | ((flags & 0xc0000)>>16));
+	return (flags & ~SPEED_MASK);
 }
 
 
 static inline u32_t pin_to_base(u32_t pin)
 {
 	static const u32_t base[] = {
-		DT_GPIO_GD32_GPIOA_BASE_ADDRESS,
-		DT_GPIO_GD32_GPIOB_BASE_ADDRESS,
-		DT_GPIO_GD32_GPIOC_BASE_ADDRESS,
-		DT_GPIO_GD32_GPIOD_BASE_ADDRESS,
-		DT_GPIO_GD32_GPIOE_BASE_ADDRESS,
+		GPIOA,
+		GPIOB,
+		GPIOB,
+		GPIOC,
+		GPIOD,
 	};
 
 	if((pin/16) >= ARRAY_SIZE(base)) return 0;
@@ -66,22 +61,9 @@ static inline u32_t pin_to_bit(u32_t pin)
 
 static int pinmux_gd32_set(struct device *dev, u32_t pin, u32_t flags)
 {
-	int pincfg = 0;
-
 	ARG_UNUSED(dev);
-#if 0
-	const struct gpio_gd32_config *cfg = dev->config->config_info;
-	/* enable clock for subsystem */
-	struct device *clk =
-		device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
-	if (clock_control_on(clk,
-			     (clock_control_subsys_t *)&cfg->pclken) != 0) {
-		return -EIO;
-	}
-#endif
-
-	gpio_init(pin_to_base(pin), gpio_mode_with_af(flags), gpio_speed(flags), pin_to_bit(pin)) ;
+	gpio_init(pin_to_base(pin), gpio_mode(flags), gpio_speed(flags), pin_to_bit(pin)) ;
 
         return 0;
 }

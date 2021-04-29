@@ -36,7 +36,7 @@ SYS_INIT(_eclic_init, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 //eclic_priority_group_set(ECLIC_PRIGROUP_LEVEL3_PRIO1);
 //eclic_set_vector(RISCV_MACHINE_TIMER_IRQ, eclic_mtip_handler);
-
+/*
 void arch_irq_enable(unsigned int irq)
 {
         eclic_enable_interrupt(irq);
@@ -59,3 +59,4 @@ int arch_irq_is_enabled(unsigned int irq)
 {
 	return arch_irq_is_enabled(irq);
 }
+*/

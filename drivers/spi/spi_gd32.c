@@ -26,6 +26,9 @@ LOG_MODULE_REGISTER(spi_gd32);
 typedef void (*irq_config_func_t)(struct device *port);
 
 typedef uint32_t SPI_TypeDef;
+typedef uint32_t u32_t;
+typedef uint16_t u16_t;
+typedef uint8_t u8_t;
 
 struct spi_gd32_config {
 	struct gd32_pclken pclken;
@@ -41,10 +44,10 @@ struct spi_gd32_data {
 
 
 #define DEV_CFG(dev)						\
-(const struct spi_gd32_config * const)(dev->config->config_info)
+(const struct spi_gd32_config * const)(dev->config)
 
 #define DEV_DATA(dev)					\
-(struct spi_gd32_data * const)(dev->driver_data)
+(struct spi_gd32_data * const)(dev->data)
 
 /*
  * Check for SPI_SR_FRE to determine support for TI mode frame format
@@ -409,7 +412,7 @@ static int transceive(struct device *dev,
 	}
 #endif
 
-	spi_context_lock(&data->ctx, asynchronous, signal);
+	spi_context_lock(&data->ctx, asynchronous, signal, config);
 
 	ret = spi_gd32_configure(dev, config);
 	if (ret) {
@@ -483,8 +486,8 @@ static const struct spi_driver_api api_funcs = {
 
 static int spi_gd32_init(struct device *dev)
 {
-	struct spi_gd32_data *data __attribute__((unused)) = dev->driver_data;
-	const struct spi_gd32_config *cfg = dev->config->config_info;
+	struct spi_gd32_data *data __attribute__((unused)) = dev->data;
+	const struct spi_gd32_config *cfg = dev->config;
 
 	__ASSERT_NO_MSG(device_get_binding(GD32_CLOCK_CONTROL_NAME));
 
@@ -510,10 +513,10 @@ static void spi_gd32_irq_config_func_0(struct device *port);
 #endif
 
 static const struct spi_gd32_config spi_gd32_cfg_0 = {
-	.spi = (SPI_TypeDef *) DT_SPI_0_BASE_ADDRESS,
+	.spi = (SPI_TypeDef *) 0,//DT_SPI_0_BASE_ADDRESS,
 	.pclken = {
-		.enr = DT_SPI_0_CLOCK_BITS,
-		.bus = DT_SPI_0_CLOCK_BUS
+		.enr = 0,//DT_SPI_0_CLOCK_BITS,
+		.bus = 0,//DT_SPI_0_CLOCK_BUS
 	},
 #ifdef CONFIG_SPI_GD32_INTERRUPT
 	.irq_config = spi_gd32_irq_config_func_0,
@@ -525,7 +528,7 @@ static struct spi_gd32_data spi_gd32_dev_data_0 = {
 	SPI_CONTEXT_INIT_SYNC(spi_gd32_dev_data_0, ctx),
 };
 
-DEVICE_AND_API_INIT(spi_gd32_0, DT_SPI_0_NAME, &spi_gd32_init,
+DEVICE_AND_API_INIT(spi_gd32_0, ""/*DT_SPI_0_NAME*/, &spi_gd32_init,
 		    &spi_gd32_dev_data_0, &spi_gd32_cfg_0,
 		    POST_KERNEL, CONFIG_SPI_INIT_PRIORITY,
 		    &api_funcs);
@@ -533,9 +536,9 @@ DEVICE_AND_API_INIT(spi_gd32_0, DT_SPI_0_NAME, &spi_gd32_init,
 #ifdef CONFIG_SPI_GD32_INTERRUPT
 static void spi_gd32_irq_config_func_0(struct device *dev)
 {
-	IRQ_CONNECT(DT_SPI_0_IRQ, DT_SPI_0_IRQ_PRI,
+	IRQ_CONNECT(0/*DT_SPI_0_IRQ*/, 0/*DT_SPI_0_IRQ_PRI*/,
 		    spi_gd32_isr, DEVICE_GET(spi_gd32_0), 0);
-	irq_enable(DT_SPI_0_IRQ);
+	irq_enable(0/*DT_SPI_0_IRQ*/);
 }
 #endif
 
@@ -548,10 +551,10 @@ static void spi_gd32_irq_config_func_1(struct device *port);
 #endif
 
 static const struct spi_gd32_config spi_gd32_cfg_1 = {
-	.spi = (SPI_TypeDef *) DT_SPI_1_BASE_ADDRESS,
+	.spi = (SPI_TypeDef *) 0,//DT_SPI_1_BASE_ADDRESS,
 	.pclken = {
-		.enr = DT_SPI_1_CLOCK_BITS,
-		.bus = DT_SPI_1_CLOCK_BUS
+		.enr = 0,//DT_SPI_1_CLOCK_BITS,
+		.bus = 0,//DT_SPI_1_CLOCK_BUS
 	},
 #ifdef CONFIG_SPI_GD32_INTERRUPT
 	.irq_config = spi_gd32_irq_config_func_1,
@@ -563,7 +566,7 @@ static struct spi_gd32_data spi_gd32_dev_data_1 = {
 	SPI_CONTEXT_INIT_SYNC(spi_gd32_dev_data_1, ctx),
 };
 
-DEVICE_AND_API_INIT(spi_gd32_1, DT_SPI_1_NAME, &spi_gd32_init,
+DEVICE_AND_API_INIT(spi_gd32_1, ""/*DT_SPI_1_NAME*/, &spi_gd32_init,
 		    &spi_gd32_dev_data_1, &spi_gd32_cfg_1,
 		    POST_KERNEL, CONFIG_SPI_INIT_PRIORITY,
 		    &api_funcs);
@@ -571,9 +574,9 @@ DEVICE_AND_API_INIT(spi_gd32_1, DT_SPI_1_NAME, &spi_gd32_init,
 #ifdef CONFIG_SPI_GD32_INTERRUPT
 static void spi_gd32_irq_config_func_1(struct device *dev)
 {
-	IRQ_CONNECT(DT_SPI_1_IRQ, DT_SPI_1_IRQ_PRI,
+	IRQ_CONNECT(0/*DT_SPI_1_IRQ*/, /*DT_SPI_1_IRQ_PRI*/,
 		    spi_gd32_isr, DEVICE_GET(spi_gd32_1), 0);
-	irq_enable(DT_SPI_1_IRQ);
+	irq_enable(0/*DT_SPI_1_IRQ*/);
 }
 #endif
 

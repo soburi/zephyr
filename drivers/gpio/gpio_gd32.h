@@ -13,6 +13,8 @@
 
 #include <drivers/gpio.h>
 
+typedef uint32_t u32_t;
+
 /* GPIO buses definitions */
 
 #define GD32_PORT_NOT_AVAILABLE 0xFFFFFFFF
@@ -168,6 +170,10 @@
 					 | GD32_CNF_GP_OUTPUT \
 					 | GD32_CNF_PUSH_PULL)
 #define GD32_PINCFG_MODE_INPUT         GD32_MODE_INPUT
+#define GD32_PINCFG_MODE_ANALOG        (GD32_MODE_INPUT	\
+					 | GD32_CNF_IN_ANALOG)
+#define GD32_PINCFG_PUSH_PULL          GD32_CNF_PUSH_PULL
+#define GD32_PINCFG_OPEN_DRAIN         GD32_CNF_OPEN_DRAIN
 #define GD32_PINCFG_PULL_UP            (GD32_CNF_IN_PUPD | GD32_PUPD_PULL_UP)
 #define GD32_PINCFG_PULL_DOWN          (GD32_CNF_IN_PUPD | \
 					GD32_PUPD_PULL_DOWN)
@@ -176,6 +182,9 @@
 #else
 #define GD32_PINCFG_MODE_OUTPUT        GD32_MODER_OUTPUT_MODE
 #define GD32_PINCFG_MODE_INPUT         GD32_MODER_INPUT_MODE
+#define GD32_PINCFG_MODE_ANALOG        GD32_MODER_ANALOG_MODE
+#define GD32_PINCFG_PUSH_PULL          GD32_OTYPER_PUSH_PULL
+#define GD32_PINCFG_OPEN_DRAIN         GD32_OTYPER_OPEN_DRAIN
 #define GD32_PINCFG_PULL_UP            GD32_PUPDR_PULL_UP
 #define GD32_PINCFG_PULL_DOWN          GD32_PUPDR_PULL_DOWN
 #define GD32_PINCFG_FLOATING           GD32_PUPDR_NO_PULL
@@ -221,6 +230,8 @@
  * @brief configuration of GPIO device
  */
 struct gpio_gd32_config {
+	/* gpio_driver_config needs to be first */
+	struct gpio_driver_config common;
 	/* port base address */
 	u32_t *base;
 	/* IO port */
@@ -232,6 +243,8 @@ struct gpio_gd32_config {
  * @brief driver data
  */
 struct gpio_gd32_data {
+	/* gpio_driver_data needs to be first */
+	struct gpio_driver_data common;
 	/* Enabled INT pins generating a cb */
 	u32_t cb_pins;
 	/* user ISR cb */

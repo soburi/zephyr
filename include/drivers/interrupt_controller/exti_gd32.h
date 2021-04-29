@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_EXTI_GD32_H_
-#define ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_EXTI_GD32_H_
+#ifndef ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_EXTI_GD32_H_
+#define ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_EXTI_GD32_H_
 
 #include <zephyr/types.h>
 
@@ -31,7 +31,7 @@
  *
  * @param line EXTI# line
  */
-int gd32_exti_enable(int line);
+void gd32_exti_enable(int line);
 
 /**
  * @brief disable EXTI interrupt for specific line
@@ -39,16 +39,6 @@ int gd32_exti_enable(int line);
  * @param line EXTI# line
  */
 void gd32_exti_disable(int line);
-
-/**
- * @brief EXTI trigger flags
- */
-enum gd32_exti_trigger {
-	/* trigger on rising edge */
-	GD32_EXTI_TRIG_RISING  = 0x1,
-	/* trigger on falling endge */
-	GD32_EXTI_TRIG_FALLING = 0x2,
-};
 
 /**
  * @brief set EXTI interrupt line triggers
@@ -68,8 +58,7 @@ typedef void (*gd32_exti_callback_t) (int line, void *user);
  * @param cb   user callback
  * @param arg  user arg
  */
-int gd32_exti_set_callback(int line, int port, gd32_exti_callback_t cb,
-				void *data);
+int gd32_exti_set_callback(int line, gd32_exti_callback_t cb, void *data);
 
 /**
  * @brief unset EXTI interrupt callback
@@ -78,4 +67,4 @@ int gd32_exti_set_callback(int line, int port, gd32_exti_callback_t cb,
  */
 void gd32_exti_unset_callback(int line);
 
-#endif /* ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_EXTI_GD32_H_ */
+#endif /* ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_EXTI_GD32_H_ */

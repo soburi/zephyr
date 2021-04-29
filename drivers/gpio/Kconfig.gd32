@@ -5,7 +5,7 @@
 
 menuconfig GPIO_GD32
 	bool "GPIO Driver for GD32 family of MCUs"
-	depends on SOC_SERIES_RISCV_GIGADEVICE_GD32VF103
+	depends on SOC_RISCV_GIGADEVICE_GD32VF103
 	select HAS_DTS_GPIO
 	help
 	  Enable GPIO driver for GD32 line of MCUs
