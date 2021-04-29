@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#define DT_DRV_COMPAT gigadevice_gd32_uart
+
 /**
  * @brief Driver for UART port on GD32 family processor.
  * @note  LPUART and U(S)ART have the same base and
@@ -47,13 +49,22 @@ LOG_MODULE_REGISTER(uart_gd32);
 #define USART_HWFC_RTSCTS             CLT2_HWFC(3)                     /*!< RTS&CTS enable */
 #define USART_CTL2_HWFC               BITS(8,9)                        /*!< RTS&CTS enable */
 
+struct soc_gpio_pinctrl {
+	int x;
+	int y;
+};
+
 /* device config */
 struct uart_gd32_config {
-	struct uart_device_config uconf;
-	/* clock subsystem driving this peripheral */
+        struct uart_device_config uconf;
+        /* clock subsystem driving this peripheral */
 	struct gd32_pclken pclken;
-	/* initial hardware flow control, 1 for RTS/CTS */
-	bool hw_flow_control;
+        /* initial hardware flow control, 1 for RTS/CTS */
+        bool hw_flow_control;
+        /* initial parity, 0 for none, 1 for odd, 2 for even */
+        int  parity;
+        const struct soc_gpio_pinctrl *pinctrl_list;
+        size_t pinctrl_list_size;
 };
 
 /* driver data */
@@ -425,7 +436,7 @@ static int uart_gd32_err_check(const struct device *dev)
 	return err;
 }
 
-static inline void __uart_gd32_get_clock(struct device *dev)
+static inline void __uart_gd32_get_clock(const struct device *dev)
 {
 	struct uart_gd32_data *data = DEV_DATA(dev);
 	struct device *clk =
@@ -626,7 +637,7 @@ static const struct uart_driver_api uart_gd32_driver_api = {
  *
  * @return 0
  */
-static int uart_gd32_init(struct device *dev)
+static int uart_gd32_init(const struct device *dev)
 {
 	const struct uart_gd32_config *config = DEV_CFG(dev);
 	struct uart_gd32_data *data = DEV_DATA(dev);
@@ -690,11 +701,11 @@ static void uart_gd32_irq_config_func_##name(struct device *dev)	\
 GD32_UART_IRQ_HANDLER_DECL(index);					\
 									\
 static const struct soc_gpio_pinctrl uart_pins_##index[] =		\
-				ST_GD32_DT_INST_PINCTRL(index, 0);	\
+				GIGADEVICE_GD32_DT_INST_PINCTRL(index, 0);	\
 									\
 static const struct uart_gd32_config uart_gd32_cfg_##index = {	\
 	.uconf = {							\
-		.regs = (uint8_t *)DT_INST_REG_ADDR(index),		\
+		.regs = DT_INST_REG_ADDR(index),		\
 		GD32_UART_IRQ_HANDLER_FUNC(index)			\
 	},								\
 	.pclken = { .bus = DT_INST_CLOCKS_CELL(index, bus),		\

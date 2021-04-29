@@ -13,6 +13,7 @@
 
 #include <soc_common.h>
 #include <devicetree.h>
+#include <gigadevice_gd32_dt.h>
 
 #include "n200_timer.h"
 
