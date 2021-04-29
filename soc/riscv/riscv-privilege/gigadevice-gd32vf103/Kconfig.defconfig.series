@@ -14,9 +14,6 @@ config RISCV_SOC_INTERRUPT_INIT
 config RISCV_HAS_CPU_IDLE
 	default y
 
-config RISCV_MACHINE_TIMER_USE_CUSTOM_CLOCK
-        default y
-
 config PLIC
 	default n
 
