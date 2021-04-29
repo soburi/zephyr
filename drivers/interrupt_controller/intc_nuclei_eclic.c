@@ -22,7 +22,7 @@
  * @brief Initialize the Platform Level Interrupt Controller
  * @return N/A
  */
-static int _eclic_init(struct device *dev)
+static int _eclic_init(const struct device *dev)
 {
 	//ECLIC init
 	eclic_init(ECLIC_NUM_INTERRUPTS);

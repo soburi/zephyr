@@ -177,7 +177,7 @@ static int gpio_gd32_enable_int(int port, int pin)
 	return 0;
 }
 
-static int gpio_gd32_port_get_raw(struct device *dev, u32_t *value)
+static int gpio_gd32_port_get_raw(const struct device *dev, u32_t *value)
 {
 	const struct gpio_gd32_config *cfg = dev->config;
 	uint32_t gpio = (uint32_t)cfg->base;
@@ -187,7 +187,7 @@ static int gpio_gd32_port_get_raw(struct device *dev, u32_t *value)
 	return 0;
 }
 
-static int gpio_gd32_port_set_masked_raw(struct device *dev,
+static int gpio_gd32_port_set_masked_raw(const struct device *dev,
 					  gpio_port_pins_t mask,
 					  gpio_port_value_t value)
 {
@@ -201,7 +201,7 @@ static int gpio_gd32_port_set_masked_raw(struct device *dev,
 	return 0;
 }
 
-static int gpio_gd32_port_set_bits_raw(struct device *dev,
+static int gpio_gd32_port_set_bits_raw(const struct device *dev,
 					gpio_port_pins_t pins)
 {
 	const struct gpio_gd32_config *cfg = dev->config;
@@ -212,7 +212,7 @@ static int gpio_gd32_port_set_bits_raw(struct device *dev,
 	return 0;
 }
 
-static int gpio_gd32_port_clear_bits_raw(struct device *dev,
+static int gpio_gd32_port_clear_bits_raw(const struct device *dev,
 					  gpio_port_pins_t pins)
 {
 	const struct gpio_gd32_config *cfg = dev->config;
@@ -223,7 +223,7 @@ static int gpio_gd32_port_clear_bits_raw(struct device *dev,
 	return 0;
 }
 
-static int gpio_gd32_port_toggle_bits(struct device *dev,
+static int gpio_gd32_port_toggle_bits(const struct device *dev,
 				       gpio_port_pins_t pins)
 {
 	const struct gpio_gd32_config *cfg = dev->config;
@@ -237,7 +237,7 @@ static int gpio_gd32_port_toggle_bits(struct device *dev,
 /**
  * @brief Configure pin or port
  */
-static int gpio_gd32_config(struct device *dev,
+static int gpio_gd32_config(const struct device *dev,
 			     gpio_pin_t pin, gpio_flags_t flags)
 {
 	const struct gpio_gd32_config *cfg = dev->config;
@@ -268,7 +268,7 @@ release_lock:
 	return err;
 }
 
-static int gpio_gd32_pin_interrupt_configure(struct device *dev,
+static int gpio_gd32_pin_interrupt_configure(const struct device *dev,
 		gpio_pin_t pin, enum gpio_int_mode mode,
 		enum gpio_int_trig trig)
 {
@@ -294,7 +294,7 @@ static int gpio_gd32_pin_interrupt_configure(struct device *dev,
 		goto release_lock;
 	}
 
-	if (gd32_exti_set_callback(pin, gpio_gd32_isr, dev) != 0) {
+	if (gd32_exti_set_callback(pin, gpio_gd32_isr, (void*)dev) != 0) {
 		err = -EBUSY;
 		goto release_lock;
 	}
@@ -323,7 +323,7 @@ release_lock:
 	return err;
 }
 
-static int gpio_gd32_manage_callback(struct device *dev,
+static int gpio_gd32_manage_callback(const struct device *dev,
 				      struct gpio_callback *callback,
 				      bool set)
 {
@@ -332,7 +332,7 @@ static int gpio_gd32_manage_callback(struct device *dev,
 	return gpio_manage_callback(&data->cb, callback, set);
 }
 
-static int gpio_gd32_enable_callback(struct device *dev,
+static int gpio_gd32_enable_callback(const struct device *dev,
 				      gpio_pin_t pin)
 {
 	struct gpio_gd32_data *data = dev->data;
@@ -342,7 +342,7 @@ static int gpio_gd32_enable_callback(struct device *dev,
 	return 0;
 }
 
-static int gpio_gd32_disable_callback(struct device *dev,
+static int gpio_gd32_disable_callback(const struct device *dev,
 				       gpio_pin_t pin)
 {
 	struct gpio_gd32_data *data = dev->data;
@@ -374,12 +374,12 @@ static const struct gpio_driver_api gpio_gd32_driver = {
  *
  * @return 0
  */
-static int gpio_gd32_init(struct device *device)
+static int gpio_gd32_init(const struct device *device)
 {
 	const struct gpio_gd32_config *cfg = device->config;
 
 	/* enable clock for subsystem */
-	struct device *clk =
+	const struct device *clk =
 		device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
 	if (clock_control_on(clk,
@@ -471,11 +471,11 @@ GPIO_DEVICE_INIT_GD32(j, J);
 GPIO_DEVICE_INIT_GD32(k, K);
 #endif /* CONFIG_GPIO_GD32_PORTK */
 
-static int gpio_gd32_afio_init(struct device *device)
+static int gpio_gd32_afio_init(const struct device *device)
 {
 	//UNUSED(device);
 
-	struct device *clk = device_get_binding(GD32_CLOCK_CONTROL_NAME);
+	const struct device *clk = device_get_binding(GD32_CLOCK_CONTROL_NAME);
 	struct gd32_pclken pclken = {
 		.bus = GD32_CLOCK_BUS_APB2,
 		.enr = 0x1,

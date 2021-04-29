@@ -12,7 +12,7 @@
 #define __RISCV_GIGADEVICE_GD32VF103_SOC_H_
 
 #include <soc_common.h>
-#include <generated_dts_board.h>
+#include <devicetree.h>
 
 #include "n200_timer.h"
 

@@ -221,12 +221,12 @@ static inline void __gd32_exti_isr_10_15(void *arg)
 	__gd32_exti_isr(10, 16, arg);
 }
 
-static void __gd32_exti_connect_irqs(struct device *dev);
+static void __gd32_exti_connect_irqs(const struct device *dev);
 
 /**
  * @brief initialize EXTI device driver
  */
-static int gd32_exti_init(struct device *dev)
+static int gd32_exti_init(const struct device *dev)
 {
 	__gd32_exti_connect_irqs(dev);
 
@@ -243,7 +243,7 @@ DEVICE_INIT(exti_gd32, GD32_EXTI_NAME, gd32_exti_init,
  */
 int gd32_exti_set_callback(int line, gd32_exti_callback_t cb, void *arg)
 {
-	struct device *dev = DEVICE_GET(exti_gd32);
+	const struct device *dev = DEVICE_GET(exti_gd32);
 	struct gd32_exti_data *data = dev->data;
 
 	if (data->cb[line].cb) {
@@ -268,7 +268,7 @@ void gd32_exti_unset_callback(int line)
 /**
  * @brief connect all interrupts
  */
-static void __gd32_exti_connect_irqs(struct device *dev)
+static void __gd32_exti_connect_irqs(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 

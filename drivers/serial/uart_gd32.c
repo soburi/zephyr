@@ -76,63 +76,63 @@ static inline u32_t uart_gd32_cfg2ll_databits(enum uart_config_data_bits db);
 static inline enum uart_config_data_bits uart_gd32_ll2cfg_databits(u32_t db);
 static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc);
 
-static inline void uart_gd32_set_baudrate(struct device *dev, u32_t baud_rate)
+static inline void uart_gd32_set_baudrate(const struct device *dev, u32_t baud_rate)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	usart_baudrate_set(regs, baud_rate);
 }
 
-static inline void uart_gd32_set_parity(struct device *dev, u32_t parity)
+static inline void uart_gd32_set_parity(const struct device *dev, u32_t parity)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	usart_parity_config(regs, uart_gd32_cfg2ll_parity(parity));
 }
 
-static inline u32_t uart_gd32_get_parity(struct device *dev)
+static inline u32_t uart_gd32_get_parity(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	return uart_gd32_ll2cfg_parity( (USART_CTL0(regs) & USART_CTL0_PM) >> 9);
 }
 
-static inline void uart_gd32_set_stopbits(struct device *dev, u32_t stopbits)
+static inline void uart_gd32_set_stopbits(const struct device *dev, u32_t stopbits)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	usart_stop_bit_set(regs, stopbits);
 }
 
-static inline u32_t uart_gd32_get_stopbits(struct device *dev)
+static inline u32_t uart_gd32_get_stopbits(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	return uart_gd32_ll2cfg_stopbits( (USART_CTL1(regs) & USART_CTL1_STB) >> 12);
 }
 
-static inline void uart_gd32_set_databits(struct device *dev, u32_t databits)
+static inline void uart_gd32_set_databits(const struct device *dev, u32_t databits)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	usart_word_length_set(regs, databits);
 }
 
-static inline u32_t uart_gd32_get_databits(struct device *dev)
+static inline u32_t uart_gd32_get_databits(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	return uart_gd32_ll2cfg_databits( (USART_CTL0(regs) & USART_CTL0_WL) >> 12);
 }
 
-static inline void uart_gd32_set_hwctrl(struct device *dev, u32_t hwctrl)
+static inline void uart_gd32_set_hwctrl(const struct device *dev, u32_t hwctrl)
 {
 	u32_t regs = DEV_REGS(dev);
 	usart_hardware_flow_rts_config(regs, (hwctrl>>0 & 0x1));
 	usart_hardware_flow_cts_config(regs, (hwctrl>>1 & 0x1));
 }
 
-static inline u32_t uart_gd32_get_hwctrl(struct device *dev)
+static inline u32_t uart_gd32_get_hwctrl(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
@@ -261,7 +261,7 @@ static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc)
 	return UART_CFG_PARITY_NONE;
 }
 
-static int uart_gd32_configure(struct device *dev,
+static int uart_gd32_configure(const struct device *dev,
 				const struct uart_config *cfg)
 {
 	struct uart_gd32_data *data = DEV_DATA(dev);
@@ -332,7 +332,7 @@ static int uart_gd32_configure(struct device *dev,
 	return 0;
 };
 
-static int uart_gd32_config_get(struct device *dev, struct uart_config *cfg)
+static int uart_gd32_config_get(const struct device *dev, struct uart_config *cfg)
 {
 	struct uart_gd32_data *data = DEV_DATA(dev);
 
@@ -347,7 +347,7 @@ static int uart_gd32_config_get(struct device *dev, struct uart_config *cfg)
 	return 0;
 }
 
-static int uart_gd32_poll_in(struct device *dev, unsigned char *c)
+static int uart_gd32_poll_in(const struct device *dev, unsigned char *c)
 {
 	u32_t regs = DEV_REGS(dev);
 
@@ -365,7 +365,7 @@ static int uart_gd32_poll_in(struct device *dev, unsigned char *c)
 	return 0;
 }
 
-static void uart_gd32_poll_out(struct device *dev,
+static void uart_gd32_poll_out(const struct device *dev,
 					unsigned char c)
 {
 	u32_t regs = DEV_REGS(dev);
@@ -380,7 +380,7 @@ static void uart_gd32_poll_out(struct device *dev,
 
 }
 
-static int uart_gd32_err_check(struct device *dev)
+static int uart_gd32_err_check(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 	u32_t err = 0U;
@@ -424,7 +424,7 @@ static int uart_gd32_err_check(struct device *dev)
 static inline void __uart_gd32_get_clock(struct device *dev)
 {
 	struct uart_gd32_data *data = DEV_DATA(dev);
-	struct device *clk =
+	const struct device *clk =
 		device_get_binding(GD32_CLOCK_CONTROL_NAME);
 
 	__ASSERT_NO_MSG(clk);
@@ -434,7 +434,7 @@ static inline void __uart_gd32_get_clock(struct device *dev)
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
 
-static int uart_gd32_fifo_fill(struct device *dev, const u8_t *tx_data,
+static int uart_gd32_fifo_fill(const struct device *dev, const u8_t *tx_data,
 				  int size)
 {
 	u32_t regs = DEV_REGS(dev);
@@ -451,7 +451,7 @@ static int uart_gd32_fifo_fill(struct device *dev, const u8_t *tx_data,
 	return num_tx;
 }
 
-static int uart_gd32_fifo_read(struct device *dev, u8_t *rx_data,
+static int uart_gd32_fifo_read(const struct device *dev, u8_t *rx_data,
 				  const int size)
 {
 	u32_t regs = DEV_REGS(dev);
@@ -473,56 +473,56 @@ static int uart_gd32_fifo_read(struct device *dev, u8_t *rx_data,
 	return num_rx;
 }
 
-static void uart_gd32_irq_tx_enable(struct device *dev)
+static void uart_gd32_irq_tx_enable(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	usart_interrupt_enable(regs, USART_INT_TBE);
 }
 
-static void uart_gd32_irq_tx_disable(struct device *dev)
+static void uart_gd32_irq_tx_disable(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	usart_interrupt_disable(regs, USART_INT_TBE);
 }
 
-static int uart_gd32_irq_tx_ready(struct device *dev)
+static int uart_gd32_irq_tx_ready(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	return usart_interrupt_flag_get(regs, USART_INT_FLAG_TBE);
 }
 
-static int uart_gd32_irq_tx_complete(struct device *dev)
+static int uart_gd32_irq_tx_complete(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	return usart_interrupt_flag_get(regs, USART_INT_FLAG_TC);
 }
 
-static void uart_gd32_irq_rx_enable(struct device *dev)
+static void uart_gd32_irq_rx_enable(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	usart_interrupt_enable(regs, USART_INT_RBNE);
 }
 
-static void uart_gd32_irq_rx_disable(struct device *dev)
+static void uart_gd32_irq_rx_disable(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	usart_interrupt_disable(regs, USART_INT_RBNE);
 }
 
-static int uart_gd32_irq_rx_ready(struct device *dev)
+static int uart_gd32_irq_rx_ready(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
 	return usart_interrupt_flag_get(regs, USART_INT_FLAG_RBNE);
 }
 
-static void uart_gd32_irq_err_enable(struct device *dev)
+static void uart_gd32_irq_err_enable(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
@@ -534,7 +534,7 @@ static void uart_gd32_irq_err_enable(struct device *dev)
 	usart_interrupt_enable(regs, USART_INT_PERR);
 }
 
-static void uart_gd32_irq_err_disable(struct device *dev)
+static void uart_gd32_irq_err_disable(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
@@ -551,7 +551,7 @@ static int usart_interrupt_flag_enabled(uint32_t usart_periph, uint32_t int_flag
     return (USART_REG_VAL(usart_periph, int_flag) >> USART_BIT_POS(int_flag)) & 0x1;
 }
 
-static int uart_gd32_irq_is_pending(struct device *dev)
+static int uart_gd32_irq_is_pending(const struct device *dev)
 {
 	u32_t regs = DEV_REGS(dev);
 
@@ -561,12 +561,12 @@ static int uart_gd32_irq_is_pending(struct device *dev)
 		 usart_interrupt_flag_get(regs, USART_INT_FLAG_TC)));
 }
 
-static int uart_gd32_irq_update(struct device *dev)
+static int uart_gd32_irq_update(const struct device *dev)
 {
 	return 1;
 }
 
-static void uart_gd32_irq_callback_set(struct device *dev,
+static void uart_gd32_irq_callback_set(const struct device *dev,
 					uart_irq_callback_user_data_t cb,
 					void *cb_data)
 {

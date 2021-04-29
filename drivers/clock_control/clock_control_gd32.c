@@ -71,7 +71,7 @@ static inline void periph_clock_disable(enum gd32_rcu_reg addr, enum gd32_rcu_pe
 }
 
 
-static int gd32_rcu_on(struct device *dev, clock_control_subsys_t sub_system)
+static int gd32_rcu_on(const struct device *dev, clock_control_subsys_t sub_system)
 {
 	const uint32_t  en_offset[] = {0,  AHBEN_REG_OFFSET,  APB1EN_REG_OFFSET,  APB2EN_REG_OFFSET};
 	struct gd32_pclken* pclken = (struct gd32_pclken*)sub_system;
@@ -80,7 +80,7 @@ static int gd32_rcu_on(struct device *dev, clock_control_subsys_t sub_system)
 	return 0;
 }
 
-static int gd32_rcu_off(struct device *dev, clock_control_subsys_t sub_system)
+static int gd32_rcu_off(const struct device *dev, clock_control_subsys_t sub_system)
 {
 	const uint32_t rst_offset[] = {0, AHBRST_REG_OFFSET, APB1RST_REG_OFFSET, APB2RST_REG_OFFSET};
 	struct gd32_pclken* pclken = (struct gd32_pclken*)sub_system;
@@ -124,7 +124,7 @@ static uint32_t rcu_apb2_rate(uint32_t clksrc)
 	return 0;
 }
 
-static int gd32_rcu_get_rate(struct device *dev, clock_control_subsys_t sub_system, u32_t* rate)
+static int gd32_rcu_get_rate(const struct device *dev, clock_control_subsys_t sub_system, u32_t* rate)
 {
 	const uint32_t rate_[] = {-ENOTSUP, SystemCoreClock,
 		rcu_apb1_rate(SystemCoreClock), rcu_apb2_rate(SystemCoreClock)};
@@ -133,7 +133,7 @@ static int gd32_rcu_get_rate(struct device *dev, clock_control_subsys_t sub_syst
 	return 0;
 }
 
-static int gd32_rcu_init(struct device *dev)
+static int gd32_rcu_init(const struct device *dev)
 {
 	return 0;
 }

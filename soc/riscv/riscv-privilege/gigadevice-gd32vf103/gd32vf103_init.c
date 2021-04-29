@@ -5,7 +5,7 @@
 #include "riscv_encoding.h"
 #include <init.h>
 
-static int _init(struct device* dev)
+static int _init(const struct device* dev)
 {
 	ARG_UNUSED(dev);
 
