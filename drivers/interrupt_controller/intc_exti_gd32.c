@@ -234,9 +234,10 @@ static int gd32_exti_init(const struct device *dev)
 }
 
 static struct gd32_exti_data exti_data;
-DEVICE_INIT(exti_gd32, GD32_EXTI_NAME, gd32_exti_init,
-	    &exti_data, NULL,
-	    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE);
+DEVICE_DEFINE(exti_gd32, GD32_EXTI_NAME, gd32_exti_init,
+	      NULL, &exti_data, NULL,
+	      PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
+	      NULL);
 
 /**
  * @brief set & unset for the interrupt callbacks

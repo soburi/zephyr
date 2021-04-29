@@ -33,9 +33,9 @@ LOG_MODULE_REGISTER(uart_gd32);
 
 /* convenience defines */
 #define DEV_CFG(dev)							\
-	((const struct uart_gd32_config * const)(dev)->config)
+	((const struct uart_gd32_config *const)(dev)->config)
 #define DEV_DATA(dev)							\
-	((struct uart_gd32_data * const)(dev)->data)
+	((struct uart_gd32_data *const)(dev)->data)
 #define DEV_REGS(dev) \
 	(DEV_CFG(dev)->uconf.regs)
 
@@ -83,7 +83,8 @@ static inline void uart_gd32_set_baudrate(const struct device *dev, u32_t baud_r
 	usart_baudrate_set(regs, baud_rate);
 }
 
-static inline void uart_gd32_set_parity(const struct device *dev, u32_t parity)
+static inline void uart_gd32_set_parity(const struct device *dev,
+					 uint32_t parity)
 {
 	u32_t regs = DEV_REGS(dev);
 
@@ -97,7 +98,8 @@ static inline u32_t uart_gd32_get_parity(const struct device *dev)
 	return uart_gd32_ll2cfg_parity( (USART_CTL0(regs) & USART_CTL0_PM) >> 9);
 }
 
-static inline void uart_gd32_set_stopbits(const struct device *dev, u32_t stopbits)
+static inline void uart_gd32_set_stopbits(const struct device *dev,
+					   uint32_t stopbits)
 {
 	u32_t regs = DEV_REGS(dev);
 
@@ -111,7 +113,8 @@ static inline u32_t uart_gd32_get_stopbits(const struct device *dev)
 	return uart_gd32_ll2cfg_stopbits( (USART_CTL1(regs) & USART_CTL1_STB) >> 12);
 }
 
-static inline void uart_gd32_set_databits(const struct device *dev, u32_t databits)
+static inline void uart_gd32_set_databits(const struct device *dev,
+					   uint32_t databits)
 {
 	u32_t regs = DEV_REGS(dev);
 
@@ -125,7 +128,8 @@ static inline u32_t uart_gd32_get_databits(const struct device *dev)
 	return uart_gd32_ll2cfg_databits( (USART_CTL0(regs) & USART_CTL0_WL) >> 12);
 }
 
-static inline void uart_gd32_set_hwctrl(const struct device *dev, u32_t hwctrl)
+static inline void uart_gd32_set_hwctrl(const struct device *dev,
+					 uint32_t hwctrl)
 {
 	u32_t regs = DEV_REGS(dev);
 	usart_hardware_flow_rts_config(regs, (hwctrl>>0 & 0x1));
@@ -152,7 +156,7 @@ static inline u32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity)
 	}
 }
 
-static inline enum uart_config_parity uart_gd32_ll2cfg_parity(u32_t parity)
+static inline enum uart_config_parity uart_gd32_ll2cfg_parity(uint32_t parity)
 {
 	switch (parity) {
 	case USART_PM_ODD:
@@ -186,7 +190,7 @@ static inline u32_t uart_gd32_cfg2ll_stopbits(enum uart_config_stop_bits sb)
 	}
 }
 
-static inline enum uart_config_stop_bits uart_gd32_ll2cfg_stopbits(u32_t sb)
+static inline enum uart_config_stop_bits uart_gd32_ll2cfg_stopbits(uint32_t sb)
 {
 	switch (sb) {
 /* Some MCU's don't support 0.5 stop bits */
@@ -225,7 +229,7 @@ static inline u32_t uart_gd32_cfg2ll_databits(enum uart_config_data_bits db)
 	}
 }
 
-static inline enum uart_config_data_bits uart_gd32_ll2cfg_databits(u32_t db)
+static inline enum uart_config_data_bits uart_gd32_ll2cfg_databits(uint32_t db)
 {
 	switch (db) {
 /* Some MCU's don't support 7B or 9B datawidth */
@@ -252,7 +256,7 @@ static inline u32_t uart_gd32_cfg2ll_hwctrl(enum uart_config_flow_control fc)
 	return USART_HWFC_NONE;
 }
 
-static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(u32_t fc)
+static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(uint32_t fc)
 {
 	if (fc == USART_HWFC_RTSCTS) {
 		return UART_CFG_FLOW_CTRL_RTS_CTS;
@@ -684,13 +688,13 @@ static void uart_gd32_irq_config_func_##name(struct device *dev)	\
 
 #define GD32_UART_INIT(index)						\
 GD32_UART_IRQ_HANDLER_DECL(index);					\
-                                                                        \
+									\
 static const struct soc_gpio_pinctrl uart_pins_##index[] =		\
 				ST_GD32_DT_INST_PINCTRL(index, 0);	\
 									\
-static const struct uart_gd32_config uart_gd32_cfg_##name = {	\
+static const struct uart_gd32_config uart_gd32_cfg_##index = {	\
 	.uconf = {							\
-		.regs = DT_INST_REG_ADDR(index),		\
+		.regs = (uint8_t *)DT_INST_REG_ADDR(index),		\
 		GD32_UART_IRQ_HANDLER_FUNC(index)			\
 	},								\
 	.pclken = { .bus = DT_INST_CLOCKS_CELL(index, bus),		\
@@ -699,10 +703,10 @@ static const struct uart_gd32_config uart_gd32_cfg_##name = {	\
 	.hw_flow_control = DT_INST_PROP(index, hw_flow_control),	\
 	.parity = DT_INST_PROP_OR(index, parity, UART_CFG_PARITY_NONE),	\
 	.pinctrl_list = uart_pins_##index,				\
-	.pinctrl_list_size = ARRAY_SIZE(uart_pins_##index),\
+	.pinctrl_list_size = ARRAY_SIZE(uart_pins_##index),		\
 };									\
 									\
-static struct uart_gd32_data uart_gd32_data_##name = {			\
+static struct uart_gd32_data uart_gd32_data_##index = {		\
 	.baud_rate = DT_INST_PROP(index, current_speed),		\
 };									\
 									\

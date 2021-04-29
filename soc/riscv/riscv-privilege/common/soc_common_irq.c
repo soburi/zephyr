@@ -24,6 +24,9 @@ void arch_irq_enable(unsigned int irq)
 		return;
 	}
 #endif
+#if defined(CONFIG_NUCLEI_ECLIC)
+	eclic_enable_interrupt(irq);
+#endif
 
 	/*
 	 * CSR mie register is updated using atomic instruction csrrs
@@ -47,6 +50,9 @@ void arch_irq_disable(unsigned int irq)
 		return;
 	}
 #endif
+#if defined(CONFIG_NUCLEI_ECLIC)
+	eclic_disable_interrupt(irq);
+#endif
 
 	/*
 	 * Use atomic instruction csrrc to disable device interrupt in mie CSR.
@@ -66,6 +72,9 @@ void arch_irq_priority_set(unsigned int irq, unsigned int prio)
 		irq = irq_from_level_2(irq);
 		riscv_plic_set_priority(irq, prio);
 	}
+#endif
+#if defined(CONFIG_NUCLEI_ECLIC)
+	eclic_set_irq_priority(irq, prio);
 #endif
 
 	return ;

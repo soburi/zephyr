@@ -155,17 +155,16 @@ static const struct clock_control_driver_api gd32_rcu_api = {
 //		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS,
 //		    &gd32_rcu_api);
 
-#define GD32_RCU_INIT(inst)                                                      \
-	static struct gd32_rcu_config gd32_rcu_config = {                        \
-		.base_address = DT_INST_REG_ADDR(inst)                           \
-	};                                                                       \
-                                                                                 \
-	DEVICE_DT_INST_DEFINE(inst,                                              \
-			      &gd32_rcu_init,                                    \
-			      device_pm_control_nop,                             \
-			      NULL, &gd32_rcu##inst##_config,                    \
-			      PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS, \
-			      &gd32_rcu_api);
+static struct gd32_rcu_config gd32_rcu_config = {
+	//.base_address = DT_INST_REG_ADDR(0),
+};
+
+DEVICE_DT_DEFINE(DT_NODELABEL(rcu),
+		      gd32_rcu_init,
+		      device_pm_control_nop,
+		      NULL, &gd32_rcu_config,
+		      PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS,
+		      &gd32_rcu_api);
 
 
-DT_INST_FOREACH_STATUS_OKAY(GD32_RCU_INIT)
+//DT_INST_FOREACH_STATUS_OKAY(GD32_RCU_INIT)
