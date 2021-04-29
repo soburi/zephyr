@@ -44,10 +44,10 @@
 #define GD32_CLOCK_CONTROL_NAME "gd32-rcu"
 
 struct gd32_pclken {
-	u32_t bus;
-	u32_t enr;
+	uint32_t bus;
+	uint32_t enr;
 };
-
+/*
 #define ARCH_IRQ_CONNECT(irq_p, priority_p, isr_p, isr_param_p, flags_p) \
 ({ \
 	Z_ISR_DECLARE(irq_p, 0, isr_p, isr_param_p); \
@@ -57,7 +57,7 @@ struct gd32_pclken {
 	arch_irq_priority_set(irq_p, priority_p); \
 	irq_p; \
 })
-
+*/
 #endif /* !_ASMLANGUAGE */
 
 #endif /* __RISCV_GIGADEVICE_GD32VF103_SOC_H_ */
