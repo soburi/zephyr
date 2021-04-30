@@ -55,4 +55,8 @@ config PINMUX_GD32
 	default y
 	depends on PINMUX
 
+config SPI_GD32
+	default y
+	depends on SPI
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32V
