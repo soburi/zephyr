@@ -1,9 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
-if (SOC_RISCV_GIGADEVICE_GD32VF103)
-  zephyr_compile_options(-march=rv32imac -mcmodel=medlow)
-endif()
-
 zephyr_include_directories(GD32VF103_standard_peripheral/)
 zephyr_include_directories(GD32VF103_standard_peripheral/Include)
 zephyr_include_directories(RISCV/drivers)

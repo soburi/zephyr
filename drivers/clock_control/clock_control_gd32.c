@@ -3,11 +3,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
+#define DT_DRV_COMPAT gigadevice_rcu
+
+#include <devicetree.h>
+#include <device.h>
+
 #include <errno.h>
 #include <soc.h>
 #include <drivers/clock_control.h>
-
-typedef uint32_t u32_t;
 
 #include "gd32vf103_rcu.h"
 
@@ -16,7 +20,7 @@ typedef uint32_t u32_t;
 LOG_MODULE_REGISTER(clock_control);
 
 struct gd32_rcu_config {
-	u32_t base_address;
+	uint32_t base_address;
 };
 
 enum gd32_rcu_reg {
@@ -124,7 +128,7 @@ static uint32_t rcu_apb2_rate(uint32_t clksrc)
 	return 0;
 }
 
-static int gd32_rcu_get_rate(const struct device *dev, clock_control_subsys_t sub_system, u32_t* rate)
+static int gd32_rcu_get_rate(const struct device *dev, clock_control_subsys_t sub_system, uint32_t* rate)
 {
 	const uint32_t rate_[] = {-ENOTSUP, SystemCoreClock,
 		rcu_apb1_rate(SystemCoreClock), rcu_apb2_rate(SystemCoreClock)};
@@ -145,22 +149,12 @@ static const struct clock_control_driver_api gd32_rcu_api = {
 	//.get_status = gd32_rcu_get_status,
 };
 
-//static struct gd32_rcu_config gd32_rcu_config = {
-//	.base_address = 0,//DT_TIM_GD32_1_BASE_ADDRESS,
-//};
-//
-//DEVICE_AND_API_INIT(gd32_rcu, GD32_CLOCK_CONTROL_NAME,
-//		    &gd32_rcu_init,
-//		    NULL, &gd32_rcu_config,
-//		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS,
-//		    &gd32_rcu_api);
-
-static struct gd32_rcu_config gd32_rcu_config = {
-	//.base_address = DT_INST_REG_ADDR(0),
+static const struct gd32_rcu_config gd32_rcu_config = {
+	.base_address = DT_REG_ADDR_BY_IDX(DT_NODELABEL(rcu), 0)
 };
 
 DEVICE_DT_DEFINE(DT_NODELABEL(rcu),
-		      gd32_rcu_init,
+		      &gd32_rcu_init,
 		      device_pm_control_nop,
 		      NULL, &gd32_rcu_config,
 		      PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS,

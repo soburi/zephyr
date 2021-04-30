@@ -42,7 +42,7 @@
 #include "n200_func.h"
 
 /* common clock control device name for all GD32 chips */
-#define GD32_CLOCK_CONTROL_NAME "gd32-rcu"
+#define GD32_CLOCK_CONTROL_NAME DT_LABEL(DT_NODELABEL(rcu))
 
 struct gd32_pclken {
 	uint32_t bus;
