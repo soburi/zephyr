@@ -51,4 +51,11 @@ config GPIO_GD32
 
 endif # GPIO
 
+if SPI
+
+config SPI_GD32
+	default y
+
+endif #SPI
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32V
