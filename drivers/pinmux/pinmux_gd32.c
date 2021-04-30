@@ -59,7 +59,7 @@ static inline u32_t pin_to_bit(u32_t pin)
 	return 1<<(pin%16);
 }
 
-static int pinmux_gd32_set(struct device *dev, u32_t pin, u32_t flags)
+static int pinmux_gd32_set(const struct device *dev, u32_t pin, u32_t flags)
 {
 	ARG_UNUSED(dev);
 
@@ -68,7 +68,7 @@ static int pinmux_gd32_set(struct device *dev, u32_t pin, u32_t flags)
         return 0;
 }
 
-static int pinmux_gd32_get(struct device *dev, u32_t pin, u32_t *func)
+static int pinmux_gd32_get(const struct device *dev, u32_t pin, u32_t *func)
 {
         u32_t base = pin_to_base(pin);
 
@@ -91,17 +91,17 @@ static int pinmux_gd32_get(struct device *dev, u32_t pin, u32_t *func)
         return 0;
 }
 
-static int pinmux_gd32_pullup(struct device *dev, u32_t pin, u8_t func)
+static int pinmux_gd32_pullup(const struct device *dev, u32_t pin, u8_t func)
 {
         return -ENOTSUP;
 }
 
-static int pinmux_gd32_input(struct device *dev, u32_t pin, u8_t func)
+static int pinmux_gd32_input(const struct device *dev, u32_t pin, u8_t func)
 {
         return -ENOTSUP;
 }
 
-static int pinmux_gd32_init(struct device *dev)
+static int pinmux_gd32_init(const struct device *dev)
 {
         return 0;
 }
@@ -113,7 +113,9 @@ static const struct pinmux_driver_api pinmux_gd32_driver_api = {
         .input = pinmux_gd32_input,
 };
 
-DEVICE_AND_API_INIT(pinmux_gd32_dev, CONFIG_PINMUX_NAME,
-		    &pinmux_gd32_init, NULL, NULL,
+
+DEVICE_DEFINE(pinmux_gd32, CONFIG_PINMUX_NAME,
+		    &pinmux_gd32_init, device_pm_control_nop, NULL,
+		    NULL,
 		    PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT,
 		    &pinmux_gd32_driver_api);
