@@ -65,9 +65,33 @@
 	status = "okay";
 };
 
+&i2c0 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
+&i2c1 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
 &spi0 {
 	status = "okay";
         cs-gpios = <&gpiob 2 0>;
+
+        lcd0: lcd@0 {
+                compatible = "sitronix,st7735s";
+                reg = <0>;
+                status = "okay";
+                label = "LCD0";
+		reset-gpios = <&gpiob 1 0>;
+		cmd-data-gpios = <&gpiob 0 0>;
+		width = <160>;
+		height = <80>;
+		x-offset = <1>;
+		y-offset = <26>;
+                spi-max-frequency = <4000000>;
+        };
 };
 
 &spi1 {
@@ -82,5 +106,9 @@
                 spi-max-frequency = <1000000>;
         };
 
+};
+
+&usb {
+	status = "okay";
 };
 
