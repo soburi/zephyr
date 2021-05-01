@@ -47,6 +47,15 @@ struct gd32_pclken {
 	uint32_t enr;
 };
 
+/**
+ * @brief structure to convey pinctrl information for stm32 soc
+ * value
+ */
+struct soc_gpio_pinctrl {
+        uint32_t pinmux;
+        uint32_t pincfg;
+};
+
 #endif  /* !_ASMLANGUAGE */
 
 #endif  /* __RISCV_GIGADEVICE_GD32VF103_SOC_H_ */
