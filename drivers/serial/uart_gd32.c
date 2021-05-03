@@ -655,6 +655,9 @@ static int uart_gd32_init(const struct device *dev)
 	const struct uart_gd32_config *config = DEV_CFG(dev);
 	struct uart_gd32_data *data = DEV_DATA(dev);
 	uint32_t regs = DEV_REGS(dev);
+	uint32_t ll_parity;
+	uint32_t ll_datawidth;
+	int err;
 
 	__uart_gd32_get_clock(dev);
 	/* enable clock */
@@ -663,16 +666,48 @@ static int uart_gd32_init(const struct device *dev)
 		return -EIO;
 	}
 
+	/* Configure dt provided device signals when available */
+	/* TODO
+	err = gd32_dt_pinctrl_configure(config->pinctrl_list,
+					 config->pinctrl_list_size,
+					 (uint32_t)UART_STRUCT(dev));
+	if (err < 0) {
+		return err;
+	}
+	*/
+
 	usart_deinit(regs);
 
 	/* TX/RX direction */
 	usart_transmit_config(regs, USART_TRANSMIT_ENABLE);
 	usart_receive_config(regs, USART_RECEIVE_ENABLE);
 
-	/* 8 data bit, 1 start bit, 1 stop bit, no parity */
-	uart_gd32_set_databits(dev, USART_WL_8BIT);
+	/* Determine the datawidth and parity. If we use other parity than
+	 * 'none' we must use datawidth = 9 (to get 8 databit + 1 parity bit).
+	 */
+	if (config->parity == 2) {
+		/* 8 databit, 1 parity bit, parity even */
+		ll_parity = USART_PM_EVEN;
+		ll_datawidth = USART_WL_9BIT;
+	} else if (config->parity == 1) {
+		/* 8 databit, 1 parity bit, parity odd */
+		ll_parity = USART_PM_ODD;
+		ll_datawidth = USART_WL_9BIT;
+	} else {  /* Default to 8N0, but show warning if invalid value */
+		if (config->parity != 0) {
+			LOG_WRN("Invalid parity setting '%d'."
+				"Defaulting to 'none'.", config->parity);
+		}
+		/* 8 databit, parity none */
+		ll_parity = USART_PM_NONE;
+		ll_datawidth = USART_WL_8BIT;
+	}
+
+	/* Set datawidth and parity, 1 start bit, 1 stop bit  */
+	uart_gd32_set_databits(dev, ll_datawidth);
+	uart_gd32_set_parity(dev, ll_parity);
 	uart_gd32_set_stopbits(dev, USART_STB_1BIT);
-	uart_gd32_set_parity(dev, USART_PM_NONE);
+
 
 	if (config->hw_flow_control) {
 		uart_gd32_set_hwctrl(dev, USART_HWFC_RTSCTS);
