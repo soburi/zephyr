@@ -51,4 +51,8 @@ config GPIO_GD32
 
 endif # GPIO
 
+config PINMUX_GD32
+	default y
+	depends on PINMUX
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32V
