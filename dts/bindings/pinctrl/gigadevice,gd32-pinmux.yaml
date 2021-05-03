@@ -1,0 +1,16 @@
+title: GD32 PINMUX
+
+description: |
+    This binding gives a base representation of the GD32 PINMUX
+
+compatible: "gigadevice,gd32-pinmux"
+
+include: base.yaml
+
+properties:
+    reg:
+      required: true
+
+pinmux-cells:
+  - pin
+  - function
