@@ -51,6 +51,13 @@ config GPIO_GD32
 
 endif # GPIO
 
+if PINMUX
+
+config PINMUX_GD32
+	default y
+
+endif # PINMUX
+
 if SPI
 
 config SPI_GD32
