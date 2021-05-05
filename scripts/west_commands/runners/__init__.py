@@ -26,6 +26,7 @@ from runners import nsim
 from runners import openocd
 from runners import pyocd
 from runners import qemu
+from runners import rvlink
 from runners import stm32flash
 from runners import xtensa
 from runners import mdb
