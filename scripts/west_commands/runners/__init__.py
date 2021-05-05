@@ -42,6 +42,7 @@ _names = [
     'openocd',
     'pyocd',
     'qemu',
+    'rvlink',
     'stm32cubeprogrammer',
     'stm32flash',
     'xtensa',
