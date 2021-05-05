@@ -17,3 +17,4 @@ board_runner_args(jlink "--tool-opt=-jtagconf -1,-1")
 
 include(${ZEPHYR_BASE}/boards/common/openocd.board.cmake)
 include(${ZEPHYR_BASE}/boards/common/jlink.board.cmake)
+include(${ZEPHYR_BASE}/boards/common/rvlink.board.cmake)
