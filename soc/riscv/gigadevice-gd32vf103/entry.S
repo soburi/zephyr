@@ -5,6 +5,7 @@
 #define MSTATUS_MIE   0x8
 #define CSR_MMISC_CTL 0x7d0
 #define CSR_MTVT2     0x7ec
+#define CSR_MTVT
 
 vector_base:
 	j __start_gd32vf103
@@ -119,7 +120,7 @@ _start0800:
 
 	/* Intial the mtvt*/
 	la t0, vector_base
-	csrw mtvt, t0
+	csrw CSR_MTVT, t0
 
 	/* Intial the mtvt2 and enable it*/
 	la t0, __irq_wrapper
