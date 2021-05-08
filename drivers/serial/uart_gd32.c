@@ -300,35 +300,35 @@ static int uart_gd32_configure(const struct device *dev,
 	const uint32_t flowctrl = uart_gd32_cfg2ll_hwctrl(cfg->flow_ctrl);
 
 	/* Hardware doesn't support mark or space parity */
-	if ((UART_CFG_PARITY_MARK == cfg->parity) ||
-	    (UART_CFG_PARITY_SPACE == cfg->parity)) {
+	if ((cfg->parity == UART_CFG_PARITY_MARK) ||
+	    (cfg->parity == UART_CFG_PARITY_SPACE)) {
 		return -ENOTSUP;
 	}
 
-	if (UART_CFG_STOP_BITS_0_5 == cfg->stop_bits) {
+	if (cfg->stop_bits == UART_CFG_STOP_BITS_0_5) {
 		return -ENOTSUP;
 	}
 
-	if (UART_CFG_STOP_BITS_1_5 == cfg->stop_bits) {
+	if (cfg->stop_bits == UART_CFG_STOP_BITS_1_5) {
 		return -ENOTSUP;
 	}
 
 	/* Driver doesn't support 5 or 6 databits and potentially 7 or 9 */
-	if ((UART_CFG_DATA_BITS_5 == cfg->data_bits) ||
-	    (UART_CFG_DATA_BITS_6 == cfg->data_bits)
+	if ((cfg->data_bits == UART_CFG_DATA_BITS_5) ||
+	    (cfg->data_bits == UART_CFG_DATA_BITS_6)
 #ifndef USART_WL_7BIT
-	    || (UART_CFG_DATA_BITS_7 == cfg->data_bits)
+	    || (cfg->data_bits == UART_CFG_DATA_BITS_7)
 #endif /* USART_WL_7BIT */
 #ifndef USART_WL_9BIT
-	    || (UART_CFG_DATA_BITS_9 == cfg->data_bits)
+	    || (cfg->data_bits == UART_CFG_DATA_BITS_9)
 #endif /* USART_WL_9BIT */
 	    ) {
 		return -ENOTSUP;
 	}
 
 	/* Driver supports only RTS CTS flow control */
-	if (UART_CFG_FLOW_CTRL_NONE != cfg->flow_ctrl) {
-		if (UART_CFG_FLOW_CTRL_RTS_CTS != cfg->flow_ctrl) {
+	if (cfg->flow_ctrl != UART_CFG_FLOW_CTRL_NONE) {
+		if (cfg->flow_ctrl != UART_CFG_FLOW_CTRL_RTS_CTS) {
 			return -ENOTSUP;
 		}
 	}
