@@ -5,7 +5,7 @@
 #define MSTATUS_MIE   0x8
 #define CSR_MMISC_CTL 0x7d0
 #define CSR_MTVT2     0x7ec
-#define CSR_MTVT
+#define CSR_MTVT      0x307
 
 vector_base:
 	j __start_gd32vf103
