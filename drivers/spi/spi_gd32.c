@@ -19,6 +19,7 @@ LOG_MODULE_REGISTER(spi_gd32);
 #include <drivers/clock_control.h>
 
 #include "gd32vf103_spi.h"
+#include "gd32vf103_gpio.h"
 #include "spi_context.h"
 
 #include <gigadevice_gd32_dt.h>
@@ -496,6 +497,26 @@ static int spi_gd32_init(const struct device *dev)
 //		LOG_ERR("SPI pinctrl setup failed (%d)", err);
 //		return err;
 //	}
+	if((uint32_t)cfg->spi == SPI0) {
+		rcu_periph_clock_enable(RCU_GPIOA);
+		rcu_periph_clock_enable(RCU_GPIOB);
+
+		rcu_periph_clock_enable(RCU_AF);
+		rcu_periph_clock_enable(RCU_SPI0);
+		/* SPI0 GPIO config: NSS/PA4, SCK/PA5, MOSI/PA7 */
+		gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_5 |GPIO_PIN_6| GPIO_PIN_7);
+		gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_2);
+	} else if((uint32_t)cfg->spi == SPI1) {
+		rcu_periph_clock_enable(RCU_GPIOB);
+		rcu_periph_clock_enable(RCU_AF);
+		rcu_periph_clock_enable(RCU_SPI1);
+
+		/* SPI1_SCK(PB13), SPI1_MISO(PB14) and SPI1_MOSI(PB15) GPIO pin configuration */
+		gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_15);
+		gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
+		/* SPI1_CS(PB12) GPIO pin configuration */
+		gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
+	}
 
 #ifdef CONFIG_SPI_GD32_INTERRUPT
 	cfg->irq_config(dev);
