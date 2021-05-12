@@ -65,6 +65,39 @@
 	status = "okay";
 };
 
+&spi0 {
+	status = "okay";
+	cs-gpios = <&gpiob 2 GPIO_ACTIVE_LOW>;
+
+	st7735r@0 {
+		compatible = "sitronix,st7735r";
+		label = "ST7735R";
+		spi-max-frequency = <10000000>;
+		reg = <0>;
+		cmd-data-gpios = <&gpiob 0 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpiob 1 GPIO_ACTIVE_LOW>;
+		width = <160>;
+		height = <80>;
+		x-offset = <1>;
+		y-offset = <26>;
+		display-inversion;
+		madctl = <0x70>;
+		colmod = <0x05>;
+		vmctr1 = <0x0e>;
+		invctr = <0x03>;
+		pwctr1 = [62 02 04];
+		pwctr2 = [c0];
+		pwctr3 = [0d 00];
+		pwctr4 = [8d 6a];
+		pwctr5 = [8d ee];
+		frmctr1 = [05 3a 3a];
+		frmctr2 = [05 3a 3a];
+		frmctr3 = [05 3a 3a 05 3a 3a];
+		gamctrp1 = [10 0e 02 03 0e 07 02 07 0a 12 27 37 00 0d 0e 10];
+		gamctrn1 = [10 0e 03 03 0f 06 02 08 0a 13 26 36 00 0d 0e 10];
+	};
+};
+
 &spi1 {
 	status = "okay";
         cs-gpios = <&gpiob 12 GPIO_ACTIVE_LOW>;
