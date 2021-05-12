@@ -36,6 +36,10 @@ properties:
       required: true
       description: Width in pixels of the panel driven by the controller
 
+    invert:
+      type: boolean
+      description: Invert display colors
+
     x-offset:
       type: int
       required: true
