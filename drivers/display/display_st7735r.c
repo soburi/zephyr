@@ -41,6 +41,7 @@ struct st7735r_config {
 	struct st7735r_gpio_data reset;
 	uint16_t height;
 	uint16_t width;
+	bool inversion;
 	uint8_t madctl;
 	uint8_t colmod;
 	uint8_t caset[4];
@@ -388,7 +389,7 @@ static int st7735r_lcd_init(struct st7735r_data *data)
 		return ret;
 	}
 
-	ret = st7735r_transmit(data, ST7735R_CMD_INV_OFF, NULL, 0);
+	ret = st7735r_transmit(data, config->inversion ? ST7735R_CMD_INV_ON : ST7735R_CMD_INV_OFF, NULL, 0);
 	if (ret < 0) {
 		return ret;
 	}
@@ -604,6 +605,7 @@ static const struct display_driver_api st7735r_api = {
 			DT_INST_GPIO_FLAGS(inst, reset_gpios)),			\
 		.width = DT_INST_PROP(inst, width),				\
 		.height = DT_INST_PROP(inst, height),				\
+		.inversion = DT_INST_PROP(inst, display_inversion),		\
 		.madctl = DT_INST_PROP(inst, madctl),				\
 		.colmod = DT_INST_PROP(inst, colmod),				\
 		.caset = DT_INST_PROP(inst, caset),				\
