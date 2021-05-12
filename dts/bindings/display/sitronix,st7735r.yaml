@@ -36,6 +36,12 @@ properties:
       required: true
       description: Width in pixels of the panel driven by the controller
 
+    display-inversion:
+      type: boolean
+      description:
+        Display inversion mode. Every bit is inverted from the frame memory to
+        the display.
+
     x-offset:
       type: int
       required: true
