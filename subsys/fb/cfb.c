@@ -23,6 +23,24 @@ static inline uint8_t byte_reverse(uint8_t b)
 	return b;
 }
 
+static inline uint16_t get_depth_from_pixel_format(const enum display_pixel_format pixel_format)
+{
+	switch (pixel_format) {
+	case PIXEL_FORMAT_ARGB_8888:
+		return 4U;
+	case PIXEL_FORMAT_RGB_888:
+		return 3U;
+	case PIXEL_FORMAT_RGB_565:
+	case PIXEL_FORMAT_BGR_565:
+		return 2U;
+	case PIXEL_FORMAT_MONO01:
+	case PIXEL_FORMAT_MONO10:
+		return 1U;
+	}
+
+	return 0U;
+}
+
 struct char_framebuffer {
 	/** Pointer to a buffer in RAM */
 	uint8_t *buf;
@@ -135,7 +153,7 @@ int cfb_print(const struct device *dev, char *str, uint16_t x, uint16_t y)
 		return -1;
 	}
 
-	if ((fb->screen_info & SCREEN_INFO_MONO_VTILED) && !(y % 8)) {
+	if (!(y % 8)) {
 		for (size_t i = 0; i < strlen(str); i++) {
 			if (x + fptr->width > fb->x_res) {
 				x = 0U;
@@ -210,7 +228,47 @@ int cfb_framebuffer_finalize(const struct device *dev)
 		cfb_invert(fb);
 	}
 
-	return api->write(dev, 0, 0, &desc, fb->buf);
+	if ((fb->screen_info & SCREEN_INFO_MONO_VTILED)) {
+		return api->write(dev, 0, 0, &desc, fb->buf);
+	} else   {
+		int ret;
+		uint8_t *buf;
+		uint16_t depth;
+		struct display_capabilities cfg;
+
+		api->get_capabilities(dev, &cfg);
+
+		depth = get_depth_from_pixel_format(cfg.current_pixel_format);
+
+		desc.buf_size = fb->x_res * fb->ppt * depth;
+		desc.width = fb->x_res;
+		desc.height = 8U;
+		desc.pitch = fb->x_res;
+
+		buf = k_malloc(desc.buf_size);
+
+		for (int y = 0; y < (fb->y_res / fb->ppt); y++) {
+			for (int x = 0; x < fb->x_res; x++) {
+				for (int d = 0; d < depth; d++) {
+					for (int b = 0; b < 8; b++) {
+						if (fb->buf[(y * fb->x_res) + x] & (0x01 << b)) {
+							buf[(b * fb->x_res + x) * depth + d] = 0xFF;
+						} else {
+							buf[(b * fb->x_res + x) * depth + d] = 0x00;
+						}
+					}
+				}
+			}
+
+			ret = api->write(dev, 0, y * 8, &desc, buf);
+			if (ret) {
+				break;
+			}
+		}
+
+		k_free(buf);
+		return ret;
+	}
 }
 
 int cfb_get_display_parameter(const struct device *dev,
