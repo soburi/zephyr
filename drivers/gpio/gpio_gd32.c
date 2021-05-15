@@ -262,7 +262,7 @@ static int gpio_gd32_port_toggle_bits(const struct device *dev,
 	const struct gpio_gd32_config *cfg = dev->config;
 	uint32_t gpio = (uint32_t)cfg->base;
 
-	gpio_bit_set(gpio, gpio_output_port_get(gpio) ^ pins);
+	gpio_port_write(gpio, gpio_output_port_get(gpio) ^ pins);
 
 	return 0;
 }
