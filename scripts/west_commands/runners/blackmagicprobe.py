@@ -5,6 +5,7 @@
 '''Runner for flashing with Black Magic Probe.'''
 # https://github.com/blacksphere/blackmagic/wiki
 
+import pathlib
 import signal
 
 from runners.core import ZephyrBinaryRunner, RunnerCaps
@@ -15,7 +16,7 @@ class BlackMagicProbeRunner(ZephyrBinaryRunner):
     def __init__(self, cfg, gdb_serial):
         super().__init__(cfg)
         self.gdb = [cfg.gdb] if cfg.gdb else None
-        self.elf_file = cfg.elf_file
+        self.elf_file = pathlib.Path(cfg.elf_file).as_posix()
         self.gdb_serial = gdb_serial
 
     @classmethod
