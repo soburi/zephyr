@@ -1,26 +1,21 @@
 # Copyright (c) 2021 Tokita, Hiroshi <tokita.hiroshi@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
-
 '''Runner for flashing with RV-Link.'''
 # https://gitee.com/zoomdy/RV-LINK
 # https://gitlab.melroy.org/micha/rv-link
 
-import signal
 import pathlib
+import signal
 
 from runners.core import ZephyrBinaryRunner, RunnerCaps
 
 class RvLinkRunner(ZephyrBinaryRunner):
     '''Runner front-end for RV-Link probe.'''
 
-    def __init__(self, cfg, gdb_serial, posix_separator):
+    def __init__(self, cfg, gdb_serial):
         super().__init__(cfg)
         self.gdb = [cfg.gdb] if cfg.gdb else None
-        if posix_separator != '':
-            self.elf_file = pathlib.Path(cfg.elf_file).as_posix()
-        else:
-            self.elf_file = cfg.elf_file
-
+        self.elf_file = pathlib.Path(cfg.elf_file).as_posix()
         self.gdb_serial = gdb_serial
 
     @classmethod
@@ -33,15 +28,12 @@ class RvLinkRunner(ZephyrBinaryRunner):
 
     @classmethod
     def do_create(cls, cfg, args):
-        return RvLinkRunner(cfg, args.gdb_serial, args.posix_separator)
+        return RvLinkRunner(cfg, args.gdb_serial)
 
     @classmethod
     def do_add_parser(cls, parser):
         parser.add_argument('--gdb-serial', default='/dev/ttyACM0',
                             help='GDB serial port')
-        parser.add_argument('--posix-separator', default='',
-                            help='True to use slash as file path separator.\n'
-                                 'Try it if gdb can not handle backslash correctly.')
 
     def rvl_flash(self, command, **kwargs):
         if self.elf_file is None:
