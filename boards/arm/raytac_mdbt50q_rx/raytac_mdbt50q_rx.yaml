@@ -1,0 +1,19 @@
+identifier: raytac_mdbt50q_rx
+name: Raytac_MDBT50Q_RX
+type: mcu
+arch: arm
+ram: 256
+flash: 1024
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+supported:
+  - ble
+  - counter
+  - gpio
+  - ieee802154
+  - usb_cdc
+  - usb_device
+  - watchdog
+  - netif:openthread
