@@ -15,37 +15,16 @@
 
 #include <sw_isr_table.h>
 
-static inline void eclic_init(uint32_t num_irq)
-{
-	ECLIC_SetMth(0);
-	ECLIC_SetCfgNlbits(__ECLIC_INTCTLBITS);
-}
-
-static inline void eclic_mode_enable(void)
-{
-	uint32_t mtvec_value = __RV_CSR_READ(CSR_MTVEC);
-
-	mtvec_value = mtvec_value & 0xFFFFFFC0;
-	mtvec_value = mtvec_value | 0x00000003;
-	__RV_CSR_WRITE(CSR_MTVEC, mtvec_value);
-}
-
-static inline void eclic_global_interrupt_enable(void)
-{
-	/* set machine interrupt enable bit */
-	__RV_CSR_SET(CSR_MSTATUS, MSTATUS_MIE);
-}
-
 /**
  * @brief Initialize the Platform Level Interrupt Controller
  * @return N/A
  */
 static int _eclic_init(const struct device *dev)
 {
-	/* Initialze ECLIC */
-	eclic_init(SOC_ECLIC_NUM_INTERRUPTS);
-	eclic_mode_enable();
-	eclic_global_interrupt_enable();
+	ECLIC_SetMth(0);
+	ECLIC_SetCfgNlbits(__ECLIC_INTCTLBITS);
+	__set_exc_entry(__RV_CSR_READ(CSR_MTVEC));
+	__RV_CSR_SET(CSR_MSTATUS, MSTATUS_MIE);
 
 	return 0;
 }
