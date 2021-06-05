@@ -158,9 +158,13 @@ manifest:
       path: modules/lib/tensorflow
       revision: dc70a45a7cc12c25726a32cd91b28be59e7bc596
 
+    - name: hal_gigadevice
+      remote: soburi
+      revision: ecd758461dfaa16ba11bb71609aebca689122c16
+      path: modules/hal/gigadevice
     - name: hal_nuclei
       remote: soburi
-      revision: ce2159a6320d9b72ed52a609bcce0fb0e2dd5261
+      revision: 0ccebf6a7d76456ea350d1a42b55e4e7f1ae8e69
       path: modules/hal/nuclei
 
   self:
