@@ -11,20 +11,112 @@
 
 #include <kernel.h>
 #include <device.h>
+#include <devicetree.h>
 #include <soc.h>
-#include <gd32vf103_gpio.h>
-//#include <gd32vf103_exti.h>
 #include <drivers/gpio.h>
 #include <drivers/clock_control.h>
 #include <dt-bindings/clock/gd32_clock.h>
 #include <drivers/pinmux.h>
 #include <sys/util.h>
+#include <drivers/clock_control/gd32_clock_control.h>
 #ifdef CONFIG_EXTI_GD32
 #include <drivers/interrupt_controller/exti_gd32.h>
 #endif
-
 #include <drivers/gpio/gpio_gd32.h>
+
 #include "gpio_utils.h"
+#include "gpio_gd32_registers.h"
+
+static uint16_t gpio_input_port_get(uint32_t gpio_periph)
+{
+    return (uint16_t)(GPIO_ISTAT(gpio_periph));
+}
+
+static uint16_t gpio_output_port_get(uint32_t gpio_periph)
+{
+    return ((uint16_t) GPIO_OCTL(gpio_periph));
+}
+
+static void gpio_port_write(uint32_t gpio_periph, uint16_t data)
+{
+    GPIO_OCTL(gpio_periph) = (uint32_t) data;
+}
+
+static void gpio_bit_set(uint32_t gpio_periph, uint32_t pin)
+{
+    GPIO_BOP(gpio_periph) = (uint32_t) pin;
+}
+
+static void gpio_bit_reset(uint32_t gpio_periph, uint32_t pin)
+{
+    GPIO_BC(gpio_periph) = (uint32_t) pin;
+}
+
+static void gpio_init(uint32_t gpio_periph, uint32_t mode, uint32_t speed,
+               uint32_t pin)
+{
+    uint16_t i;
+    uint32_t temp_mode = 0U;
+    uint32_t reg = 0U;
+
+    /* GPIO mode configuration */
+    temp_mode = (uint32_t)(mode & ((uint32_t) 0x0FU));
+
+    /* GPIO speed configuration */
+    if (((uint32_t) 0x00U) != ((uint32_t) mode & ((uint32_t) 0x10U))) {
+        /* output mode max speed:10MHz,2MHz,50MHz */
+        temp_mode |= (uint32_t) speed;
+    }
+
+    /* configure the eight low port pins with GPIO_CTL0 */
+    for (i = 0U; i < 8U; i++) {
+        if ((1U << i) & pin) {
+            reg = GPIO_CTL0(gpio_periph);
+
+            /* clear the specified pin mode bits */
+            reg &= ~GPIO_MODE_MASK(i);
+            /* set the specified pin mode bits */
+            reg |= GPIO_MODE_SET(i, temp_mode);
+
+            /* set IPD or IPU */
+            if (GPIO_MODE_IPD == mode) {
+                /* reset the corresponding OCTL bit */
+                GPIO_BC(gpio_periph) = (uint32_t)((1U << i) & pin);
+            } else {
+                /* set the corresponding OCTL bit */
+                if (GPIO_MODE_IPU == mode) {
+                    GPIO_BOP(gpio_periph) = (uint32_t)((1U << i) & pin);
+                }
+            }
+            /* set GPIO_CTL0 register */
+            GPIO_CTL0(gpio_periph) = reg;
+        }
+    }
+    /* configure the eight high port pins with GPIO_CTL1 */
+    for (i = 8U; i < 16U; i++) {
+        if ((1U << i) & pin) {
+            reg = GPIO_CTL1(gpio_periph);
+
+            /* clear the specified pin mode bits */
+            reg &= ~GPIO_MODE_MASK(i - 8U);
+            /* set the specified pin mode bits */
+            reg |= GPIO_MODE_SET(i - 8U, temp_mode);
+
+            /* set IPD or IPU */
+            if (GPIO_MODE_IPD == mode) {
+                /* reset the corresponding OCTL bit */
+                GPIO_BC(gpio_periph) = (uint32_t)((1U << i) & pin);
+            } else {
+                /* set the corresponding OCTL bit */
+                if (GPIO_MODE_IPU == mode) {
+                    GPIO_BOP(gpio_periph) = (uint32_t)((1U << i) & pin);
+                }
+            }
+            /* set GPIO_CTL1 register */
+            GPIO_CTL1(gpio_periph) = reg;
+        }
+    }
+}
 
 /**
  * @brief Common GPIO driver for GD32 MCUs.
@@ -177,9 +269,40 @@ int gpio_gd32_clock_request(const struct device *dev, bool on)
 }
 
 
-static void gpio_gd32_set_exti_source(int port, int pin)
+
+static void gpio_gd32_set_exti_source(uint8_t output_port, uint8_t output_pin)
 {
-	gpio_exti_source_select(port, pin);
+    uint32_t source = 0U;
+    source = ((uint32_t) 0x0FU)
+             << (AFIO_EXTI_SOURCE_FIELDS * (output_pin & AFIO_EXTI_SOURCE_MASK));
+
+    /* select EXTI sources */
+    if (GPIO_PIN_SOURCE_4 > output_pin) {
+        /* select EXTI0/EXTI1/EXTI2/EXTI3 */
+        AFIO_EXTISS0 &= ~source;
+        AFIO_EXTISS0 |= (((uint32_t) output_port)
+                         << (AFIO_EXTI_SOURCE_FIELDS
+                             * (output_pin & AFIO_EXTI_SOURCE_MASK)));
+    } else if (GPIO_PIN_SOURCE_8 > output_pin) {
+        /* select EXTI4/EXTI5/EXTI6/EXTI7 */
+        AFIO_EXTISS1 &= ~source;
+        AFIO_EXTISS1 |= (((uint32_t) output_port)
+                         << (AFIO_EXTI_SOURCE_FIELDS
+                             * (output_pin & AFIO_EXTI_SOURCE_MASK)));
+    } else if (GPIO_PIN_SOURCE_12 > output_pin) {
+        /* select EXTI8/EXTI9/EXTI10/EXTI11 */
+        AFIO_EXTISS2 &= ~source;
+        AFIO_EXTISS2 |= (((uint32_t) output_port)
+                         << (AFIO_EXTI_SOURCE_FIELDS
+                             * (output_pin & AFIO_EXTI_SOURCE_MASK)));
+    } else {
+        /* select EXTI12/EXTI13/EXTI14/EXTI15 */
+        AFIO_EXTISS3 &= ~source;
+        AFIO_EXTISS3 |= (((uint32_t) output_port)
+                         << (AFIO_EXTI_SOURCE_FIELDS
+                             * (output_pin & AFIO_EXTI_SOURCE_MASK)));
+    }
+
 }
 
 static int gpio_gd32_get_exti_source(int pin)
@@ -372,15 +495,17 @@ static int gpio_gd32_manage_callback(const struct device *dev,
 	return gpio_manage_callback(&data->cb, callback, set);
 }
 
-static const struct gpio_driver_api gpio_gd32_driver = {
-	.pin_configure = gpio_gd32_config,
-	.port_get_raw = gpio_gd32_port_get_raw,
-	.port_set_masked_raw = gpio_gd32_port_set_masked_raw,
-	.port_set_bits_raw = gpio_gd32_port_set_bits_raw,
-	.port_clear_bits_raw = gpio_gd32_port_clear_bits_raw,
-	.port_toggle_bits = gpio_gd32_port_toggle_bits,
-	.pin_interrupt_configure = gpio_gd32_pin_interrupt_configure,
-	.manage_callback = gpio_gd32_manage_callback,
+static const struct gd32_gpio_driver_api gpio_gd32_driver = {
+	.api.pin_configure = gpio_gd32_config,
+	.api.port_get_raw = gpio_gd32_port_get_raw,
+	.api.port_set_masked_raw = gpio_gd32_port_set_masked_raw,
+	.api.port_set_bits_raw = gpio_gd32_port_set_bits_raw,
+	.api.port_clear_bits_raw = gpio_gd32_port_clear_bits_raw,
+	.api.port_toggle_bits = gpio_gd32_port_toggle_bits,
+	.api.pin_interrupt_configure = gpio_gd32_pin_interrupt_configure,
+	.api.manage_callback = gpio_gd32_manage_callback,
+	.configure = gd32_gpio_configure,
+	.clock_request = gd32_gpio_clock_request,
 };
 
 /**
