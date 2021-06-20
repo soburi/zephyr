@@ -19,7 +19,21 @@
 #include <sys/__assert.h>
 #include <drivers/interrupt_controller/exti_gd32.h>
 
-#include "gd32vf103_exti.h"
+/* EXTI definitions */
+#define EXTI                         EXTI_BASE
+
+/* registers definitions */
+#define EXTI_INTEN                   REG32(EXTI + 0x00U)      /*!< interrupt enable register */
+#define EXTI_EVEN                    REG32(EXTI + 0x04U)      /*!< event enable register */
+#define EXTI_RTEN                    REG32(EXTI + 0x08U)      /*!< rising edge trigger enable register */
+#define EXTI_FTEN                    REG32(EXTI + 0x0CU)      /*!< falling trigger enable register */
+#define EXTI_SWIEV                   REG32(EXTI + 0x10U)      /*!< software interrupt event register */
+#define EXTI_PD                      REG32(EXTI + 0x14U)      /*!< pending register */
+
+void exti_interrupt_enable(exti_line_enum linex);
+void exti_interrupt_disable(exti_line_enum linex);
+FlagStatus exti_interrupt_flag_get(exti_line_enum linex);
+void exti_interrupt_flag_clear(exti_line_enum linex);
 
 const IRQn_Type exti_irq_table[] = {
 	EXTI0_IRQn, EXTI1_IRQn, EXTI2_IRQn, EXTI3_IRQn,

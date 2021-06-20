@@ -13,7 +13,7 @@
 #include <device.h>
 #include <soc.h>
 #include <gd32vf103_gpio.h>
-#include <gd32vf103_exti.h>
+//#include <gd32vf103_exti.h>
 #include <drivers/gpio.h>
 #include <drivers/clock_control.h>
 #include <dt-bindings/clock/gd32_clock.h>
@@ -23,7 +23,7 @@
 #include <drivers/interrupt_controller/exti_gd32.h>
 #endif
 
-#include "gpio_gd32.h"
+#include <drivers/gpio/gpio_gd32.h>
 #include "gpio_utils.h"
 
 /**
