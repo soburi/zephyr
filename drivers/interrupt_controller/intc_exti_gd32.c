@@ -19,21 +19,32 @@
 #include <sys/__assert.h>
 #include <drivers/interrupt_controller/exti_gd32.h>
 
-/* EXTI definitions */
-#define EXTI                         EXTI_BASE
+//#include "gd32vf103_exti.h"
+#include "intc_exti_gd32.h"
 
-/* registers definitions */
-#define EXTI_INTEN                   REG32(EXTI + 0x00U)      /*!< interrupt enable register */
-#define EXTI_EVEN                    REG32(EXTI + 0x04U)      /*!< event enable register */
-#define EXTI_RTEN                    REG32(EXTI + 0x08U)      /*!< rising edge trigger enable register */
-#define EXTI_FTEN                    REG32(EXTI + 0x0CU)      /*!< falling trigger enable register */
-#define EXTI_SWIEV                   REG32(EXTI + 0x10U)      /*!< software interrupt event register */
-#define EXTI_PD                      REG32(EXTI + 0x14U)      /*!< pending register */
+FlagStatus _exti_interrupt_flag_get(exti_line_enum linex)
+{
+    uint32_t flag_left, flag_right;
 
-void exti_interrupt_enable(exti_line_enum linex);
-void exti_interrupt_disable(exti_line_enum linex);
-FlagStatus exti_interrupt_flag_get(exti_line_enum linex);
-void exti_interrupt_flag_clear(exti_line_enum linex);
+    flag_left = EXTI_PD & (uint32_t) linex;
+    flag_right = EXTI_INTEN & (uint32_t) linex;
+
+    if ((RESET != flag_left) && (RESET != flag_right)) {
+        return SET;
+    } else {
+        return RESET;
+    }
+}
+
+void _exti_interrupt_disable(exti_line_enum linex)
+{
+    EXTI_INTEN &= ~(uint32_t) linex;
+}
+
+void _exti_interrupt_flag_clear(exti_line_enum linex)
+{
+    EXTI_PD = (uint32_t) linex;
+}
 
 const IRQn_Type exti_irq_table[] = {
 	EXTI0_IRQn, EXTI1_IRQn, EXTI2_IRQn, EXTI3_IRQn,
@@ -105,7 +116,7 @@ void gd32_exti_enable(int line)
 void gd32_exti_disable(int line)
 {
 	if (line < 32) {
-		exti_interrupt_disable(1 << line);
+		_exti_interrupt_disable(1 << line);
 	} else {
 		__ASSERT_NO_MSG(line);
 	}
@@ -121,7 +132,7 @@ static inline int gd32_exti_is_pending(int line)
 	int ret = 0;
 
 	if (line < 32) {
-		ret = exti_interrupt_flag_get(1 << line);
+		ret = _exti_interrupt_flag_get(1 << line);
 	} else {
 		__ASSERT_NO_MSG(line);
 	}
@@ -136,7 +147,7 @@ static inline int gd32_exti_is_pending(int line)
 static inline void gd32_exti_clear_pending(int line)
 {
 	if (line < 32) {
-		exti_interrupt_flag_clear(1 << line);
+		_exti_interrupt_flag_clear(1 << line);
 	} else {
 		__ASSERT_NO_MSG(line);
 	}
