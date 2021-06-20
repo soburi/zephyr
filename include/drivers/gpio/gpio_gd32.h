@@ -53,8 +53,11 @@
 #define GD32_CNF_AF_PP  (0x2 << GD32_CNF_OUT_SHIFT)
 #define GD32_CNF_AF_OD  (0x3 << GD32_CNF_OUT_SHIFT)
 
+#define GD32_GPIO_PIN(x) BIT(x)
+
 #define AFIO_EXTI_PORT_MASK     ((uint8_t)0x70)
 #define AFIO_EXTI_SOURCE_FIELDS ((uint8_t)0x04U) /*!< select AFIO exti source registers */
+#define AFIO_EXTI_SOURCE_MASK   ((uint8_t)0x03U)
 
 /**
  * @brief configuration of GPIO device
@@ -81,6 +84,19 @@ struct gpio_gd32_data {
 	sys_slist_t cb;
 };
 
+typedef int (*gd32_gpio_configure_fn)(
+						    const struct device *dev,
+							int pin, int conf, int altf);
+typedef int (*gd32_gpio_clock_request_fn)(
+						    const struct device *dev,
+						    bool sys);
+
+struct gd32_gpio_driver_api {
+	struct gpio_driver_api api;
+	gd32_gpio_configure_fn configure;
+	gd32_gpio_clock_request_fn clock_request;
+};
+
 /**
  * @brief helper for configuration of GPIO pin
  *
@@ -89,7 +105,13 @@ struct gpio_gd32_data {
  * @param conf GPIO mode
  * @param altf Alternate function
  */
-int gpio_gd32_configure(const struct device *dev, int pin, int conf, int altf);
+static inline int gd32_gpio_configure(const struct device *dev, int pin, int conf, int altf)
+{
+	const struct gd32_gpio_driver_api *api =
+		(const struct gd32_gpio_driver_api *)dev->api;
+
+	return api->configure(dev, pin, conf, altf);
+}
 
 /**
  * @brief Enable / disable GPIO port clock.
@@ -97,6 +119,13 @@ int gpio_gd32_configure(const struct device *dev, int pin, int conf, int altf);
  * @param dev GPIO port device pointer
  * @param on boolean for on/off clock request
  */
-int gpio_gd32_clock_request(const struct device *dev, bool on);
+static inline int gd32_gpio_clock_request(const struct device *dev, bool on)
+{
+	const struct gd32_gpio_driver_api *api =
+		(const struct gd32_gpio_driver_api *)dev->api;
+
+	return api->clock_request(dev, on);
+}
+
 
 #endif /* ZEPHYR_DRIVERS_GPIO_GPIO_GD32_H_ */
