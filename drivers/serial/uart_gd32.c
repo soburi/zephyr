@@ -23,11 +23,12 @@
 #include <drivers/uart.h>
 #include <drivers/pinmux.h>
 #include <drivers/clock_control.h>
+#include <drivers/clock_control/gd32_clock_control.h>
+#include <drivers/gpio/gpio_gd32.h>
 
 
 #include <linker/sections.h>
-#include "gd32vf103_usart.h"
-#include "gd32vf103_gpio.h"
+#include "uart_gd32.h"
 
 #include "gigadevice_gd32_dt.h"
 
@@ -51,6 +52,11 @@ LOG_MODULE_REGISTER(uart_gd32);
 #define USART_HWFC_RTSCTS             CLT2_HWFC(3)                      /*!< RTS&CTS enable */
 #define USART_CTL2_HWFC               BITS(8, 9)                        /*!< RTS&CTS enable */
 
+#define USART0 DT_INST_REG_ADDR(0)
+#define USART1 DT_INST_REG_ADDR(1)
+#define USART2 DT_INST_REG_ADDR(2)
+
+
 /* device config */
 struct uart_gd32_config {
 	struct uart_device_config uconf;
@@ -64,11 +70,6 @@ struct uart_gd32_config {
 	size_t pinctrl_list_size;
 };
 
-static inline int usart_interrupt_flag_enabled(uint32_t usart_periph, uint32_t int_flag)
-{
-	return (USART_REG_VAL(usart_periph, int_flag) >> USART_BIT_POS(int_flag)) & 0x1;
-}
-
 /* driver data */
 struct uart_gd32_data {
 	/* Baud rate */
@@ -81,20 +82,162 @@ struct uart_gd32_data {
 #endif
 };
 
-static inline uint32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity);
-static inline enum uart_config_parity uart_gd32_ll2cfg_parity(uint32_t parity);
-static inline uint32_t uart_gd32_cfg2ll_stopbits(enum uart_config_stop_bits sb);
-static inline enum uart_config_stop_bits uart_gd32_ll2cfg_stopbits(uint32_t sb);
-static inline uint32_t uart_gd32_cfg2ll_databits(enum uart_config_data_bits db);
-static inline enum uart_config_data_bits uart_gd32_ll2cfg_databits(uint32_t db);
-static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(uint32_t fc);
+static void usart_parity_config(uint32_t usart_periph, uint32_t paritycfg)
+{
+    /* clear USART_CTL0 PM,PCEN bits */
+    USART_CTL0(usart_periph) &= ~(USART_CTL0_PM | USART_CTL0_PCEN);
+    /* configure USART parity mode */
+    USART_CTL0(usart_periph) |= paritycfg ;
+}
+
+static void usart_stop_bit_set(uint32_t usart_periph, uint32_t stblen)
+{
+    /* clear USART_CTL1 STB bits */
+    USART_CTL1(usart_periph) &= ~USART_CTL1_STB;
+    /* configure USART stop bits */
+    USART_CTL1(usart_periph) |= stblen;
+}
+
+static void usart_word_length_set(uint32_t usart_periph, uint32_t wlen)
+{
+    /* clear USART_CTL0 WL bit */
+    USART_CTL0(usart_periph) &= ~USART_CTL0_WL;
+    /* configure USART word length */
+    USART_CTL0(usart_periph) |= wlen;
+}
+
+static void usart_hardware_flow_rts_config(uint32_t usart_periph, uint32_t rtsconfig)
+{
+    uint32_t ctl = 0U;
+
+    ctl = USART_CTL2(usart_periph);
+    ctl &= ~USART_CTL2_RTSEN;
+    ctl |= rtsconfig;
+    /* configure RTS */
+    USART_CTL2(usart_periph) = ctl;
+}
+
+static void usart_hardware_flow_cts_config(uint32_t usart_periph, uint32_t ctsconfig)
+{
+    uint32_t ctl = 0U;
+
+    ctl = USART_CTL2(usart_periph);
+    ctl &= ~USART_CTL2_CTSEN;
+    ctl |= ctsconfig;
+    /* configure CTS */
+    USART_CTL2(usart_periph) = ctl;
+}
+
+static void usart_enable(uint32_t usart_periph)
+{
+    USART_CTL0(usart_periph) |= USART_CTL0_UEN;
+}
+
+static void usart_disable(uint32_t usart_periph)
+{
+    USART_CTL0(usart_periph) &= ~(USART_CTL0_UEN);
+}
+
+static FlagStatus usart_flag_get(uint32_t usart_periph, usart_flag_enum flag)
+{
+    if (RESET != (USART_REG_VAL(usart_periph, flag) & BIT(USART_BIT_POS(flag)))) {
+        return SET;
+    } else {
+        return RESET;
+    }
+}
+
+static void usart_flag_clear(uint32_t usart_periph, usart_flag_enum flag)
+{
+    USART_REG_VAL(usart_periph, flag) &= ~BIT(USART_BIT_POS(flag));
+}
+
+static void usart_transmit_config(uint32_t usart_periph, uint32_t txconfig)
+{
+    uint32_t ctl = 0U;
+
+    ctl = USART_CTL0(usart_periph);
+    ctl &= ~USART_CTL0_TEN;
+    ctl |= txconfig;
+    /* configure transfer mode */
+    USART_CTL0(usart_periph) = ctl;
+}
+
+static void usart_receive_config(uint32_t usart_periph, uint32_t rxconfig)
+{
+    uint32_t ctl = 0U;
+
+    ctl = USART_CTL0(usart_periph);
+    ctl &= ~USART_CTL0_REN;
+    ctl |= rxconfig;
+    /* configure receiver mode */
+    USART_CTL0(usart_periph) = ctl;
+}
+
+static void usart_data_transmit(uint32_t usart_periph, uint32_t data)
+{
+    USART_DATA(usart_periph) = USART_DATA_DATA & data;
+}
+
+static uint16_t usart_data_receive(uint32_t usart_periph)
+{
+    return (uint16_t)(GET_BITS(USART_DATA(usart_periph), 0U, 8U));
+}
+
+
+
+
+
+static uint32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity);
+static enum uart_config_parity uart_gd32_ll2cfg_parity(uint32_t parity);
+static uint32_t uart_gd32_cfg2ll_stopbits(enum uart_config_stop_bits sb);
+static enum uart_config_stop_bits uart_gd32_ll2cfg_stopbits(uint32_t sb);
+static uint32_t uart_gd32_cfg2ll_databits(enum uart_config_data_bits db);
+static enum uart_config_data_bits uart_gd32_ll2cfg_databits(uint32_t db);
+static enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(uint32_t fc);
 
 static inline void uart_gd32_set_baudrate(const struct device *dev,
-					  uint32_t baud_rate)
+					  uint32_t baudval)
 {
-	uint32_t regs = DEV_REGS(dev);
+	uint32_t usart_periph = DEV_REGS(dev);
+    uint32_t uclk = 0U, intdiv = 0U, fradiv = 0U, udiv = 0U;
 
-	usart_baudrate_set(regs, baud_rate);
+	int err;
+
+	static const int _CK_APB2 = CK_APB2;
+	static const int _CK_APB1 = CK_APB1;
+    switch (usart_periph) {
+        /* get clock frequency */
+        case USART0:
+            /* get USART0 clock */
+            err = clock_control_get_rate(DEVICE_DT_GET(DT_NODELABEL(rcu)), (clock_control_subsys_t)&_CK_APB2, &uclk);
+            break;
+        case USART1:
+            /* get USART1 clock */
+            err = clock_control_get_rate(DEVICE_DT_GET(DT_NODELABEL(rcu)), (clock_control_subsys_t)&_CK_APB1, &uclk);
+            break;
+        case USART2:
+            /* get USART2 clock */
+            err = clock_control_get_rate(DEVICE_DT_GET(DT_NODELABEL(rcu)), (clock_control_subsys_t)&_CK_APB1, &uclk);
+            break;
+#if 0
+        case UART3:
+            /* get UART3 clock */
+            uclk = rcu_clock_freq_get(CK_APB1);
+            break;
+        case UART4:
+            /* get UART4 clock */
+            uclk = rcu_clock_freq_get(CK_APB1);
+            break;
+#endif
+        default:
+            break;
+    }
+    /* oversampling by 16, configure the value of USART_BAUD */
+    udiv = (uclk + baudval / 2U) / baudval;
+    intdiv = udiv & (0x0000fff0U);
+    fradiv = udiv & (0x0000000fU);
+    USART_BAUD(usart_periph) = ((USART_BAUD_FRADIV | USART_BAUD_INTDIV) & (intdiv | fradiv));
 }
 
 static inline void uart_gd32_set_parity(const struct device *dev,
@@ -678,13 +821,46 @@ static int uart_gd32_init(const struct device *dev)
 		return -EIO;
 	}
 
-	usart_deinit(regs);
+    switch (regs) {
+        case USART0:
+            /* reset USART0 */
+            gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), RCU_USART0RST);
+            gd32_clock_control_peripheral_disable(DEVICE_DT_GET(DT_NODELABEL(rcu)), RCU_USART0RST);
+            break;
+        case USART1:
+            /* reset USART1 */
+            gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), RCU_USART1RST);
+            gd32_clock_control_peripheral_disable(DEVICE_DT_GET(DT_NODELABEL(rcu)), RCU_USART1RST);
+            break;
+        case USART2:
+            /* reset USART2 */
+            gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), RCU_USART2RST);
+            gd32_clock_control_peripheral_disable(DEVICE_DT_GET(DT_NODELABEL(rcu)), RCU_USART2RST);
+            break;
+#if 0
+        case UART3:
+            /* reset UART3 */
+            rcu_periph_reset_enable(RCU_UART3RST);
+            rcu_periph_reset_disable(RCU_UART3RST);
+            break;
+        case UART4:
+            /* reset UART4 */
+            rcu_periph_reset_enable(RCU_UART4RST);
+            rcu_periph_reset_disable(RCU_UART4RST);
+            break;
+#endif
+        default:
+            break;
+    }
 
 	/* TODO make configurable with pinctrl */
-	rcu_periph_clock_enable(RCU_GPIOA);
-	rcu_periph_clock_enable(RCU_USART0);
-	gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
-	gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+	gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), RCU_GPIOA);
+	gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), RCU_USART0);
+	gd32_gpio_configure(DEVICE_DT_GET(DT_NODELABEL(gpioa)), GD32_GPIO_PIN(9), GD32_CNF_AF_PP|GD32_MODE_OUTPUT_MAX_50, 0);
+	//gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+	gd32_gpio_configure(DEVICE_DT_GET(DT_NODELABEL(gpioa)), GD32_GPIO_PIN(10), GD32_CNF_IN_FLOAT|GD32_MODE_OUTPUT_MAX_50, 0);
+	//gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+
 
 	/* TX/RX direction */
 	usart_transmit_config(regs, USART_TRANSMIT_ENABLE);
