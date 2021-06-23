@@ -321,9 +321,9 @@ static int gpio_gd32_pin_interrupt_configure(const struct device *dev,
 
 	if (mode == GPIO_INT_MODE_DISABLED) {
 		if (gpio_gd32_get_exti_source(pin) == cfg->port) {
-			gd32_exti_disable(pin);
-			gd32_exti_unset_callback(pin);
-			gd32_exti_trigger(pin, EXTI_TRIG_NONE);
+			gd32_exti_disable(DEVICE_DT_GET(DT_NODELABEL(exti)), pin);
+			gd32_exti_unset_callback(DEVICE_DT_GET(DT_NODELABEL(exti)), pin);
+			gd32_exti_trigger(DEVICE_DT_GET(DT_NODELABEL(exti)), pin, EXTI_TRIG_NONE);
 		}
 		/* else: No irq source configured for pin. Nothing to disable */
 		goto exit;
@@ -335,7 +335,7 @@ static int gpio_gd32_pin_interrupt_configure(const struct device *dev,
 		goto exit;
 	}
 
-	if (gd32_exti_set_callback(pin, gpio_gd32_isr, data) != 0) {
+	if (gd32_exti_set_callback(DEVICE_DT_GET(DT_NODELABEL(exti)), pin, gpio_gd32_isr, data) != 0) {
 		err = -EBUSY;
 		goto exit;
 	}
@@ -354,9 +354,9 @@ static int gpio_gd32_pin_interrupt_configure(const struct device *dev,
 		break;
 	}
 
-	gd32_exti_trigger(pin, edge);
+	gd32_exti_trigger(DEVICE_DT_GET(DT_NODELABEL(exti)), pin, edge);
 
-	gd32_exti_enable(pin);
+	gd32_exti_enable(DEVICE_DT_GET(DT_NODELABEL(exti)), pin);
 
 exit:
 	return err;
