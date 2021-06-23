@@ -4,44 +4,62 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#define DT_DRV_COMPAT gd32_rcu
+
+#include <devicetree.h>
+#include <device.h>
+
 #include <soc.h>
-#include <gd32vf103_rcu.h>
 #include <drivers/clock_control.h>
+#include <drivers/clock_control/gd32_clock_control.h>
 #include <sys/util.h>
 #include <sys/__assert.h>
+#include "clock_control_gd32.h"
 
 #define LOG_LEVEL CONFIG_CLOCK_CONTROL_LOG_LEVEL
 #include <logging/log.h>
 LOG_MODULE_REGISTER(clock_control);
 
-static const uint32_t en_offset[] = { 0, AHBEN_REG_OFFSET, APB1EN_REG_OFFSET, APB2EN_REG_OFFSET };
+#define GD32_RCU_REG_VAL(periph)                 (REG32(RCU + ((uint32_t)(periph) >> 6)))
+
+static const uint32_t en_offset[] = { 0, GD32_AHBEN_REG_OFFSET, GD32_APB1EN_REG_OFFSET, GD32_APB2EN_REG_OFFSET };
 
 static inline bool check_bus_periph(uint32_t bus, uint32_t periph)
 {
-	rcu_periph_enum ph = (rcu_periph_enum)RCU_REGIDX_BIT(en_offset[bus], RCU_BIT_POS(periph));
+	gd32_rcu_periph_enum ph = (gd32_rcu_periph_enum)GD32_RCU_REGIDX_BIT(en_offset[bus], GD32_RCU_BIT_POS(periph));
 
-	if (bus == CK_AHB  && RCU_DMA0 <= ph && ph <= RCU_USBFS) {
+	if (bus == GD32_CK_AHB  && GD32_RCU_DMA0 <= ph && ph <= GD32_RCU_USBFS) {
 		return true;
 	}
-	if (bus == CK_APB1 && RCU_TIMER1 <= ph && ph <= RCU_RTC) {
+	if (bus == GD32_CK_APB1 && GD32_RCU_TIMER1 <= ph && ph <= GD32_RCU_RTC) {
 		return true;
 	}
-	if (bus == CK_APB2 && RCU_AF <= ph  && ph <= RCU_USART0) {
+	if (bus == GD32_CK_APB2 && GD32_RCU_AF <= ph  && ph <= GD32_RCU_USART0) {
 		return true;
 	}
 	return false;
 }
 
+static inline void periph_enable(gd32_rcu_periph_enum periph)
+{
+    GD32_RCU_REG_VAL(periph) |= BIT(GD32_RCU_BIT_POS(periph));
+}
+
+static inline void periph_disable(gd32_rcu_periph_enum periph)
+{
+    GD32_RCU_REG_VAL(periph) &= ~BIT(GD32_RCU_BIT_POS(periph));
+}
+
 static inline void periph_clock_enable(uint32_t bus, uint32_t periph)
 {
-	rcu_periph_clock_enable((rcu_periph_enum)
-				RCU_REGIDX_BIT(en_offset[bus], RCU_BIT_POS(periph)));
+	periph_enable((gd32_rcu_periph_enum)
+				GD32_RCU_REGIDX_BIT(en_offset[bus], GD32_RCU_BIT_POS(periph)));
 }
 
 static inline void periph_clock_disable(uint32_t bus, uint32_t periph)
 {
-	rcu_periph_clock_disable((rcu_periph_enum)
-				 RCU_REGIDX_BIT(en_offset[bus], RCU_BIT_POS(periph)));
+	periph_disable((gd32_rcu_periph_enum)
+				 GD32_RCU_REGIDX_BIT(en_offset[bus], GD32_RCU_BIT_POS(periph)));
 }
 
 static int gd32_clock_control_on(const struct device *dev,
@@ -57,6 +75,113 @@ static int gd32_clock_control_on(const struct device *dev,
 	return 0;
 }
 
+static uint32_t clock_freq_get(gd32_rcu_clock_freq_enum clock)
+{
+    uint32_t sws, ck_freq = 0U;
+    uint32_t cksys_freq, ahb_freq, apb1_freq, apb2_freq;
+    uint32_t pllsel, predv0sel, pllmf, ck_src, idx, clk_exp;
+    uint32_t predv0, predv1, pll1mf;
+
+    /* exponent of AHB, APB1 and APB2 clock divider */
+    uint8_t ahb_exp[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
+    uint8_t apb1_exp[8] = {0, 0, 0, 0, 1, 2, 3, 4};
+    uint8_t apb2_exp[8] = {0, 0, 0, 0, 1, 2, 3, 4};
+
+    sws = GET_BITS(RCU_CFG0, 2, 3);
+    switch (sws) {
+        /* IRC8M is selected as CK_SYS */
+        case SEL_IRC8M:
+            cksys_freq = IRC8M_VALUE;
+            break;
+        /* HXTAL is selected as CK_SYS */
+        case SEL_HXTAL:
+            cksys_freq = HXTAL_VALUE;
+            break;
+        /* PLL is selected as CK_SYS */
+        case SEL_PLL:
+            /* PLL clock source selection, HXTAL or IRC8M/2 */
+            pllsel = (RCU_CFG0 & RCU_CFG0_PLLSEL);
+
+            if (RCU_PLLSRC_HXTAL == pllsel) {
+                /* PLL clock source is HXTAL */
+                ck_src = HXTAL_VALUE;
+
+                predv0sel = (RCU_CFG1 & RCU_CFG1_PREDV0SEL);
+                /* source clock use PLL1 */
+                if (RCU_PREDV0SRC_CKPLL1 == predv0sel) {
+                    predv1 = (uint32_t)((RCU_CFG1 & RCU_CFG1_PREDV1) >> 4) + 1U;
+                    pll1mf = (uint32_t)((RCU_CFG1 & RCU_CFG1_PLL1MF) >> 8) + 2U;
+                    if (17U == pll1mf) {
+                        pll1mf = 20U;
+                    }
+                    ck_src = (ck_src / predv1) * pll1mf;
+                }
+                predv0 = (RCU_CFG1 & RCU_CFG1_PREDV0) + 1U;
+                ck_src /= predv0;
+            } else {
+                /* PLL clock source is IRC8M/2 */
+                ck_src = IRC8M_VALUE / 2U;
+            }
+
+            /* PLL multiplication factor */
+            pllmf = GET_BITS(RCU_CFG0, 18, 21);
+            if ((RCU_CFG0 & RCU_CFG0_PLLMF_4)) {
+                pllmf |= 0x10U;
+            }
+            if (pllmf < 15U) {
+                pllmf += 2U;
+            } else {
+                pllmf += 1U;
+            }
+
+            cksys_freq = ck_src * pllmf;
+
+            if (15U == pllmf) {
+                /* PLL source clock multiply by 6.5 */
+                cksys_freq = ck_src * 6U + ck_src / 2U;
+            }
+
+            break;
+        /* IRC8M is selected as CK_SYS */
+        default:
+            cksys_freq = IRC8M_VALUE;
+            break;
+    }
+
+    /* calculate AHB clock frequency */
+    idx = GET_BITS(RCU_CFG0, 4, 7);
+    clk_exp = ahb_exp[idx];
+    ahb_freq = cksys_freq >> clk_exp;
+
+    /* calculate APB1 clock frequency */
+    idx = GET_BITS(RCU_CFG0, 8, 10);
+    clk_exp = apb1_exp[idx];
+    apb1_freq = ahb_freq >> clk_exp;
+
+    /* calculate APB2 clock frequency */
+    idx = GET_BITS(RCU_CFG0, 11, 13);
+    clk_exp = apb2_exp[idx];
+    apb2_freq = ahb_freq >> clk_exp;
+
+    /* return the clocks frequency */
+    switch (clock) {
+        case GD32_CK_SYS:
+            ck_freq = cksys_freq;
+            break;
+        case GD32_CK_AHB:
+            ck_freq = ahb_freq;
+            break;
+        case GD32_CK_APB1:
+            ck_freq = apb1_freq;
+            break;
+        case GD32_CK_APB2:
+            ck_freq = apb2_freq;
+            break;
+        default:
+            break;
+    }
+    return ck_freq;
+}
 
 static int gd32_clock_control_off(const struct device *dev,
 				  clock_control_subsys_t sub_system)
@@ -77,17 +202,22 @@ static int gd32_clock_control_get_subsys_rate(const struct device *dev,
 {
 	struct gd32_pclken *pclken = (struct gd32_pclken *)sub_system;
 
-	*rate = rcu_clock_freq_get(pclken->bus);
+	*rate = clock_freq_get(pclken->bus);
 
 	return 0;
 }
 
-static struct clock_control_driver_api gd32_clock_control_api = {
-	.on = gd32_clock_control_on,
-	.off = gd32_clock_control_off,
-	.get_rate = gd32_clock_control_get_subsys_rate,
-};
+static void gd32_clock_control_peripheral_enable_(const struct device *dev,
+					      uint32_t peripheral)
+{
+    periph_enable(peripheral);
+}
 
+static void gd32_clock_control_peripheral_disable_(const struct device *dev,
+					      uint32_t peripheral)
+{
+    periph_disable(peripheral);
+}
 
 static int gd32_clock_control_init(const struct device *dev)
 {
@@ -208,6 +338,14 @@ static int gd32_clock_control_init(const struct device *dev)
 
 	return 0;
 }
+
+static struct gd32_clock_control_driver_api gd32_clock_control_api = {
+	.api.on = gd32_clock_control_on,
+	.api.off = gd32_clock_control_off,
+	.api.get_rate = gd32_clock_control_get_subsys_rate,
+	.peripheral_enable = gd32_clock_control_peripheral_enable_,
+	.peripheral_disable = gd32_clock_control_peripheral_disable_,
+};
 
 /**
  * @brief RCU device, note that priority is intentionally set to 1 so
