@@ -15,16 +15,28 @@
 #include <gd32vf103_gpio.h>
 #include <gd32vf103_exti.h>
 #include <drivers/gpio.h>
-#include <drivers/clock_control.h>
+#include <drivers/clock_control/gd32_clock_control.h>
 #include <dt-bindings/clock/gd32_clock.h>
 #include <drivers/pinmux.h>
 #include <sys/util.h>
 #ifdef CONFIG_EXTI_GD32
 #include <drivers/interrupt_controller/exti_gd32.h>
 #endif
+#include <drivers/gpio/gpio_gd32.h>
 
-#include "gpio_gd32.h"
 #include "gpio_utils.h"
+
+#define GD32_PORTA 'A'
+#define GD32_PORTB 'B'
+#define GD32_PORTC 'C'
+#define GD32_PORTD 'D'
+#define GD32_PORTE 'E'
+#define GD32_PORTF 'F'
+#define GD32_PORTG 'G'
+#define GD32_PORTH 'H'
+#define GD32_PORTI 'I'
+#define GD32_PORTJ 'J'
+#define GD32_PORTK 'K'
 
 /**
  * @brief Common GPIO driver for GD32 MCUs.
@@ -89,7 +101,7 @@ static inline uint32_t gd32_pinval_get(int pin)
 /**
  * @brief Configure the hardware.
  */
-int gpio_gd32_configure(const struct device *dev, int pin, int conf, int altf)
+static int gpio_gd32_configure(const struct device *dev, int pin, int conf, int altf)
 {
 	const struct gpio_gd32_config *cfg = dev->config;
 	uint32_t gpio = (uint32_t)cfg->base;
@@ -151,7 +163,7 @@ int gpio_gd32_configure(const struct device *dev, int pin, int conf, int altf)
 /**
  * @brief GPIO port clock handling
  */
-int gpio_gd32_clock_request(const struct device *dev, bool on)
+static int gpio_gd32_clock_request(const struct device *dev, bool on)
 {
 	const struct gpio_gd32_config *cfg = dev->config;
 	int ret = 0;
@@ -159,7 +171,7 @@ int gpio_gd32_clock_request(const struct device *dev, bool on)
 	__ASSERT_NO_MSG(dev != NULL);
 
 	/* enable clock for subsystem */
-	const struct device *clk = DEVICE_DT_GET(GD32_CLOCK_CONTROL_NODE);
+	const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(rcu));
 
 	if (on) {
 		ret = clock_control_on(clk,
@@ -179,7 +191,37 @@ int gpio_gd32_clock_request(const struct device *dev, bool on)
 
 static void gpio_gd32_set_exti_source(int port, int pin)
 {
-	gpio_exti_source_select(port, pin);
+    uint32_t source = 0U;
+    source = ((uint32_t) 0x0FU)
+             << (AFIO_EXTI_SOURCE_FIELDS * (pin & AFIO_EXTI_SOURCE_MASK));
+
+    /* select EXTI sources */
+    if (GPIO_PIN_SOURCE_4 > pin) {
+        /* select EXTI0/EXTI1/EXTI2/EXTI3 */
+        AFIO_EXTISS0 &= ~source;
+        AFIO_EXTISS0 |= (((uint32_t) port)
+                         << (AFIO_EXTI_SOURCE_FIELDS
+                             * (pin & AFIO_EXTI_SOURCE_MASK)));
+    } else if (GPIO_PIN_SOURCE_8 > pin) {
+        /* select EXTI4/EXTI5/EXTI6/EXTI7 */
+        AFIO_EXTISS1 &= ~source;
+        AFIO_EXTISS1 |= (((uint32_t) port)
+                         << (AFIO_EXTI_SOURCE_FIELDS
+                             * (pin & AFIO_EXTI_SOURCE_MASK)));
+    } else if (GPIO_PIN_SOURCE_12 > pin) {
+        /* select EXTI8/EXTI9/EXTI10/EXTI11 */
+        AFIO_EXTISS2 &= ~source;
+        AFIO_EXTISS2 |= (((uint32_t) port)
+                         << (AFIO_EXTI_SOURCE_FIELDS
+                             * (pin & AFIO_EXTI_SOURCE_MASK)));
+    } else {
+        /* select EXTI12/EXTI13/EXTI14/EXTI15 */
+        AFIO_EXTISS3 &= ~source;
+        AFIO_EXTISS3 |= (((uint32_t) port)
+                         << (AFIO_EXTI_SOURCE_FIELDS
+                             * (pin & AFIO_EXTI_SOURCE_MASK)));
+    }
+
 }
 
 static int gpio_gd32_get_exti_source(int pin)
@@ -270,7 +312,7 @@ static int gpio_gd32_port_toggle_bits(const struct device *dev,
 /**
  * @brief Configure pin or port
  */
-static int gpio_gd32_config(const struct device *dev,
+static int gpio_gd32_pin_configure(const struct device *dev,
 			    gpio_pin_t pin, gpio_flags_t flags)
 {
 	int err = 0;
@@ -372,15 +414,17 @@ static int gpio_gd32_manage_callback(const struct device *dev,
 	return gpio_manage_callback(&data->cb, callback, set);
 }
 
-static const struct gpio_driver_api gpio_gd32_driver = {
-	.pin_configure = gpio_gd32_config,
-	.port_get_raw = gpio_gd32_port_get_raw,
-	.port_set_masked_raw = gpio_gd32_port_set_masked_raw,
-	.port_set_bits_raw = gpio_gd32_port_set_bits_raw,
-	.port_clear_bits_raw = gpio_gd32_port_clear_bits_raw,
-	.port_toggle_bits = gpio_gd32_port_toggle_bits,
-	.pin_interrupt_configure = gpio_gd32_pin_interrupt_configure,
-	.manage_callback = gpio_gd32_manage_callback,
+static const struct gd32_gpio_driver_api gpio_gd32_driver = {
+	.api.pin_configure = gpio_gd32_pin_configure,
+	.api.port_get_raw = gpio_gd32_port_get_raw,
+	.api.port_set_masked_raw = gpio_gd32_port_set_masked_raw,
+	.api.port_set_bits_raw = gpio_gd32_port_set_bits_raw,
+	.api.port_clear_bits_raw = gpio_gd32_port_clear_bits_raw,
+	.api.port_toggle_bits = gpio_gd32_port_toggle_bits,
+	.api.pin_interrupt_configure = gpio_gd32_pin_interrupt_configure,
+	.api.manage_callback = gpio_gd32_manage_callback,
+	.configure = gpio_gd32_configure,
+	.clock_request = gpio_gd32_clock_request,
 };
 
 /**
@@ -479,10 +523,10 @@ static int gpio_gd32_afio_init(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 
-	const struct device *clk = DEVICE_DT_GET(GD32_CLOCK_CONTROL_NODE);
+	const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(rcu));
 	struct gd32_pclken pclken = {
 		.bus = GD32_CLOCK_BUS_APB2,
-		.enr = RCU_AF,
+		.enr = GD32_RCU_AF,
 	};
 
 	clock_control_on(clk, &pclken);
