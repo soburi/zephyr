@@ -323,7 +323,7 @@ static int gpio_gd32_pin_interrupt_configure(const struct device *dev,
 		if (gpio_gd32_get_exti_source(pin) == cfg->port) {
 			gd32_exti_disable(DEVICE_DT_GET(DT_NODELABEL(exti)), pin);
 			gd32_exti_unset_callback(DEVICE_DT_GET(DT_NODELABEL(exti)), pin);
-			gd32_exti_trigger(DEVICE_DT_GET(DT_NODELABEL(exti)), pin, EXTI_TRIG_NONE);
+			gd32_exti_trigger(DEVICE_DT_GET(DT_NODELABEL(exti)), pin, GD32_EXTI_TRIG_NONE);
 		}
 		/* else: No irq source configured for pin. Nothing to disable */
 		goto exit;
@@ -344,13 +344,13 @@ static int gpio_gd32_pin_interrupt_configure(const struct device *dev,
 
 	switch (trig) {
 	case GPIO_INT_TRIG_LOW:
-		edge = EXTI_TRIG_FALLING;
+		edge = GD32_EXTI_TRIG_FALLING;
 		break;
 	case GPIO_INT_TRIG_HIGH:
-		edge = EXTI_TRIG_RISING;
+		edge = GD32_EXTI_TRIG_RISING;
 		break;
 	case GPIO_INT_TRIG_BOTH:
-		edge = EXTI_TRIG_BOTH;
+		edge = GD32_EXTI_TRIG_BOTH;
 		break;
 	}
 
