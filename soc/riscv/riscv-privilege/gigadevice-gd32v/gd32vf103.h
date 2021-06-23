@@ -199,10 +199,6 @@ typedef enum EXCn {
 /** @} */ /* End of group Configuration_of_CMSIS */
 
 
-
-#include <nmsis_core.h>                         /*!< Nuclei N/NX class processor and core peripherals */
-
-
 /* ========================================  Start of section using anonymous unions  ======================================== */
 
 /* system frequency define */
