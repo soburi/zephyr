@@ -11,9 +11,8 @@
 
 #include <kernel.h>
 #include <device.h>
+#include <devicetree.h>
 #include <soc.h>
-#include <gd32vf103_gpio.h>
-#include <gd32vf103_exti.h>
 #include <drivers/gpio.h>
 #include <drivers/clock_control/gd32_clock_control.h>
 #include <dt-bindings/clock/gd32_clock.h>
@@ -24,6 +23,7 @@
 #endif
 #include <drivers/gpio/gpio_gd32.h>
 
+#include "gpio_gd32_registers.h"
 #include "gpio_utils.h"
 
 #define GD32_PORTA 'A'
@@ -37,6 +37,107 @@
 #define GD32_PORTI 'I'
 #define GD32_PORTJ 'J'
 #define GD32_PORTK 'K'
+
+#ifndef REGS_FSCOPE
+#define REGS_FSCOPE static
+#endif
+
+REGS_FSCOPE
+uint16_t gpio_input_port_get(uint32_t gpio_periph)
+{
+    return (uint16_t)(GPIO_ISTAT(gpio_periph));
+}
+
+REGS_FSCOPE
+uint16_t gpio_output_port_get(uint32_t gpio_periph)
+{
+    return ((uint16_t) GPIO_OCTL(gpio_periph));
+}
+
+REGS_FSCOPE
+void gpio_port_write(uint32_t gpio_periph, uint16_t data)
+{
+    GPIO_OCTL(gpio_periph) = (uint32_t) data;
+}
+
+REGS_FSCOPE
+void gpio_bit_set(uint32_t gpio_periph, uint32_t pin)
+{
+    GPIO_BOP(gpio_periph) = (uint32_t) pin;
+}
+
+REGS_FSCOPE
+void gpio_bit_reset(uint32_t gpio_periph, uint32_t pin)
+{
+    GPIO_BC(gpio_periph) = (uint32_t) pin;
+}
+
+REGS_FSCOPE
+void gpio_init(uint32_t gpio_periph, uint32_t mode, uint32_t speed,
+               uint32_t pin)
+{
+    uint16_t i;
+    uint32_t temp_mode = 0U;
+    uint32_t reg = 0U;
+
+    /* GPIO mode configuration */
+    temp_mode = (uint32_t)(mode & ((uint32_t) 0x0FU));
+
+    /* GPIO speed configuration */
+    if (((uint32_t) 0x00U) != ((uint32_t) mode & ((uint32_t) 0x10U))) {
+        /* output mode max speed:10MHz,2MHz,50MHz */
+        temp_mode |= (uint32_t) speed;
+    }
+
+    /* configure the eight low port pins with GPIO_CTL0 */
+    for (i = 0U; i < 8U; i++) {
+        if ((1U << i) & pin) {
+            reg = GPIO_CTL0(gpio_periph);
+
+            /* clear the specified pin mode bits */
+            reg &= ~GPIO_MODE_MASK(i);
+            /* set the specified pin mode bits */
+            reg |= GPIO_MODE_SET(i, temp_mode);
+
+            /* set IPD or IPU */
+            if (GPIO_MODE_IPD == mode) {
+                /* reset the corresponding OCTL bit */
+                GPIO_BC(gpio_periph) = (uint32_t)((1U << i) & pin);
+            } else {
+                /* set the corresponding OCTL bit */
+                if (GPIO_MODE_IPU == mode) {
+                    GPIO_BOP(gpio_periph) = (uint32_t)((1U << i) & pin);
+                }
+            }
+            /* set GPIO_CTL0 register */
+            GPIO_CTL0(gpio_periph) = reg;
+        }
+    }
+    /* configure the eight high port pins with GPIO_CTL1 */
+    for (i = 8U; i < 16U; i++) {
+        if ((1U << i) & pin) {
+            reg = GPIO_CTL1(gpio_periph);
+
+            /* clear the specified pin mode bits */
+            reg &= ~GPIO_MODE_MASK(i - 8U);
+            /* set the specified pin mode bits */
+            reg |= GPIO_MODE_SET(i - 8U, temp_mode);
+
+            /* set IPD or IPU */
+            if (GPIO_MODE_IPD == mode) {
+                /* reset the corresponding OCTL bit */
+                GPIO_BC(gpio_periph) = (uint32_t)((1U << i) & pin);
+            } else {
+                /* set the corresponding OCTL bit */
+                if (GPIO_MODE_IPU == mode) {
+                    GPIO_BOP(gpio_periph) = (uint32_t)((1U << i) & pin);
+                }
+            }
+            /* set GPIO_CTL1 register */
+            GPIO_CTL1(gpio_periph) = reg;
+        }
+    }
+}
 
 /**
  * @brief Common GPIO driver for GD32 MCUs.
@@ -88,17 +189,6 @@ static int gpio_gd32_flags_to_conf(int flags, int *pincfg)
 }
 
 /**
- * @brief Translate pin to pinval that the LL library needs
- */
-static inline uint32_t gd32_pinval_get(int pin)
-{
-	uint32_t pinval;
-
-	pinval = 1 << pin;
-	return pinval;
-}
-
-/**
  * @brief Configure the hardware.
  */
 static int gpio_gd32_configure(const struct device *dev, int pin, int conf, int altf)
@@ -106,7 +196,7 @@ static int gpio_gd32_configure(const struct device *dev, int pin, int conf, int 
 	const struct gpio_gd32_config *cfg = dev->config;
 	uint32_t gpio = (uint32_t)cfg->base;
 
-	int pin_ll = gd32_pinval_get(pin);
+	int pin_ll = GD32_GPIO_PIN(pin);
 
 
 	ARG_UNUSED(altf);
