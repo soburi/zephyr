@@ -20,15 +20,16 @@
 #include <sys/__assert.h>
 #include <soc.h>
 #include <init.h>
+#include <devicetree.h>
 #include <drivers/uart.h>
 #include <drivers/pinmux.h>
 #include <drivers/clock_control.h>
 #include <drivers/clock_control/gd32_clock_control.h>
+#include <drivers/gpio/gpio_gd32.h>
 
 
 #include <linker/sections.h>
-#include "gd32vf103_usart.h"
-#include "gd32vf103_gpio.h"
+#include "uart_gd32.h"
 
 #include "gigadevice_gd32_dt.h"
 
@@ -36,6 +37,10 @@
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(uart_gd32);
+
+#ifndef REGS_FSCOPE
+#define REGS_FSCOPE static
+#endif
 
 /* convenience defines */
 #define DEV_CFG(dev) \
@@ -88,11 +93,6 @@ struct uart_gd32_config {
 	size_t pinctrl_list_size;
 };
 
-static inline int usart_interrupt_flag_enabled(uint32_t usart_periph, uint32_t int_flag)
-{
-	return (USART_REG_VAL(usart_periph, int_flag) >> USART_BIT_POS(int_flag)) & 0x1;
-}
-
 /* driver data */
 struct uart_gd32_data {
 	/* Baud rate */
@@ -105,81 +105,126 @@ struct uart_gd32_data {
 #endif
 };
 
-static inline uint32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity);
-static inline enum uart_config_parity uart_gd32_ll2cfg_parity(uint32_t parity);
-static inline uint32_t uart_gd32_cfg2ll_stopbits(enum uart_config_stop_bits sb);
-static inline enum uart_config_stop_bits uart_gd32_ll2cfg_stopbits(uint32_t sb);
-static inline uint32_t uart_gd32_cfg2ll_databits(enum uart_config_data_bits db);
-static inline enum uart_config_data_bits uart_gd32_ll2cfg_databits(uint32_t db);
-static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(uint32_t fc);
-
-static inline void uart_gd32_set_baudrate(const struct device *dev,
-					  uint32_t baud_rate)
+REGS_FSCOPE
+void usart_parity_config(uint32_t usart_periph, uint32_t paritycfg)
 {
-	uint32_t regs = DEV_REGS(dev);
-
-	usart_baudrate_set(regs, baud_rate);
+    /* clear USART_CTL0 PM,PCEN bits */
+    USART_CTL0(usart_periph) &= ~(USART_CTL0_PM | USART_CTL0_PCEN);
+    /* configure USART parity mode */
+    USART_CTL0(usart_periph) |= paritycfg ;
 }
 
-static inline void uart_gd32_set_parity(const struct device *dev,
-					uint32_t parity)
+REGS_FSCOPE
+void usart_stop_bit_set(uint32_t usart_periph, uint32_t stblen)
 {
-	uint32_t regs = DEV_REGS(dev);
-
-	usart_parity_config(regs, uart_gd32_cfg2ll_parity(parity));
+    /* clear USART_CTL1 STB bits */
+    USART_CTL1(usart_periph) &= ~USART_CTL1_STB;
+    /* configure USART stop bits */
+    USART_CTL1(usart_periph) |= stblen;
 }
 
-static inline uint32_t uart_gd32_get_parity(const struct device *dev)
+REGS_FSCOPE
+void usart_word_length_set(uint32_t usart_periph, uint32_t wlen)
 {
-	uint32_t regs = DEV_REGS(dev);
-
-	return uart_gd32_ll2cfg_parity((USART_CTL0(regs) & USART_CTL0_PM) >> 9);
+    /* clear USART_CTL0 WL bit */
+    USART_CTL0(usart_periph) &= ~USART_CTL0_WL;
+    /* configure USART word length */
+    USART_CTL0(usart_periph) |= wlen;
 }
 
-static inline void uart_gd32_set_stopbits(const struct device *dev,
-					  uint32_t stopbits)
+REGS_FSCOPE
+void usart_enable(uint32_t usart_periph)
 {
-	uint32_t regs = DEV_REGS(dev);
-
-	usart_stop_bit_set(regs, stopbits);
+    USART_CTL0(usart_periph) |= USART_CTL0_UEN;
 }
 
-static inline uint32_t uart_gd32_get_stopbits(const struct device *dev)
+REGS_FSCOPE
+void usart_disable(uint32_t usart_periph)
 {
-	uint32_t regs = DEV_REGS(dev);
-
-	return uart_gd32_ll2cfg_stopbits((USART_CTL1(regs) & USART_CTL1_STB) >> 12);
+    USART_CTL0(usart_periph) &= ~(USART_CTL0_UEN);
 }
 
-static inline void uart_gd32_set_databits(const struct device *dev,
-					  uint32_t databits)
+REGS_FSCOPE
+FlagStatus usart_flag_get(uint32_t usart_periph, usart_flag_enum flag)
 {
-	uint32_t regs = DEV_REGS(dev);
-
-	usart_word_length_set(regs, databits);
+    if (RESET != (USART_REG_VAL(usart_periph, flag) & BIT(USART_BIT_POS(flag)))) {
+        return SET;
+    } else {
+        return RESET;
+    }
 }
 
-static inline uint32_t uart_gd32_get_databits(const struct device *dev)
+REGS_FSCOPE
+void usart_flag_clear(uint32_t usart_periph, usart_flag_enum flag)
 {
-	uint32_t regs = DEV_REGS(dev);
-
-	return uart_gd32_ll2cfg_databits((USART_CTL0(regs) & USART_CTL0_WL) >> 12);
+    USART_REG_VAL(usart_periph, flag) &= ~BIT(USART_BIT_POS(flag));
 }
 
-static inline void uart_gd32_set_hwctrl(const struct device *dev,
-					uint32_t hwctrl)
+REGS_FSCOPE
+void usart_transmit_config(uint32_t usart_periph, uint32_t txconfig)
 {
-	uint32_t regs = DEV_REGS(dev);
+    uint32_t ctl = 0U;
 
-	usart_hardware_flow_rts_config(regs, (hwctrl >> 0 & 0x1));
-	usart_hardware_flow_cts_config(regs, (hwctrl >> 1 & 0x1));
+    ctl = USART_CTL0(usart_periph);
+    ctl &= ~USART_CTL0_TEN;
+    ctl |= txconfig;
+    /* configure transfer mode */
+    USART_CTL0(usart_periph) = ctl;
 }
 
-static inline uint32_t uart_gd32_get_hwctrl(const struct device *dev)
+REGS_FSCOPE
+void usart_receive_config(uint32_t usart_periph, uint32_t rxconfig)
 {
-	uint32_t regs = DEV_REGS(dev);
+    uint32_t ctl = 0U;
 
-	return uart_gd32_ll2cfg_hwctrl((USART_CTL0(regs) & USART_CTL2_HWFC) >> 12);
+    ctl = USART_CTL0(usart_periph);
+    ctl &= ~USART_CTL0_REN;
+    ctl |= rxconfig;
+    /* configure receiver mode */
+    USART_CTL0(usart_periph) = ctl;
+}
+
+REGS_FSCOPE
+void usart_data_transmit(uint32_t usart_periph, uint32_t data)
+{
+    USART_DATA(usart_periph) = USART_DATA_DATA & data;
+}
+
+REGS_FSCOPE
+uint16_t usart_data_receive(uint32_t usart_periph)
+{
+    return (uint16_t)(GET_BITS(USART_DATA(usart_periph), 0U, 8U));
+}
+
+static inline void usart_hardware_flow_rtscts_config(uint32_t usart_periph, uint32_t rtsctsconfig)
+{
+    uint32_t ctl = 0U;
+
+    ctl = USART_CTL2(usart_periph);
+    ctl &= ~(USART_CTL2_RTSEN|USART_CTL2_CTSEN);
+    ctl |= rtsctsconfig;
+    /* configure CTS */
+    USART_CTL2(usart_periph) = ctl;
+}
+
+static inline uint32_t uart_gd32_get_parity(uint32_t usart_periph)
+{
+	return (USART_CTL0(usart_periph) & USART_CTL0_PM);
+}
+
+static inline uint32_t uart_gd32_get_stopbits(uint32_t usart_periph)
+{
+	return (USART_CTL1(usart_periph) & USART_CTL1_STB);
+}
+
+static inline uint32_t uart_gd32_get_databits(uint32_t usart_periph)
+{
+	return (USART_CTL0(usart_periph) & USART_CTL0_WL);
+}
+
+static inline uint32_t uart_gd32_get_hwctrl(uint32_t usart_periph)
+{
+	return (USART_CTL0(usart_periph) & USART_CTL2_HWFC);
 }
 
 static inline uint32_t uart_gd32_cfg2ll_parity(enum uart_config_parity parity)
@@ -286,6 +331,11 @@ static inline enum uart_config_data_bits uart_gd32_ll2cfg_databits(uint32_t db)
 	}
 }
 
+
+#define CLT2_HWFC(regval)             (BITS(8, 9) & ((uint32_t)(regval) << 8))
+#define USART_HWFC_NONE               CLT2_HWFC(0)                      /*!< HWFC disable */
+#define USART_HWFC_RTSCTS             CLT2_HWFC(3)                      /*!< RTS&CTS enable */
+#define USART_CTL2_HWFC               BITS(8, 9)                        /*!< RTS&CTS enable */
 /**
  * @brief  Get GD32 hardware flow control define from
  *         Zephyr hardware flow control option.
@@ -318,6 +368,48 @@ static inline enum uart_config_flow_control uart_gd32_ll2cfg_hwctrl(uint32_t fc)
 	return UART_CFG_PARITY_NONE;
 }
 
+static inline void uart_gd32_set_baudrate(const struct device *dev,
+					  uint32_t baudval)
+{
+	uint32_t usart_periph = DEV_REGS(dev);
+    uint32_t uclk = 0U, intdiv = 0U, fradiv = 0U, udiv = 0U;
+
+	int err;
+
+	static const int _CK_APB2 = GD32_CK_APB2;
+	static const int _CK_APB1 = GD32_CK_APB1;
+    switch (usart_periph) {
+        /* get clock frequency */
+        case USART0:
+            /* get USART0 clock */
+            err = clock_control_get_rate(DEVICE_DT_GET(DT_NODELABEL(rcu)), (clock_control_subsys_t)&_CK_APB2, &uclk);
+            break;
+        case USART1:
+            /* get USART1 clock */
+            err = clock_control_get_rate(DEVICE_DT_GET(DT_NODELABEL(rcu)), (clock_control_subsys_t)&_CK_APB1, &uclk);
+            break;
+        case USART2:
+            /* get USART2 clock */
+            err = clock_control_get_rate(DEVICE_DT_GET(DT_NODELABEL(rcu)), (clock_control_subsys_t)&_CK_APB1, &uclk);
+            break;
+        case UART3:
+            /* get UART3 clock */
+            err = clock_control_get_rate(DEVICE_DT_GET(DT_NODELABEL(rcu)), (clock_control_subsys_t)&_CK_APB1, &uclk);
+            break;
+        case UART4:
+            /* get UART4 clock */
+            err = clock_control_get_rate(DEVICE_DT_GET(DT_NODELABEL(rcu)), (clock_control_subsys_t)&_CK_APB1, &uclk);
+            break;
+        default:
+            break;
+    }
+    /* oversampling by 16, configure the value of USART_BAUD */
+    udiv = (uclk + baudval / 2U) / baudval;
+    intdiv = udiv & (0x0000fff0U);
+    fradiv = udiv & (0x0000000fU);
+    USART_BAUD(usart_periph) = ((USART_BAUD_FRADIV | USART_BAUD_INTDIV) & (intdiv | fradiv));
+}
+
 static int uart_gd32_configure(const struct device *dev,
 			       const struct uart_config *cfg)
 {
@@ -326,7 +418,6 @@ static int uart_gd32_configure(const struct device *dev,
 	const uint32_t parity = uart_gd32_cfg2ll_parity(cfg->parity);
 	const uint32_t stopbits = uart_gd32_cfg2ll_stopbits(cfg->stop_bits);
 	const uint32_t databits = uart_gd32_cfg2ll_databits(cfg->data_bits);
-
 	const uint32_t flowctrl = uart_gd32_cfg2ll_hwctrl(cfg->flow_ctrl);
 
 	/* Hardware doesn't support mark or space parity */
@@ -369,20 +460,20 @@ static int uart_gd32_configure(const struct device *dev,
 
 	usart_disable(regs);
 
-	if (parity != uart_gd32_get_parity(dev)) {
-		uart_gd32_set_parity(dev, parity);
+	if (parity != uart_gd32_get_parity(DEV_REGS(dev))) {
+	    usart_parity_config(DEV_REGS(dev), uart_gd32_cfg2ll_parity(parity));
 	}
 
-	if (stopbits != uart_gd32_get_stopbits(dev)) {
-		uart_gd32_set_stopbits(dev, stopbits);
+	if (stopbits != uart_gd32_get_stopbits(DEV_REGS(dev))) {
+	    usart_stop_bit_set(DEV_REGS(dev), stopbits);
 	}
 
-	if (databits != uart_gd32_get_databits(dev)) {
-		uart_gd32_set_databits(dev, databits);
+	if (databits != uart_gd32_get_databits(DEV_REGS(dev))) {
+	    usart_word_length_set(DEV_REGS(dev), databits);
 	}
 
-	if (flowctrl != uart_gd32_get_hwctrl(dev)) {
-		uart_gd32_set_hwctrl(dev, flowctrl);
+	if (flowctrl != uart_gd32_get_hwctrl(DEV_REGS(dev))) {
+	    usart_hardware_flow_rtscts_config(regs, flowctrl);
 	}
 
 	if (cfg->baudrate != data->baud_rate) {
@@ -400,13 +491,10 @@ static int uart_gd32_config_get(const struct device *dev,
 	struct uart_gd32_data *data = DEV_DATA(dev);
 
 	cfg->baudrate = data->baud_rate;
-	cfg->parity = uart_gd32_ll2cfg_parity(uart_gd32_get_parity(dev));
-	cfg->stop_bits = uart_gd32_ll2cfg_stopbits(
-		uart_gd32_get_stopbits(dev));
-	cfg->data_bits = uart_gd32_ll2cfg_databits(
-		uart_gd32_get_databits(dev));
-	cfg->flow_ctrl = uart_gd32_ll2cfg_hwctrl(
-		uart_gd32_get_hwctrl(dev));
+	cfg->parity = uart_gd32_ll2cfg_parity(uart_gd32_get_parity(DEV_REGS(dev)));
+	cfg->stop_bits = uart_gd32_ll2cfg_stopbits(uart_gd32_get_stopbits(DEV_REGS(dev)));
+	cfg->data_bits = uart_gd32_ll2cfg_databits(uart_gd32_get_databits(DEV_REGS(dev)));
+	cfg->flow_ctrl = uart_gd32_ll2cfg_hwctrl(uart_gd32_get_hwctrl(DEV_REGS(dev)));
 	return 0;
 }
 
@@ -702,13 +790,42 @@ static int uart_gd32_init(const struct device *dev)
 		return -EIO;
 	}
 
-	usart_deinit(regs);
+    switch (regs) {
+        case USART0:
+            /* reset USART0 */
+            gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_USART0RST);
+            gd32_clock_control_peripheral_disable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_USART0RST);
+            break;
+        case USART1:
+            /* reset USART1 */
+            gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_USART1RST);
+            gd32_clock_control_peripheral_disable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_USART1RST);
+            break;
+        case USART2:
+            /* reset USART2 */
+            gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_USART2RST);
+            gd32_clock_control_peripheral_disable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_USART2RST);
+            break;
+        case UART3:
+            /* reset UART3 */
+            gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_UART3RST);
+            gd32_clock_control_peripheral_disable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_UART3RST);
+            break;
+        case UART4:
+            /* reset UART4 */
+            gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_UART4RST);
+            gd32_clock_control_peripheral_disable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_UART4RST);
+            break;
+        default:
+            break;
+    }
 
 	/* TODO make configurable with pinctrl */
-	rcu_periph_clock_enable(RCU_GPIOA);
-	rcu_periph_clock_enable(RCU_USART0);
-	gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
-	gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+	gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_GPIOA);
+	gd32_clock_control_peripheral_enable(DEVICE_DT_GET(DT_NODELABEL(rcu)), GD32_RCU_USART0);
+	gd32_gpio_configure(DEVICE_DT_GET(DT_NODELABEL(gpioa)), 9, GD32_CNF_AF_PP|GD32_MODE_OUTPUT_MAX_50, 0);
+	gd32_gpio_configure(DEVICE_DT_GET(DT_NODELABEL(gpioa)), 10, GD32_CNF_IN_FLOAT|GD32_MODE_OUTPUT_MAX_50, 0);
+
 
 	/* TX/RX direction */
 	usart_transmit_config(regs, USART_TRANSMIT_ENABLE);
@@ -736,12 +853,12 @@ static int uart_gd32_init(const struct device *dev)
 	}
 
 	/* Set datawidth and parity, 1 start bit, 1 stop bit  */
-	uart_gd32_set_parity(dev, ll_parity);
-	uart_gd32_set_databits(dev, ll_datawidth);
-	uart_gd32_set_stopbits(dev, USART_STB_1BIT);
+	usart_parity_config(DEV_REGS(dev), uart_gd32_cfg2ll_parity(ll_parity));
+	usart_word_length_set(DEV_REGS(dev), ll_datawidth);
+	usart_stop_bit_set(DEV_REGS(dev), USART_STB_1BIT);
 
 	if (config->hw_flow_control) {
-		uart_gd32_set_hwctrl(dev, USART_HWFC_RTSCTS);
+	    usart_hardware_flow_rtscts_config(regs, USART_HWFC_RTSCTS);
 	}
 
 	/* Set the default baudrate */
