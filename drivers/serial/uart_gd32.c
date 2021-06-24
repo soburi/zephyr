@@ -23,6 +23,7 @@
 #include <drivers/uart.h>
 #include <drivers/pinmux.h>
 #include <drivers/clock_control.h>
+#include <drivers/clock_control/gd32_clock_control.h>
 
 
 #include <linker/sections.h>
@@ -50,6 +51,29 @@ LOG_MODULE_REGISTER(uart_gd32);
 #define USART_HWFC_CTS                CLT2_HWFC(2)                      /*!< CTS enable */
 #define USART_HWFC_RTSCTS             CLT2_HWFC(3)                      /*!< RTS&CTS enable */
 #define USART_CTL2_HWFC               BITS(8, 9)                        /*!< RTS&CTS enable */
+
+#if !defined(USART0) && DT_NODE_EXISTS(DT_NODELABEL(usart0))
+#define USART0 DT_REG_ADDR(DT_NODELABEL(usart0))
+#endif
+
+#if !defined(USART1) && DT_NODE_EXISTS(DT_NODELABEL(usart1))
+#define USART1 DT_REG_ADDR(DT_NODELABEL(usart1))
+#endif
+
+#if !defined(USART2) && DT_NODE_EXISTS(DT_NODELABEL(usart2))
+#define USART2 DT_REG_ADDR(DT_NODELABEL(usart2))
+#endif
+
+#if !defined(UART3) && DT_NODE_EXISTS(DT_NODELABEL(uart3))
+#define UART3 DT_REG_ADDR(DT_NODELABEL(uart3))
+#endif
+
+#if !defined(UART4) && DT_NODE_EXISTS(DT_NODELABEL(uart4))
+#define UART4 DT_REG_ADDR(DT_NODELABEL(uart4))
+#endif
+
+#define IS_UART_HWFLOW_INSTANCE(base) (base == USART0 || base == USART1 || base == USART2)
+#define IS_UART_LIN_INSTANCE(base) (base == USART0 || base == USART1 || base == USART2)
 
 /* device config */
 struct uart_gd32_config {
@@ -462,7 +486,7 @@ static int uart_gd32_err_check(const struct device *dev)
 static inline void __uart_gd32_get_clock(const struct device *dev)
 {
 	struct uart_gd32_data *data = DEV_DATA(dev);
-	const struct device *clk = DEVICE_DT_GET(GD32_CLOCK_CONTROL_NODE);
+	const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(rcu));
 
 	data->clock = clk;
 }
