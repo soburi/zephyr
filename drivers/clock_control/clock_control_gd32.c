@@ -10,11 +10,11 @@
 #include <device.h>
 
 #include <soc.h>
-#include <gd32vf103_rcu.h>
 #include <drivers/clock_control.h>
 #include <drivers/clock_control/gd32_clock_control.h>
 #include <sys/util.h>
 #include <sys/__assert.h>
+#include "clock_control_gd32.h"
 
 #define LOG_LEVEL CONFIG_CLOCK_CONTROL_LOG_LEVEL
 #include <logging/log.h>

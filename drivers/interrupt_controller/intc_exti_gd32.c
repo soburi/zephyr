@@ -19,7 +19,15 @@
 #include <sys/__assert.h>
 #include <drivers/interrupt_controller/exti_gd32.h>
 
-#include "gd32vf103_exti.h"
+#include "intc_exti_gd32.h"
+
+#ifndef REGS_FSCOPE
+#define REGS_FSCOPE static
+#endif
+
+#ifndef EXTI_LINE
+#define EXTI_LINE uint32_t
+#endif
 
 const IRQn_Type exti_irq_table[] = {
 	EXTI0_IRQn, EXTI1_IRQn, EXTI2_IRQn, EXTI3_IRQn,
@@ -40,22 +48,56 @@ struct gd32_exti_data {
 	struct __exti_cb cb[ARRAY_SIZE(exti_irq_table)];
 };
 
-static void exti_set_rising_trigger(exti_line_enum linex)
+REGS_FSCOPE
+FlagStatus exti_interrupt_flag_get(EXTI_LINE linex)
+{
+	uint32_t flag_left, flag_right;
+
+	flag_left = EXTI_PD & (uint32_t) linex;
+	flag_right = EXTI_INTEN & (uint32_t) linex;
+
+	if ((RESET != flag_left) && (RESET != flag_right)) {
+		return SET;
+	} else {
+		return RESET;
+	}
+}
+
+REGS_FSCOPE
+void exti_interrupt_disable(EXTI_LINE linex)
+{
+	EXTI_INTEN &= ~(uint32_t) linex;
+}
+
+REGS_FSCOPE
+void exti_interrupt_flag_clear(EXTI_LINE linex)
+{
+	EXTI_PD = (uint32_t) linex;
+}
+
+REGS_FSCOPE
+void exti_interrupt_enable(EXTI_LINE linex)
+{
+	/* set the EXTI mode and enable the interrupts or events from EXTI line x */
+	EXTI_INTEN |= (uint32_t) linex;
+}
+
+static void exti_set_rising_trigger(EXTI_LINE linex)
 {
 	EXTI_RTEN |= (uint32_t) linex;
 }
 
-static void exti_reset_rising_trigger(exti_line_enum linex)
+static void exti_reset_rising_trigger(EXTI_LINE linex)
 {
 	EXTI_RTEN &= ~(uint32_t) linex;
 }
 
-static void exti_set_falling_trigger(exti_line_enum linex)
+static void exti_set_falling_trigger(EXTI_LINE linex)
 {
 	EXTI_FTEN |= (uint32_t) linex;
 }
 
-static void exti_reset_falling_trigger(exti_line_enum linex)
+static void exti_reset_falling_trigger(EXTI_LINE linex)
 {
 	EXTI_FTEN &= ~(uint32_t) linex;
 }
