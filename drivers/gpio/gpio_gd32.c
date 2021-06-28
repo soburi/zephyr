@@ -139,8 +139,13 @@ static int flags_to_conf(int flags, int *pincfg)
 	if ((flags & GPIO_OUTPUT) != 0) {
 		/* Output only or Output/Input */
 
-		if (flags & GPIO_LINE_OPEN_DRAIN) {
-			*pincfg = GPIO_MODE_OUT_OD | GPIO_OSPEED_50MHZ;
+		if ((flags & GPIO_SINGLE_ENDED) != 0) {
+			if (flags & GPIO_LINE_OPEN_DRAIN) {
+				*pincfg = GPIO_MODE_OUT_OD | GPIO_OSPEED_50MHZ;
+			} else {
+				/* Output can't be open source */
+				return -ENOTSUP;
+			}
 		} else {
 			*pincfg = GPIO_MODE_OUT_PP | GPIO_OSPEED_50MHZ;
 		}
