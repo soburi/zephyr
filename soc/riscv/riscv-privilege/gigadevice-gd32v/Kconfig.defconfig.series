@@ -41,17 +41,17 @@ config CLOCK_CONTROL_GD32
 	depends on CLOCK_CONTROL
 
 config UART_GD32
-	default y
+	default n
 	depends on SERIAL
 
 if GPIO
 
 config GPIO_GD32
-	default y
+	default n
 
 endif # GPIO
 
 config EXTI_GD32
-	default y
+	default n
 
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32V

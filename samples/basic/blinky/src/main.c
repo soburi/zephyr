@@ -33,19 +33,21 @@ void main(void)
 	bool led_is_on = true;
 	int ret;
 
-	dev = device_get_binding(LED0);
-	if (dev == NULL) {
-		return;
-	}
+	//dev = device_get_binding(LED0);
+	//if (dev == NULL) {
+	//	return;
+	//}
 
-	ret = gpio_pin_configure(dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS);
-	if (ret < 0) {
-		return;
-	}
+	//ret = gpio_pin_configure(dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS);
+	//if (ret < 0) {
+	//	return;
+	//}
 
+	int count = 0;
 	while (1) {
-		gpio_pin_set(dev, PIN, (int)led_is_on);
-		led_is_on = !led_is_on;
+		//gpio_pin_set(dev, PIN, (int)led_is_on);
+		//led_is_on = !led_is_on;
 		k_msleep(SLEEP_TIME_MS);
+		printk("%d\n", count++);
 	}
 }
