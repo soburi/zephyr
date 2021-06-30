@@ -51,4 +51,7 @@ config GPIO_GD32
 
 endif # GPIO
 
+config EXTI_GD32
+	default y
+
 endif # SOC_SERIES_RISCV_GIGADEVICE_GD32V
