@@ -73,7 +73,7 @@ static void gd32_exti_enable_(const struct device *dev, int line)
 static void gd32_exti_disable_(const struct device *dev, int line)
 {
 	if (line < 32) {
-		EXTI->INTEN = BIT(line);
+		EXTI->INTEN &= ~BIT(line);
 	} else {
 		__ASSERT_NO_MSG(line);
 	}
@@ -104,7 +104,7 @@ static inline int gd32_exti_is_pending(int line)
 static inline void gd32_exti_clear_pending(int line)
 {
 	if (line < 32) {
-		EXTI->PD = BIT(line);
+		EXTI->PD &= ~BIT(line);
 	} else {
 		__ASSERT_NO_MSG(line);
 	}
@@ -119,15 +119,15 @@ static void gd32_exti_trigger_(const struct device *dev, int line, int trigger)
 
 	switch (trigger) {
 	case GD32_EXTI_TRIG_NONE:
-		EXTI->RTEN &= BIT(line);
-		EXTI->FTEN &= BIT(line);
+		EXTI->RTEN &= ~BIT(line);
+		EXTI->FTEN &= ~BIT(line);
 		break;
 	case GD32_EXTI_TRIG_RISING:
 		EXTI->RTEN |= BIT(line);
-		EXTI->FTEN &= BIT(line);
+		EXTI->FTEN &= ~BIT(line);
 		break;
 	case GD32_EXTI_TRIG_FALLING:
-		EXTI->RTEN &= BIT(line);
+		EXTI->RTEN &= ~BIT(line);
 		EXTI->FTEN |= BIT(line);
 		break;
 	case GD32_EXTI_TRIG_BOTH:
