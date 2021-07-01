@@ -199,10 +199,9 @@ static void __gd32_exti_isr_5_9(const void *arg)
 {
 	__gd32_exti_isr(5, 10, arg);
 }
-int count = 0;
+
 static void __gd32_exti_isr_10_15(const void *arg)
 {
-	count++;
 	__gd32_exti_isr(10, 16, arg);
 }
 
