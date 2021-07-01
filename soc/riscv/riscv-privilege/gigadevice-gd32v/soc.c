@@ -9,8 +9,11 @@
 #include <stdio.h>
 #include <init.h>
 
+int count = 0;
+
 static void __gd32_exti_isr_10_15(const void *arg)
 {
+	count++;
 	//__gd32_exti_isr(10, 16, arg);
 }
 
