@@ -400,53 +400,27 @@ void __gpio_init(uint32_t gpio_periph, uint32_t mode, uint32_t speed,
     }
 }
 
-void longan_led_init()
-{
-    /* enable the led clock */
-    __rcu_periph_clock_enable(LED_GPIO_CLK);
-    /* configure led GPIO port */ 
-    __gpio_init(LED_GPIO_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_PIN);
-
-    GPIO_BC(LED_GPIO_PORT) = LED_PIN;
-}
-
-void longan_led_on()
-{
-    /*
-     * LED is hardwired with 3.3V on the anode, we control the cathode
-     * (negative side) so we need to use reversed logic: bit clear is on.
-     */
-    GPIO_BC(LED_GPIO_PORT) = LED_PIN;
-}
-
-void longan_led_off()
-{
-    GPIO_BOP(LED_GPIO_PORT) = LED_PIN;
-}
-
 void main(void)
 {
 	const struct device *dev;
 	bool led_is_on = true;
 	int ret;
 
-	longan_led_init();
-	init();
-	//dev = device_get_binding(LED0);
-	//if (dev == NULL) {
-	//	return;
-	//}
+	//longan_led_init();
+	dev = device_get_binding(LED0);
+	if (dev == NULL) {
+		return;
+	}
 
-	//ret = gpio_pin_configure(dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS);
-	//if (ret < 0) {
-	//	return;
-	//}
+	init();
+	ret = gpio_pin_configure(dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS);
+	if (ret < 0) {
+		return;
+	}
 
 	int count = 0;
 	while (1) {
-		//gpio_pin_set(dev, PIN, (int)led_is_on);
-		if(led_is_on) longan_led_on();
-		else longan_led_off();
+		gpio_pin_set(dev, PIN, (int)led_is_on);
 		led_is_on = !led_is_on;
 		k_msleep(SLEEP_TIME_MS);
 		printk("%d\n", count++);

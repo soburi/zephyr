@@ -47,7 +47,7 @@ config UART_GD32
 if GPIO
 
 config GPIO_GD32
-	default n
+	default y
 
 endif # GPIO
 
