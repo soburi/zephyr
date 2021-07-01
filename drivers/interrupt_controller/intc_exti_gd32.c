@@ -237,8 +237,8 @@ static int gd32_exti_init(const struct device *dev)
 		    __gd32_exti_isr_5_9, DEVICE_DT_GET(DT_NODELABEL(exti)),
 		    0);
 	IRQ_CONNECT(EXTI10_15_IRQn,
-		    0,
-		    __gd32_exti_isr_10_15, NULL,
+		    CONFIG_EXTI_GD32_EXTI10_15_IRQ_PRI,
+		    __gd32_exti_isr_10_15, DEVICE_DT_GET(DT_NODELABEL(exti)),
 		    0);
 
 	return 0;
