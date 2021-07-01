@@ -41,7 +41,7 @@ config CLOCK_CONTROL_GD32
 	depends on CLOCK_CONTROL
 
 config UART_GD32
-	default n
+	default y
 	depends on SERIAL
 
 if GPIO
