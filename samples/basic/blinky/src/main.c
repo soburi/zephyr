@@ -26,8 +26,15 @@
 #define PIN	0
 #define FLAGS	0
 #endif
+int cb_count = 0;
+struct gpio_callback gpio_cb;
 
-extern int count;
+static void callback_edge(const struct device *port, struct gpio_callback *cb,
+			  gpio_port_pins_t pins)
+{
+	cb_count++;
+}
+
 void main(void)
 {
 	const struct device *dev;
@@ -40,6 +47,7 @@ void main(void)
 	}
 
 	gpio_pin_interrupt_configure(dev, PIN, GPIO_INT_EDGE_BOTH);
+	gpio_init_callback(&gpio_cb, callback_edge, BIT(PIN));
 	
 	ret = gpio_pin_configure(dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS);
 	if (ret < 0) {
@@ -50,6 +58,6 @@ void main(void)
 		gpio_pin_set(dev, PIN, (int)led_is_on);
 		led_is_on = !led_is_on;
 		k_msleep(SLEEP_TIME_MS);
-		printk("%d\n", count++);
+		printk("%d\n", cb_count++);
 	}
 }
