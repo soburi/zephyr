@@ -170,38 +170,39 @@ static void __gd32_exti_isr(int min, int max, const struct device *dev)
 	}
 }
 
-static inline void __gd32_exti_isr_0(const void *arg)
+static void __gd32_exti_isr_0(const void *arg)
 {
 	__gd32_exti_isr(0, 1, arg);
 }
 
-static inline void __gd32_exti_isr_1(const void *arg)
+static void __gd32_exti_isr_1(const void *arg)
 {
 	__gd32_exti_isr(1, 2, arg);
 }
 
-static inline void __gd32_exti_isr_2(const void *arg)
+static void __gd32_exti_isr_2(const void *arg)
 {
 	__gd32_exti_isr(2, 3, arg);
 }
 
-static inline void __gd32_exti_isr_3(const void *arg)
+static void __gd32_exti_isr_3(const void *arg)
 {
 	__gd32_exti_isr(3, 4, arg);
 }
 
-static inline void __gd32_exti_isr_4(const void *arg)
+static void __gd32_exti_isr_4(const void *arg)
 {
 	__gd32_exti_isr(4, 5, arg);
 }
 
-static inline void __gd32_exti_isr_5_9(const void *arg)
+static void __gd32_exti_isr_5_9(const void *arg)
 {
 	__gd32_exti_isr(5, 10, arg);
 }
-
-static inline void __gd32_exti_isr_10_15(const void *arg)
+int count = 0;
+static void __gd32_exti_isr_10_15(const void *arg)
 {
+	count++;
 	__gd32_exti_isr(10, 16, arg);
 }
 
@@ -237,8 +238,8 @@ static int gd32_exti_init(const struct device *dev)
 		    __gd32_exti_isr_5_9, DEVICE_DT_GET(DT_NODELABEL(exti)),
 		    0);
 	IRQ_CONNECT(EXTI10_15_IRQn,
-		    CONFIG_EXTI_GD32_EXTI10_15_IRQ_PRI,
-		    __gd32_exti_isr_10_15, DEVICE_DT_GET(DT_NODELABEL(exti)),
+		    0,
+		    __gd32_exti_isr_10_15, NULL,
 		    0);
 
 	return 0;
