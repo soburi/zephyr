@@ -309,8 +309,8 @@ void init()
 {
 	//Enable the interrupts. From now on interrupt handlers can be executed
 	//eclic_global_interrupt_enable();	
-    csr_set(mstatus, MSTATUS_MIE);
-    __eclic_set_nlbits(ECLIC_PRIGROUP_LEVEL4_PRIO0);
+//    csr_set(mstatus, MSTATUS_MIE);
+//    __eclic_set_nlbits(ECLIC_PRIGROUP_LEVEL4_PRIO0);
 
 	exti_source_select(GPIO_PORT_SOURCE_GPIOC, GPIO_PIN_SOURCE_13);
 	//exti_init(EXTI_13, EXTI_INTERRUPT, EXTI_TRIG_BOTH);
@@ -334,72 +334,7 @@ void init()
 }
 
 
-void __gpio_init(uint32_t gpio_periph, uint32_t mode, uint32_t speed,
-        uint32_t pin)
-{
-    uint16_t i;
-    uint32_t temp_mode = 0U;
-    uint32_t reg = 0U;
-
-    /* GPIO mode configuration */
-    temp_mode = (uint32_t) (mode & ((uint32_t) 0x0FU));
-
-    /* GPIO speed configuration */
-    if (((uint32_t) 0x00U) != ((uint32_t) mode & ((uint32_t) 0x10U))) {
-        /* output mode max speed:10MHz,2MHz,50MHz */
-        temp_mode |= (uint32_t) speed;
-    }
-
-    /* configure the eight low port pins with GPIO_CTL0 */
-    for (i = 0U; i < 8U; i++) {
-        if ((1U << i) & pin) {
-            reg = GPIO_CTL0(gpio_periph);
-
-            /* clear the specified pin mode bits */
-            reg &= ~GPIO_MODE_MASK(i);
-            /* set the specified pin mode bits */
-            reg |= GPIO_MODE_SET(i, temp_mode);
-
-            /* set IPD or IPU */
-            if (GPIO_MODE_IPD == mode) {
-                /* reset the corresponding OCTL bit */
-                GPIO_BC(gpio_periph) = (uint32_t) ((1U << i) & pin);
-            } else {
-                /* set the corresponding OCTL bit */
-                if (GPIO_MODE_IPU == mode) {
-                    GPIO_BOP(gpio_periph) = (uint32_t) ((1U << i) & pin);
-                }
-            }
-            /* set GPIO_CTL0 register */
-            GPIO_CTL0(gpio_periph) = reg;
-        }
-    }
-    /* configure the eight high port pins with GPIO_CTL1 */
-    for (i = 8U; i < 16U; i++) {
-        if ((1U << i) & pin) {
-            reg = GPIO_CTL1(gpio_periph);
-
-            /* clear the specified pin mode bits */
-            reg &= ~GPIO_MODE_MASK(i - 8U);
-            /* set the specified pin mode bits */
-            reg |= GPIO_MODE_SET(i - 8U, temp_mode);
-
-            /* set IPD or IPU */
-            if (GPIO_MODE_IPD == mode) {
-                /* reset the corresponding OCTL bit */
-                GPIO_BC(gpio_periph) = (uint32_t) ((1U << i) & pin);
-            } else {
-                /* set the corresponding OCTL bit */
-                if (GPIO_MODE_IPU == mode) {
-                    GPIO_BOP(gpio_periph) = (uint32_t) ((1U << i) & pin);
-                }
-            }
-            /* set GPIO_CTL1 register */
-            GPIO_CTL1(gpio_periph) = reg;
-        }
-    }
-}
-
+extern int count;
 void main(void)
 {
 	const struct device *dev;
@@ -413,12 +348,12 @@ void main(void)
 	}
 
 	init();
+	
 	ret = gpio_pin_configure(dev, PIN, GPIO_OUTPUT_ACTIVE | FLAGS);
 	if (ret < 0) {
 		return;
 	}
 
-	int count = 0;
 	while (1) {
 		gpio_pin_set(dev, PIN, (int)led_is_on);
 		led_is_on = !led_is_on;
