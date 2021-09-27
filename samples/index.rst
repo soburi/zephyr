@@ -29,6 +29,7 @@ Samples and Demos
    modules/*
    compression/*
    fuel_gauge/*
+   wasm_micro_runtime/*
 
 .. comment
    To add a new sample document, please use the template available under
