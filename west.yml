@@ -336,6 +336,9 @@ manifest:
     - name: zcbor
       revision: 67fd8bb88d3136738661fa8bb5f9989103f4599e
       path: modules/lib/zcbor
+    - name: wasm-micro-runtime
+      revision: 32242988ed558274d40b2cb7be207b1993bfe9fb
+      path: modules/lib/wasm-micro-runtime
 
   self:
     path: zephyr
