@@ -91,8 +91,35 @@ Depending on the interface used (such as JLink), you might need to
 checkout to a branch that supports this interface, before proceeding.
 Build and install openocd as described in the README.
 
-When openocd is installed, you can flash the board with the following
-command (assuming JLink is used):
+Here is an example of building and flashing the :ref:`blinky-sample` application.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/basic/blinky
+   :board: rpi_pico
+   :goals: build flash
+   :gen-args: -DOPENOCD=/usr/local/bin/openocd -DOPENOCD_DEFAULT_PATH=/usr/local/share/openocd/scripts -DRPI_PICO_DEBUG_ADAPTER=picoprobe
+
+Set `/usr/local/bin/openocd` to **OPENOCD** and `/usr/local/share/openocd/scripts` to **OPENOCD_DEFAULT_PATH** will works
+with openocd that install with default configuration.
+It also works in the Raspberry Pi Pico development environment that is set up with the `pico_setup.sh`_ script.
+
+**RPI_PICO_DEBUG_ADAPTER** specifies what debug adapter is used for debugging.
+
+If **RPI_PICO_DEBUG_ADAPTER** was not assigned, use `picoprobe` as default. And also able to use `raspberrypi-swd`.
+How to connect `picoprobe` and `raspberrypi-swd` is described in `Getting Started with Raspberry Pi Pico`_.
+Any other SWD debug adapter maybe also work with this configuration.
+
+**RPI_PICO_DEBUG_ADAPTER** value remember into CMakeCache.txt.
+So you can omit the option in `west flash` and `west debug` execution,
+you need only the `west build` case.
+
+**RPI_PICO_DEBUG_ADAPTER** is used in an argument to openocd as `"source [find interface/${RPI_PICO_DEBUG_ADAPTER}.cfg]"`.
+Thus, **RPI_PICO_DEBUG_ADAPTER** needs to assign from the definition file name of debugging adapter.
+
+
+
+You can also flash the board with the following
+command that directly call openocd (assuming JLink is used):
 
 .. code-block:: console
 
@@ -111,8 +138,22 @@ Debugging
 =========
 
 The SWD interface can also be used to debug the board. To achieve this,
-install openocd as described for flashing the board. Also, install gdb-multiarch.
-Then run the following command:
+install openocd as described for flashing the board.
+
+Here is an example for debugging the :ref:`blinky-sample` application.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/basic/blinky
+   :board: rpi_pico
+   :maybe-skip-config:
+   :goals: debug
+   :gen-args: -DOPENOCD=/usr/local/bin/openocd -DOPENOCD_DEFAULT_PATH=/usr/local/share/openocd/scripts -DRPI_PICO_DEBUG_ADAPTER=raspberrypi-swd
+
+As with flashing, you can specify the debug adapter by specifying **RPI_PICO_DEBUG_ADAPTER**
+at `west build` time. No needs to specify it at `west debug` time.
+
+You can also debugging with openocd and gdb launching from command-line.
+Run the following command:
 
 .. code-block:: console
 
@@ -132,3 +173,11 @@ Inside gdb, run:
    (gdb) file path/to/zephyr.elf
 
 You can then start debugging the board.
+
+.. target-notes::
+
+.. _pico_setup.sh:
+   https://raw.githubusercontent.com/raspberrypi/pico-setup/master/pico_setup.sh
+
+.. _Getting Started with Raspberry Pi Pico:
+  https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf
