@@ -1,0 +1,9 @@
+# Copyright (c) 2022 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+# Workaround for not being able to have commas in macro arguments
+DT_COMPAT_PL022 := arm,pl022
+
+config SPI_PL022
+	default $(dt_compat_enabled,$(DT_COMPAT_PL022))
+	bool "ARM PL022 SPI driver"
