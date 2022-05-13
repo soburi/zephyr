@@ -1,0 +1,9 @@
+/*
+ * Copyright (c) 2022 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+&spi0 {
+	cs-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
+};
