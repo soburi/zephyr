@@ -1,0 +1,42 @@
+if SHIELD_SOBURI_PICO_TRAINER
+
+config SPI
+	default y
+
+config I2C
+	default y
+
+config ADC
+	default y
+
+if DISPLAY
+
+config SSD1306
+	default y
+
+endif
+
+if DISK_ACCESS
+
+config SDHC
+	default y
+
+config DISK_DRIVER_SDMMC
+	default y
+
+endif
+
+if NETWORKING
+
+config NET_L2_ETHERNET
+        default y
+
+config ETH_ENC28J60
+	default y
+
+config ETH_ENC28J60_0
+	default y
+
+endif
+
+endif # SOBURI_PICO_TRAINER

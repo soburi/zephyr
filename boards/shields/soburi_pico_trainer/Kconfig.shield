@@ -1,0 +1,2 @@
+config SHIELD_SOBURI_PICO_TRAINER
+	def_bool $(shields_list_contains,soburi_pico_trainer)
