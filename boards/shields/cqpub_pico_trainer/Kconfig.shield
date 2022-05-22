@@ -1,0 +1,5 @@
+config SHIELD_CQPUB_PICO_TRAINER
+	def_bool $(shields_list_contains,cqpub_pico_trainer)
+
+config SHIELD_CQPUB_PICO_TRAINER_WAVESHARE_19376
+	def_bool $(shields_list_contains,cqpub_pico_trainer_waveshare_19376)

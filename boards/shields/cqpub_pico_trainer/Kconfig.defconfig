@@ -1,0 +1,20 @@
+if SHIELD_CQPUB_PICO_TRAINER || SHIELD_CQPUB_PICO_TRAINER_WAVESHARE_19376
+
+if DISK_ACCESS
+
+config SDHC
+	default y
+
+config DISK_DRIVER_SDMMC
+	default y
+
+endif
+
+if NETWORKING
+
+config NET_L2_ETHERNET
+	default y
+
+endif
+
+endif # CQPUB_PICO_TRAINER
