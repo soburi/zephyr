@@ -6,4 +6,14 @@ DT_COMPAT_PL022 := arm,pl022
 
 config SPI_PL022
 	default $(dt_compat_enabled,$(DT_COMPAT_PL022))
+	select SPI_PL022_INTERRUPT if SPI_ASYNC
 	bool "ARM PL022 SPI driver"
+
+if SPI_PL022
+
+config SPI_PL022_INTERRUPT
+	bool "PL022 interrupt mode"
+	help
+	  Enables interrupt support for PL022 SPI driver.
+
+endif
