@@ -1,0 +1,44 @@
+# Copyright (c) 2022 TOKITA Hiroshi <tokita.hiroshi@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+config FS_MOUNT_POINT
+        string "mount point of filesystem"
+        default "/SD:"
+
+config INTERVAL_TO_NEXT_ANIMATION
+	int "interval until to start next animation in ms"
+	default 1500
+
+config ANIMATION_DATA_0
+	string "animation data 0"
+
+config ANIMATION_DATA_1
+	string "animation data 1"
+
+config ANIMATION_DATA_2
+	string "animation data 2"
+
+config ANIMATION_DATA_3
+	string "animation data 3"
+
+config ANIMATION_DATA_4
+	string "animation data 4"
+
+config ANIMATION_DATA_5
+	string "animation data 5"
+
+config ANIMATION_DATA_6
+	string "animation data 6"
+
+config ANIMATION_DATA_7
+	string "animation data 7"
+
+config ANIMATION_DATA_8
+	string "animation data 8"
+
+config ANIMATION_DATA_9
+	string "animation data 9"
+
+
+source "Kconfig.zephyr"
+

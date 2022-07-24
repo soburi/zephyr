@@ -1,0 +1,21 @@
+&dma0 {
+        status = "okay";
+};
+
+&spi0 {
+        dmas = <&dma0 1 0>, <&dma0 2 2>;
+        dma-names = "rx", "tx";
+
+        lcd0: lcd@0 {
+                spi-max-frequency = <24000000>;
+        };
+};
+
+&spi1 {
+        dmas =  <&dma0 3 0>, <&dma0 4 2>;
+        dma-names = "rx", "tx";
+
+        sdhc0: sdhc@0 {
+                spi-max-frequency = <24000000>;
+        };
+};

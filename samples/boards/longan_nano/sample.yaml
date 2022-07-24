@@ -1,0 +1,9 @@
+sample:
+  name: Longan Nano example
+tests:
+  sample.board.longan_nano:
+    platform_allow: longan_nano
+    tags: ec
+  sample.board.longan_nano_lite:
+    platform_allow: longan_nano_lite
+    tags: ec
