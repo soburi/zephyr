@@ -1,0 +1,22 @@
+if SOC_SERIES_GD_GD32VF103
+
+config SOC_SERIES
+        default "gd_gd32vf103"
+
+endif # SOC_SERIES_GD32VF103
+
+
+
+if SOC_GD_GD32VF103
+
+config SOC
+        default "gd_gd32vf103"
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+        default 1000
+
+config NUM_IRQS
+	default 30
+
+endif
+

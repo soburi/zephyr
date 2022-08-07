@@ -1,0 +1,2 @@
+config BOARD
+        default "sipeed_longan_nano" if BOARD_SIPEED_LONGAN_NANO

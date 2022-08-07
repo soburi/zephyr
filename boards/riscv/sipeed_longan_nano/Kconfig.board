@@ -1,0 +1,2 @@
+config BOARD_SIPEED_LONGAN_NANO
+        bool "Sipeed Longan Nano target"
