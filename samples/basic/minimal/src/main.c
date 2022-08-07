@@ -9,3 +9,7 @@
 void main(void)
 {
 }
+
+void sys_clock_elapsed() {
+
+}

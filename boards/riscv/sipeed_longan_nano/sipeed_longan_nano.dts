@@ -1,0 +1,26 @@
+/*
+ * Copyright (c) 2021 Tokita, Hiroshi <tokita.hiroshi@gmail.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/dts-v1/;
+
+/ {
+	#address-cells = <1>;
+
+	sram0: memory@20000000 {
+		compatible = "mmio-sram";
+		reg = <0x20000000 32768>;
+	};
+
+	flash0: flash@8000000 {
+		compatible = "soc-nv-flash";
+		reg = <0x08000000 131072>;
+	};
+
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+	};
+};
+
