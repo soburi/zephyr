@@ -21,8 +21,5 @@ config RISCV_SOC_MCAUSE_EXCEPTION_MASK
 config NUM_IRQS
 	default 30
 
-#config FLASH_BASE_ADDRESS
-#        default 0x8000000 
-
 endif
 

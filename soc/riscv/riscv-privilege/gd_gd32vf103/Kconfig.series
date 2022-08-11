@@ -9,11 +9,6 @@ config SOC_SERIES_GD_GD32VF103
 	select SOC_FAMILY_RISCV_PRIVILEGE
 	select XIP
 	select INCLUDE_RESET_VECTOR
-	#select ATOMIC_OPERATIONS_C
-	#select BUILD_OUTPUT_HEX
-	#select GD32_HAS_AFIO_PINMUX
-	#select HAS_GD32_HAL
-	#select RISCV_HAS_CLIC
 
 	help
 	  Enable support for GigaDevice GD32VF1 series SoC
