@@ -1,5 +1,2 @@
 config BOARD_SIPEED_LONGAN_NANO
         bool "Sipeed Longan Nano target"
-        #select QEMU_TARGET
-	#select CPU_HAS_FPU
-        #select RISCV_ISA_RV32I
