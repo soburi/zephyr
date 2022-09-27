@@ -23,6 +23,8 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: babblesim
       url-base: https://github.com/BabbleSim
+    - name: soburi
+      url-base: https://github.com/soburi
 
   group-filter: [-babblesim, -optional]
 
@@ -260,6 +262,12 @@ manifest:
     - name: libmetal
       revision: 03140d7f4bd9ba474ebfbb6256e84a9089248e67
       path: modules/hal/libmetal
+      groups:
+        - hal
+    - name: hal_wch
+      revision: a2d01f443796a312e5fba05a7c018c0c012e5795
+      path: modules/hal/wch
+      remote: soburi
       groups:
         - hal
     - name: liblc3
