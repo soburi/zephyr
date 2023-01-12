@@ -87,8 +87,8 @@ static inline uint8_t get_glyph_byte(uint8_t *glyph_ptr, const struct cfb_font *
  * Draw the monochrome character in the monochrome tiled framebuffer,
  * a byte is interpreted as 8 pixels ordered vertically among each other.
  */
-static uint8_t draw_char_vtmono(const struct char_framebuffer *fb,
-			     char c, uint16_t x, uint16_t y)
+static uint8_t draw_char_vtmono(const struct char_framebuffer *fb, char c, uint16_t x, uint16_t y,
+				bool draw_bg)
 {
 	const struct cfb_font *fptr = &(fb->fonts[fb->font_idx]);
 	uint8_t *glyph_ptr;
@@ -105,24 +105,39 @@ static uint8_t draw_char_vtmono(const struct char_framebuffer *fb,
 	}
 
 	for (size_t g_x = 0; g_x < fptr->width; g_x++) {
-		uint32_t y_segment = y / 8U;
+		int16_t fb_x = x + g_x;
+		uint8_t byte = get_glyph_byte(glyph_ptr, fptr, g_x, 0);
 
-		for (size_t g_y = 0; g_y < fptr->height / 8U; g_y++) {
-			uint32_t fb_y = (y_segment + g_y) * fb->x_res;
-			uint8_t byte;
+		for (size_t g_y = 0; g_y < fptr->height; g_y++) {
+			int16_t fb_y = y + g_y;
+			size_t fb_index = (fb_y / 8U) * fb->x_res + fb_x;
 
-			if ((fb_y + x + g_x) >= fb->size) {
-				return 0;
+			if ((g_y % 8) == 0) {
+				byte = get_glyph_byte(glyph_ptr, fptr, g_x, g_y / 8);
+				if (need_reverse) {
+					byte = byte_reverse(byte);
+				}
 			}
 
-			byte = get_glyph_byte(glyph_ptr, fptr, g_x, g_y);
-			if (need_reverse) {
-				byte = byte_reverse(byte);
+			if (fb_x < 0 || fb->x_res <= fb_x || fb_y < 0 || fb->y_res <= fb_y) {
+				continue;
 			}
 
-			fb->buf[fb_y + x + g_x] = byte;
+			if ((y % 8) == 0) {
+				if (draw_bg) {
+					fb->buf[fb_index] = byte;
+				} else {
+					fb->buf[fb_index] |= byte;
+				}
+				g_y += 7;
+			} else {
+				if (byte & BIT(g_y % 8)) {
+					WRITE_BIT(fb->buf[fb_index], fb_y % 8, 0xFF);
+				} else if (draw_bg) {
+					WRITE_BIT(fb->buf[fb_index], fb_y % 8, 0);
+				}
+			}
 		}
-
 	}
 
 	return fptr->width;
@@ -144,13 +159,13 @@ int cfb_print(const struct device *dev, char *str, uint16_t x, uint16_t y)
 		return -EINVAL;
 	}
 
-	if ((fb->screen_info & SCREEN_INFO_MONO_VTILED) && !(y % 8)) {
+	if ((fb->screen_info & SCREEN_INFO_MONO_VTILED)) {
 		for (size_t i = 0; i < strlen(str); i++) {
 			if (x + fptr->width > fb->x_res) {
 				x = 0U;
 				y += fptr->height;
 			}
-			x += fb->kerning + draw_char_vtmono(fb, str[i], x, y);
+			x += fb->kerning + draw_char_vtmono(fb, str[i], x, y, true);
 		}
 		return 0;
 	}
