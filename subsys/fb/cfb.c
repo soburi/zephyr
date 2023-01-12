@@ -195,7 +195,15 @@ int cfb_invert_area(const struct device *dev, uint16_t x, uint16_t y,
 		return -EINVAL;
 	}
 
-	if ((fb->screen_info & SCREEN_INFO_MONO_VTILED) && !(y % 8)) {
+	if ((fb->screen_info & SCREEN_INFO_MONO_VTILED)) {
+		if (x > fb->x_res) {
+			x = fb->x_res;
+		}
+
+		if (y > fb->y_res) {
+			y = fb->y_res;
+		}
+
 		if (x + width > fb->x_res) {
 			width = fb->x_res - x;
 		}
@@ -205,10 +213,26 @@ int cfb_invert_area(const struct device *dev, uint16_t x, uint16_t y,
 		}
 
 		for (size_t i = x; i < x + width; i++) {
-			for (size_t j = y / 8U; j < (y + height) / 8U; j++) {
-				size_t index = (j * fb->x_res) + i;
+			for (size_t j = y; j < (y + height); j++) {
+				size_t index = ((j / 8) * fb->x_res) + i;
+				uint8_t remains = y + height - j;
 
-				fb->buf[index] = ~fb->buf[index];
+				if ((j % 8) > 0) {
+					uint8_t m = BIT_MASK((j % 8));
+					uint8_t b = fb->buf[index];
+
+					fb->buf[index] = ~(b | m) | (b & m);
+					j += 7 - (j % 8);
+				} else if (remains >= 8) {
+					fb->buf[index] = ~fb->buf[index];
+					j += 7;
+				} else {
+					uint8_t m = BIT_MASK(remains % 8) << (8 - (remains % 8));
+					uint8_t b = fb->buf[index];
+
+					fb->buf[index] = ~(b | m) | (b & m);
+					j += (remains - 1);
+				}
 			}
 		}
 
