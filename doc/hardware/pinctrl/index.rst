@@ -500,6 +500,40 @@ Dynamic pin control
 .. doxygengroup:: pinctrl_interface_dynamic
 
 
+Raspberry Pi Pico binary info helpers
+=====================================
+
+The Raspberry Pi Pico port emits a ``binary_info`` section that mirrors the
+Devicetree pin controller layout. The helper macros introduced in
+``soc/raspberrypi/rpi_pico/common/binary_info.c`` use a consistent naming
+scheme to make each level of the traversal explicit:
+
+``RP2_BI_PINCTRL_GROUP_PIN_COUNT``
+    Operates on a *group node* (a child of ``DT_NODELABEL(pinctrl)``) and
+    reports how many encoded pins belong to that group.
+
+``RP2_BI_PINCTRL_GROUP_OFFSET``
+    Computes the running total of pins for the parent ``pinctrl`` node so that
+    per-group data can be placed back-to-back in the emitted structure.
+
+``RP2_BI_PINCTRL_FOREACH_GROUP``
+    Iterates the hierarchy of groups and their ``pinmux`` entries.  The name
+    follows the Devicetree nesting order: pin controller → group → pin.
+
+``RP2_BI_PINCTRL_ENCODE_GROUP_PINS``
+    Uses the above helpers to encode every pin in a group, ensuring that the
+    binary layout follows the Devicetree ordering.
+
+``RP2_BI_DECLARE_PIN_GROUP``
+    Performs validation (pin count limits, uniform function selection) before
+    emitting the ``binary_info`` declaration for a group.
+
+The macros form a readable pipeline: pin counts feed offset calculations, which
+feed the encoder, which is wrapped by the declaration helper.  This hierarchy
+matches the Devicetree structure and makes it easier to reason about future
+updates to the ``binary_info`` feature.
+
+
 Other reference material
 ************************
 
