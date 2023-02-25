@@ -1,0 +1,28 @@
+# Copyright (c) 2023, TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Worldsemi WS2812 or compatible LED strip driver based on RaspberryPi Pico's PIO
+  The LED strip node can put up to 4 instances under a single PIO node.
+
+compatible: "worldsemi,ws2812-rpi_pico-pio"
+
+include: ws2812.yaml
+
+properties:
+  output-pin:
+    type: int
+    required: true
+    description: |
+      Select the output pin.
+
+      Note: This driver does not configure the output pin.
+      You need to configure the pin with pinctrl that is in the parent node configuration
+      for use by PIO.
+
+  frequency:
+    type: int
+    description: |
+      Specify the number of times a waveform representing 1 bit is
+      transmitted per second. It is same meaning as bit-per-seconds.
+      WS2812 works with 800000. Set the value 400000 if use with WS2811.
