@@ -83,7 +83,7 @@ hardware features:
      - :dtcompatible:`raspberrypi,pico-flash`
    * - UART (PIO)
      - :kconfig:option:`CONFIG_SERIAL`
-     - :dtcompatible:`raspberrypi,pico-uart-pio`
+     - :dtcompatible:`raspberrypi,pico-pio-uart`
 
 Pin Mapping
 ===========
