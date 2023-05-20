@@ -12,11 +12,33 @@ if SOC_GD_GD32VF103
 config SOC
         default "gd_gd32vf103"
 
+config KERNEL_ENTRY
+	default "__nuclei_start"
+
 config SYS_CLOCK_HW_CYCLES_PER_SEC
-        default 1000
+        default 108000000
+
+config RISCV_MACHINE_TIMER_SYSTEM_CLOCK_DIVIDER
+	default 4
+
+config RISCV_SOC_MCAUSE_EXCEPTION_MASK
+	default 0x7ff
+
+config RISCV_SOC_INTERRUPT_INIT
+	default y
+
+config RISCV_HAS_CPU_IDLE
+	default y
+
+config RISCV_GP
+	default y
+
+config RISCV_HAS_PLIC
+	default n
 
 config NUM_IRQS
-	default 30
+	default 87 if  NUCLEI_ECLIC
+	default 16 if !NUCLEI_ECLIC
 
 endif
 

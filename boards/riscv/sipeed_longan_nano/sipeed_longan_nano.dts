@@ -7,6 +7,7 @@
 
 / {
 	#address-cells = <1>;
+	#size-cells = <1>;
 
 	sram0: memory@20000000 {
 		compatible = "mmio-sram";
@@ -21,6 +22,31 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+	};
+
+	soc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "simple-bus";
+		interrupt-parent = <&eclic>;
+		ranges;
+
+		systimer: timer@d1000000 {
+			compatible = "nuclei,systimer";
+			reg = <0xd1000000 0x10000>;
+			interrupts = <3 0>, <7 0>;
+		};
+
+		eclic: interrupt-controller@d2000000 {
+			compatible = "nuclei,eclic";
+			#address-cells = <0>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+			reg =  <0xd2000000 0x0001
+				0xd2000004 0x0004
+				0xd200000b 0x0001
+				0xd2001000 0x1000>;
+		};
 	};
 };
 
