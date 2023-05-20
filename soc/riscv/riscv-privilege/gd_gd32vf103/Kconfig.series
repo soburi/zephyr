@@ -9,6 +9,7 @@ config SOC_SERIES_GD_GD32VF103
 	select SOC_FAMILY_RISCV_PRIVILEGE
 	select XIP
 	select INCLUDE_RESET_VECTOR
+        select BUILD_OUTPUT_HEX
 
 	help
 	  Enable support for GigaDevice GD32VF1 series SoC
