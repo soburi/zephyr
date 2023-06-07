@@ -5,3 +5,4 @@
 zephyr_library()
 
 zephyr_library_sources(pio_rpi_pico.c)
+zephyr_library_sources(pio_intr_dispatcher_rpi_pico.c)
