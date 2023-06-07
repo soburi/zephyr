@@ -14,17 +14,21 @@
 &pio0 {
 	status = "okay";
 
-	pio0_uart0: pio0_uart0 {
-		compatible = "raspberrypi,pico-uart-pio";
-
+	pio_intr_dispatcher: pio_intr_dispatcher {
+		compatible = "raspberrypi,pico-pio-intr-dispatcher";
 		status = "okay";
 
-		pio,interrupts = <0>;
-		pio,interrupt-names = "shared";
+		pio0_uart0: pio0_uart0 {
+			compatible = "raspberrypi,pico-uart-pio";
+			status = "okay";
 
-		pinctrl-0 = <&pio0_uart0_default>;
-		pinctrl-names = "default";
+			pio,interrupts = <0>;
+			pio,interrupt-names = "shared";
 
-		current-speed = <115200>;
+			pinctrl-0 = <&pio0_uart0_default>;
+			pinctrl-names = "default";
+
+			current-speed = <115200>;
+		};
 	};
 };

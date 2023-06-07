@@ -12,6 +12,7 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/misc/pio_rpi_pico/pio_rpi_pico.h>
+#include <zephyr/drivers/misc/pio_rpi_pico/pio_intr_dispatcher_rpi_pico.h>
 #include <zephyr/drivers/misc/pio_rpi_pico/pio_rpi_pico_util.h>
 
 /* PIO registers */
@@ -747,9 +748,9 @@ static void pio_uart_irq_config##inst(const struct device *dev)					\
 												\
 	static const struct pio_uart_config pio_uart_config##inst = {				\
 		.parent = DEVICE_DT_GET(DT_INST_PARENT(inst)),					\
-		.pio_regs = (pio_hw_t *)DT_INST_PIO_RPI_PICO_REG_ADDR(inst),			\
+		.pio_regs = (pio_hw_t *)DT_PIO_RPI_PICO_REG_ADDR(DT_INST_PARENT(inst)),			\
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(inst),					\
-		.clock_frequency = DT_INST_PIO_RPI_PICO_CLOCK_FREQ_HZ(inst),			\
+		.clock_frequency = DT_PIO_RPI_PICO_CLOCK_FREQ_HZ(DT_INST_PARENT(inst)),			\
 		.tx_gpio =  DT_INST_PIO_RPI_PICO_PIN_BY_NAME(inst, default, 0, tx_gpio, 0),	\
 		.rx_gpio =  DT_INST_PIO_RPI_PICO_PIN_BY_NAME(inst, default, 0, rx_gpio, 0),	\
 		PIO_UART_GEN_IRQ_CONFIG(inst)							\

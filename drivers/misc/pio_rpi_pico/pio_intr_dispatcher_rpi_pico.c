@@ -11,11 +11,12 @@
 #include <zephyr/device.h>
 #include <hardware/structs/pio.h>
 #include <zephyr/drivers/misc/pio_rpi_pico/pio_rpi_pico.h>
+#include <zephyr/drivers/misc/pio_rpi_pico/pio_intr_dispatcher_rpi_pico.h>
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(pio_rpi_pico, CONFIG_PIO_RPI_PICO_LOG_LEVEL);
+LOG_MODULE_REGISTER(pio_intr_dispatcher_rpi_pico, CONFIG_PIO_RPI_PICO_LOG_LEVEL);
 
-#define DT_DRV_COMPAT	raspberrypi_pico_pio
+#define DT_DRV_COMPAT	raspberrypi_pico_pio_intr_dispatcher
 
 typedef void (*pio_rpi_pico_irq_config_func_t)(void);
 
@@ -191,8 +192,8 @@ static void pio_rpi_pico_irq(sys_slist_t *irq_list)
 #define PIO_RPI_PICO_IRQ_CONFIG_FUNC(idx, inst)							\
 static void pio_rpi_pico_irq_config##inst##_##idx(void)						\
 {												\
-	IRQ_CONNECT(DT_INST_IRQ_BY_IDX(inst, idx, irq),						\
-		    DT_INST_IRQ_BY_IDX(inst, idx, priority),					\
+	IRQ_CONNECT(DT_IRQ_BY_IDX(DT_INST_PARENT(inst), idx, irq),						\
+		    DT_IRQ_BY_IDX(DT_INST_PARENT(inst), idx, priority),					\
 		    pio_rpi_pico_irq,								\
 		    &pio_rpi_pico_irq_data##inst[idx], (0));					\
 }
@@ -200,23 +201,23 @@ static void pio_rpi_pico_irq_config##inst##_##idx(void)						\
 #define PIO_RPI_PICO_IRQ_CONFIG_DATA(idx, inst)							\
 	{											\
 		.irq_config = pio_rpi_pico_irq_config##inst##_##idx,				\
-		.irq_map = DT_INST_IRQ_BY_IDX(inst, idx, irq),					\
+		.irq_map = DT_IRQ_BY_IDX(DT_INST_PARENT(inst), idx, irq),					\
 	}
 
 #define PIO_RPI_PICO_INIT(inst)									\
-	static sys_slist_t pio_rpi_pico_irq_data##inst[DT_NUM_IRQS(DT_DRV_INST(inst))];		\
-	LISTIFY(DT_NUM_IRQS(DT_DRV_INST(inst)), PIO_RPI_PICO_IRQ_CONFIG_FUNC, (), inst)		\
+	static sys_slist_t pio_rpi_pico_irq_data##inst[DT_NUM_IRQS(DT_INST_PARENT(inst))];		\
+	LISTIFY(DT_NUM_IRQS(DT_INST_PARENT(inst)), PIO_RPI_PICO_IRQ_CONFIG_FUNC, (), inst)		\
 												\
 	static struct pio_rpi_pico_data pio_rpi_pico_data##inst;				\
 												\
 	static const struct pio_rpi_pico_irq_config						\
-				pio_rpi_pico_irq_config##inst[DT_NUM_IRQS(DT_DRV_INST(inst))] =	\
-	{LISTIFY(DT_NUM_IRQS(DT_DRV_INST(inst)), PIO_RPI_PICO_IRQ_CONFIG_DATA, (,), inst)};	\
+				pio_rpi_pico_irq_config##inst[DT_NUM_IRQS(DT_INST_PARENT(inst))] =	\
+	{LISTIFY(DT_NUM_IRQS(DT_INST_PARENT(inst)), PIO_RPI_PICO_IRQ_CONFIG_DATA, (,), inst)};	\
 												\
 	static const struct pio_rpi_pico_config pio_rpi_pico_config##inst = {			\
 		.irq_configs = pio_rpi_pico_irq_config##inst,					\
 		.irq_lists = pio_rpi_pico_irq_data##inst,					\
-		.irq_cnt = DT_NUM_IRQS(DT_DRV_INST(inst)),					\
+		.irq_cnt = DT_NUM_IRQS(DT_INST_PARENT(inst)),					\
 	};											\
 												\
 	DEVICE_DT_INST_DEFINE(inst, &pio_rpi_pico_init,						\
