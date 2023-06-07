@@ -9,12 +9,18 @@ config PIO_RPI_PICO
 	depends on RESET
 	select PICOSDK_USE_PIO
 
+config PIO_INTR_DISPATCHER_RPI_PICO
+	bool "RaspberryPi Pico PIO interrupt_dispatcher"
+	default y
+	depends on DT_HAS_RASPBERRYPI_PICO_PIO_INTR_DISPATCHER_ENABLED
 
 if PIO_RPI_PICO
 
 module = PIO_RPI_PICO
 module-str = pio_rpi_pico
 source "subsys/logging/Kconfig.template.log_config"
+
+if PIO_INTR_DISPATCHER_RPI_PICO
 
 config PIO_RPI_PICO_INSTR_COUNT
 	int "Number of Program Instructions for each PIO"
@@ -23,5 +29,7 @@ config PIO_RPI_PICO_INSTR_COUNT
 config PIO_RPI_PICO_SM_COUNT
 	int "Number of State Machine instances for each PIO"
 	default 4 if SOC_RP2040
+
+endif
 
 endif
