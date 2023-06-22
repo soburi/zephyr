@@ -63,6 +63,11 @@ void arm_smccc_smc(unsigned long a0, unsigned long a1, unsigned long a2, unsigne
 		return;
 	}
 
+	if (a0 == OPTEE_SMC_DISABLE_SHM_CACHE) {
+		res->a0 = OPTEE_SMC_RETURN_ENOTAVAIL;
+		return;
+	}
+
 	if (a0 == OPTEE_SMC_EXCHANGE_CAPABILITIES) {
 		res->a1 = OPTEE_SMC_SEC_CAP_DYNAMIC_SHM;
 		return;
