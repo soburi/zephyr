@@ -1,0 +1,5 @@
+# Copyright (c) 2023 Tada Hiroki <hirokin18931@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_WIO_LITE_RISCV
+	select SOC_GD32VF103

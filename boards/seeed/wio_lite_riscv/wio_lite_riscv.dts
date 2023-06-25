@@ -1,0 +1,120 @@
+/*
+ * Copyright (c) 2023 Tada, Hiroki <hirokin18931@gmail.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <gd/gd32vf103Xb.dtsi>
+#include "wio_lite_riscv-pinctrl.dtsi"
+
+/ {
+	model = "Wio Lite Riscv";
+	compatible = "seeed,wio_lite_riscv";
+
+	chosen {
+		zephyr,console = &usart0;
+		zephyr,shell-uart = &usart0;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		sdhc0 = &sdhc0;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		led_blue: led_blue {
+			gpios = <&gpioa 8 GPIO_ACTIVE_LOW>;
+			label = "LED_B";
+		};
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		button_boot0: button_boot0 {
+			label = "BUTTON_BOOT0";
+			gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	pwmleds {
+		compatible = "pwm-leds";
+
+		/* NOTE: bridge TIMER0_CH0 and LED_BLUE (PA8) */
+		pwm_led_blue: pwm_led_green {
+			pwms = <&pwm1 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+			label = "PWM_LED_BLUE";
+		};
+	};
+
+	aliases {
+		led0 = &led_blue;
+		pwm-led0 = &pwm_led_blue;
+		sw0 = &button_boot0;
+		watchdog0 = &fwdgt;
+	};
+};
+
+&gpioa {
+	status = "okay";
+};
+
+&gpiob {
+	status = "okay";
+};
+
+&gpioc {
+	status = "okay";
+};
+
+&usart0 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&usart0_default>;
+	pinctrl-names = "default";
+};
+
+&usart1 {
+	current-speed = <115200>;
+
+	pinctrl-0 = <&usart1_esp_wifi>;
+	pinctrl-names = "default";
+
+	esp8266 {
+		compatible = "espressif,esp-at";
+		status = "okay";
+	};
+};
+
+&timer1 {
+	status = "okay";
+	prescaler = <4096>;
+
+	pwm1: pwm {
+		status = "okay";
+		pinctrl-0 = <&pwm1_default>;
+		pinctrl-names = "default";
+	};
+};
+
+&spi1 {
+	status = "okay";
+	pinctrl-0 = <&spi1_default>;
+	pinctrl-names = "default";
+
+	cs-gpios = <&gpiob 1 GPIO_ACTIVE_LOW>;
+
+	sdhc0: sdhc@0 {
+		compatible = "zephyr,sdhc-spi-slot";
+		reg = <0>;
+		status = "okay";
+		spi-max-frequency = <24000000>;
+		mmc {
+			compatible = "zephyr,sdmmc-disk";
+			status = "okay";
+		};
+	};
+};
+
+&fwdgt {
+	status = "okay";
+};

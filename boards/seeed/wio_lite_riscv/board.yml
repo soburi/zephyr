@@ -1,0 +1,5 @@
+board:
+  name: wio_lite_riscv
+  vendor: seeed
+  socs:
+    - name: gd32vf103

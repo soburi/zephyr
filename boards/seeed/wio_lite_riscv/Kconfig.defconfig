@@ -1,0 +1,8 @@
+# Copyright (c) 2023 Tada, Hiroki <hirokin18931@gmail.com>
+
+if BOARD_WIO_LITE_RISCV
+
+config DISK_DRIVER_SDMMC
+        default y if DISK_DRIVERS
+
+endif # BOARD_WIO_LITE_RISCV
