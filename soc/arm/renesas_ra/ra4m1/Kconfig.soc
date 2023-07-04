@@ -1,0 +1,14 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+choice
+	prompt "Renesas RA4M1 SoC Selection"
+	depends on SOC_SERIES_RA4M1
+
+config SOC_R7FA4M1AB3CFM
+	bool "R7FA4M1AB3CFM"
+	select MCU_PACKAGE_LQFP
+	select MCU_PACKAGE_PINS_100
+	select MCU_FEATURE_SET_A
+
+endchoice
