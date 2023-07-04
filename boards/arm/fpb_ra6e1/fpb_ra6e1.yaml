@@ -1,0 +1,12 @@
+identifier: fpb_ra6e1
+name: RA6E1 Fast Prototyping Board
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+ram: 256
+supported:
+  - gpio
+  - uart

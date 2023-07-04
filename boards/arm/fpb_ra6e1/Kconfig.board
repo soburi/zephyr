@@ -1,0 +1,6 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_FPB_RA6E1
+	bool "RA6E1 Fast Prototyping Board"
+	depends on SOC_R7FA6E10F2CFP
