@@ -1,0 +1,25 @@
+#
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+description: Renesas RA GPIO
+
+compatible: "renesas,ra-gpio"
+
+include: [gpio-controller.yaml, base.yaml]
+
+properties:
+  reg:
+    required: true
+
+  portno:
+    type: int
+
+  "#gpio-cells":
+    const: 2
+
+gpio-cells:
+  - pin
+  - flags
