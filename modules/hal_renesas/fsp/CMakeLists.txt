@@ -40,4 +40,8 @@ if (CONFIG_USE_FSP_IOPORT)
   zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/r_ioport/r_ioport.c)
 endif()
 
+if (CONFIG_USE_FSP_SCI_UART)
+  zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/r_sci_uart/r_sci_uart.c)
+endif()
+
 endif()
