@@ -47,13 +47,13 @@
 			#clock-cells = <0>;
 		};
 
-		ioport1: gpio@40080020 {
+		ioport1: gpio@40040020 {
 			compatible = "renesas,ra-gpio";
-			reg = <0x40080020 0x20>;
+			reg = <0x40040020 0x20>;
 			gpio-controller;
 			#gpio-cells = <2>;
 			interrupts = <6 0>;
-			portno = <4>;
+			portno = <1>;
 		};
 
 		pinctrl: pinctrl@40040800 {

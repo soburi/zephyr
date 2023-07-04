@@ -35,4 +35,8 @@ zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/bsp/mcu/a
 zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/bsp/mcu/all/bsp_rom_registers.c)
 zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/bsp/mcu/all/bsp_security.c)
 
+if (CONFIG_USE_FSP_IOPORT)
+  zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/r_ioport/r_ioport.c)
+endif()
+
 endif()

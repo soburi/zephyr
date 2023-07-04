@@ -47,6 +47,15 @@
 			#clock-cells = <0>;
 		};
 
+		ioport4: gpio@40080080 {
+			compatible = "renesas,ra-gpio";
+			reg = <0x40080080 0x20>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupts = <6 0>;
+			portno = <4>;
+		};
+
 		pinctrl: pinctrl@40080800 {
 			compatible = "renesas,ra-pinctrl";
 			reg = <0x40080800 0x500 0x40080d03 0x1>;
