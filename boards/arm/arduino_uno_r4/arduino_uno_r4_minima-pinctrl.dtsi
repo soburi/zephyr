@@ -1,0 +1,12 @@
+&pinctrl {
+        uart2_default: uart2_default {
+                group1 {
+			/*port3:pin0 sci0-txd*/
+                        pinmux = <0x04630000>;
+                };
+                group2 {
+			/*port3:pin1 sci0-rxd*/
+                        pinmux = <0x04650000>;
+		};
+        };
+};

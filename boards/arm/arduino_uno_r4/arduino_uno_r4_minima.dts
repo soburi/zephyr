@@ -1,0 +1,63 @@
+/*
+ * Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include "arduino_uno_r4_common.dtsi"
+#include "arduino_uno_r4_minima-pinctrl.dtsi"
+
+/ {
+	model = "Arduino Uno R4 Minima";
+
+	chosen {
+		zephyr,console = &uart2;
+		zephyr,shell-uart = &uart2;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &code_partition;
+	};
+
+	leds {
+                compatible = "gpio-leds";
+		led: led {
+			gpios = <&ioport1 11 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	aliases {
+		led0 = &led;
+	};
+};
+
+&uart2 {
+	status = "okay";
+        pinctrl-0 = <&uart2_default>;
+        pinctrl-names = "default";
+};
+
+&ioport1 {
+	status = "okay";
+};
+
+&flash0 {
+        partitions {
+                compatible = "fixed-partitions";
+                #address-cells = <1>;
+                #size-cells = <1>;
+
+                boot_partition: partition@0 {
+                        label = "bootloader";
+                        reg = <0x00000000 0x4000>;
+                        read-only;
+                };
+
+                code_partition: partition@4000 {
+                        label = "code";
+                        reg = <0x4000 0x3C000>;
+                        read-only;
+                };
+        };
+};
+
