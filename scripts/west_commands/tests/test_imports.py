@@ -20,6 +20,7 @@ def test_runner_imports():
                     'canopen',
                     'dediprog',
                     'dfu-util',
+                    'e2-server-gdb',
                     'esp32',
                     'ezflashcli',
                     'gd32isp',
