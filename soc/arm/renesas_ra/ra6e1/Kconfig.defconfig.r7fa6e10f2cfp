@@ -1,0 +1,9 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+if SOC_R7FA6E10F2CFP
+
+config SOC
+	default "r7fa6e10f2cfp"
+
+endif # SOC_R7FA6E10f2CFP

@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <mem.h>
+#include <freq.h>
+#include <arm/armv8-m.dtsi>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include <zephyr/dt-bindings/display/panel.h>
+
+/ {
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-m33";
+			reg = <0>;
+		};
+	};
+
+	sram0: memory0@20000000 {
+		compatible = "mmio-sram";
+		reg = <0x20000000 DT_SIZE_K(32)>;
+	};
+
+	flash0: flash0@0 {
+		compatible = "soc-nv-flash";
+		reg = <0x00000000 DT_SIZE_K(256)>;
+	};
+
+	flash1: flash1@40100000 {
+		compatible = "soc-nv-flash";
+		reg = <0x40100000 DT_SIZE_K(8)>;
+	};
+
+	/* TODO: Remove after implementing clock_control */
+	dummyclock: clock {
+		compatible = "fixed-clock";
+		clock-frequency = <1>;
+		#clock-cells = <0>;
+	};
+
+	soc {
+	};
+};
+
+&nvic {
+	arm,num-irq-priority-bits = <4>;
+};

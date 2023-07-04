@@ -1,0 +1,14 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+choice
+	prompt "Renesas RA6E1 SoC Selection"
+	depends on SOC_SERIES_RA6E1
+
+config SOC_R7FA6E10F2CFP
+	bool "R7FA6E10F2CFP"
+	select MCU_PACKAGE_QFP
+	select MCU_PACKAGE_PINS_100
+	select MCU_FEATURE_SET_0
+
+endchoice
