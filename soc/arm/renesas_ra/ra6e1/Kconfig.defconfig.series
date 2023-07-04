@@ -1,0 +1,14 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+if SOC_SERIES_RA6E1
+
+source "soc/arm/renesas_ra/ra6e1/Kconfig.defconfig.r7fa6*"
+
+config SOC_SERIES
+	default "ra6e1"
+
+config NUM_IRQS
+	default 40
+
+endif # SOC_SERIES_RA6E1

@@ -1,0 +1,13 @@
+/*
+ * Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#ifndef ZEPHYR_SOC_ARM_RENESAS_RA_RA6E1_PINCTRL_SOC_H_
+#define ZEPHYR_SOC_ARM_RENESAS_RA_RA6E1_PINCTRL_SOC_H_
+
+struct pinctrl_soc_pin {
+};
+
+#endif /* ZEPHYR_SOC_ARM_RENESAS_RA_RA6E1_PINCTRL_SOC_H_ */
