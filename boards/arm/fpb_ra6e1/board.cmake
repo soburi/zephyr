@@ -1,0 +1,55 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+board_runner_args(e2-server-gdb
+	"--target" "R7FA6E10F"
+	"--adapter" "SEGGERJLINKARM"
+	"-uSelect=USB"
+	"-uJLinkSetting=${CMAKE_CURRENT_LIST_DIR}/support/jlink.ini"
+	"-uJLinkLog=JLinkLog.log"
+	"-uLowPower=0"
+	"-uInterface=SWD"
+	"-uIfSpeed=4000"
+	"-uNoReset=1"
+	"-uResetPreRun=1"
+	"-uResetCon=1"
+	"-uResetBefDownload=1"
+	"-uReleaseCM3=0"
+	"-uDisconnectionMode=1"
+	"-uSWOcoreClock=0"
+	"-uEnableSciBoot=1"
+	"-uresetOnReload=1"
+	"-uFlashBp=1"
+	"-uSimulation=0"
+	"-ueraseRomOnDownload=0"
+	"-ueraseDataRomOnDownload=0"
+	"-uOSRestriction=0"
+	"-uProgReWriteIRom=0"
+	"-uCPUFrequency=0"
+	"-uCECycle=1"
+	"-uMemRegion=0x20000000:0x800:RAM:s"
+	"-uMemRegion=0x20000800:0x1800:RAM:c"
+	"-uMemRegion=0x00000000:0x1000:FLASH:s"
+	"-uMemRegion=0x00001000:0x7000:FLASH:c"
+	"-uMemRegion=0x08000000:0x0:DATA_FLASH:s"
+	"-uMemRegion=0x0100A100:0x80:OPTION_SETTING:s"
+	"-uMemRegion=0x0100A200:0xD0:OPTION_SETTING_S:s"
+	"-uMemRegion=0x00000000:0x0:ID_CODE:s"
+	"-uMemRegion=0x80010000:0x0:SDRAM:s"
+	"-uMemRegion=0x60000000:0x0:QSPI_FLASH:s"
+	"-uMemRegion=0x80020000:0x0:OSPI_DEVICE_0:s"
+	"-uMemRegion=0x80030000:0x0:OSPI_DEVICE_1:s"
+	"-uMemRegion=0x00008000:0xF8000:FLASH:n"
+	"-uMemRegion=0x08000000:0x2000:DATA_FLASH:n"
+	"-uTz=SSD"
+	"-uCore=SINGLE_CORE\|enabled\|1\|main"
+	"-uSyncMode=async"
+	"-uFirstGDB=main"
+	"-n 0"
+	"-l"
+)
+
+board_runner_args(rfp-cli "--device=RA" "--tool=jlink" "--interface=swd" "--verify" "--reset")
+
+include(${ZEPHYR_BASE}/boards/common/rfp-cli.board.cmake)
+include(${ZEPHYR_BASE}/boards/common/e2-server-gdb.board.cmake)

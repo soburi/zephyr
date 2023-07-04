@@ -1,0 +1,23 @@
+&pinctrl {
+        uart0_default: uart0_default {
+                group1 {
+			/*port1:pin0 sci0-txd*/
+                        pinmux = <0x04210000>;
+                };
+                group2 {
+			/*port1:pin1 sci0-rxd*/
+                        pinmux = <0x04230000>;
+		};
+        };
+
+        uart9_default: uart9_default {
+                group1 {
+                       /*port1:pin0 sci9-txd*/
+                        pinmux = <0x5330000>;
+                };
+                group2 {
+                       /*port1:pin1 sci9-rxd*/
+                        pinmux = <0x5350000>;
+               };
+        };
+};

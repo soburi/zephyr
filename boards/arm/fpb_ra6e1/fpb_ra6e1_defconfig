@@ -1,0 +1,23 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+CONFIG_SOC_SERIES_RA6E1=y
+CONFIG_SOC_R7FA6E10F2CFP=y
+
+CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC=166666666
+
+CONFIG_BUILD_OUTPUT_HEX=y
+
+# enable uart driver
+CONFIG_SERIAL=y
+
+# enable console
+CONFIG_CONSOLE=y
+CONFIG_UART_CONSOLE=y
+
+# enable GPIO
+CONFIG_GPIO=y
+
+CONFIG_PINCTRL=y
+
+CONFIG_CLOCK_CONTROL=y
