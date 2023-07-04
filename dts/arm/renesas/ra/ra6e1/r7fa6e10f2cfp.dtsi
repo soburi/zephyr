@@ -62,6 +62,76 @@
                         reg-names = "pfs", "pmisc_pwpr";
 			status = "okay";
 		};
+
+		uart0: uart@40118000 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118000 0x100>;
+			clocks = <&clock>;
+			channel = <0>;
+		};
+
+		uart1: uart@40118100 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118100 0x100>;
+			clocks = <&clock>;
+			channel = <1>;
+		};
+
+		uart2: uart@40118200 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118200 0x100>;
+			clocks = <&clock>;
+			channel = <2>;
+		};
+
+		uart3: uart@40118300 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118300 0x100>;
+			clocks = <&clock>;
+			channel = <3>;
+		};
+
+		uart4: uart@40118400 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118400 0x100>;
+			clocks = <&clock>;
+			channel = <4>;
+		};
+
+		uart5: uart@40118500 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118500 0x100>;
+			clocks = <&clock>;
+			channel = <5>;
+		};
+
+		uart6: uart@40118600 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118600 0x100>;
+			clocks = <&clock>;
+			channel = <6>;
+		};
+
+		uart7: uart@40118700 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118700 0x100>;
+			clocks = <&clock>;
+			channel = <7>;
+		};
+
+		uart8: uart@40118800 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118800 0x100>;
+			clocks = <&clock>;
+			channel = <8>;
+		};
+
+		uart9: uart@40118900 {
+			compatible = "renesas,ra-uart-sci";
+			reg = <0x40118900 0x100>;
+			clocks = <&clock>;
+			channel = <9>;
+		};
 	};
 };
 

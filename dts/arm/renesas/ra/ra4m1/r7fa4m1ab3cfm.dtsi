@@ -63,74 +63,84 @@
 			status = "okay";
 		};
 
-		uart0: uart@40118000 {
+		uart0: uart@40070000 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118000 0x100>;
+			reg = <0x40070000 0x20>;
 			clocks = <&clock>;
 			channel = <0>;
+			status = "disabled";
 		};
 
-		uart1: uart@40118100 {
+		uart1: uart@40070020 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118100 0x100>;
+			reg = <0x40070020 0x20>;
 			clocks = <&clock>;
 			channel = <1>;
+			status = "disabled";
 		};
 
-		uart2: uart@40118200 {
+		uart2: uart@40070040 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118200 0x100>;
+			reg = <0x40070040 0x20>;
 			clocks = <&clock>;
 			channel = <2>;
+			status = "disabled";
 		};
 
-		uart3: uart@40118300 {
+		uart3: uart@40070060 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118300 0x100>;
+			reg = <0x40070060 0x20>;
 			clocks = <&clock>;
 			channel = <3>;
+			status = "disabled";
 		};
 
-		uart4: uart@40118400 {
+		uart4: uart@40070080 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118400 0x100>;
+			reg = <0x40070080 0x20>;
 			clocks = <&clock>;
 			channel = <4>;
+			status = "disabled";
 		};
 
-		uart5: uart@40118500 {
+		uart5: uart@400700a0 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118500 0x100>;
+			reg = <0x400700a0 0x20>;
 			clocks = <&clock>;
 			channel = <5>;
+			status = "disabled";
 		};
 
-		uart6: uart@40118600 {
+		uart6: uart@400700c0 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118600 0x100>;
+			reg = <0x400700c0 0x20>;
 			clocks = <&clock>;
 			channel = <6>;
+			status = "disabled";
 		};
 
-		uart7: uart@40118700 {
+		uart7: uart@400700e0 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118700 0x100>;
+			reg = <0x400700e0 0x20>;
 			clocks = <&clock>;
 			channel = <7>;
+			status = "disabled";
 		};
 
-		uart8: uart@40118800 {
+		uart8: uart@40070100 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118800 0x100>;
+			reg = <0x40070100 0x20>;
 			clocks = <&clock>;
 			channel = <8>;
+			status = "disabled";
 		};
 
-		uart9: uart@40118900 {
+		uart9: uart@40070120 {
 			compatible = "renesas,ra-uart-sci";
-			reg = <0x40118900 0x100>;
+			reg = <0x40070120 0x20>;
 			clocks = <&clock>;
 			channel = <9>;
+			status = "disabled";
 		};
 	};
 };
