@@ -30,6 +30,7 @@ _names = [
     'canopen_program',
     'dediprog',
     'dfu',
+    'e2-server-gdb',
     'esp32',
     'ezflashcli',
     'gd32isp',
