@@ -1,0 +1,44 @@
+#ifndef BSP_MCU_DEVICE_PN_CFG_H_
+#define BSP_MCU_DEVICE_PN_CFG_H_
+
+#define BSP_ROM_SIZE_BYTES        (CONFIG_FLASH_SIZE * (1024))
+#define BSP_RAM_SIZE_BYTES        (CONFIG_SRAM_SIZE * (1024))
+#define BSP_DATA_FLASH_SIZE_BYTES (CONFIG_DATA_FLASH_SIZE * (1024))
+
+#ifdef CONFIG_MCU_FEATURE_SET_0
+#define BSP_MCU_FEATURE_SET       ('0')
+#endif
+
+#ifdef CONFIG_MCU_FEATURE_SET_A
+#define BSP_MCU_FEATURE_SET       ('A')
+#endif
+
+#ifdef CONFIG_MCU_FEATURE_SET_B
+#define BSP_MCU_FEATURE_SET       ('B')
+#endif
+
+#ifdef CONFIG_MCU_PACKAGE_BGA
+#define BSP_PACKAGE_BGA
+#endif
+
+#ifdef CONFIG_MCU_PACKAGE_LGA
+#define BSP_PACKAGE_LGA
+#endif
+
+#ifdef CONFIG_MCU_PACKAGE_LQFP
+#define BSP_PACKAGE_LQFP
+#endif
+
+#ifdef CONFIG_MCU_PACKAGE_QFN
+#define BSP_PACKAGE_QFN
+#endif
+
+#ifdef CONFIG_MCU_PACKAGE_QFP
+#define BSP_PACKAGE_QFP
+#endif
+
+#ifdef CONFIG_MCU_PACKAGE_PINS
+#define BSP_PACKAGE_PINS CONFIG_MCU_PACKAGE_PINS
+#endif
+
+#endif /* BSP_MCU_DEVICE_PN_CFG_H_ */

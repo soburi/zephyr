@@ -3,3 +3,5 @@
 
 config ZEPHYR_HAL_RENESAS_MODULE
 	bool
+
+rsource "fsp/Kconfig"

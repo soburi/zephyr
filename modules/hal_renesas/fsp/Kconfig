@@ -1,0 +1,325 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+config HAS_FSP
+	bool
+
+menu "Renesas FSP drivers"
+	depends on HAS_FSP
+
+config USE_FSP_ACMPHS
+	bool
+	help
+	  Enable FSP High Speed Analog Comparator (ACMPHS) driver
+
+config USE_FSP_ACMPLP
+	bool
+	help
+	  Enable FSP Low Power Analog Comparator (ACMPLP) driver
+
+config USE_FSP_ADC_B
+	bool
+	help
+	  Enable FSP A/D Converter (ADC) driver
+
+config USE_FSP_ADC
+	bool
+	help
+	  Enable FSP A/D Converter (ADC) driver
+
+config USE_FSP_AGT
+	bool
+	help
+	  Enable FSP Asynchronous General-Purpose Timer (AGT) driver
+
+config USE_FSP_CAC
+	bool
+	help
+	  Enable FSP Clock Frequency Accuracy Measurement Circuit (CAC) driver
+
+config USE_FSP_CANFD
+	bool
+	help
+	  Enable FSP CAN-FD (CANFD) driver
+
+config USE_FSP_CAN
+	bool
+	help
+	  Enable FSP Controller Area Network (CAN) driver
+
+config USE_FSP_CEC
+	bool
+	help
+	  Enable FSP HDMI CEC (CEC) driver
+
+config USE_FSP_CGC
+	bool
+	help
+	  Enable FSP Clock Generation Circuit (CGC) driver
+
+config USE_FSP_CRC
+	bool
+	help
+	  Enable FSP Cyclic Redundancy Check Calculator (CRC) driver
+
+config USE_FSP_CTSU
+	bool
+	help
+	  Enable FSP Capacitive Touch Sensing Unit (CTSU) driver
+
+config USE_FSP_DAC8
+	bool
+	help
+	  Enable FSP 8-Bit D/A Converter (DAC8) driver
+
+config USE_FSP_DAC
+	bool
+	help
+	  Enable FSP 12-Bit D/A Converter (DAC) driver
+
+config USE_FSP_DMAC
+	bool
+	help
+	  Enable FSP DMA Controller (DMAC) driver
+
+config USE_FSP_DOC
+	bool
+	help
+	  Enable FSP Data Operation Circuit (DOC) driver
+
+config USE_FSP_DTC
+	bool
+	help
+	  Enable FSP Data Transfer Controller (DTC) driver
+
+config USE_FSP_ELC
+	bool
+	help
+	  Enable FSP Event Link Controller (ELC) driver
+
+config USE_FSP_ETHER
+	bool
+	help
+	  Enable FSP Ethernet MAC Controller (ETHER) driver
+
+config USE_FSP_ETHER_PHY
+	bool
+	help
+	  Enable FSP Ethernet Phy (ETHER_PHY) driver
+
+config USE_FSP_FLASH_HP
+	bool
+	help
+	  Enable FSP High-Performance Flash (FLASH_HP) driver
+
+config USE_FSP_FLASH_LP
+	bool
+	help
+	  Enable FSP Low-Power Flash (FLASH_LP) driver
+
+config USE_FSP_GLCDC
+	bool
+	help
+	  Enable FSP Graphics LCD Controller (GLCDC) driver
+
+config USE_FSP_GPT
+	bool
+	help
+	  Enable FSP General PWM Timer (GPT) driver
+
+config USE_FSP_GPT_THREE_PHASE
+	bool
+	help
+	  Enable FSP 3-Phase General PWM Timer (GPT) driver
+
+config USE_FSP_I3C
+	bool
+	help
+	  Enable FSP I3C driver
+
+config USE_FSP_ICU
+	bool
+	help
+	  Enable FSP Interrupt Control Unit (ICU) driver
+
+config USE_FSP_IIC_B_MASTER
+	bool
+	help
+	  Enable FSP I2C Bus Interface B (IIC_B) master driver
+
+config USE_FSP_IIC_B_SLAVE
+	bool
+	help
+	  Enable FSP I2C Bus Interface B (IIC_B) slave driver
+
+config USE_FSP_IIC_MASTER
+	bool
+	help
+	  Enable FSP I2C Bus Interface (IIC) master driver
+
+config USE_FSP_IIC_SLAVE
+	bool
+	help
+	  Enable FSP I2C Bus Interface (IIC) slave driver
+
+config USE_FSP_IIRFA
+	bool
+	help
+	  Enable FSP IIR Filter Accelerator (IIRFA) driver
+
+config USE_FSP_IOPORT
+	bool
+	help
+	  Enable FSP I/O Ports (IOPORT) driver
+
+config USE_FSP_IWDT
+	bool
+	help
+	  Enable FSP Independent Watch Dog Timer (IWDT) driver
+
+config USE_FSP_JPEG
+	bool
+	help
+	  Enable FSP JPEG (JPEG) driver
+
+config USE_FSP_KINT
+	bool
+	help
+	  Enable FSP Key Interrupt Function (KINT) driver
+
+config USE_FSP_LPM
+	bool
+	help
+	  Enable FSP Low Power Modes (LPM) driver
+
+config USE_FSP_LVD
+	bool
+	help
+	  Enable FSP Low Voltage Detection (LVD) driver
+
+config USE_FSP_OPAMP
+	bool
+	help
+	  Enable FSP Operational Amplifier (OPAMP) driver
+
+config USE_FSP_OSPI
+	bool
+	help
+	  Enable FSP Octa Serial Peripheral Interface (OSPI) driver
+
+config USE_FSP_PDC
+	bool
+	help
+	  Enable FSP Parallel Data Capture Unit (PDC) driver
+
+config USE_FSP_POEG
+	bool
+	help
+	  Enable FSP Port Output Enable for GPT (POEG) driver
+
+config USE_FSP_PTP
+	bool
+	help
+	  Enable FSP Ethernet PTP Controller (EPTPC) driver
+
+config USE_FSP_QSPI
+	bool
+	help
+	  Enable FSP Quad Serial Peripheral Interface (QSPI) driver
+
+config USE_FSP_RTC
+	bool
+	help
+	  Enable FSP Real Time Clock (RTC) driver
+
+config USE_FSP_SCE_KEY_INJECTION
+	bool
+	help
+	  Enable FSP Secure Cryptographic Engine (SCE) key injection driver
+
+config USE_FSP_SCI_B_I2C
+	bool
+	help
+	  Enable FSP Serial Communications Interface B (SCI_B) driver
+
+config USE_FSP_SCI_B_SPI
+	bool
+	help
+	  Enable FSP Serial Communications Interface B (SCI_B) driver
+
+config USE_FSP_SCI_B_UART
+	bool
+	help
+	  Enable FSP Serial Communications Interface B (SCI_B) driver
+
+config USE_FSP_SCI_I2C
+	bool
+	help
+	  Enable FSP Serial Communications Interface (SCI) driver
+
+config USE_FSP_SCI_SPI
+	bool
+	help
+	  Enable FSP Serial Communications Interface (SCI) driver
+
+config USE_FSP_SCI_UART
+	bool
+	help
+	  Enable FSP Serial Communications Interface (SCI) driver
+
+config USE_FSP_SDADC
+	bool
+	help
+	  Enable FSP Sigma Delta A/D Converter (SDADC) driver
+
+config USE_FSP_SDHI
+	bool
+	help
+	  Enable FSP SD/MMC Host Interface (SDHI) driver
+
+config USE_FSP_SLCDC
+	bool
+	help
+	  Enable FSP Segment LCD Controller (SLCDC) driver
+
+config USE_FSP_SPI_B
+	bool
+	help
+	  Enable FSP Serial Peripheral Interface B (SPI_B) driver
+
+config USE_FSP_SPI
+	bool
+	help
+	  Enable FSP Serial Peripheral Interface (SPI) driver
+
+config USE_FSP_SSI
+	bool
+	help
+	  Enable FSP Serial Sound Interface (SSI) driver
+
+config USE_FSP_ULPT
+	bool
+	help
+	  Enable FSP Ultra Low Power Timer ULPT (ULPT) driver
+
+config USE_FSP_USB_BASIC
+	bool
+	help
+	  Enable FSP USB (USB) basic driver
+
+config USE_FSP_USB_HHID
+	bool
+	help
+	  Enable FSP USB Host Human Interface Device (USB_HHID) driver
+
+config USE_FSP_USB_HMSC
+	bool
+	help
+	  Enable FSP USB Host Mass Storage Class (USB_HMSC) driver
+
+config USE_FSP_WDT
+	bool
+	help
+	  Enable FSP Watch Dog Timer (WDT) driver
+
+endmenu
