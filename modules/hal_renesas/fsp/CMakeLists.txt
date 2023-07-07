@@ -24,7 +24,6 @@ zephyr_library_sources(ra_gen/board_init.c)
 zephyr_library_sources(ra_gen/common_data.c)
 zephyr_library_sources(ra_gen/hal_data.c)
 
-zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/bsp/cmsis/Device/RENESAS/Source/system.c)
 zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/bsp/mcu/all/bsp_clocks.c)
 zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/bsp/mcu/all/bsp_common.c)
 zephyr_library_sources(${ZEPHYR_HAL_RENESAS_MODULE_DIR}/fsp/ra/fsp/src/bsp/mcu/all/bsp_delay.c)

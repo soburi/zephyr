@@ -9,13 +9,19 @@
 #include <zephyr/init.h>
 #include "soc.h"
 
+uint32_t SystemCoreClock;
+
 __weak void bsp_init(void *p_args)
 {
 }
 
 static int soc_init(void)
 {
-	SystemInit();
+	bsp_clock_init();
+
+	/* Initialize SystemCoreClock variable. */
+	SystemCoreClockUpdate();
+
 	return 0;
 }
 
