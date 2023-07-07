@@ -1,0 +1,117 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_FAMILY_RA
+	bool
+	select HAS_FSP
+
+if SOC_FAMILY_RA
+
+config SOC_FAMILY
+	string
+	default "renesas_ra"
+
+source "soc/arm/renesas_ra/*/Kconfig.soc"
+
+config DATA_FLASH_SIZE
+	int "Data Flash Size in kB"
+	default $(dt_node_reg_size_int,/soc/flash@1,0)
+	help
+	  DATA_FLASH region size
+
+config DATA_FLASH_BASE_ADDRESS
+	hex "Flash Base Address"
+	default $(dt_node_reg_addr_hex,/soc/flash@1)
+	help
+	  DATA_FLASH address
+
+config MCU_FEATURE_SET_0
+	bool
+
+config MCU_FEATURE_SET_A
+	bool
+
+config MCU_FEATURE_SET_B
+	bool
+
+config MCU_PACKAGE_BGA
+	bool
+
+config MCU_PACKAGE_LFQFP
+	bool
+
+config MCU_PACKAGE_LGA
+	bool
+
+config MCU_PACKAGE_LQFP
+	bool
+
+config MCU_PACKAGE_QFP
+	bool
+
+config MCU_PACKAGE_QFN
+	bool
+
+config MCU_PACKAGE_PINS_16
+	bool
+
+config MCU_PACKAGE_PINS_20
+	bool
+
+config MCU_PACKAGE_PINS_24
+	bool
+
+config MCU_PACKAGE_PINS_25
+	bool
+
+config MCU_PACKAGE_PINS_32
+	bool
+
+config MCU_PACKAGE_PINS_36
+	bool
+
+config MCU_PACKAGE_PINS_40
+	bool
+
+config MCU_PACKAGE_PINS_48
+	bool
+
+config MCU_PACKAGE_PINS_56
+	bool
+
+config MCU_PACKAGE_PINS_64
+	bool
+
+config MCU_PACKAGE_PINS_80
+	bool
+
+config MCU_PACKAGE_PINS_100
+	bool
+
+config MCU_PACKAGE_PINS_144
+	bool
+
+config MCU_PACKAGE_PINS_145
+	bool
+
+config MCU_PACKAGE_PINS_176
+	bool
+
+config MCU_PACKAGE_PINS
+	int
+	default 16 if MCU_PACKAGE_PINS_16
+	default 20 if MCU_PACKAGE_PINS_20
+	default 24 if MCU_PACKAGE_PINS_24
+	default 25 if MCU_PACKAGE_PINS_25
+	default 32 if MCU_PACKAGE_PINS_32
+	default 36 if MCU_PACKAGE_PINS_36
+	default 40 if MCU_PACKAGE_PINS_40
+	default 48 if MCU_PACKAGE_PINS_48
+	default 56 if MCU_PACKAGE_PINS_56
+	default 64 if MCU_PACKAGE_PINS_64
+	default 80 if MCU_PACKAGE_PINS_80
+	default 100 if MCU_PACKAGE_PINS_100
+	default 144 if MCU_PACKAGE_PINS_144
+	default 145 if MCU_PACKAGE_PINS_145
+	default 176 if MCU_PACKAGE_PINS_176
+endif # SOC_FAMILY_RA
