@@ -12,6 +12,11 @@
 extern "C" {
 #endif
 
+struct ra_clock_config {
+	uint32_t function;
+	uint32_t channel;
+};
+
 #ifdef __cplusplus
 }
 #endif

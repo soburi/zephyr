@@ -39,14 +39,13 @@
 		reg = <0x40100000 DT_SIZE_K(8)>;
 	};
 
-	/* TODO: Remove after implementing clock_control */
-	dummyclock: clock {
-		compatible = "fixed-clock";
-		clock-frequency = <1>;
-		#clock-cells = <0>;
-	};
-
 	soc {
+		clock: clock@4001e000 {
+			compatible = "renesas,ra-clock";
+			reg = <0x4001e000 0x40 0x40084000 0x4>;
+                        reg-names = "system", "mstp";
+			#clock-cells = <0>;
+		};
 	};
 };
 

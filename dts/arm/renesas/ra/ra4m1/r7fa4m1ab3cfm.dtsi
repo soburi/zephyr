@@ -42,7 +42,7 @@
 	soc {
 		clock: clock@4001e000 {
 			compatible = "renesas,ra-clock";
-			reg = <0x4001e000 0x40 0x40084000 0x4>;
+			reg = <0x4001e000 0x40 0x40047000 0x10>;
                         reg-names = "system", "mstp";
 			#clock-cells = <0>;
 		};
