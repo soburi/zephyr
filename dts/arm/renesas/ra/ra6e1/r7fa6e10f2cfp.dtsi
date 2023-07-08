@@ -46,6 +46,13 @@
                         reg-names = "system", "mstp";
 			#clock-cells = <0>;
 		};
+
+		pinctrl: pinctrl@40080800 {
+			compatible = "renesas,ra-pinctrl";
+			reg = <0x40080800 0x500 0x40080d03 0x1>;
+                        reg-names = "pfs", "pmisc_pwpr";
+			status = "okay";
+		};
 	};
 };
 

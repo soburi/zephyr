@@ -1,0 +1,34 @@
+# Copyright (c) 2023 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+    The RPi Pico pin controller is a node responsible for controlling
+
+compatible: "renesas,ra-pinctrl"
+
+include: base.yaml
+
+child-binding:
+  description: |
+    Definitions for a pinctrl state.
+  child-binding:
+
+    include:
+      - name: pincfg-node.yaml
+        property-allowlist:
+          - bias-disable
+          - bias-pull-down
+          - bias-pull-up
+          - input-enable
+          - input-schmitt-enable
+          - drive-strength
+          - slew-rate
+
+    properties:
+      pinmux:
+        required: true
+        type: array
+        description: |
+          An array of pins sharing the same group properties. Each
+          element of the array is an integer constructed from the
+          pin number and the alternative function of the pin.
