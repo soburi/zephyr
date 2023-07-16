@@ -1,0 +1,11 @@
+description: Nuvoton NuMaker System Clock Controller (SCC)
+
+compatible: "renesas,ra-system-clock"
+
+include: [fixed-factor-clock.yaml, base.yaml]
+
+properties:
+  clock-src:
+    type: phandle
+    description: |
+      System clock source

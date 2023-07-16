@@ -61,10 +61,10 @@ extern "C" {
 #define BSP_PRV_IELS_ENUM(vector) (ELC_##vector)
 
 /*
- * ID Code
- * Note: To permanently lock and disable the debug interface define the
- * BSP_ID_CODE_PERMANENTLY_LOCKED in the compiler settings. WARNING: This will disable debug access
- * to the part and cannot be reversed by a debug probe.
+ ID Code
+ Note: To permanently lock and disable the debug interface define the BSP_ID_CODE_PERMANENTLY_LOCKED
+ in the compiler settings. WARNING: This will disable debug access to the part and cannot be
+ reversed by a debug probe.
  */
 #if defined(BSP_ID_CODE_PERMANENTLY_LOCKED)
 #define BSP_CFG_ID_CODE_LONG_1 (0x00000000)

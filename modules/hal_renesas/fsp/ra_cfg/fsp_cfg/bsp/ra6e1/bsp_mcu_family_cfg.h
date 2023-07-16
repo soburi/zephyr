@@ -89,7 +89,7 @@ extern "C" {
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 28) /* SCI3 */ |                                     \
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 29) /* SCI2 */ |                                     \
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 30) /* SCI1 */ |                                     \
-	 (((1 > 0) ? 0U : 1U) << 31) /* SCI0 */ | 0x33f4f9) /* Unused */
+	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 31) /* SCI0 */ | 0x33f4f9) /* Unused */
 #endif
 #ifndef BSP_TZ_CFG_PSARC
 #define BSP_TZ_CFG_PSARC                                                                           \
@@ -125,7 +125,7 @@ extern "C" {
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 22) /* GPT9 */ |                                     \
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 23) /* GPT8 */ |                                     \
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 24) /* GPT7 */ |                                     \
-	 (((1 > 0) ? 0U : 1U) << 25) /* GPT6 */ |                                                  \
+	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 25) /* GPT6 */ |                                     \
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 26) /* GPT5 */ |                                     \
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 27) /* GPT4 */ |                                     \
 	 (((RA_NOT_DEFINED > 0) ? 0U : 1U) << 28) /* GPT3 */ |                                     \
@@ -248,8 +248,7 @@ extern "C" {
 /* Security attribution of FLWT and FCKMHZ registers. */
 #ifndef BSP_TZ_CFG_FSAR
 /* If the CGC registers are only accessible in Secure mode, than there is no
- * reason for nonsecure applications to access FLWT and FCKMHZ.
- */
+ * reason for nonsecure applications to access FLWT and FCKMHZ. */
 #if BSP_CFG_CLOCKS_SECURE
 /* Protect FLWT and FCKMHZ registers from nonsecure write access. */
 #define BSP_TZ_CFG_FSAR (0xFEFEU)
@@ -262,8 +261,7 @@ extern "C" {
 /* Security attribution for SRAM registers. */
 #ifndef BSP_TZ_CFG_SRAMSAR
 /* If the CGC registers are only accessible in Secure mode, than there is no reason for Non Secure
- * applications to access SRAM0WTEN and therefore there is no reason to access PRCR2.
- */
+ * applications to access SRAM0WTEN and therefore there is no reason to access PRCR2. */
 #define BSP_TZ_CFG_SRAMSAR (1 | ((BSP_CFG_CLOCKS_SECURE == 0) ? (1U << 1U) : 0U) | 4 | 0xFFFFFFF8U)
 #endif
 
@@ -310,7 +308,7 @@ extern "C" {
 #endif
 #endif
 
-#define BSP_CFG_ROM_REG_OFS1 (0xFFFFFEF8 | (1 << 2) | (3) | (1 << 8))
+#define BSP_CFG_ROM_REG_OFS1 (0xFFFFFEF8 | (1 << 2) | (3) | (0 << 8))
 
 /* Used to create IELS values for the interrupt initialization table g_interrupt_event_link_select.
  */
@@ -354,26 +352,22 @@ extern "C" {
 #define BSP_CFG_ROM_REG_PBPS3 (0xFFFFFFFFU)
 #endif
 /* Security Attribution for Block Protection Register 0 (If any blocks are marked as protected in
- * the secure application, then mark them as secure)
- */
+ * the secure application, then mark them as secure) */
 #ifndef BSP_CFG_ROM_REG_BPS_SEL0
 #define BSP_CFG_ROM_REG_BPS_SEL0 (BSP_CFG_ROM_REG_BPS0 & BSP_CFG_ROM_REG_PBPS0)
 #endif
 /* Security Attribution for Block Protection Register 1 (If any blocks are marked as protected in
- * the secure application, then mark them as secure)
- */
+ * the secure application, then mark them as secure) */
 #ifndef BSP_CFG_ROM_REG_BPS_SEL1
 #define BSP_CFG_ROM_REG_BPS_SEL1 (BSP_CFG_ROM_REG_BPS1 & BSP_CFG_ROM_REG_PBPS1)
 #endif
 /* Security Attribution for Block Protection Register 2 (If any blocks are marked as protected in
- * the secure application, then mark them as secure)
- */
+ * the secure application, then mark them as secure) */
 #ifndef BSP_CFG_ROM_REG_BPS_SEL2
 #define BSP_CFG_ROM_REG_BPS_SEL2 (BSP_CFG_ROM_REG_BPS2 & BSP_CFG_ROM_REG_PBPS2)
 #endif
 /* Security Attribution for Block Protection Register 3 (If any blocks are marked as protected in
- * the secure application, then mark them as secure)
- */
+ * the secure application, then mark them as secure) */
 #ifndef BSP_CFG_ROM_REG_BPS_SEL3
 #define BSP_CFG_ROM_REG_BPS_SEL3 (BSP_CFG_ROM_REG_BPS3 & BSP_CFG_ROM_REG_PBPS3)
 #endif

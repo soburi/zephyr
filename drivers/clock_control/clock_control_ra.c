@@ -2,7 +2,6 @@
 #include "bsp_api.h"
 #include "bsp_clocks.h"
 
-
 #define DT_DRV_COMPAT renesas_ra_clock
 
 #include <zephyr/drivers/clock_control.h>
@@ -10,14 +9,15 @@
 #include <soc.h>
 
 #if BSP_TZ_NONSECURE_BUILD
- #include "bsp_guard.h"
+#include "bsp_guard.h"
 #endif
 
 uint32_t SystemCoreClock;
 
-struct mstp_regs
-{
+struct mstp_regs {
+#if DT_INST_REG_SIZE_BY_NAME(0, mstp) != 16
 	volatile uint32_t MSTPCRA;
+#endif
 	volatile uint32_t MSTPCRB;
 	volatile uint32_t MSTPCRC;
 	volatile uint32_t MSTPCRD;
@@ -26,8 +26,93 @@ struct mstp_regs
 
 static struct {
 	struct mstp_regs *MSTP;
-} regs = { (struct mstp_regs *)(DT_INST_REG_ADDR_BY_NAME(0, mstp))};
+} regs = {(struct mstp_regs *)(DT_INST_REG_ADDR_BY_NAME(0, mstp))};
 
+/*******************************************************************************************************************//**
+ * Update SystemCoreClock variable based on current clock settings.
+ **********************************************************************************************************************/
+__attribute__((naked)) void bsp_prv_software_delay_loop (__attribute__(
+                                                              (unused)) uint32_t loop_cnt)
+{
+    __asm volatile (
+#if defined(RENESAS_CORTEX_M85) && (defined(__ARMCC_VERSION) || defined(__GNUC__))
+
+        /* Optimize inner loop execution time on CM85 cores (Alignment allows for instruction fusion). */
+        ".align 8\n"
+#endif
+        "sw_delay_loop:         \n"
+#if defined(__ICCARM__) || defined(__ARMCC_VERSION)
+        "   subs r0, #1         \n"    ///< 1 cycle
+#elif defined(__GNUC__)
+        "   sub r0, r0, #1      \n"    ///< 1 cycle
+#endif
+
+        "   cmp r0, #0          \n"    ///< 1 cycle
+
+/* CM0 and CM23 have a different instruction set */
+#if defined(__CORE_CM0PLUS_H_GENERIC) || defined(__CORE_CM23_H_GENERIC)
+        "   bne sw_delay_loop   \n"    ///< 2 cycles
+#else
+        "   bne.n sw_delay_loop \n"    ///< 2 cycles
+#endif
+        "   bx lr               \n");  ///< 2 cycles
+}
+#define BSP_DELAY_NS_PER_SECOND    (1000000000)
+#define BSP_DELAY_NS_PER_US        (1000)
+void R_BSP_SoftwareDelay (uint32_t delay, bsp_delay_units_t units)
+{
+    uint32_t iclk_hz;
+    uint32_t cycles_requested;
+    uint32_t ns_per_cycle;
+    uint32_t loops_required = 0;
+    uint32_t total_us       = (delay * units);                        /** Convert the requested time to microseconds. */
+    uint64_t ns_64bits;
+
+    iclk_hz = SystemCoreClock;                                        /** Get the system clock frequency in Hz. */
+
+    /* Running on the Sub-clock (32768 Hz) there are 30517 ns/cycle. This means one cycle takes 31 us. One execution
+     * loop of the delay_loop takes 6 cycles which at 32768 Hz is 180 us. That does not include the overhead below prior to even getting
+     * to the delay loop. Given this, at this frequency anything less then a delay request of 122 us will not even generate a single
+     * pass through the delay loop.  For this reason small delays (<=~200 us) at this slow clock rate will not be possible and such a request
+     * will generate a minimum delay of ~200 us.*/
+    ns_per_cycle = BSP_DELAY_NS_PER_SECOND / iclk_hz;                 /** Get the # of nanoseconds/cycle. */
+
+    /* We want to get the time in total nanoseconds but need to be conscious of overflowing 32 bits. We also do not want to do 64 bit */
+    /* division as that pulls in a division library. */
+    ns_64bits = (uint64_t) total_us * (uint64_t) BSP_DELAY_NS_PER_US; // Convert to ns.
+
+    /* Have we overflowed 32 bits? */
+    if (ns_64bits <= UINT32_MAX)
+    {
+        /* No, we will not overflow. */
+        cycles_requested = ((uint32_t) ns_64bits / ns_per_cycle);
+        loops_required   = cycles_requested / BSP_DELAY_LOOP_CYCLES;
+    }
+    else
+    {
+        /* We did overflow. Try dividing down first. */
+        total_us  = (total_us / (ns_per_cycle * BSP_DELAY_LOOP_CYCLES));
+        ns_64bits = (uint64_t) total_us * (uint64_t) BSP_DELAY_NS_PER_US; // Convert to ns.
+
+        /* Have we overflowed 32 bits? */
+        if (ns_64bits <= UINT32_MAX)
+        {
+            /* No, we will not overflow. */
+            loops_required = (uint32_t) ns_64bits;
+        }
+        else
+        {
+            /* We still overflowed, use the max count for cycles */
+            loops_required = UINT32_MAX;
+        }
+    }
+
+    /** Only delay if the supplied parameters constitute a delay. */
+    if (loops_required > (uint32_t) 0)
+    {
+        bsp_prv_software_delay_loop(loops_required);
+    }
+}
 /***********************************************************************************************************************
  * Macro definitions
  **********************************************************************************************************************/
@@ -106,6 +191,7 @@ static struct {
    #define BSP_PRV_UCK_DIV             (2U)
   #elif BSP_CLOCKS_USB_CLOCK_DIV_5 == BSP_CFG_UCK_DIV
    #define BSP_PRV_UCK_DIV             (6U)
+   //#error // fpb
   #elif BSP_CLOCKS_USB_CLOCK_DIV_6 == BSP_CFG_UCK_DIV
    #define BSP_PRV_UCK_DIV             (3U)
   #elif BSP_CLOCKS_USB_CLOCK_DIV_8 == BSP_CFG_UCK_DIV
@@ -147,6 +233,7 @@ static struct {
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKE_BITS     ((BSP_CFG_PCLKE_DIV & 0xFU) << 20U)
 #else
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKE_BITS     (0U)
+   //#error // fpb
 #endif
 #if BSP_FEATURE_CGC_HAS_PCLKD
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKD_BITS     (BSP_CFG_PCLKD_DIV & 0xFU)
@@ -155,16 +242,19 @@ static struct {
 #endif
 #if BSP_FEATURE_CGC_HAS_PCLKC
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKC_BITS     ((BSP_CFG_PCLKC_DIV & 0xFU) << 4U)
+   //#error // fpb
 #else
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKC_BITS     (0U)
 #endif
 #if BSP_FEATURE_CGC_HAS_PCLKB
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKB_BITS     ((BSP_CFG_PCLKB_DIV & 0xFU) << 8U)
+   //#error // fpb
 #else
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKB_BITS     (0U)
 #endif
 #if BSP_FEATURE_CGC_HAS_PCLKA
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKA_BITS     ((BSP_CFG_PCLKA_DIV & 0xFU) << 12U)
+   //#error // fpb
 #else
  #define BSP_PRV_STARTUP_SCKDIVCR_PCLKA_BITS     (0U)
 #endif
@@ -174,11 +264,13 @@ static struct {
 
 /* Some MCUs have a requirement that bits 18-16 be set to the same value as the bits for configuring the PCLKB divisor. */
  #define BSP_PRV_STARTUP_SCKDIVCR_BCLK_BITS      ((BSP_CFG_PCLKB_DIV & 0xFU) << 16U)
+   //#error // fpb
 #else
  #define BSP_PRV_STARTUP_SCKDIVCR_BCLK_BITS      (0U)
 #endif
 #if BSP_FEATURE_CGC_HAS_FCLK
  #define BSP_PRV_STARTUP_SCKDIVCR_FCLK_BITS      ((BSP_CFG_FCLK_DIV & 0xFU) << 28U)
+   //#error // fpb
 #else
  #define BSP_PRV_STARTUP_SCKDIVCR_FCLK_BITS      (0U)
 #endif
@@ -202,6 +294,7 @@ static struct {
                                  BSP_FEATURE_NUM_PLL2_OUTPUT_CLOCKS)
  #else
   #define BSP_PRV_NUM_CLOCKS    ((uint8_t) BSP_CLOCKS_SOURCE_CLOCK_PLL2 + 1U)
+   //#error // fpb
  #endif
 #elif BSP_PRV_PLL_SUPPORTED
  #if 0 != BSP_FEATURE_NUM_PLL1_OUTPUT_CLOCKS
@@ -224,6 +317,7 @@ static struct {
   #elif BSP_CLOCKS_SOURCE_CLOCK_HOCO == BSP_CFG_PLL_SOURCE
    #define BSP_PRV_PLSRCSEL                        (1)
    #define BSP_PRV_PLL_USED                        (1)
+   //#error // fpb
   #else
    #define BSP_PRV_PLL_USED                        (0)
   #endif
@@ -299,6 +393,7 @@ static struct {
  #elif BSP_CLOCKS_SOURCE_CLOCK_HOCO == BSP_CFG_PLL2_SOURCE
   #define BSP_PRV_PL2SRCSEL                           (1)
   #define BSP_PRV_PLL2_USED                           (1)
+   //#error // fpb
  #else
   #define BSP_PRV_PLL2_USED                           (0)
  #endif
@@ -324,12 +419,14 @@ static struct {
   #define BSP_PRV_PLL2CCR                             ((BSP_CFG_PLL2_MUL << R_SYSTEM_PLL2CCR_PLL2MUL_Pos) | \
                                                        (BSP_CFG_PLL2_DIV << R_SYSTEM_PLL2CCR_PL2IDIV_Pos) | \
                                                        (BSP_PRV_PL2SRCSEL << R_SYSTEM_PLL2CCR_PL2SRCSEL_Pos))
+   //#error // fpb
  #endif
 #endif
 
 /* All clocks with configurable source except PLL and CLKOUT can use PLL. */
 #if (BSP_CFG_CLOCK_SOURCE == BSP_CLOCKS_SOURCE_CLOCK_PLL)
  #define BSP_PRV_STABILIZE_PLL                    (1)
+   //#error // fpb
 #endif
 
 /* All clocks with configurable source can use the main oscillator. */
@@ -377,6 +474,7 @@ static struct {
  #define BSP_PRV_MAIN_OSC_USED                    (1)
 #else
  #define BSP_PRV_MAIN_OSC_USED                    (0)
+   //#error // fpb
 #endif
 
 /* All clocks with configurable source can use HOCO except the CECCLK and I3CCLK. */
@@ -386,6 +484,7 @@ static struct {
 #elif defined(BSP_CFG_PLL_SOURCE) && (BSP_CFG_PLL_SOURCE == BSP_CLOCKS_SOURCE_CLOCK_HOCO) && BSP_PRV_PLL_USED
  #define BSP_PRV_HOCO_USED                        (1)
  #define BSP_PRV_STABILIZE_HOCO                   (1)
+   //#error // fpb
 #elif defined(BSP_CFG_PLL2_SOURCE) && (BSP_CFG_PLL2_SOURCE == BSP_CLOCKS_SOURCE_CLOCK_HOCO) && BSP_PRV_PLL2_USED
  #define BSP_PRV_HOCO_USED                        (1)
  #define BSP_PRV_STABILIZE_HOCO                   (1)
@@ -453,6 +552,7 @@ static struct {
  #define BSP_PRV_MOCO_USED                        (1)
 #else
  #define BSP_PRV_MOCO_USED                        (0)
+   //#error // fpb
 #endif
 
 /* All clocks with configurable source except UCK, CANFD, LCDCLK, USBHSCLK, I3CCLK and PLL can use LOCO. */
@@ -479,6 +579,7 @@ static struct {
  #define BSP_PRV_LOCO_USED                        (1)
 #else
  #define BSP_PRV_LOCO_USED                        (0)
+   //#error // fpb
 #endif
 
 /* Determine the optimal operating speed mode to apply after clock configuration based on the startup clock
@@ -496,6 +597,7 @@ static struct {
  #define BSP_PRV_CLOCK_SUPPLY_TYPE_B              (0 == BSP_CFG_ROM_REG_OFS1_ICSATS)
 #else
  #define BSP_PRV_CLOCK_SUPPLY_TYPE_B              (0)
+   //#error // fpb
 #endif
 
 #if (BSP_FEATURE_BSP_HAS_CANFD_CLOCK && (BSP_CFG_CANFDCLK_SOURCE != BSP_CLOCKS_CLOCK_DISABLED) &&    \
@@ -514,6 +616,7 @@ static struct {
  #define BSP_PRV_HAS_ENABLED_PERIPHERAL_CLOCKS    (1U)
 #else
  #define BSP_PRV_HAS_ENABLED_PERIPHERAL_CLOCKS    (0U)
+   //#error // fpb
 #endif
 
 static uint32_t g_clock_freq[BSP_PRV_NUM_CLOCKS]  BSP_PLACE_IN_SECTION(BSP_SECTION_NOINIT);
@@ -787,6 +890,7 @@ void bsp_clock_init2(void)
         /* Allow a stop interval of at least 5 SOSC clock cycles before configuring the drive capacity
          * and restarting Sub-Clock Oscillator. */
         R_BSP_SoftwareDelay(BSP_PRV_SUBCLOCK_STOP_INTERVAL_US, BSP_DELAY_UNITS_MICROSECONDS);
+        //k_busy_wait(BSP_PRV_SUBCLOCK_STOP_INTERVAL_US);
     }
 
     /* Configure the subclock drive as subclock is not running. */
@@ -867,6 +971,7 @@ void bsp_clock_init2(void)
 
     /* If FLL is enabled, wait for the FLL stabilization delay (1.8 ms) */
     R_BSP_SoftwareDelay(BSP_PRV_FLL_STABILIZATION_TIME_US, BSP_DELAY_UNITS_MICROSECONDS);
+    //k_busy_wait(BSP_PRV_FLL_STABILIZATION_TIME_US);
  #endif
 
  #if BSP_PRV_STABILIZE_HOCO
@@ -884,6 +989,7 @@ void bsp_clock_init2(void)
         R_SYSTEM->MOCOCR = 0U;
   #if BSP_PRV_STABILIZE_MOCO
         R_BSP_SoftwareDelay(BSP_FEATURE_CGC_MOCO_STABILIZATION_MAX_US, BSP_DELAY_UNITS_MICROSECONDS);
+        //k_busy_wait(BSP_FEATURE_CGC_MOCO_STABILIZATION_MAX_US);
   #endif
     }
  #endif
@@ -1126,14 +1232,13 @@ void bsp_clock_init2(void)
 }
 
 
-static int clock_control_ra_on(const struct device *dev,
-                            clock_control_subsys_t subsys)
+static int clock_control_ra_on(const struct device *dev, clock_control_subsys_t subsys)
 {
-	struct ra_clock_config *clockconf = (struct ra_clock_config*)subsys;
+	struct ra_clock_config *clockconf = (struct ra_clock_config *)subsys;
 
-        int lock = irq_lock();
+	int lock = irq_lock();
 	regs.MSTP->MSTPCRB &= ~(1U << (31U - clockconf->channel));
-        irq_unlock(lock);
+	irq_unlock(lock);
 
     /* Set the CANFD clock if it exists on the MCU */
 #if BSP_FEATURE_BSP_HAS_CANFD_CLOCK && (BSP_CFG_CANFDCLK_SOURCE != BSP_CLOCKS_CLOCK_DISABLED) && \
@@ -1197,9 +1302,35 @@ static int clock_control_ra_on(const struct device *dev,
 #if BSP_FEATURE_BSP_HAS_USB60_CLOCK_REQ && (BSP_CFG_U60CK_SOURCE != BSP_CLOCKS_CLOCK_DISABLED)
     bsp_peripheral_clock_set(&R_SYSTEM->USB60CKCR, &R_SYSTEM->USB60CKDIVCR, BSP_CFG_U60CK_DIV, BSP_CFG_U60CK_SOURCE);
 #endif
-
 	return 0;
 }
+
+void SystemCoreClockUpdate (void)
+{
+    uint32_t clock_index = R_SYSTEM->SCKSCR;
+#if !BSP_FEATURE_CGC_HAS_CPUCLK
+    SystemCoreClock = g_clock_freq[clock_index] >> R_SYSTEM->SCKDIVCR_b.ICK;
+#else
+    uint8_t cpuclk_div = R_SYSTEM->SCKDIVCR2_b.CPUCK;
+    if (8U == cpuclk_div)
+    {
+        SystemCoreClock = g_clock_freq[clock_index] / 3U;
+    }
+    else if (9U == cpuclk_div)
+    {
+        SystemCoreClock = g_clock_freq[clock_index] / 6U;
+    }
+    else if (10U == cpuclk_div)
+    {
+        SystemCoreClock = g_clock_freq[clock_index] / 12U;
+    }
+    else
+    {
+        SystemCoreClock = g_clock_freq[clock_index] >> cpuclk_div;
+    }
+#endif
+}
+
 
 
 static const struct clock_control_driver_api ra_clock_control_driver_api = {
@@ -1208,7 +1339,6 @@ static const struct clock_control_driver_api ra_clock_control_driver_api = {
 	//.get_rate = nxp_s32_clock_get_rate,
 };
 
-
 static int ra_clock_control_init(const struct device *dev)
 {
 	bsp_clock_init2();
@@ -1216,5 +1346,4 @@ static int ra_clock_control_init(const struct device *dev)
 }
 
 DEVICE_DT_INST_DEFINE(0, &ra_clock_control_init, NULL, NULL, NULL, PRE_KERNEL_1,
-		      CONFIG_CLOCK_CONTROL_INIT_PRIORITY,
-		      &ra_clock_control_driver_api);
+		      CONFIG_CLOCK_CONTROL_INIT_PRIORITY, &ra_clock_control_driver_api);

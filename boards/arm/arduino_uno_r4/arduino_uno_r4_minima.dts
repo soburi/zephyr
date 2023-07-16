@@ -61,3 +61,6 @@
         };
 };
 
+&hoco {
+	clock-frequency = <40000000>;
+};

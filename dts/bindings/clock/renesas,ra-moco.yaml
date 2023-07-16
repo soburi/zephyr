@@ -1,0 +1,5 @@
+
+
+compatible: "renesas,ra-moco"
+
+include: fixed-clock.yaml

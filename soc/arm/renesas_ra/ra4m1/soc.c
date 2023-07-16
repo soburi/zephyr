@@ -9,6 +9,10 @@
 #include <zephyr/init.h>
 #include "soc.h"
 
+void bsp_prv_operating_mode_opccr_set()
+{
+}
+
 static int soc_init(void)
 {
 	return 0;
