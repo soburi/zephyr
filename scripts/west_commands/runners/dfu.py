@@ -25,7 +25,7 @@ class DfuUtilBinaryRunner(ZephyrBinaryRunner):
         self.dev_id = dev_id # Used only for error checking in do_run
         self.alt = alt
         self.img = img
-        self.cmd = [exe, '-d,{}'.format(dev_id)]
+        self.cmd = [exe, '-d {}'.format(dev_id)]
         try:
             self.list_pattern = ', alt={},'.format(int(self.alt))
         except ValueError:
@@ -124,8 +124,8 @@ class DfuUtilBinaryRunner(ZephyrBinaryRunner):
             # http://dfu-util.sourceforge.net/dfuse.html
             dcfg = self.dfuse_config
             addr_opts = hex(dcfg.address) + ':' + dcfg.options
-            cmd.extend(['-s', addr_opts])
-        cmd.extend(['-a', self.alt, '-D', self.img])
+            #cmd.extend(['-s', addr_opts])
+        cmd.extend(['-a', self.alt, '-D', self.img, '-Q'])
         self.check_call(cmd)
 
         if self.dfuse and 'leave' in dcfg.options.split(':'):
