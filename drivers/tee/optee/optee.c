@@ -1336,7 +1336,8 @@ static void optee_get_revision(const struct device *dev)
 	}
 }
 
-static bool optee_exchange_caps(const struct device *dev, unsigned long *sec_caps)
+static bool optee_exchange_caps(const struct device *dev, unsigned long *sec_caps,
+				unsigned int *rpc_param_count)
 {
 	struct optee_driver_data *data = (struct optee_driver_data *)dev->data;
 	struct arm_smccc_res res = { 0 };
@@ -1353,6 +1354,13 @@ static bool optee_exchange_caps(const struct device *dev, unsigned long *sec_cap
 	}
 
 	*sec_caps = res.a1;
+
+	if (*sec_caps & OPTEE_SMC_SEC_CAP_RPC_ARG) {
+		*rpc_param_count = (unsigned int)res.a3;
+	} else {
+		*rpc_param_count = 0;
+	}
+
 	return true;
 }
 
@@ -1370,6 +1378,35 @@ static unsigned long optee_get_thread_count(const struct device *dev, unsigned l
 
 	*thread_count = res.a1;
 	return true;
+}
+
+static void optee_enable_shm_cache(struct optee_driver_data *data)
+{
+	struct arm_smccc_res res;
+
+	data->smc_call(OPTEE_SMC_ENABLE_SHM_CACHE, 0, 0, 0, 0, 0, 0, 0, &res);
+	if (res.a0 != OPTEE_SMC_RETURN_OK) {
+		LOG_ERR("Can't enable shm cache");
+	}
+}
+
+static void optee_disable_shm_cache(const struct device *dev, bool mapped)
+{
+	struct arm_smccc_res res;
+	struct tee_shm *shm;
+	struct optee_driver_data *data = dev->data;
+
+	while (true) {
+		data->smc_call(OPTEE_SMC_DISABLE_SHM_CACHE, 0, 0, 0, 0, 0, 0, 0, &res);
+		if (res.a0 == OPTEE_SMC_RETURN_ENOTAVAIL) {
+			break;
+		}
+
+		if (mapped && res.a0 == OPTEE_SMC_RETURN_OK) {
+			shm = (struct tee_shm *)regs_to_u64(res.a1, res.a2);
+			tee_rm_shm(dev, shm);
+		}
+	}
 }
 
 static int optee_init(const struct device *dev)
@@ -1396,7 +1433,7 @@ static int optee_init(const struct device *dev)
 
 	optee_get_revision(dev);
 
-	if (!optee_exchange_caps(dev, &data->sec_caps)) {
+	if (!optee_exchange_caps(dev, &data->sec_caps, &data->rpc_param_count)) {
 		LOG_ERR("OPTEE capabilities exchange failed\n");
 		return -EINVAL;
 	}
@@ -1412,6 +1449,21 @@ static int optee_init(const struct device *dev)
 	}
 
 	k_sem_init(&data->call_sem, thread_count, thread_count);
+
+	/*
+	 * We need to disable all existing shm objects before enabling caching.
+	 * This prevents us from receiving invalid shm addresses. It could occur,
+	 * for example if we are being rebooted by the hypervisor and the previous
+	 * instance did not cleanup the cache on shutdown.
+	 */
+	optee_disable_shm_cache(dev, false);
+
+	/*
+	 * Only enable the shm cache in case we're not able to pass the RPC
+	 * arg struct right after the normal arg struct.
+	 */
+	if (data->rpc_param_count == 0)
+		optee_enable_shm_cache(data);
 
 	return 0;
 }
