@@ -19,3 +19,15 @@ config OPTEE_MAX_NOTIF
 	help
 	 Sets the maximum notifications from OP-TEE to the Normal World. OP-TEE using
 	 this mechanism for the synchronization.
+
+config OPTEE_SHM_CACHE_MAX_ENTRIES
+	int "Upper limit of SHM cache entries"
+	depends on OPTEE
+	default 16
+	help
+	  This sets the maximum number of entries in the SHM cache. SHM allocator
+	  would not allocate more than this number of entries. This effectively
+	  limits the number of OPTEE requests that can be in flight at any given
+	  time. This is needed to prevent the possibility of causing a memory
+	  leak by doing a large number of requests in parallel. The default value
+	  of 16 should be sufficient for most use cases.
