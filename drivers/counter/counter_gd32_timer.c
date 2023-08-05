@@ -45,8 +45,6 @@ struct counter_gd32_config {
 	struct reset_dt_spec reset;
 	uint16_t prescaler;
 	void (*irq_config)(const struct device *dev);
-	void (*set_irq_pending)(void);
-	uint32_t (*get_irq_pending)(void);
 };
 
 static uint32_t get_autoreload_value(const struct device *dev)
@@ -197,11 +195,11 @@ static uint32_t ticks_sub(uint32_t val, uint32_t old, uint32_t top)
 
 static void set_cc_int_pending(const struct device *dev, uint8_t chan)
 {
-	const struct counter_gd32_config *config = dev->config;
 	struct counter_gd32_data *data = dev->data;
 
 	atomic_or(&data->cc_int_pending, TIMER_INT_CH(chan));
-	config->set_irq_pending();
+	interrupt_enable(dev, TIMER_INT_CH(chan));
+	set_software_event_gen(dev, TIMER_INT_CH(chan));
 }
 
 static int set_cc(const struct device *dev, uint8_t chan, uint32_t val,
@@ -348,9 +346,15 @@ static int counter_gd32_timer_set_top_value(const struct device *dev,
 
 static uint32_t counter_gd32_timer_get_pending_int(const struct device *dev)
 {
-	const struct counter_gd32_config *cfg = dev->config;
+	const struct counter_gd32_config *config = dev->config;
 
-	return cfg->get_irq_pending();
+	for(uint32_t i=0; i<config->counter_info.channels; i++) {
+		if (interrupt_flag_get(dev, TIMER_INT_CH(i))) {
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 static uint32_t counter_gd32_timer_get_freq(const struct device *dev)
@@ -470,15 +474,6 @@ static const struct counter_driver_api counter_api = {
 			    irq_handler, DEVICE_DT_INST_GET(n), 0);            \
 		irq_enable(DT_INST_IRQ_BY_NAME(n, global, irq));               \
 	}                                                                      \
-	static void set_irq_pending_##n(void)                                  \
-	{                                                                      \
-		(NVIC_SetPendingIRQ(DT_INST_IRQ_BY_NAME(n, global, irq)));     \
-	}                                                                      \
-	static uint32_t get_irq_pending_##n(void)                              \
-	{                                                                      \
-		return NVIC_GetPendingIRQ(                                     \
-			DT_INST_IRQ_BY_NAME(n, global, irq));                  \
-	}
 
 #define TIMER_IRQ_CONFIG_ADVANCED(n)                                           \
 	static void irq_config_##n(const struct device *dev)                   \
@@ -492,14 +487,6 @@ static const struct counter_driver_api counter_api = {
 			    irq_handler, (DEVICE_DT_INST_GET(n)), 0);          \
 		irq_enable((DT_INST_IRQ_BY_NAME(n, cc, irq)));                 \
 	}                                                                      \
-	static void set_irq_pending_##n(void)                                  \
-	{                                                                      \
-		(NVIC_SetPendingIRQ(DT_INST_IRQ_BY_NAME(n, cc, irq)));         \
-	}                                                                      \
-	static uint32_t get_irq_pending_##n(void)                              \
-	{                                                                      \
-		return NVIC_GetPendingIRQ(DT_INST_IRQ_BY_NAME(n, cc, irq));    \
-	}
 
 #define GD32_TIMER_INIT(n)                                                     \
 	COND_CODE_1(DT_INST_PROP(n, is_advanced),                              \
@@ -520,8 +507,6 @@ static const struct counter_driver_api counter_api = {
 		.reset = RESET_DT_SPEC_INST_GET(n),                            \
 		.prescaler = DT_INST_PROP(n, prescaler),                       \
 		.irq_config = irq_config_##n,                                  \
-		.set_irq_pending = set_irq_pending_##n,                        \
-		.get_irq_pending = get_irq_pending_##n,                        \
 	};                                                                     \
                                                                                \
 	DEVICE_DT_INST_DEFINE(n, counter_gd32_timer_init, NULL,                \
