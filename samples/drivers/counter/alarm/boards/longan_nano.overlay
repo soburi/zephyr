@@ -8,3 +8,7 @@
 	status = "okay";
 	prescaler = <52733>;
 };
+
+&timer1 {
+	status = "disabled";
+};
