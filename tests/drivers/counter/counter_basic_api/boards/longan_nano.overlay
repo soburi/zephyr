@@ -6,36 +6,35 @@
 
 &timer0 {
 	status = "okay";
-	prescaler = <1646>;
+	prescaler = <1999>;
 };
-/*
+
 &timer1 {
 	status = "okay";
-	prescaler = <1646>;
+	prescaler = <1999>;
 };
 
 &timer2 {
 	status = "okay";
-	prescaler = <1646>;
+	prescaler = <1999>;
 };
 
 &timer3 {
 	status = "okay";
-	prescaler = <1646>;
+	prescaler = <1999>;
 };
 
 &timer4 {
 	status = "okay";
-	prescaler = <1646>;
+	prescaler = <1999>;
 };
 
 &timer5 {
 	status = "okay";
-	prescaler = <1646>;
+	prescaler = <1999>;
 };
 
 &timer6 {
 	status = "okay";
-	prescaler = <1646>;
+	prescaler = <1999>;
 };
-*/

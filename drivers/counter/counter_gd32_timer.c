@@ -15,6 +15,7 @@
 #include <zephyr/irq.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/spinlock.h>
 
 #include <gd32_timer.h>
 
@@ -35,6 +36,7 @@ struct counter_gd32_data {
 	uint32_t guard_period;
 	atomic_t cc_int_pending;
 	uint32_t freq;
+        struct k_spinlock lock;
 	struct counter_gd32_ch_data alarm[];
 };
 
@@ -139,11 +141,31 @@ static void interrupt_flag_clear(const struct device *dev, uint32_t interrupt)
 	TIMER_INTF(config->reg) &= ~interrupt;
 }
 
+static int counter_gd32_timer_enable_update(const struct device *dev)
+{
+	const struct counter_gd32_config *config = dev->config;
+
+	TIMER_CTL0(config->reg) &= ~((uint32_t)TIMER_CTL0_UPDIS);
+
+	return 0;
+}
+
+static int counter_gd32_timer_disable_update(const struct device *dev)
+{
+	const struct counter_gd32_config *config = dev->config;
+
+	TIMER_CTL0(config->reg) |= (uint32_t)TIMER_CTL0_UPDIS;
+
+	return 0;
+}
+
 static int counter_gd32_timer_start(const struct device *dev)
 {
 	const struct counter_gd32_config *config = dev->config;
 
 	TIMER_CTL0(config->reg) |= (uint32_t)TIMER_CTL0_CEN;
+	//TIMER_CTL0(config->reg) &= ~(uint32_t)TIMER_CTL0_UPDIS;
+	//interrupt_enable(dev, TIMER_INT_ALL | TIMER_INT_UP);
 
 	return 0;
 }
@@ -153,6 +175,8 @@ static int counter_gd32_timer_stop(const struct device *dev)
 	const struct counter_gd32_config *config = dev->config;
 
 	TIMER_CTL0(config->reg) &= ~(uint32_t)TIMER_CTL0_CEN;
+	//TIMER_CTL0(config->reg) |= (uint32_t)TIMER_CTL0_UPDIS;
+	interrupt_disable(dev, 0xFFFF);
 
 	return 0;
 }
@@ -338,7 +362,12 @@ static int counter_gd32_timer_set_top_value(const struct device *dev,
 	}
 
 	if (cfg->callback) {
+		counter_gd32_timer_enable_update(dev);
+		printk("INT_UP enabled\n");
 		interrupt_enable(dev, TIMER_INT_UP);
+	} else {
+		counter_gd32_timer_disable_update(dev);
+		interrupt_disable(dev, TIMER_INT_UP);
 	}
 
 	return err;
@@ -401,10 +430,10 @@ static void alarm_irq_handle(const struct device *dev, uint32_t chan)
 	struct counter_gd32_ch_data *alarm = &data->alarm[chan];
 	counter_alarm_callback_t cb;
 	bool hw_irq_pending = !!(interrupt_flag_get(dev, TIMER_FLAG_CH(chan)));
-	bool sw_irq_pending = data->cc_int_pending & TIMER_INT_CH(chan);
+	//bool sw_irq_pending = data->cc_int_pending & TIMER_INT_CH(chan);
 
-	if (hw_irq_pending || sw_irq_pending) {
-		atomic_and(&data->cc_int_pending, ~TIMER_INT_CH(chan));
+	if (hw_irq_pending) {// || sw_irq_pending) {
+		//atomic_and(&data->cc_int_pending, ~TIMER_INT_CH(chan));
 		interrupt_disable(dev, TIMER_INT_CH(chan));
 		interrupt_flag_clear(dev, TIMER_FLAG_CH(chan));
 
@@ -419,6 +448,7 @@ static void alarm_irq_handle(const struct device *dev, uint32_t chan)
 
 static void irq_handler(const struct device *dev)
 {
+	struct counter_gd32_data *data = dev->data;
 	const struct counter_gd32_config *cfg = dev->config;
 
 	top_irq_handle(dev);
@@ -426,6 +456,35 @@ static void irq_handler(const struct device *dev)
 	for (uint32_t i = 0; i < cfg->counter_info.channels; i++) {
 		alarm_irq_handle(dev, i);
 	}
+	interrupt_flag_clear(dev, TIMER_INT_FLAG_UP);
+}
+
+static void irq_handler_0(const struct device *dev)
+{
+	const struct counter_gd32_config *config = dev->config;
+	printk("%s %x %x\n", __func__, TIMER_DMAINTEN(config->reg), TIMER_INTF(config->reg));
+	irq_handler(dev);
+}
+
+static void irq_handler_1(const struct device *dev)
+{
+	const struct counter_gd32_config *config = dev->config;
+	printk("%s %x %x\n", __func__, TIMER_DMAINTEN(config->reg), TIMER_INTF(config->reg));
+	irq_handler(dev);
+}
+
+static void irq_handler_2(const struct device *dev)
+{
+	const struct counter_gd32_config *config = dev->config;
+	printk("%s %x %x\n", __func__, TIMER_DMAINTEN(config->reg), TIMER_INTF(config->reg));
+	irq_handler(dev);
+}
+
+static void irq_handler_3(const struct device *dev)
+{
+	const struct counter_gd32_config *config = dev->config;
+	printk("%s %x %x\n", __func__, TIMER_DMAINTEN(config->reg), TIMER_INTF(config->reg));
+	irq_handler(dev);
 }
 
 static int counter_gd32_timer_init(const struct device *dev)
@@ -447,7 +506,6 @@ static int counter_gd32_timer_init(const struct device *dev)
 	cfg->irq_config(dev);
 	set_prescaler(dev, cfg->prescaler);
 	set_autoreload_value(dev, cfg->counter_info.max_top_value);
-	set_software_event_gen(dev, TIMER_SWEVG_UPG);
 
 	return 0;
 }
