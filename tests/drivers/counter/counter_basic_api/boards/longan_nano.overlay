@@ -5,7 +5,7 @@
  */
 
 &timer0 {
-	status = "okay";
+	status = "disabled";
 	prescaler = <1999>;
 };
 
@@ -15,7 +15,7 @@
 };
 
 &timer2 {
-	status = "disabled";
+	status = "okay";
 	prescaler = <1999>;
 };
 
@@ -23,7 +23,7 @@
 	status = "disabled";
 	prescaler = <1999>;
 };
-
+/*
 &timer4 {
 	status = "disabled";
 	prescaler = <1999>;
@@ -38,3 +38,4 @@
 	status = "okay";
 	prescaler = <1999>;
 };
+*/

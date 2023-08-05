@@ -143,6 +143,8 @@ static int counter_gd32_timer_start(const struct device *dev)
 {
 	const struct counter_gd32_config *config = dev->config;
 
+	interrupt_flag_clear(dev, 0xFFFF);
+
 	TIMER_CTL0(config->reg) |= (uint32_t)TIMER_CTL0_CEN;
 
 	return 0;
@@ -415,13 +417,15 @@ static void alarm_irq_handle(const struct device *dev, uint32_t chan)
 			cb(dev, chan, get_counter(dev), alarm->user_data);
 		}
 	}
+	interrupt_flag_clear(dev, TIMER_SWEVG_UPG);
 }
 
 static void irq_handler(const struct device *dev)
 {
+	printk("irq_handler\n");
 	const struct counter_gd32_config *cfg = dev->config;
 
-	top_irq_handle(dev);
+	//top_irq_handle(dev);
 
 	for (uint32_t i = 0; i < cfg->counter_info.channels; i++) {
 		alarm_irq_handle(dev, i);
@@ -434,6 +438,7 @@ static int counter_gd32_timer_init(const struct device *dev)
 	struct counter_gd32_data *data = dev->data;
 	uint32_t pclk;
 
+	printk("counter_gd32_timer_init\n");
 	clock_control_on(GD32_CLOCK_CONTROLLER,
 			 (clock_control_subsys_t)&cfg->clkid);
 	clock_control_get_rate(GD32_CLOCK_CONTROLLER,

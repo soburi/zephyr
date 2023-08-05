@@ -625,7 +625,7 @@ static void test_all_channels_instance(const struct device *dev)
 	cnt = IS_ENABLED(CONFIG_ZERO_LATENCY_IRQS) ?
 		alarm_cnt : k_sem_count_get(&alarm_cnt_sem);
 	zassert_equal(nchan, cnt,
-			"%s: Expecting alarm callback", dev->name);
+			"%s: Expecting alarm callback (%d, %d)", dev->name, cnt, nchan);
 
 	for (int i = 0; i < nchan; i++) {
 		err = counter_cancel_channel_alarm(dev, i);
@@ -757,7 +757,7 @@ static bool late_detection_capable(const struct device *dev)
 	return true;
 }
 
-#if 0
+#if 1
 ZTEST(counter_basic, test_late_alarm)
 {
 	test_all_instances(test_late_alarm_instance, late_detection_capable);
@@ -863,7 +863,7 @@ end:
 	return ret;
 }
 
-#if 0
+#if 1
 ZTEST(counter_basic, test_short_relative_alarm)
 {
 	test_all_instances(test_short_relative_alarm_instance,
