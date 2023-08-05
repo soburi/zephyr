@@ -580,7 +580,7 @@ static bool multiple_channel_alarm_capable(const struct device *dev)
 {
 	return (counter_get_num_of_channels(dev) > 1);
 }
-#if 0
+#if 1
 ZTEST(counter_basic, test_multiple_alarms)
 {
 	test_all_instances(test_multiple_alarms_instance,
@@ -962,7 +962,7 @@ static bool reliable_cancel_capable(const struct device *dev)
 	return false;
 }
 
-#if 0
+#if 1
 ZTEST(counter_basic, test_cancelled_alarm_does_not_expire)
 {
 	test_all_instances(test_cancelled_alarm_does_not_expire_instance,
