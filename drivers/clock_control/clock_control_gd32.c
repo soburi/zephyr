@@ -67,6 +67,22 @@ static const uint16_t timer_ids[] = {
 };
 #endif /* DT_HAS_COMPAT_STATUS_OKAY(gd_gd32_timer) */
 
+static inline uint32_t apb_prescaler_div(uint32_t prescaler)
+{
+	switch(prescaler) {
+		case 0x100U:
+			return 2;
+		case 0x101U:
+			return 4;
+		case 0x110U:
+			return 8;
+		case 0x111U:
+			return 16;
+		default:
+			return 1;
+	}
+}
+
 static int clock_control_gd32_on(const struct device *dev,
 				 clock_control_subsys_t sys)
 {
@@ -153,14 +169,14 @@ static int clock_control_gd32_get_rate(const struct device *dev,
 
 		/* TIMERSEL = 0 */
 		if ((cfg1 & RCU_CFG1_TIMERSEL_MSK) == 0U) {
-			if (psc <= 2U) {
+			if (apb_prescaler_div(psc) <= 2U) {
 				*rate = CPU_FREQ;
 			} else {
 				*rate *= 2U;
 			}
 		/* TIMERSEL = 1 */
 		} else {
-			if (psc <= 4U) {
+			if (apb_prescaler_div(psc) <= 4U) {
 				*rate = CPU_FREQ;
 			} else {
 				*rate *= 4U;
@@ -173,7 +189,7 @@ static int clock_control_gd32_get_rate(const struct device *dev,
 		 * Otherwise, they are set to twice the frequency of the APB
 		 * domain.
 		 */
-		if (psc != 1U) {
+		if (apb_prescaler_div(psc) == 1U) {
 			*rate *= 2U;
 		}
 #endif /* CONFIG_SOC_SERIES_GD32F4XX */
