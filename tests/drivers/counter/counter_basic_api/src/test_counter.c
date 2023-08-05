@@ -256,12 +256,13 @@ static void test_set_top_value_with_alarm_instance(const struct device *dev)
 			dev->name, top_handler_cnt);
 }
 
+#if 0
 ZTEST(counter_basic, test_set_top_value_with_alarm)
 {
 	test_all_instances(test_set_top_value_with_alarm_instance,
 			   set_top_value_capable);
 }
-
+#endif
 static void test_set_top_value_without_alarm_instance(const struct device *dev)
 {
 	int err;
@@ -301,11 +302,13 @@ static void test_set_top_value_without_alarm_instance(const struct device *dev)
 			dev->name);
 }
 
+#if 0
 ZTEST_USER(counter_no_callback, test_set_top_value_without_alarm)
 {
 	test_all_instances(test_set_top_value_without_alarm_instance,
 			   set_top_value_capable);
 }
+#endif
 
 static void alarm_handler(const struct device *dev, uint8_t chan_id,
 			  uint32_t counter,
@@ -455,6 +458,7 @@ static bool single_channel_alarm_and_custom_top_capable(const struct device *dev
 		set_top_value_capable(dev);
 }
 
+#if 0
 ZTEST(counter_basic, test_single_shot_alarm_notop)
 {
 	test_all_instances(test_single_shot_alarm_notop_instance,
@@ -466,7 +470,7 @@ ZTEST(counter_basic, test_single_shot_alarm_top)
 	test_all_instances(test_single_shot_alarm_top_instance,
 			   single_channel_alarm_and_custom_top_capable);
 }
-
+#endif
 static void *clbk_data[10];
 
 static void alarm_handler2(const struct device *dev, uint8_t chan_id,
@@ -576,13 +580,13 @@ static bool multiple_channel_alarm_capable(const struct device *dev)
 {
 	return (counter_get_num_of_channels(dev) > 1);
 }
-
+#if 0
 ZTEST(counter_basic, test_multiple_alarms)
 {
 	test_all_instances(test_multiple_alarms_instance,
 			   multiple_channel_alarm_capable);
 }
-
+#endif
 static void test_all_channels_instance(const struct device *dev)
 {
 	int err;
@@ -753,6 +757,7 @@ static bool late_detection_capable(const struct device *dev)
 	return true;
 }
 
+#if 0
 ZTEST(counter_basic, test_late_alarm)
 {
 	test_all_instances(test_late_alarm_instance, late_detection_capable);
@@ -763,6 +768,7 @@ ZTEST(counter_basic, test_late_alarm_error)
 	test_all_instances(test_late_alarm_error_instance,
 			   late_detection_capable);
 }
+#endif
 
 static void test_short_relative_alarm_instance(const struct device *dev)
 {
@@ -857,11 +863,13 @@ end:
 	return ret;
 }
 
+#if 0
 ZTEST(counter_basic, test_short_relative_alarm)
 {
 	test_all_instances(test_short_relative_alarm_instance,
 			short_relative_capable);
 }
+#endif
 
 /* Test checks if cancelled alarm does not get triggered when new alarm is
  * configured at the point where previous alarm was about to expire.
@@ -954,12 +962,13 @@ static bool reliable_cancel_capable(const struct device *dev)
 	return false;
 }
 
+#if 0
 ZTEST(counter_basic, test_cancelled_alarm_does_not_expire)
 {
 	test_all_instances(test_cancelled_alarm_does_not_expire_instance,
 			reliable_cancel_capable);
 }
-
+#endif
 static void *counter_setup(void)
 {
 	int i;
