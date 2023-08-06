@@ -139,31 +139,11 @@ static void interrupt_flag_clear(const struct device *dev, uint32_t interrupt)
 	TIMER_INTF(config->reg) &= ~interrupt;
 }
 
-static int counter_gd32_timer_enable_update(const struct device *dev)
-{
-	const struct counter_gd32_config *config = dev->config;
-
-	TIMER_CTL0(config->reg) &= ~((uint32_t)TIMER_CTL0_UPDIS);
-
-	return 0;
-}
-
-static int counter_gd32_timer_disable_update(const struct device *dev)
-{
-	const struct counter_gd32_config *config = dev->config;
-
-	TIMER_CTL0(config->reg) |= (uint32_t)TIMER_CTL0_UPDIS;
-
-	return 0;
-}
-
 static int counter_gd32_timer_start(const struct device *dev)
 {
 	const struct counter_gd32_config *config = dev->config;
 
 	TIMER_CTL0(config->reg) |= (uint32_t)TIMER_CTL0_CEN;
-	//TIMER_CTL0(config->reg) &= ~(uint32_t)TIMER_CTL0_UPDIS;
-	//interrupt_enable(dev, TIMER_INT_ALL | TIMER_INT_UP);
 
 	return 0;
 }
@@ -173,8 +153,6 @@ static int counter_gd32_timer_stop(const struct device *dev)
 	const struct counter_gd32_config *config = dev->config;
 
 	TIMER_CTL0(config->reg) &= ~(uint32_t)TIMER_CTL0_CEN;
-	//TIMER_CTL0(config->reg) |= (uint32_t)TIMER_CTL0_UPDIS;
-	interrupt_disable(dev, 0xFFFF);
 
 	return 0;
 }
@@ -361,8 +339,6 @@ static int counter_gd32_timer_set_top_value(const struct device *dev,
 
 	if (cfg->callback) {
 		interrupt_enable(dev, TIMER_INT_UP);
-	} else {
-		interrupt_disable(dev, TIMER_INT_UP);
 	}
 
 	return err;
@@ -450,7 +426,6 @@ static void irq_handler(const struct device *dev)
 	for (uint32_t i = 0; i < cfg->counter_info.channels; i++) {
 		alarm_irq_handle(dev, i);
 	}
-	interrupt_flag_clear(dev, TIMER_INT_FLAG_UP);
 }
 
 static int counter_gd32_timer_init(const struct device *dev)
