@@ -360,11 +360,8 @@ static int counter_gd32_timer_set_top_value(const struct device *dev,
 	}
 
 	if (cfg->callback) {
-		counter_gd32_timer_enable_update(dev);
-		//printk("INT_UP enabled\n");
 		interrupt_enable(dev, TIMER_INT_UP);
 	} else {
-		counter_gd32_timer_disable_update(dev);
 		interrupt_disable(dev, TIMER_INT_UP);
 	}
 
