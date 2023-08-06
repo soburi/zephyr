@@ -263,6 +263,7 @@ ZTEST(counter_basic, test_set_top_value_with_alarm)
 			   set_top_value_capable);
 }
 #endif
+
 static void test_set_top_value_without_alarm_instance(const struct device *dev)
 {
 	int err;
@@ -471,6 +472,7 @@ ZTEST(counter_basic, test_single_shot_alarm_top)
 			   single_channel_alarm_and_custom_top_capable);
 }
 #endif
+
 static void *clbk_data[10];
 
 static void alarm_handler2(const struct device *dev, uint8_t chan_id,
@@ -580,6 +582,7 @@ static bool multiple_channel_alarm_capable(const struct device *dev)
 {
 	return (counter_get_num_of_channels(dev) > 1);
 }
+
 #if 1
 ZTEST(counter_basic, test_multiple_alarms)
 {
@@ -587,6 +590,7 @@ ZTEST(counter_basic, test_multiple_alarms)
 			   multiple_channel_alarm_capable);
 }
 #endif
+
 static void test_all_channels_instance(const struct device *dev)
 {
 	int err;
@@ -625,7 +629,7 @@ static void test_all_channels_instance(const struct device *dev)
 	cnt = IS_ENABLED(CONFIG_ZERO_LATENCY_IRQS) ?
 		alarm_cnt : k_sem_count_get(&alarm_cnt_sem);
 	zassert_equal(nchan, cnt,
-			"%s: Expecting alarm callback (%d, %d)", dev->name, cnt, nchan);
+			"%s: Expecting alarm callback", dev->name);
 
 	for (int i = 0; i < nchan; i++) {
 		err = counter_cancel_channel_alarm(dev, i);
@@ -639,6 +643,7 @@ static void test_all_channels_instance(const struct device *dev)
 			"%s: Unexpected error on disabling alarm", dev->name);
 	}
 }
+
 #if 1
 ZTEST(counter_basic, test_all_channels)
 {
@@ -646,6 +651,7 @@ ZTEST(counter_basic, test_all_channels)
 			   single_channel_alarm_capable);
 }
 #endif
+
 /**
  * Test validates if alarm set too late (current tick or current tick + 1)
  * results in callback being called.
@@ -969,6 +975,7 @@ ZTEST(counter_basic, test_cancelled_alarm_does_not_expire)
 			reliable_cancel_capable);
 }
 #endif
+
 static void *counter_setup(void)
 {
 	int i;
@@ -998,4 +1005,4 @@ static void *counter_setup(void)
 ZTEST_SUITE(counter_basic, NULL, counter_setup, NULL, NULL, NULL);
 
 /* No callbacks, run in usermode */
-//ZTEST_SUITE(counter_no_callback, NULL, counter_setup, NULL, NULL, NULL);
+ZTEST_SUITE(counter_no_callback, NULL, counter_setup, NULL, NULL, NULL);
