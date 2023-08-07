@@ -189,7 +189,7 @@ static int clock_control_gd32_get_rate(const struct device *dev,
 		 * Otherwise, they are set to twice the frequency of the APB
 		 * domain.
 		 */
-		if (apb_prescaler_div(psc) == 1U) {
+		if (apb_prescaler_div(psc) != 1U) {
 			*rate *= 2U;
 		}
 #endif /* CONFIG_SOC_SERIES_GD32F4XX */
