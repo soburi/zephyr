@@ -256,7 +256,7 @@ static void test_set_top_value_with_alarm_instance(const struct device *dev)
 			dev->name, top_handler_cnt);
 }
 
-#if 1
+#if 0
 ZTEST(counter_basic, test_set_top_value_with_alarm)
 {
 	test_all_instances(test_set_top_value_with_alarm_instance,

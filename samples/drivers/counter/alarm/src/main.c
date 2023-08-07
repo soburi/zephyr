@@ -51,6 +51,8 @@ struct counter_alarm_cfg alarm_cfg;
 #define TIMER DT_NODELABEL(counter0)
 #endif
 
+uint32_t start;
+
 static void test_counter_interrupt_fn(const struct device *counter_dev,
 				      uint8_t chan_id, uint32_t ticks,
 				      void *user_data)
@@ -72,6 +74,7 @@ static void test_counter_interrupt_fn(const struct device *counter_dev,
 
 	printk("!!! Alarm !!!\n");
 	printk("Now: %u\n", now_sec);
+	printk("Elasped %llu\n", k_uptime_get() - start);
 
 	/* Set a new alarm with a double length duration */
 	config->ticks = config->ticks * 2U;
@@ -100,6 +103,8 @@ int main(void)
 		return 0;
 	}
 
+	start = k_uptime_get();
+	printk("Start %llu\n", k_uptime_get());
 	counter_start(counter_dev);
 
 	alarm_cfg.flags = 0;
@@ -109,7 +114,7 @@ int main(void)
 
 	err = counter_set_channel_alarm(counter_dev, ALARM_CHANNEL_ID,
 					&alarm_cfg);
-	printk("Set alarm in %u sec (%u ticks)\n",
+	printk("- Set alarm in %u sec (%u ticks)\n",
 	       (uint32_t)(counter_ticks_to_us(counter_dev,
 					   alarm_cfg.ticks) / USEC_PER_SEC),
 	       alarm_cfg.ticks);
