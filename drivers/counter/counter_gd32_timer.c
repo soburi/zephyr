@@ -113,7 +113,6 @@ static void set_compare_value(const struct device *dev, uint16_t chan,
 {
 	const struct counter_gd32_config *config = dev->config;
 
-	printk("set_compare_value %u %lu %lu\n", chan, compare_value, get_counter(dev));
 	switch (chan) {
 	case 0:
 		TIMER_CH0CV(config->reg) = compare_value;
@@ -162,6 +161,7 @@ static void interrupt_flag_clear(const struct device *dev, uint32_t interrupt)
 static int counter_gd32_timer_start(const struct device *dev)
 {
 	const struct counter_gd32_config *config = dev->config;
+	struct counter_gd32_data *data = dev->data;
 	uint32_t compare_val[config->counter_info.channels];
 
 	TIMER_CTL0(config->reg) &= ~(uint32_t)TIMER_CTL0_CEN;
@@ -176,6 +176,8 @@ static int counter_gd32_timer_start(const struct device *dev)
 	}
 
 	TIMER_CTL0(config->reg) |= (uint32_t)TIMER_CTL0_CEN;
+
+	k_busy_wait((1000000.0f / (float)data->freq) * 1.5);
 	interrupt_enable(dev, TIMER_INT_CH(0));
 
 	for (int i=0; i<config->counter_info.channels; i++) {
@@ -236,7 +238,6 @@ static void set_cc_int_pending(const struct device *dev, uint8_t chan)
 
 	atomic_or(&data->cc_int_pending, TIMER_INT_CH(chan));
 	interrupt_enable(dev, TIMER_INT_CH(chan));
-	printk("int_pending\n");
 	set_software_event_gen(dev, TIMER_INT_CH(chan));
 }
 
@@ -384,9 +385,9 @@ static int counter_gd32_timer_set_top_value(const struct device *dev,
 
 static uint32_t counter_gd32_timer_get_pending_int(const struct device *dev)
 {
-	const struct counter_gd32_config *config = dev->config;
+	const struct counter_gd32_config *cfg = dev->config;
 
-	for(uint32_t i=0; i<config->counter_info.channels; i++) {
+	for(uint32_t i=0; i<cfg->counter_info.channels; i++) {
 		if (interrupt_flag_get(dev, TIMER_INT_CH(i))) {
 			return 1;
 		}
@@ -440,7 +441,6 @@ static void alarm_irq_handle(const struct device *dev, uint32_t chan)
 	counter_alarm_callback_t cb;
 	bool hw_irq_pending = !!(interrupt_flag_get(dev, TIMER_FLAG_CH(chan)));
 	bool sw_irq_pending = data->cc_int_pending & TIMER_INT_CH(chan);
-	uint32_t counter = get_counter(dev);
 
 	if (hw_irq_pending || sw_irq_pending) {
 		atomic_and(&data->cc_int_pending, ~TIMER_INT_CH(chan));
@@ -450,7 +450,6 @@ static void alarm_irq_handle(const struct device *dev, uint32_t chan)
 		cb = alarm->callback;
 		alarm->callback = NULL;
 
-		//if (cb && (counter != 0) ) {
 		if (cb) {
 			cb(dev, chan, get_counter(dev), alarm->user_data);
 		}
@@ -460,8 +459,6 @@ static void alarm_irq_handle(const struct device *dev, uint32_t chan)
 static void irq_handler(const struct device *dev)
 {
 	const struct counter_gd32_config *cfg = dev->config;
-
-	printk("irq_handler %x %x %lu\n", TIMER_INTF(cfg->reg), TIMER_DMAINTEN(cfg->reg), get_counter(dev));
 
 	top_irq_handle(dev);
 
@@ -489,11 +486,6 @@ static int counter_gd32_timer_init(const struct device *dev)
 	cfg->irq_config(dev);
 	set_prescaler(dev, cfg->prescaler);
 	set_autoreload_value(dev, cfg->counter_info.max_top_value);
-
-	for(int i=0; i<cfg->counter_info.channels; i++) {
-		printk("set_compare\n");
-		set_compare_value(dev, i, UINT16_MAX);
-	}
 
 	return 0;
 }
