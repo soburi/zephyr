@@ -23,12 +23,18 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: babblesim
       url-base: https://github.com/BabbleSim
+    - name: soburi
+      url-base: https://github.com/soburi
 
   group-filter: [-babblesim]
 
   #
   # Please add items below based on alphabetical order
   projects:
+    - name: u8g2
+      remote: soburi
+      revision: 7851fd39858551dfa9c4af4a597e0ad85a180807
+      path: modules/lib/gui/u8g2
     - name: acpica
       revision: 0333c2af13179f9b33d495cf7cb9a509f751cbb1
       path: modules/lib/acpica
