@@ -6,8 +6,8 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <zephyr.h>
-#include <sys/printk.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
 
 #include "bh_platform.h"
 #include "wasm_export.h"

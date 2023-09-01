@@ -23,6 +23,8 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: babblesim
       url-base: https://github.com/BabbleSim
+    - name: soburi
+      url-base: https://github.com/soburi
 
   group-filter: [-babblesim, -optional]
 
@@ -377,7 +379,8 @@ manifest:
       revision: 54abc109c9c0adfd53c70077744c14e454f04f4a
       path: modules/lib/uoscore-uedhoc
     - name: wasm-micro-runtime
-      revision: 1a987ae59b7061d83f15470f130f89bf9d756b56
+      remote: soburi
+      revision: wasmupdate
       path: modules/lib/wasm-micro-runtime
     - name: zcbor
       revision: 9b07780aca6fb21f82a241ba386ad9b379809337
