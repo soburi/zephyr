@@ -1,8 +1,11 @@
 sample:
-  description: U8G2 Logo
-  name: u8g2 logo
+  description: Demonstration of the WS2812 LED driver
+  name: WS2812 sample
 tests:
-  sample.modules.u8g2.u8x2_logo.sdl:
-    platform_allow: native_posix native_posix_64
-    build_only: true
-    tags: display
+  sample.drivers.led.ws2812:
+    tags: LED
+    filter: dt_compat_enabled("worldsemi,ws2812-spi")
+    harness_config:
+      fixture: fixture_led_ws2812
+    integration_platforms:
+      - mimxrt1050_evk
