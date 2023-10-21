@@ -1,0 +1,9 @@
+# Copyright (c) 2023 Chen Xingyu <hi@xingrz.me>
+# SPDX-License-Identifier: Apache-2.0
+
+config QINGKE_V3_SYSTICK
+	bool "WCH QingKe V3 SysTick"
+	default y
+	depends on DT_HAS_WCH_QINGKE_V3_SYSTICK_ENABLED
+	help
+	  Enable WCH QingKe V3 SysTick driver.
