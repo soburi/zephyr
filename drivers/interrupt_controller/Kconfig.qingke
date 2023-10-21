@@ -1,0 +1,10 @@
+# Copyright (c) 2023 Chen Xingyu <hi@xingrz.me>
+# SPDX-License-Identifier: Apache-2.0
+
+config QINGKE_PFIC
+	bool "WCH QingKe PFIC"
+	default y
+	depends on DT_HAS_WCH_QINGKE_PFIC_ENABLED
+	depends on RISCV_HAS_CLIC
+	help
+	  Enable WCH QingKe PFIC driver.
