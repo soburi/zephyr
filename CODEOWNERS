@@ -332,6 +332,8 @@
 /drivers/gpio/*bd8lb600fs*                @benediktibk
 /drivers/gpio/*pcal64xxa*                 @benediktibk
 /drivers/gpio/gpio_altera_pio.c           @shilinte
+/drivers/gpio/*qingke*                    @xingrz
+/drivers/gpio/*ch56x*                     @xingrz
 /drivers/hwinfo/                          @alexanderwachter
 /drivers/i2c/i2c_common.c                 @sjg20
 /drivers/i2c/i2c_emul.c                   @sjg20
@@ -699,6 +701,7 @@
 /include/zephyr/dt-bindings/clock/kinetis_mcg.h  @henrikbrixandersen
 /include/zephyr/dt-bindings/clock/kinetis_scg.h  @henrikbrixandersen
 /include/zephyr/dt-bindings/ethernet/xlnx_gem.h  @ibirnbaum
+/include/zephyr/dt-bindings/gpio/ch56x-gpio.h    @xingrz
 /include/zephyr/dt-bindings/pcie/                @dcpleung
 /include/zephyr/dt-bindings/pinctrl/esp*         @sylvioalves
 /include/zephyr/dt-bindings/pwm/*it8xxx2*        @RuibinChang
