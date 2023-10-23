@@ -29,6 +29,12 @@
 			compatible = "syscon";
 			reg = <0x40001000 0x20>;
 			reg-io-width = <1>;
+
+			hclk: system-clock {
+				compatible = "wch,ch56x-hclk";
+				clock-frequency = <DT_FREQ_M(15)>;
+				#clock-cells = <2>;
+			};
 		};
 	};
 };

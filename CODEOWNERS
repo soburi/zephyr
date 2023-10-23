@@ -261,6 +261,8 @@
 /drivers/clock_control/*nrf*              @nordic-krch
 /drivers/clock_control/*esp32*            @extremegtx @sylvioalves
 /drivers/clock_control/*cpg_mssr*         @aaillet
+/drivers/clock_control/*qingke*           @xingrz
+/drivers/clock_control/*ch56x*            @xingrz
 /drivers/counter/                         @nordic-krch
 /drivers/console/ipm_console.c            @finikorg
 /drivers/console/semihost_console.c       @luozhongyao
@@ -635,6 +637,7 @@
 /include/zephyr/drivers/auxdisplay.h       @thedjnK
 /include/zephyr/drivers/can.h                    @alexanderwachter @henrikbrixandersen
 /include/zephyr/drivers/can/                     @alexanderwachter @henrikbrixandersen
+/include/zephyr/drivers/clock_control/ch56x.h    @xingrz
 /include/zephyr/drivers/counter.h                @nordic-krch
 /include/zephyr/drivers/dac.h                    @martinjaeger
 /include/zephyr/drivers/espi.h                   @albertofloyd @franciscomunoz @sjvasanth1
@@ -691,6 +694,7 @@
 /include/zephyr/device.h                         @tbursztyka @nashif
 /include/zephyr/devicetree.h                     @galak
 /include/zephyr/devicetree/can.h                 @henrikbrixandersen
+/include/zephyr/dt-bindings/clock/ch56x-clocks.h @xingrz
 /include/zephyr/dt-bindings/clock/kinetis_mcg.h  @henrikbrixandersen
 /include/zephyr/dt-bindings/clock/kinetis_scg.h  @henrikbrixandersen
 /include/zephyr/dt-bindings/ethernet/xlnx_gem.h  @ibirnbaum
