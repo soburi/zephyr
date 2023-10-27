@@ -2840,6 +2840,24 @@ Infineon Platforms:
     Infineon SOCs, dts files and related drivers. Infineon Proto, Pioneer, Eval and Relax
     boards.
 
+WCH Platforms:
+  status: maintained
+  maintainers:
+    - xingrz
+  files:
+    - boards/riscv/ch*/
+    - drivers/*/Kconfig.qingke
+    - drivers/*/qingke_*.c
+    - drivers/*/*_qingke*.c
+    - drivers/*/*_ch*.c
+    - dts/riscv/wch/
+    - dts/bindings/*/wch*
+    - soc/riscv/riscv-privileged/qingke/
+  labels:
+    - "platform: WCH"
+  description: >-
+    WCH SOCs, dts files and related drivers. WCH boards based on QingKe SoCs.
+
 RTIO:
   status: maintained
   maintainers:
