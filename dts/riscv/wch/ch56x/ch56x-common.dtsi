@@ -35,6 +35,13 @@
 			sig: safe-access-sig@0 {
 				reg = <0x00 0x01>;
 			};
+
+			clkmux: clock-mux@8 {
+				compatible = "wch,ch56x-clkmux";
+				reg = <0x08 0x04>;
+				clock-frequency = <DT_FREQ_M(15)>;
+				#clock-cells = <0>;
+			};
 		};
 	};
 };
