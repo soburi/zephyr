@@ -24,5 +24,17 @@
 			compatible = "mmio-sram";
 			reg = <0x20020000 DT_SIZE_K(16)>;
 		};
+
+		syscon: system-controller@40001000 {
+			compatible = "syscon";
+			reg = <0x40001000 0x20>;
+			reg-io-width = <1>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			sig: safe-access-sig@0 {
+				reg = <0x00 0x01>;
+			};
+		};
 	};
 };

@@ -657,6 +657,7 @@
 /include/zephyr/drivers/smbus.h                  @finikorg
 /include/zephyr/drivers/spi.h                    @tbursztyka
 /include/zephyr/drivers/sip_svc/                 @maheshraotm
+/include/zephyr/drivers/syscon/qingke.h          @xingrz
 /include/zephyr/drivers/lora.h                   @Mani-Sadhasivam
 /include/zephyr/drivers/peci.h                   @albertofloyd @franciscomunoz @sjvasanth1
 /include/zephyr/drivers/pm_cpu_ops.h             @carlocaione
