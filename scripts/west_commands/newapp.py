@@ -1,6 +1,4 @@
-# Copyright (c) 2018 Open Source Foundries Limited.
-# Copyright 2019 Foundries.io
-# Copyright (c) 2020 Nordic Semiconductor ASA
+# Copyright (c) 2023 TOKITA Hiroshi
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -25,7 +23,6 @@ class NewApp(WestCommand):
             'create new application project',
             "Permanently reprogram a board's newapp with a new binary.",
             accepts_unknown_args=True)
-        #self.runner_key = 'newapp-runner'  # in runners.yaml
 
     def do_add_parser(self, parser_adder):
         parser = parser_adder.add_parser(
@@ -35,8 +32,7 @@ class NewApp(WestCommand):
             description=self.description)
 
         parser.add_argument('projectname', type=str,
-                            help='''Shell that which the completion
-                            script is intended for.''')
+                            help='''Shell that which the completion script is intended for.''')
 
         parser.add_argument('-t', '--template', type=str, default="samples/hello_world",
                            help='''image signing tool name; imgtool and rimage
