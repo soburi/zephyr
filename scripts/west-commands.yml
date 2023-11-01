@@ -84,3 +84,8 @@ west-commands:
       - name: sdk
         class: Sdk
         help: manage Zephyr SDK
+  - file: scripts/west_commands/newapp.py
+    commands:
+      - name: newapp
+        class: NewApp
+        help: create new application project
