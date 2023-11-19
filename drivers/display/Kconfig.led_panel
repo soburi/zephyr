@@ -1,0 +1,9 @@
+# Copyright (c) 2023 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+config LED_PANEL
+	bool "LED panel display driver"
+	default y
+	depends on DT_HAS_LED_PANEL_ENABLED
+	help
+	  Enable dummy display driver compliant with display driver API.

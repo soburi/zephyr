@@ -256,7 +256,7 @@ int main(void)
 #endif
 	}
 
-	(void)memset(buf, 0xFFu, buf_size);
+	(void)memset(buf, 0x00u, buf_size);
 
 	buf_desc.buf_size = buf_size;
 	buf_desc.pitch = capabilities.x_resolution;
