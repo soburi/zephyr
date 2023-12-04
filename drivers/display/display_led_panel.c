@@ -31,11 +31,20 @@ size_t pixel_index(const struct led_panel_config *config, const uint16_t x, cons
 {
 	const size_t mod_col = x / config->module_width;
 	const size_t mod_row = y / config->module_height;
-	const size_t mod_x = x % config->module_width;
+	size_t mod_x = x % config->module_width;
 	const size_t mod_y = y % config->module_height;
 	const size_t mod_pixs = config->module_width * config->module_height;
 	const size_t mod_num_in_row = (config->width / config->module_width);
 	const size_t offset = (mod_num_in_row * mod_row + mod_col) * mod_pixs;
+
+	bool fold = true;
+	int fold_even = 0;
+
+	if (fold) {
+		if ((mod_y % 2) == fold_even) {
+			mod_x = (config->module_width-1) - mod_x;
+		}
+	}
 
 	return offset + mod_y * config->module_width + mod_x;
 }
