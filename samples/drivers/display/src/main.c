@@ -18,6 +18,31 @@ LOG_MODULE_REGISTER(sample, LOG_LEVEL_INF);
 #include "posix_board_if.h"
 #endif
 
+#include <inttypes.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/adc.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/printk.h>
+#include <zephyr/sys/util.h>
+#include <math.h>
+
+#if !DT_NODE_EXISTS(DT_PATH(zephyr_user)) || \
+	!DT_NODE_HAS_PROP(DT_PATH(zephyr_user), io_channels)
+#error "No suitable devicetree overlay specified"
+#endif
+
+#define DT_SPEC_AND_COMMA(node_id, prop, idx) \
+	ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
+
+/* Data of ADC io-channels specified in devicetree. */
+static const struct adc_dt_spec adc_channels[] = {
+	DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels,
+			     DT_SPEC_AND_COMMA)
+};
 enum corner {
 	TOP_LEFT,
 	TOP_RIGHT,
@@ -157,6 +182,66 @@ static void fill_buffer_mono(enum corner corner, uint8_t grey, uint8_t *buf,
 	memset(buf, color, buf_size);
 }
 
+void set_color(uint8_t *buf, int32_t val_ave, int r, int g, int b) {
+	for (int y=0; y<16; y++) {
+		buf[0 + (val_ave/256 *4) + (y * 16 *4)] = r;
+		buf[1 + (val_ave/256 *4) + (y * 16 *4)] = g;
+		buf[2 + (val_ave/256 *4) + (y * 16 *4)] = b;
+		buf[3 + (val_ave/256 *4) + (y * 16 *4)] = 0;
+	}
+}
+
+void hsv_to_rgb(float h, float s, float v, int *r, int *g, int *b) {
+    int i;
+    float f, p, q, t;
+
+    if (s == 0) {
+        // achromatic (gray)
+        *r = *g = *b = (int)(v * 255);
+        return;
+    }
+
+    h /= 60;            // sector 0 to 5
+    i = (int)floor(h);
+    f = h - i;          // factorial part of h
+    p = v * (1 - s);
+    q = v * (1 - s * f);
+    t = v * (1 - s * (1 - f));
+
+    switch(i) {
+        case 0:
+            *r = (int)(v * 255);
+            *g = (int)(t * 255);
+            *b = (int)(p * 255);
+            break;
+        case 1:
+            *r = (int)(q * 255);
+            *g = (int)(v * 255);
+            *b = (int)(p * 255);
+            break;
+        case 2:
+            *r = (int)(p * 255);
+            *g = (int)(v * 255);
+            *b = (int)(t * 255);
+            break;
+        case 3:
+            *r = (int)(p * 255);
+            *g = (int)(q * 255);
+            *b = (int)(v * 255);
+            break;
+        case 4:
+            *r = (int)(t * 255);
+            *g = (int)(p * 255);
+            *b = (int)(v * 255);
+            break;
+        default:        // case 5:
+            *r = (int)(v * 255);
+            *g = (int)(p * 255);
+            *b = (int)(q * 255);
+            break;
+    }
+}
+
 int main(void)
 {
 	size_t x;
@@ -174,6 +259,29 @@ int main(void)
 	size_t buf_size = 0;
 	fill_buffer fill_buffer_fnc = NULL;
 
+	int err;
+	uint32_t count = 0;
+	uint16_t adcbuf;
+	struct adc_sequence sequence = {
+		.buffer = &adcbuf,
+		/* buffer size in bytes, not number of samples */
+		.buffer_size = sizeof(adcbuf),
+	};
+
+	/* Configure channels individually prior to sampling. */
+	for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++) {
+		if (!adc_is_ready_dt(&adc_channels[i])) {
+			printk("ADC controller device %s not ready\n", adc_channels[i].dev->name);
+			return 0;
+		}
+
+		err = adc_channel_setup_dt(&adc_channels[i]);
+		if (err < 0) {
+			printk("Could not setup channel #%d (%d)\n", i, err);
+			return 0;
+		}
+	}
+
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
 		LOG_ERR("Device %s not found. Aborting sample.",
@@ -187,7 +295,7 @@ int main(void)
 
 	LOG_INF("Display sample for %s", display_dev->name);
 	display_get_capabilities(display_dev, &capabilities);
-
+/*
 	if (capabilities.screen_info & SCREEN_INFO_MONO_VTILED) {
 		rect_w = 16;
 		rect_h = 8;
@@ -207,13 +315,17 @@ int main(void)
 	} else {
 		grey_scale_sleep = 100;
 	}
+*/
 
+	rect_w = capabilities.x_resolution;
+	rect_h = capabilities.y_resolution;
+	h_step = rect_h;
 	buf_size = rect_w * rect_h;
-
+/*
 	if (buf_size < (capabilities.x_resolution * h_step)) {
 		buf_size = capabilities.x_resolution * h_step;
 	}
-
+*/
 	switch (capabilities.current_pixel_format) {
 	case PIXEL_FORMAT_ARGB_8888:
 		fill_buffer_fnc = fill_buffer_argb8888;
@@ -270,7 +382,7 @@ int main(void)
 	buf_desc.pitch = rect_w;
 	buf_desc.width = rect_w;
 	buf_desc.height = rect_h;
-
+/*
 	fill_buffer_fnc(TOP_LEFT, 0, buf, buf_size);
 	x = 0;
 	y = 0;
@@ -285,27 +397,95 @@ int main(void)
 	x = capabilities.x_resolution - rect_w;
 	y = capabilities.y_resolution - rect_h;
 	display_write(display_dev, x, y, &buf_desc, buf);
-
+*/
 	display_blanking_off(display_dev);
 
 	grey_count = 0;
 	x = 0;
 	y = capabilities.y_resolution - rect_h;
 
+	int32_t val_mv[10];
+
+	uint64_t countx = 0;
+
 	while (1) {
-		fill_buffer_fnc(BOTTOM_LEFT, grey_count, buf, buf_size);
-		display_write(display_dev, x, y, &buf_desc, buf);
-		++grey_count;
-		k_msleep(grey_scale_sleep);
-#if CONFIG_TEST
-		if (grey_count >= 1024) {
-			break;
+		//printk("ADC reading[%u]:\n", count++);
+		for (int i=0; i<10; i++) {
+				//int32_t val_mv;
+
+			printk("- %s, channel %d: ",
+			       adc_channels[0].dev->name,
+			       adc_channels[0].channel_id);
+
+			(void)adc_sequence_init_dt(&adc_channels[0], &sequence);
+
+			err = adc_read(adc_channels[0].dev, &sequence);
+			if (err < 0) {
+				printk("Could not read (%d)\n", err);
+				continue;
+			}
+
+			/*
+			 * If using differential mode, the 16 bit value
+			 * in the ADC sample buffer should be a signed 2's
+			 * complement value.
+			 */
+			if (adc_channels[i].channel_cfg.differential) {
+				val_mv[i] = (int32_t)((int16_t)adcbuf);
+			} else {
+				val_mv[i] = (int32_t)adcbuf;
+			}
+			printk("%"PRId32, val_mv);
+			//err = adc_raw_to_millivolts_dt(&adc_channels[i],
+			//			       &val_mv);
+			/* conversion to mV may not be supported, skip if not */
+			//if (err < 0) {
+			//	printk(" (value in mV not available)\n");
+			//} else {
+			//	printk(" = %"PRId32" mV\n", val_mv);
+			//}
 		}
-#endif
+
+		int32_t val_ave = (
+			val_mv[0] + 
+			val_mv[1] + 
+			val_mv[2] + 
+			val_mv[3] + 
+			val_mv[4] + 
+			val_mv[5] + 
+			val_mv[6] + 
+			val_mv[7] + 
+			val_mv[8] + 
+			val_mv[9] ) / 10;
+
+		(void)memset(buf, 0x00u, buf_size);
+
+		//buf[0 + (val_ave/256 *4)] = 255;
+		//buf[1 + (val_ave/256 *4)] = 0;
+		//buf[2 + (val_ave/256 *4)] = 0;
+		//buf[3 + (val_ave/256 *4)] = 0;
+		//
+		int r, g, b;
+
+		hsv_to_rgb((countx /5) %360, 1.f, 0.1f, &r, &g, &b);
+
+		set_color(buf, val_ave, r, g, b);
+
+		display_write(display_dev, 0, 0, &buf_desc, buf);
+		++grey_count;
+
+		countx++;
+
+		//k_msleep(grey_scale_sleep);
+		//k_sleep(K_MSEC(200));
 	}
+
 
 #ifdef CONFIG_ARCH_POSIX
 	posix_exit_main(0);
 #endif
 	return 0;
 }
+
+
+

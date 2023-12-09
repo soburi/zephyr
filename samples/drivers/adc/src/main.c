@@ -92,7 +92,7 @@ int main(void)
 			}
 		}
 
-		k_sleep(K_MSEC(1000));
+		k_sleep(K_MSEC(200));
 	}
 	return 0;
 }
