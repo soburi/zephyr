@@ -49,6 +49,12 @@ config SDL_DISPLAY_ZOOM_PCT
 config SDL_DISPLAY_USE_SOFTWARE_RENDERER
 	bool "Use software renderer"
 	help
-	  Use software renderer instead of hardware accelerated renderer
+	Use software renderer instead of hardware accelerated renderer
+
+config SDL_DISPLAY_HIDE_WINDOW
+	bool "Use software renderer"
+	help
+	  Do not show window.  This is useful when running in a headless
+       	  environment such as a CI environment.
 
 endif # SDL_DISPLAY
