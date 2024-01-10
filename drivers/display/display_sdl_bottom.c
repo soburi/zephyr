@@ -12,6 +12,7 @@
 #include "nsi_tracing.h"
 
 int sdl_display_init_bottom(uint16_t height, uint16_t width, uint16_t zoom_pct,
+			    bool use_software_renderer,
 			    void **window, void **renderer, void **texture)
 {
 	*window = SDL_CreateWindow("Zephyr Display", SDL_WINDOWPOS_UNDEFINED,
@@ -22,7 +23,12 @@ int sdl_display_init_bottom(uint16_t height, uint16_t width, uint16_t zoom_pct,
 		return -1;
 	}
 
-	*renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
+	if (use_software_renderer) {
+		*renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_SOFTWARE);
+	} else {
+		*renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
+	}
+
 	if (*renderer == NULL) {
 		nsi_print_warning("Failed to create SDL renderer: %s",
 				SDL_GetError());

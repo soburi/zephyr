@@ -46,4 +46,9 @@ config SDL_DISPLAY_ZOOM_PCT
 	help
 	  SDL window zoom percentage to adjust readability on small screens
 
+config SDL_DISPLAY_USE_SOFTWARE_RENDERER
+	bool "Use software renderer"
+	help
+	  Use software renderer instead of hardware accelerated renderer
+
 endif # SDL_DISPLAY
