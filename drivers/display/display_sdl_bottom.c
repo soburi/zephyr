@@ -17,7 +17,7 @@ int sdl_display_init_bottom(uint16_t height, uint16_t width, uint16_t zoom_pct,
 {
 	*window = SDL_CreateWindow("Zephyr Display", SDL_WINDOWPOS_UNDEFINED,
 				   SDL_WINDOWPOS_UNDEFINED, width * zoom_pct / 100,
-				   height * zoom_pct / 100, SDL_WINDOW_SHOWN);
+				   height * zoom_pct / 100, SDL_WINDOW_HIDDEN);
 	if (*window == NULL) {
 		nsi_print_warning("Failed to create SDL window: %s", SDL_GetError());
 		return -1;
