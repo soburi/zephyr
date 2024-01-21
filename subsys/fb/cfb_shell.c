@@ -269,7 +269,7 @@ static int cmd_set_font(const struct shell *sh, size_t argc, char *argv[])
 
 	idx = strtol(argv[1], NULL, 10);
 
-	err = cfb_get_font_size(dev, idx, &width, &height);
+	err = cfb_get_font_size(idx, &width, &height);
 	if (err) {
 		shell_error(sh, "Invalid font idx=%d err=%d\n", idx, err);
 		return err;
