@@ -456,7 +456,6 @@ int cfb_framebuffer_invert(const struct device *dev)
 
 int cfb_framebuffer_finalize(const struct device *dev)
 {
-	const struct display_driver_api *api = dev->api;
 	const struct char_framebuffer *fb = &char_fb;
 	struct display_buffer_descriptor desc;
 	int err;
@@ -472,12 +471,12 @@ int cfb_framebuffer_finalize(const struct device *dev)
 
 	if (!(fb->pixel_format & PIXEL_FORMAT_MONO10) != !(fb->inverted)) {
 		cfb_invert(fb);
-		err = api->write(dev, 0, 0, &desc, fb->buf);
+		err = display_write(dev, 0, 0, &desc, fb->buf);
 		cfb_invert(fb);
 		return err;
 	}
 
-	return api->write(dev, 0, 0, &desc, fb->buf);
+	return display_write(dev, 0, 0, &desc, fb->buf);
 }
 
 int cfb_get_display_parameter(const struct device *dev,
@@ -555,11 +554,10 @@ int cfb_get_numof_fonts(const struct device *dev)
 
 int cfb_framebuffer_init(const struct device *dev)
 {
-	const struct display_driver_api *api = dev->api;
 	struct char_framebuffer *fb = &char_fb;
 	struct display_capabilities cfg;
 
-	api->get_capabilities(dev, &cfg);
+	display_get_capabilities(dev, &cfg);
 
 	STRUCT_SECTION_COUNT(cfb_font, &fb->numof_fonts);
 
