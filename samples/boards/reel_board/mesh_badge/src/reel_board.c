@@ -62,6 +62,70 @@ static struct k_work_delayable epd_work;
 static struct k_work_delayable long_press_work;
 static char str_buf[256];
 
+static struct cfb_display epd_disp;
+static uint8_t epd_xfer_buf[DT_PROP(DT_CHOSEN(zephyr_display), width)];
+static uint8_t epd_cmd_buf[512];
+
+//stub
+#define CONFIG_BT_DEVICE_NAME_MAX 255
+
+void mesh_send_baduser()
+{
+}
+
+void mesh_send_hello()
+{
+}
+
+const char* bt_get_name()
+{
+	return "hoge,fuga";
+}
+
+bool mesh_is_initialized()
+{
+	return 1;
+}
+
+uint16_t mesh_get_addr()
+{
+	return 23456;
+}
+
+int get_hdc1010_val(struct sensor_value *val)
+{
+	val[0].val1 = INT32_MAX;
+	val[0].val2 = INT32_MAX;
+	val[1].val1 = INT32_MAX;
+	val[1].val2 = INT32_MAX;
+	val[2].val1 = INT32_MAX;
+	val[2].val2 = INT32_MAX;
+	return 0;
+}
+
+int get_mma8652_val(struct sensor_value *val)
+{
+	val[0].val1 = INT32_MAX;
+	val[0].val2 = INT32_MAX;
+	val[1].val1 = INT32_MAX;
+	val[1].val2 = INT32_MAX;
+	val[2].val1 = INT32_MAX;
+	val[2].val2 = INT32_MAX;
+	return 0;
+}
+
+
+int get_apds9960_val(struct sensor_value *val)
+{
+	val[0].val1 = INT32_MAX;
+	val[0].val2 = INT32_MAX;
+	val[1].val1 = INT32_MAX;
+	val[1].val2 = INT32_MAX;
+	val[2].val1 = INT32_MAX;
+	val[2].val2 = INT32_MAX;
+	return 0;
+}
+
 static const struct gpio_dt_spec leds[] = {
 	GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios),
 	GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios),
@@ -321,6 +385,12 @@ static void show_statistics(void)
 		}
 	}
 
+	stat_count =  UINT32_MAX -1;
+	top[0] = 1;
+	top[1] = 1;
+	top[2] = 1;
+	top[3] = 1;
+
 	if (stat_count > 0) {
 		len = snprintk(str, sizeof(str), "Most messages from:");
 		print_line(FONT_SMALL, line++, str, len, false);
@@ -424,12 +494,18 @@ static void epd_update(struct k_work *work)
 	switch (screen_id) {
 	case SCREEN_STATS:
 		show_statistics();
+		screen_id = SCREEN_SENSORS;
+		k_work_reschedule(&epd_work, K_MSEC(5000));
 		return;
 	case SCREEN_SENSORS:
 		show_sensors_data(K_SECONDS(2));
+		screen_id = SCREEN_MAIN;
+		k_work_reschedule(&epd_work, K_MSEC(5000));
 		return;
 	case SCREEN_MAIN:
 		show_main();
+		screen_id = SCREEN_STATS;
+		k_work_reschedule(&epd_work, K_MSEC(5000));
 		return;
 	}
 }
@@ -601,6 +677,8 @@ int board_init(void)
 		return -EIO;
 	}
 
+	display_blanking_off(epd_dev);
+
 	fb = cfb_display_get_framebuffer(&epd_disp);
 
 	cfb_clear(fb, true);
@@ -624,6 +702,8 @@ int board_init(void)
 		board_show_text("Resetting Device", false, K_SECONDS(4));
 		erase_storage();
 	}
+
+	board_refresh_display();
 
 	return 0;
 }
