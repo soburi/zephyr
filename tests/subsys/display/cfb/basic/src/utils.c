@@ -10,6 +10,7 @@
 #include <zephyr/drivers/display.h>
 #include <zephyr/ztest.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/display/cfb.h>
 
 LOG_MODULE_REGISTER(cfb_test_draw_text_and_print_utils, CONFIG_CFB_LOG_LEVEL);
 
