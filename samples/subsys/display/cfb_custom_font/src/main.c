@@ -11,8 +11,8 @@
 
 #include "cfb_font_dice.h"
 
-#if CONFIG_CHARACTER_FRAMEBUFFER_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
-static uint8_t transfer_buffer[CONFIG_CHARACTER_FRAMEBUFFER_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE];
+#if CONFIG_CFB_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
+static uint8_t transfer_buffer[CONFIG_CFB_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE];
 #endif
 
 int main(void)
@@ -20,7 +20,7 @@ int main(void)
 	const struct device *const dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	struct cfb_framebuffer *fb;
 	int err;
-#if CONFIG_CHARACTER_FRAMEBUFFER_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
+#if CONFIG_CFB_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
 	struct cfb_framebuffer framebuffer;
 	struct cfb_init_param param = {
 		.transfer_buf = transfer_buffer,
@@ -37,7 +37,7 @@ int main(void)
 		return 0;
 	}
 
-#if CONFIG_CHARACTER_FRAMEBUFFER_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
+#if CONFIG_CFB_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
 	fb = &framebuffer;
 	err = cfb_init(&framebuffer, &param);
 	if (err) {
