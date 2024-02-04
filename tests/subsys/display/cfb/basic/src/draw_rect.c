@@ -18,6 +18,8 @@ LOG_MODULE_REGISTER(draw_rect, CONFIG_DISPLAY_LOG_LEVEL);
 static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 static const uint32_t display_width = DT_PROP(DT_CHOSEN(zephyr_display), width);
 static const uint32_t display_height = DT_PROP(DT_CHOSEN(zephyr_display), height);
+static const uint32_t fb_buffer_size = DT_PROP(DT_CHOSEN(zephyr_display), width) * DT_PROP(DT_CHOSEN(zephyr_display), height) * 4;
+static uint8_t fb_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) * DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
 static struct cfb_display disp;
 static struct cfb_framebuffer *fb;
 
@@ -30,7 +32,7 @@ static void cfb_test_before(void *text_fixture)
 		.height = display_height,
 		.pitch = display_width,
 		.width = display_width,
-		.buf_size = display_height * display_width / 8,
+		.buf_size = display_buf_size(dev),
 	};
 
 	memset(read_buffer, 0, sizeof(read_buffer));
@@ -38,13 +40,12 @@ static void cfb_test_before(void *text_fixture)
 
 	zassert_ok(display_blanking_off(dev));
 
-	zassert_ok(cfb_display_init(&disp, dev));
+	zassert_ok(cfb_display_init_params(&disp, dev, fb_buffer, fb_buffer_size));
 	fb = cfb_display_get_framebuffer(&disp);
 }
 
 static void cfb_test_after(void *test_fixture)
 {
-	cfb_display_deinit(&disp);
 }
 
 /*
@@ -58,7 +59,7 @@ ZTEST(draw_rect, test_draw_rect_1123_at_0_0)
 	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
 	zassert_ok(cfb_finalize(fb), "");
 
-	zassert_true(verify_image_and_bg(0, 0, rectspace1123, 11, 23, 0), "");
+	zassert_true(verify_image_and_bg(0, 0, rectspace1123, 11, 23, COLOR_BLACK), "");
 }
 
 ZTEST(draw_rect, test_draw_rect_1123_at_1_1)
@@ -69,7 +70,7 @@ ZTEST(draw_rect, test_draw_rect_1123_at_1_1)
 	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
 	zassert_ok(cfb_finalize(fb), "");
 
-	zassert_true(verify_image_and_bg(1, 1, rectspace1123, 11, 23, 0), "");
+	zassert_true(verify_image_and_bg(1, 1, rectspace1123, 11, 23, COLOR_BLACK), "");
 }
 
 /* tile border case */
@@ -81,7 +82,7 @@ ZTEST(draw_rect, test_draw_rect_1123_at_9_15)
 	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
 	zassert_ok(cfb_finalize(fb), "");
 
-	zassert_true(verify_image_and_bg(9, 15, rectspace1123, 11, 23, 0), "");
+	zassert_true(verify_image_and_bg(9, 15, rectspace1123, 11, 23, COLOR_BLACK), "");
 }
 
 ZTEST(draw_rect, test_draw_rect_1123_at_10_16)
@@ -92,7 +93,7 @@ ZTEST(draw_rect, test_draw_rect_1123_at_10_16)
 	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
 	zassert_ok(cfb_finalize(fb), "");
 
-	zassert_true(verify_image_and_bg(10, 16, rectspace1123, 11, 23, 0), "");
+	zassert_true(verify_image_and_bg(10, 16, rectspace1123, 11, 23, COLOR_BLACK), "");
 }
 
 ZTEST(draw_rect, test_draw_rect_1123_at_11_17)
@@ -103,7 +104,7 @@ ZTEST(draw_rect, test_draw_rect_1123_at_11_17)
 	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
 	zassert_ok(cfb_finalize(fb), "");
 
-	zassert_true(verify_image_and_bg(11, 17, rectspace1123, 11, 23, 0), "");
+	zassert_true(verify_image_and_bg(11, 17, rectspace1123, 11, 23, COLOR_BLACK), "");
 }
 
 /*
@@ -117,7 +118,7 @@ ZTEST(draw_rect, test_draw_rect_1123_outside_top_left)
 	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
 	zassert_ok(cfb_finalize(fb), "");
 
-	zassert_true(verify_image_and_bg(0, 0, outside_top_left, 3, 4, 0), "");
+	zassert_true(verify_image_and_bg(0, 0, outside_top_left, 3, 4, COLOR_BLACK), "");
 }
 
 ZTEST(draw_rect, test_draw_rect_1123_outside_top_right)
@@ -153,6 +154,90 @@ ZTEST(draw_rect, test_draw_rect_1123_outside_bottom_left)
 	zassert_ok(cfb_finalize(fb), "");
 
 	zassert_true(verify_image(0, display_height - 14, outside_bottom_left, 3, 14), "");
+}
+
+ZTEST(draw_rect, test_draw_rect_at_0_0_red)
+{
+	struct cfb_position start = {0, 0};
+	struct cfb_position end = {start.x + 10, start.y + 22};
+
+	SKIP_MONO_DISP();
+
+	zassert_ok(cfb_set_fg_color(fb, 0xFF, 0, 0, 0));
+
+	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
+	zassert_ok(cfb_finalize(fb));
+
+	zassert_true(verify_color_outside_rect(0, 0, 11, 23, COLOR_BLACK), "");
+	zassert_true(verify_color_inside_rect(1, 1, 9, 21, COLOR_BLACK), "");
+
+	zassert_true(verify_color_inside_rect(0, 0, 10, 1, COLOR_RED));
+	zassert_true(verify_color_inside_rect(0, 0, 1, 22, COLOR_RED));
+	zassert_true(verify_color_inside_rect(10, 0, 1, 22, COLOR_RED));
+	zassert_true(verify_color_inside_rect(0, 22, 10, 1, COLOR_RED));
+}
+
+ZTEST(draw_rect, test_draw_rect_at_0_0_green)
+{
+	struct cfb_position start = {0, 0};
+	struct cfb_position end = {start.x + 10, start.y + 22};
+
+	SKIP_MONO_DISP();
+
+	zassert_ok(cfb_set_fg_color(fb, 0, 0xFF, 0, 0));
+
+	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
+	zassert_ok(cfb_finalize(fb));
+
+	zassert_true(verify_color_outside_rect(0, 0, 11, 23, COLOR_BLACK), "");
+	zassert_true(verify_color_inside_rect(1, 1, 9, 21, COLOR_BLACK), "");
+
+	zassert_true(verify_color_inside_rect(0, 0, 10, 1, COLOR_GREEN));
+	zassert_true(verify_color_inside_rect(0, 0, 1, 22, COLOR_GREEN));
+	zassert_true(verify_color_inside_rect(10, 0, 1, 22, COLOR_GREEN));
+	zassert_true(verify_color_inside_rect(0, 22, 10, 1, COLOR_GREEN));
+}
+
+ZTEST(draw_rect, test_draw_rect_at_0_0_blue)
+{
+	struct cfb_position start = {0, 0};
+	struct cfb_position end = {start.x + 10, start.y + 22};
+
+	SKIP_MONO_DISP();
+
+	zassert_ok(cfb_set_fg_color(fb, 0, 0, 0xFF, 0));
+
+	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
+	zassert_ok(cfb_finalize(fb));
+
+	zassert_true(verify_color_outside_rect(0, 0, 11, 23, COLOR_BLACK), "");
+	zassert_true(verify_color_inside_rect(1, 1, 9, 21, COLOR_BLACK), "");
+
+	zassert_true(verify_color_inside_rect(0, 0, 10, 1, COLOR_BLUE));
+	zassert_true(verify_color_inside_rect(0, 0, 1, 22, COLOR_BLUE));
+	zassert_true(verify_color_inside_rect(10, 0, 1, 22, COLOR_BLUE));
+	zassert_true(verify_color_inside_rect(0, 22, 10, 1, COLOR_BLUE));
+}
+
+ZTEST(draw_rect, test_draw_rect_at_0_0_color)
+{
+	struct cfb_position start = {0, 0};
+	struct cfb_position end = {start.x + 10, start.y + 22};
+
+	SKIP_MONO_DISP();
+
+	zassert_ok(cfb_set_fg_color(fb, 0x4D, 0x75, 0xBA, 0));
+
+	zassert_ok(cfb_draw_rect(fb, &start, &end), "");
+	zassert_ok(cfb_finalize(fb));
+
+	zassert_true(verify_color_outside_rect(0, 0, 11, 23, COLOR_BLACK), "");
+	zassert_true(verify_color_inside_rect(1, 1, 9, 21, COLOR_BLACK), "");
+
+	zassert_true(verify_color_inside_rect(0, 0, 10, 1, COLOR_TEST_COLOR));
+	zassert_true(verify_color_inside_rect(0, 0, 1, 22, COLOR_TEST_COLOR));
+	zassert_true(verify_color_inside_rect(10, 0, 1, 22, COLOR_TEST_COLOR));
+	zassert_true(verify_color_inside_rect(0, 22, 10, 1, COLOR_TEST_COLOR));
 }
 
 ZTEST_SUITE(draw_rect, NULL, NULL, cfb_test_before, cfb_test_after, NULL);
