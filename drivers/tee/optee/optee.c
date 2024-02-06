@@ -1269,7 +1269,6 @@ static int optee_suppl_send(const struct device *dev, unsigned int ret, unsigned
 			break;
 		case TEE_PARAM_ATTR_TYPE_MEMREF_OUTPUT:
 		case TEE_PARAM_ATTR_TYPE_MEMREF_INOUT:
-			LOG_WRN("Memref params are not fully tested");
 			p->a = param[n].a;
 			p->b = param[n].b;
 			p->c = param[n].c;
