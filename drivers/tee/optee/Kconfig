@@ -3,7 +3,7 @@
 
 config OPTEE
 	bool "OP-TEE driver"
-	depends on (ARM64 && ARMV8_A_NS && HAS_ARM_SMCCC) || ZTEST
+	depends on (ARM64 && MMU && ARMV8_A_NS && HAS_ARM_SMCCC) || ZTEST
 	help
 	  This implements support of the OP-TEE firmware which is loaded
 	  as BL32 image. OP-TEE is a Trust Zone OS which implements mechanisms
