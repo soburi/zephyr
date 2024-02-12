@@ -7,6 +7,7 @@
 #include <zephyr/kernel.h>
 #include <string.h>
 #include <zephyr/display/cfb.h>
+#include <zephyr/drivers/display.h>
 #include <zephyr/sys/byteorder.h>
 
 #define LOG_LEVEL CONFIG_CFB_LOG_LEVEL
@@ -55,6 +56,13 @@ static inline const struct cfb_font *font_get(uint32_t idx)
 	}
 
 	return NULL;
+}
+
+static inline uint8_t pixels_per_tile(const enum display_pixel_format pixel_format)
+{
+	const uint32_t bits_per_pixel = DISPLAY_BITS_PER_PIXEL(pixel_format);
+
+	return (bits_per_pixel < 8) ? (bits_per_pixel * 8) : 1;
 }
 
 /*
@@ -385,7 +393,7 @@ int cfb_invert_area(struct cfb_framebuffer *fb, int16_t x, int16_t y, uint16_t w
 
 static int buffer_invert(struct cfb_framebuffer *fb)
 {
-	for (size_t i = 0; i < fb->width * fb->height / 8U; i++) {
+	for (size_t i = 0; i < fb->size; i++) {
 		fb->buf[i] = ~fb->buf[i];
 	}
 
@@ -456,17 +464,17 @@ int cfb_get_display_parameter(const struct cfb_display *disp, enum cfb_display_p
 	case CFB_DISPLAY_WIDTH:
 		return disp->x_res;
 	case CFB_DISPLAY_PPT:
-		return disp->fb.ppt;
+		return pixels_per_tile(disp->fb.pixel_format);
 	case CFB_DISPLAY_ROWS:
 		if (disp->fb.screen_info & SCREEN_INFO_MONO_VTILED) {
-			return disp->y_res / disp->fb.ppt;
+			return disp->y_res / pixels_per_tile(disp->fb.pixel_format);
 		}
 		return disp->y_res;
 	case CFB_DISPLAY_COLS:
 		if (disp->fb.screen_info & SCREEN_INFO_MONO_VTILED) {
 			return disp->x_res;
 		}
-		return disp->x_res / disp->fb.ppt;
+		return disp->x_res / pixels_per_tile(disp->fb.pixel_format);
 	}
 	return 0;
 }
@@ -530,7 +538,6 @@ int cfb_display_init(struct cfb_display *disp, const struct cfb_display_init_par
 	disp->x_res = cfg.x_resolution;
 	disp->y_res = cfg.y_resolution;
 	disp->dev = param->dev;
-	disp->fb.ppt = 8U;
 	disp->fb.pixel_format = cfg.current_pixel_format;
 	disp->fb.screen_info = cfg.screen_info;
 	disp->fb.buf = NULL;
