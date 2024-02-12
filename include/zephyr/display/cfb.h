@@ -79,10 +79,6 @@ struct cfb_framebuffer {
 
 	/** Framebuffer height in pixels */
 	uint16_t height;
-
-	/** Number of pixels per tile, typically 8 */
-	uint8_t ppt;
-
 };
 
 /**
