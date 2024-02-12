@@ -61,7 +61,7 @@ extern "C" {
 			.op = CFB_OP_DRAW_POINT,                                                   \
 			.draw_figure =                                                             \
 				{                                                                  \
-					.start = *pos,                                             \
+					.start = pos,                                             \
 				},                                                                 \
 		},                                                                                 \
 	}
@@ -72,14 +72,14 @@ extern "C" {
  * @param start Start position of the line
  * @param end End position of the line
  */
-#define CFB_OP_INIT_DRAW_LINE(str, start, end)                                                     \
+#define CFB_OP_INIT_DRAW_LINE(str, s, e)                                                     \
 	{                                                                                          \
 		.param = {                                                                         \
 			.op = CFB_OP_DRAW_LINE,                                                    \
 			.draw_figure =                                                             \
 				{                                                                  \
-					.start = *start,                                           \
-					.end = *end,                                               \
+					.start = s,                                           \
+					.end = e,                                               \
 				},                                                                 \
 		},                                                                                 \
 	}
@@ -90,14 +90,14 @@ extern "C" {
  * @param start Top-Left position of the rectangle
  * @param end Bottom-Right position of the rectangle
  */
-#define CFB_OP_INIT_DRAW_RECT(str, start, end)                                                     \
+#define CFB_OP_INIT_DRAW_RECT(str, s, e)                                                     \
 	{                                                                                          \
 		.param = {                                                                         \
 			.op = CFB_OP_DRAW_RECT,                                                    \
 			.draw_figure =                                                             \
 				{                                                                  \
-					.start = *start,                                           \
-					.end = *end,                                               \
+					.start = s,                                           \
+					.end = e,                                               \
 				},                                                                 \
 		},                                                                                 \
 	}
@@ -106,17 +106,17 @@ extern "C" {
  * @brief Initializer macro for draw-text operation
  *
  * @param str String to print
- * @param x Position in X direction of the beginning of the string
- * @param y Position in Y direction of the beginning of the string
+ * @param x Position in X direction of the beginning of the strings
+ * @param y Position in Y direction of the beginning of the strings
  */
-#define CFB_OP_INIT_DRAW_TEXT(str, x, y)                                                           \
+#define CFB_OP_INIT_DRAW_TEXT(strings, x, y)                                                           \
 	{                                                                                          \
 		.param = {                                                                         \
 			.op = CFB_OP_DRAW_TEXT,                                                    \
 			.draw_text =                                                               \
 				{                                                                  \
 					.pos = {x, y},                                             \
-					.str = str,                                                \
+					.str = strings,                                                \
 				},                                                                 \
 		},                                                                                 \
 	}
@@ -125,17 +125,17 @@ extern "C" {
  * @brief Initializer macro for print operation
  *
  * @param str String to print
- * @param x Position in X direction of the beginning of the string
- * @param y Position in Y direction of the beginning of the string
+ * @param x Position in X direction of the beginning of the strings
+ * @param y Position in Y direction of the beginning of the strings
  */
-#define CFB_OP_INIT_PRINT(str, x, y)                                                               \
+#define CFB_OP_INIT_PRINT(strings, x, y)                                                               \
 	{                                                                                          \
 		.param = {                                                                         \
 			.op = CFB_OP_PRINT,                                                        \
 			.draw_text =                                                               \
 				{                                                                  \
 					.pos = {x, y},                                             \
-					.str = str,                                                \
+					.str = strings,                                                \
 				},                                                                 \
 		},                                                                                 \
 	}
@@ -144,17 +144,17 @@ extern "C" {
  * @brief Initializer macro for draw-text-ref operation
  *
  * @param str String to print
- * @param x Position in X direction of the beginning of the string
- * @param y Position in Y direction of the beginning of the string
+ * @param x Position in X direction of the beginning of the strings
+ * @param y Position in Y direction of the beginning of the strings
  */
-#define CFB_OP_INIT_DRAW_TEXT_REF(str, x, y)                                                       \
+#define CFB_OP_INIT_DRAW_TEXT_REF(strings, x, y)                                                       \
 	{                                                                                          \
 		.param = {                                                                         \
 			.op = CFB_OP_DRAW_TEXT_REF,                                                \
 			.draw_text =                                                               \
 				{                                                                  \
 					.pos = {x, y},                                             \
-					.str = str,                                                \
+					.str = strings,                                                \
 				},                                                                 \
 		},                                                                                 \
 	}
@@ -163,17 +163,17 @@ extern "C" {
  * @brief Initializer macro for print-ref operation
  *
  * @param str String to print
- * @param x Position in X direction of the beginning of the string
- * @param y Position in Y direction of the beginning of the string
+ * @param x Position in X direction of the beginning of the strings
+ * @param y Position in Y direction of the beginning of the strings
  */
-#define CFB_OP_INIT_PRINT_REF(str, x, y)                                                           \
+#define CFB_OP_INIT_PRINT_REF(strings, x, y)                                                           \
 	{                                                                                          \
 		.param = {                                                                         \
 			.op = CFB_OP_PRINT_REF,                                                    \
 			.draw_text =                                                               \
 				{                                                                  \
 					.pos = {x, y},                                             \
-					.str = str,                                                \
+					.str = strings,                                                \
 				},                                                                 \
 		},                                                                                 \
 	}
@@ -222,13 +222,13 @@ extern "C" {
  *
  * @param kerning Spacing between each characters in pixels
  */
-#define CFB_OP_INIT_SET_KERNING(kerning)                                                           \
+#define CFB_OP_INIT_SET_KERNING(kern)                                                           \
 	{                                                                                          \
 		.param = {                                                                         \
 			.op = CFB_OP_SET_KERNING,                                                  \
 			.set_kerning =                                                             \
 				{                                                                  \
-					.kerning = kerning,                                        \
+					.kerning = kern,                                        \
 				},                                                                 \
 		},                                                                                 \
 	}
