@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#if 0
+
 #include <zephyr/kernel.h>
 #include <string.h>
 #include <zephyr/sys/printk.h>
@@ -659,4 +659,3 @@ int mesh_init(void)
 
 	return bt_mesh_init(&prov, &comp);
 }
-#endif

@@ -8,9 +8,9 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/sensor.h>
 #include "board.h"
-//#include "mesh.h"
+#include "mesh.h"
 
-//#include <zephyr/bluetooth/mesh.h>
+#include <zephyr/bluetooth/mesh.h>
 static const struct device *const dev_info[] = {
 	//DEVICE_DT_GET_ONE(ti_hdc1010),
 	//DEVICE_DT_GET_ONE(nxp_mma8652fc),
@@ -18,7 +18,43 @@ static const struct device *const dev_info[] = {
 	//DEVICE_DT_GET(DT_CHOSEN(zephyr_display)),
 };
 
-#if 0
+#if 1
+int get_hdc1010_val(struct sensor_value *val)
+{
+        val[0].val1 = INT32_MAX;
+        val[0].val2 = INT32_MAX;
+        val[1].val1 = INT32_MAX;
+        val[1].val2 = INT32_MAX;
+        val[2].val1 = INT32_MAX;
+        val[2].val2 = INT32_MAX;
+        return 0;
+}
+
+int get_mma8652_val(struct sensor_value *val)
+{
+        val[0].val1 = INT32_MAX;
+        val[0].val2 = INT32_MAX;
+        val[1].val1 = INT32_MAX;
+        val[1].val2 = INT32_MAX;
+        val[2].val1 = INT32_MAX;
+        val[2].val2 = INT32_MAX;
+        return 0;
+}
+
+
+int get_apds9960_val(struct sensor_value *val)
+{
+        val[0].val1 = INT32_MAX;
+        val[0].val2 = INT32_MAX;
+        val[1].val1 = INT32_MAX;
+        val[1].val2 = INT32_MAX;
+        val[2].val1 = INT32_MAX;
+        val[2].val2 = INT32_MAX;
+        return 0;
+}
+
+#else
+
 int get_hdc1010_val(struct sensor_value *val)
 {
 	if (sensor_sample_fetch(dev_info[DEV_IDX_HDC1010])) {
@@ -76,6 +112,8 @@ int get_apds9960_val(struct sensor_value *val)
 
 	return 0;
 }
+
+#endif
 
 #define MOTION_TIMEOUT K_MINUTES(30)
 
@@ -136,7 +174,6 @@ static void configure_accel(void)
 	k_work_init_delayable(&motion_work, motion_timeout);
 	k_work_schedule(&motion_work, MOTION_TIMEOUT);
 }
-#endif
 
 int periphs_init(void)
 {
@@ -150,7 +187,7 @@ int periphs_init(void)
 		}
 	}
 
-	//configure_accel();
+	configure_accel();
 
 	return 0;
 }

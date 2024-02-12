@@ -35,9 +35,9 @@ static ssize_t write_name(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			  const void *buf, uint16_t len, uint16_t offset,
 			  uint8_t flags)
 {
-	char name[255];
+	char name[CONFIG_BT_DEVICE_NAME_MAX];
 	int err;
-/*
+
 	if (offset) {
 		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
 	}
@@ -53,7 +53,7 @@ static ssize_t write_name(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	if (err) {
 		return BT_GATT_ERR(BT_ATT_ERR_INSUFFICIENT_RESOURCES);
 	}
-*/
+
 	board_refresh_display();
 
 	return len;
@@ -135,21 +135,21 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	printk("Disconnected (reason 0x%02x)\n", reason);
 
-	//if (strcmp(CONFIG_BT_DEVICE_NAME, bt_get_name()) ){ //&&
-	    //!mesh_is_initialized()) {
+	if (strcmp(CONFIG_BT_DEVICE_NAME, bt_get_name()) &&
+	    !mesh_is_initialized()) {
 		/* Mesh will take over advertising control */
-		//bt_le_adv_stop();
-		//mesh_start();
-	//} else {
+		bt_le_adv_stop();
+		mesh_start();
+	} else {
 		board_show_text("Disconnected", false, K_SECONDS(2));
-	//}
+	}
 }
 
 BT_CONN_CB_DEFINE(conn_cb) = {
 	.connected = connected,
 	.disconnected = disconnected,
 };
-#if 0
+
 static void bt_ready(int err)
 {
 	if (err) {
@@ -167,8 +167,8 @@ static void bt_ready(int err)
 
 	printk("Mesh initialized\n");
 
-	//bt_conn_auth_cb_register(&auth_cb);
-	//bt_conn_auth_info_cb_register(&auth_info_cb);
+	bt_conn_auth_cb_register(&auth_cb);
+	bt_conn_auth_info_cb_register(&auth_info_cb);
 
 	if (IS_ENABLED(CONFIG_SETTINGS)) {
 		settings_load();
@@ -190,7 +190,7 @@ static void bt_ready(int err)
 
 	printk("Board started\n");
 }
-#endif
+
 int main(void)
 {
 	int err;
@@ -215,7 +215,5 @@ int main(void)
 		printk("peripherals initialization failed (err %d)\n", err);
 		return 0;
 	}
-
-	k_sleep(K_MSEC(0xFFFFFFFF));
 	return 0;
 }
