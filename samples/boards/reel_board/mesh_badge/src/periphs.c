@@ -136,6 +136,7 @@ static void configure_accel(void)
 	k_work_init_delayable(&motion_work, motion_timeout);
 	k_work_schedule(&motion_work, MOTION_TIMEOUT);
 }
+#endif
 
 int periphs_init(void)
 {
@@ -149,7 +150,7 @@ int periphs_init(void)
 		}
 	}
 
-	configure_accel();
+	//configure_accel();
 
 	return 0;
 }

@@ -324,6 +324,12 @@ static void show_statistics(void)
 		}
 	}
 
+	stat_count =  UINT32_MAX -1;
+	top[0] = 1;
+	top[1] = 1;
+	top[2] = 1;
+	top[3] = 1;
+
 	if (stat_count > 0) {
 		len = snprintk(str, sizeof(str_buf), "Most messages from:");
 		str += print_line(FONT_SMALL, line++, str, len, false) + 1;
@@ -435,12 +441,18 @@ static void epd_update(struct k_work *work)
 	switch (screen_id) {
 	case SCREEN_STATS:
 		show_statistics();
+		screen_id = SCREEN_SENSORS;
+		k_work_reschedule(&epd_work, K_MSEC(5000));
 		return;
 	case SCREEN_SENSORS:
 		show_sensors_data(K_SECONDS(2));
+		screen_id = SCREEN_MAIN;
+		k_work_reschedule(&epd_work, K_MSEC(5000));
 		return;
 	case SCREEN_MAIN:
 		show_main();
+		screen_id = SCREEN_STATS;
+		k_work_reschedule(&epd_work, K_MSEC(5000));
 		return;
 	}
 }
@@ -638,6 +650,8 @@ int board_init(void)
 		board_show_text("Resetting Device", false, K_SECONDS(4));
 		erase_storage();
 	}
+
+	board_refresh_display();
 
 	return 0;
 }
