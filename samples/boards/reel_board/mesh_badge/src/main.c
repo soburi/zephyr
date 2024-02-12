@@ -22,13 +22,48 @@ static const struct bt_data ad[] = {
 	BT_DATA_BYTES(BT_DATA_FLAGS, BT_LE_AD_NO_BREDR),
 };
 
+ssize_t bt_gatt_attr_read_service(struct bt_conn *conn,
+				  const struct bt_gatt_attr *attr,
+				  void *buf, uint16_t len, uint16_t offset)
+{
+	return 0;
+}
+
+
+ssize_t bt_gatt_attr_read_chrc(struct bt_conn *conn,
+			       const struct bt_gatt_attr *attr, void *buf,
+			       uint16_t len, uint16_t offset)
+{
+	return 0;
+}
+
+ssize_t bt_gatt_attr_read_cpf(struct bt_conn *conn,
+			      const struct bt_gatt_attr *attr, void *buf,
+			      uint16_t len, uint16_t offset)
+{
+	return 0;
+}
+
+
+ssize_t bt_gatt_attr_read_cud(struct bt_conn *conn,
+			      const struct bt_gatt_attr *attr, void *buf,
+			      uint16_t len, uint16_t offset)
+{
+	return 0;
+}
+
+
+
 static ssize_t read_name(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			 void *buf, uint16_t len, uint16_t offset)
 {
+	return "hgge, fuga";
+/*
 	const char *value = bt_get_name();
 
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
 				 strlen(value));
+*/
 }
 
 static ssize_t write_name(struct bt_conn *conn, const struct bt_gatt_attr *attr,
