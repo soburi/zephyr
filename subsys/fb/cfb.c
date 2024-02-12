@@ -57,6 +57,54 @@ static inline const struct cfb_font *font_get(uint32_t idx)
 	return NULL;
 }
 
+static inline uint16_t fb_info_top(const struct fb_info *info)
+{
+	return info->pos.y;
+}
+
+static inline uint16_t fb_info_left(const struct fb_info *info)
+{
+	return info->pos.x;
+}
+
+static inline uint16_t fb_info_bottom(const struct fb_info *info)
+{
+	return info->pos.y + info->fb->height;
+}
+
+static inline uint16_t fb_info_right(const struct fb_info *info)
+{
+	return info->pos.x + info->fb->width;
+}
+
+static bool check_font_in_rect(int16_t x, int16_t y, const struct cfb_font *fptr,
+			       const struct fb_info *info)
+{
+	if (x + fptr->width <= fb_info_left(info)) {
+		return false;
+	}
+
+	if (y + fptr->height <= fb_info_top(info)) {
+		return false;
+	}
+
+	if (x > fb_info_right(info)) {
+		return false;
+	}
+
+	if (y > fb_info_bottom(info)) {
+		return false;
+	}
+
+	return true;
+}
+
+static inline uint8_t fb_ppt(const struct cfb_framebuffer *fb)
+{
+	return fb->bpp_ppt < 0 ? -fb->bpp_ppt : 1;
+}
+
+
 /*
  * Draw the monochrome character in the monochrome tiled framebuffer,
  * a byte is interpreted as 8 pixels ordered vertically among each other.
@@ -386,7 +434,7 @@ int cfb_invert_area(struct cfb_framebuffer *fb, int16_t x, int16_t y,
 
 static int buffer_invert(struct cfb_framebuffer *fb)
 {
-	for (size_t i = 0; i < fb->width * fb->height / 8U; i++) {
+	for (size_t i = 0; i < fb->size; i++) {
 		fb->buf[i] = ~fb->buf[i];
 	}
 
@@ -457,17 +505,17 @@ int cfb_get_display_parameter(const struct cfb_display *disp, enum cfb_display_p
 	case CFB_DISPLAY_WIDTH:
 		return disp->x_res;
 	case CFB_DISPLAY_PPT:
-		return disp->fb.ppt;
+		return fb_ppt(&disp->fb);
 	case CFB_DISPLAY_ROWS:
 		if (disp->fb.screen_info & SCREEN_INFO_MONO_VTILED) {
-			return disp->y_res / disp->fb.ppt;
+			return disp->y_res / fb_ppt(&disp->fb);
 		}
 		return disp->y_res;
 	case CFB_DISPLAY_COLS:
 		if (disp->fb.screen_info & SCREEN_INFO_MONO_VTILED) {
 			return disp->x_res;
 		}
-		return disp->x_res / disp->fb.ppt;
+		return disp->x_res / fb_ppt(&disp->fb);
 	}
 	return 0;
 }
@@ -546,6 +594,12 @@ int cfb_display_init(struct cfb_display *disp, const struct device *dev)
 	disp->fb.buf = k_malloc(disp->fb.size);
 	if (!disp->fb.buf) {
 		return -ENOMEM;
+	}
+
+	disp->fb.bpp_ppt = 1U;
+	if ((cfg.current_pixel_format == PIXEL_FORMAT_MONO01) ||
+	    (cfg.current_pixel_format == PIXEL_FORMAT_MONO10)) {
+		disp->fb.bpp_ppt = -8;
 	}
 
 	memset(disp->fb.buf, 0, disp->fb.size);
