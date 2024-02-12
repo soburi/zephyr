@@ -656,7 +656,7 @@ static inline int cfb_draw_text_ref(const struct cfb_framebuffer *fb, const char
  */
 static inline int cfb_draw_point(const struct cfb_framebuffer *fb, const struct cfb_position *pos)
 {
-	struct cfb_command cmd = CFB_OP_INIT_DRAW_POINT(str, pos);
+	struct cfb_command cmd = CFB_OP_INIT_DRAW_POINT(str, *pos);
 
 	return fb->append_command(fb, &cmd, true);
 }
@@ -680,7 +680,7 @@ static inline int cfb_draw_point(const struct cfb_framebuffer *fb, const struct 
 static inline int cfb_draw_line(const struct cfb_framebuffer *fb, const struct cfb_position *start,
 				const struct cfb_position *end)
 {
-	struct cfb_command cmd = CFB_OP_INIT_DRAW_LINE(str, start, end);
+	struct cfb_command cmd = CFB_OP_INIT_DRAW_LINE(str, *start, *end);
 
 	return fb->append_command(fb, &cmd, true);
 }
@@ -704,7 +704,7 @@ static inline int cfb_draw_line(const struct cfb_framebuffer *fb, const struct c
 static inline int cfb_draw_rect(const struct cfb_framebuffer *fb, const struct cfb_position *start,
 				const struct cfb_position *end)
 {
-	struct cfb_command cmd = CFB_OP_INIT_DRAW_RECT(str, start, end);
+	struct cfb_command cmd = CFB_OP_INIT_DRAW_RECT(str, *start, *end);
 
 	return fb->append_command(fb, &cmd, true);
 }
