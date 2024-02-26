@@ -16,16 +16,13 @@
         leds {
                 compatible = "gpio-leds";
                 ul: ul {
-                        gpios = <&gpioa 7 GPIO_ACTIVE_HIGH>;
+                        gpios = <&gpioc 10 GPIO_ACTIVE_HIGH>;
                 };
                 vl: vl {
-                        gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;
+                        gpios = <&gpioc 11 GPIO_ACTIVE_HIGH>;
                 };
                 wl: wl {
-                        gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
-                };
-                led: led {
-                        gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
+                        gpios = <&gpioc 12 GPIO_ACTIVE_HIGH>;
                 };
         };
  
@@ -60,7 +57,7 @@
  
         //analog_axis {
         zephyr,user {
-                io-channels = <&adc1 0>;
+                io-channels = <&adc1 8>;
         };
         //};
 };
@@ -72,38 +69,13 @@
 &adc1 {
         #address-cells = <1>;
         #size-cells = <0>;
+
+        //pinctrl-0 = <&adc1_in8_pc2>;
+        pinctrl-names = "default";
+        status = "okay";
  
-        channel@0 {
-                reg = <0>;
-                zephyr,gain = "ADC_GAIN_1";
-                zephyr,reference = "ADC_REF_INTERNAL";
-                zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
-                zephyr,resolution = <12>;
-        };
- 
-        channel@1 {
-                reg = <1>;
-                zephyr,gain = "ADC_GAIN_1";
-                zephyr,reference = "ADC_REF_INTERNAL";
-                zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
-                zephyr,resolution = <12>;
-        };
- 
-        channel@4 {
-                reg = <4>;
-                zephyr,gain = "ADC_GAIN_1";
-                zephyr,reference = "ADC_REF_INTERNAL";
-                zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
-                zephyr,resolution = <12>;
-        };
-};
- 
-&adc1 {
-        #address-cells = <1>;
-        #size-cells = <0>;
- 
-        channel@1 {
-                reg = <1>;
+        channel@8 {
+                reg = <8>;
                 zephyr,gain = "ADC_GAIN_1";
                 zephyr,reference = "ADC_REF_INTERNAL";
                 zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
