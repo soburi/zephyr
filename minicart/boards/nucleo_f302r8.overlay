@@ -41,17 +41,17 @@
                         gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
                 };
         };
- 
+
         pwmleds {
                 compatible = "pwm-leds";
                 pwm_u: pwm_u {
-                        pwms = <&pwm2 7 PWM_MSEC(20) PWM_POLARITY_INVERTED>;
+                        pwms = <&pwm1 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
                 };
                 pwm_v: pwm_v {
-                        pwms = <&pwm2 7 PWM_MSEC(20) PWM_POLARITY_INVERTED>;
+                        pwms = <&pwm1 2 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
                 };
                 pwm_w: pwm_w {
-                        pwms = <&pwm2 7 PWM_MSEC(20) PWM_POLARITY_INVERTED>;
+                        pwms = <&pwm1 3 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
                 };
         };
  
@@ -61,16 +61,29 @@
         };
         //};
 };
- 
-&pwm2 {
+
+&usart1 {
+	status = "disabled";
+};
+
+&timers1 {
         status = "okay";
+        st,prescaler = <10000>;
+
+	pwm1: pwm {
+		compatible = "st,stm32-pwm";
+		status = "okay";
+                pinctrl-0 = <&tim1_ch1_pa8>, <&tim1_ch2_pa9>, <&tim1_ch3_pa10>;
+                pinctrl-names = "default";
+		#pwm-cells = <3>;
+	};
 };
  
 &adc1 {
         #address-cells = <1>;
         #size-cells = <0>;
 
-        //pinctrl-0 = <&adc1_in8_pc2>;
+        pinctrl-0 = <&adc1_in8_pc2>;
         pinctrl-names = "default";
         status = "okay";
  
