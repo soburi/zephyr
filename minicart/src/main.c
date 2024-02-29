@@ -1,22 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pwm.h>
+#include <zephyr/drivers/counter.h>
 
 unsigned int q = 0, r = 0, s = 0;
 int START = 8;
-static const struct gpio_dt_spec LED0 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+
 static const struct gpio_dt_spec EN_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(ul), gpios);
 static const struct gpio_dt_spec EN_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(vl), gpios);
 static const struct gpio_dt_spec EN_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(wl), gpios);
 static const struct gpio_dt_spec H_A = GPIO_DT_SPEC_GET(DT_NODELABEL(u_in), gpios);
 static const struct gpio_dt_spec H_B = GPIO_DT_SPEC_GET(DT_NODELABEL(v_in), gpios);
 static const struct gpio_dt_spec H_C = GPIO_DT_SPEC_GET(DT_NODELABEL(w_in), gpios);
-
-static const struct adc_dt_spec V_adc = ADC_DT_SPEC_GET(DT_PATH(zephyr_user)); 
-
+// static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_NODELABEL(user_button), gpios);
 static const struct pwm_dt_spec mypwm_A = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_u));
 static const struct pwm_dt_spec mypwm_B = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_v));
 static const struct pwm_dt_spec mypwm_C = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_w));
@@ -24,19 +22,19 @@ static const struct pwm_dt_spec mypwm_C = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_w));
 struct gpio_callback cb_H_A;
 struct gpio_callback cb_H_B;
 struct gpio_callback cb_H_C;
+struct gpio_callback cb_button;
 
-//RawCAN can1(PA_11, PA_12);
+// RawCAN can1(PA_11, PA_12);
 
 unsigned int UP, VP, WP;
-//AnalogIn V_adc(PC_2); // gaibu Volume
-// AnalogIn V_adc(PB_1);   //Volume
+static const struct adc_dt_spec V_adc = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 
-//BufferedSerial pc(USBTX, USBRX);
+static const struct gpio_dt_spec myled = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 float Vr_adc = 0.0f;
 
-//Timer uT;
-int64_t ut0 = 0, ut1 = 0, ut2 = 0;
+static const struct device *uT = DEVICE_DT_GET(DT_NODELABEL(counter2));
+int64_t ut1 = 0, ut2 = 0, usi = 0;
 float Speed = 0;
 
 char message[64];
@@ -84,72 +82,67 @@ void send_can_msg()
 }
 */
 
-int64_t delta_T()
+void pwm_write(const struct pwm_dt_spec *dt, float ratio)
 {
-	int64_t cur  = k_uptime_ticks();
-	if (ut0 > cur) {
-		return (INT64_MAX - ut0) + cur;
+	pwm_set_dt(dt, dt->period, dt->period * ratio);
+}
+
+void HAH()
+{
+
+	s = r % 2;
+	if (s == 0) {
+		counter_get_value_64(uT, &ut1);
+		r++;
 	}
 
-	return cur - ut0;
+	if (s == 1) {
+		counter_get_value_64(uT, &ut2);
+		r++;
+		counter_stop(uT);
+		counter_start(uT);
+	}
+	pwm_write(&mypwm_A, Vr_adc);
+	pwm_write(&mypwm_B, 0);
+	pwm_write(&mypwm_C, 0);
 }
 
-void reset_T()
+void HAL()
 {
-	ut0 = k_uptime_ticks();
+
+	pwm_write(&mypwm_A, 0);
+	pwm_write(&mypwm_C, 0);
+}
+void HBH()
+{
+
+	pwm_write(&mypwm_A, 0);
+	pwm_write(&mypwm_B, Vr_adc);
+	pwm_write(&mypwm_C, 0);
+}
+void HBL()
+{
+
+	pwm_write(&mypwm_A, 0);
+	pwm_write(&mypwm_B, 0);
+}
+void HCH()
+{
+
+	pwm_write(&mypwm_A, 0);
+	pwm_write(&mypwm_B, 0);
+	pwm_write(&mypwm_C, Vr_adc);
 }
 
-void HAH() {
-
-  s = r % 2;
-  if (s == 0) {
-    ut1 = delta_T();
-    r++;
-  }
-
-  if (s == 1) {
-    ut2 = delta_T();
-    r++;
-    reset_T();
-  }
-  pwm_set_dt(&mypwm_A, 20000, 20000 * Vr_adc);
-  pwm_set_dt(&mypwm_B, 20000, 0);
-  pwm_set_dt(&mypwm_C, 20000, 0);
-}
-
-void HAL() {
-
-  pwm_set_dt(&mypwm_A, 20000, 0);
-  pwm_set_dt(&mypwm_C, 20000, 0);
-}
-void HBH() {
-
-  pwm_set_dt(&mypwm_A, 20000, 0);
-  pwm_set_dt(&mypwm_B, 20000, 20000 * Vr_adc);
-  pwm_set_dt(&mypwm_C, 20000, 0);
-}
-void HBL() {
-
-  pwm_set_dt(&mypwm_A, 20000, 0);
-  pwm_set_dt(&mypwm_B, 20000, 0);
-}
-void HCH() {
-
-  pwm_set_dt(&mypwm_A, 20000, 0);
-  pwm_set_dt(&mypwm_B, 20000, 0);
-  pwm_set_dt(&mypwm_C, 20000, 20000 * Vr_adc);
-}
-
-void HCL() {
-  pwm_set_dt(&mypwm_B, 20000, 0);
-  pwm_set_dt(&mypwm_C, 20000, 0);
+void HCL()
+{
+	pwm_write(&mypwm_B, 0);
+	pwm_write(&mypwm_C, 0);
 }
 
 uint32_t loop_count;
 
-void H_A_handler(const struct device *port,
-                                        struct gpio_callback *cb,
-                                        gpio_port_pins_t pins)
+void H_A_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	if (gpio_pin_get_dt(&H_A)) {
 		HCH();
@@ -158,9 +151,7 @@ void H_A_handler(const struct device *port,
 	}
 }
 
-void H_B_handler(const struct device *port,
-                                        struct gpio_callback *cb,
-                                        gpio_port_pins_t pins)
+void H_B_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	if (gpio_pin_get_dt(&H_B)) {
 		HAH();
@@ -169,9 +160,7 @@ void H_B_handler(const struct device *port,
 	}
 }
 
-void H_C_handler(const struct device *port,
-                                        struct gpio_callback *cb,
-                                        gpio_port_pins_t pins)
+void H_C_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	if (gpio_pin_get_dt(&H_C)) {
 		HBH();
@@ -179,6 +168,19 @@ void H_C_handler(const struct device *port,
 		HBL();
 	}
 }
+
+/*
+void button_handler(const struct device *port,
+					struct gpio_callback *cb,
+					gpio_port_pins_t pins)
+{
+	if (gpio_pin_get_dt(&button)) {
+		printf("button_rise\n");
+	} else {
+		printf("button_fall\n");
+	}
+}
+*/
 
 float volume_read(const struct adc_dt_spec *dt)
 {
@@ -192,91 +194,84 @@ float volume_read(const struct adc_dt_spec *dt)
 	return (1.0f * buf) / BIT(seq.resolution);
 }
 
-int main() {
-  //pc.set_baud(9600);
+int main()
+{
+	// pc.set_baud(9600);
 
-  //can1.frequency(500000);
-  //can1.mode(mbed::interface::can::Normal);
-  gpio_pin_configure_dt(&LED0, GPIO_OUTPUT);
+	// can1.frequency(500000);
+	// can1.mode(mbed::interface::can::Normal);
+	gpio_pin_configure_dt(&myled, GPIO_OUTPUT);
 
-  gpio_pin_configure_dt(&EN_1, GPIO_OUTPUT);
-  gpio_pin_configure_dt(&EN_2, GPIO_OUTPUT);
-  gpio_pin_configure_dt(&EN_3, GPIO_OUTPUT);
+	gpio_pin_configure_dt(&EN_1, GPIO_OUTPUT);
+	gpio_pin_configure_dt(&EN_2, GPIO_OUTPUT);
+	gpio_pin_configure_dt(&EN_3, GPIO_OUTPUT);
 
-  gpio_pin_configure_dt(&H_A, GPIO_INPUT);
-  gpio_pin_configure_dt(&H_B, GPIO_INPUT);
-  gpio_pin_configure_dt(&H_C, GPIO_INPUT);
+	gpio_pin_configure_dt(&H_A, GPIO_INPUT);
+	gpio_pin_configure_dt(&H_B, GPIO_INPUT);
+	gpio_pin_configure_dt(&H_C, GPIO_INPUT);
 
-  gpio_pin_interrupt_configure_dt(&H_A, GPIO_INT_EDGE_BOTH);
-  gpio_pin_interrupt_configure_dt(&H_B, GPIO_INT_EDGE_BOTH);
-  gpio_pin_interrupt_configure_dt(&H_C, GPIO_INT_EDGE_BOTH);
+	gpio_pin_interrupt_configure_dt(&H_A, GPIO_INT_EDGE_BOTH);
+	gpio_pin_interrupt_configure_dt(&H_B, GPIO_INT_EDGE_BOTH);
+	gpio_pin_interrupt_configure_dt(&H_C, GPIO_INT_EDGE_BOTH);
+	// gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_BOTH);
 
-  gpio_init_callback(&cb_H_A, H_A_handler, BIT(H_A.pin));
-  gpio_init_callback(&cb_H_B, H_B_handler, BIT(H_B.pin));
-  gpio_init_callback(&cb_H_C, H_B_handler, BIT(H_C.pin));
+	gpio_init_callback(&cb_H_A, H_A_handler, BIT(H_A.pin));
+	gpio_init_callback(&cb_H_B, H_B_handler, BIT(H_B.pin));
+	gpio_init_callback(&cb_H_C, H_B_handler, BIT(H_C.pin));
+	// gpio_init_callback(&cb_button, button_handler, BIT(button.pin));
 
-  //gpio_add_callback_dt(&H_A, &cb_H_A);
-  //gpio_add_callback_dt(&H_B, &cb_H_B);
-  //gpio_add_callback_dt(&H_C, &cb_H_C);
+	gpio_add_callback_dt(&H_A, &cb_H_A);
+	gpio_add_callback_dt(&H_B, &cb_H_B);
+	gpio_add_callback_dt(&H_C, &cb_H_C);
+	// gpio_add_callback_dt(&button, &cb_button);
 
-  adc_channel_setup_dt(&V_adc);
+	adc_channel_setup_dt(&V_adc);
 
-  gpio_pin_set_dt(&EN_1, 1);
-  gpio_pin_set_dt(&EN_2, 1);
-  gpio_pin_set_dt(&EN_3, 1);
+	gpio_pin_set_dt(&EN_1, 1);
+	gpio_pin_set_dt(&EN_2, 1);
+	gpio_pin_set_dt(&EN_3, 1);
 
-  reset_T();
+	counter_start(uT);
 
-	pwm_set_dt(&mypwm_A, 20000000, 10000000);
-	pwm_set_dt(&mypwm_B, 20000000, 10000000);
-	pwm_set_dt(&mypwm_C, 20000000, 10000000);
+	while (1) {
+		Vr_adc = volume_read(&V_adc);
 
-  while (1) {
-#if 0
-    Vr_adc = volume_read(&V_adc);
+		// send_can_msg();
 
-    if (loop_count == 1) {
-      //send_can_msg();
-      loop_count = 0;
-    } else {
-      loop_count++;
-    }
+		if ((Vr_adc > 0.15f) && (q == 0)) {
+			while (q < 50) {
 
-    if ((Vr_adc > 0.15f) && (q == 0)) {
-      while (q < 50) {
+				pwm_write(&mypwm_A, 0);
+				pwm_write(&mypwm_B, 0.5f);
+				pwm_write(&mypwm_C, 0);
+				k_msleep(START);
 
-	pwm_set_dt(&mypwm_A, 20000, 0);
-	pwm_set_dt(&mypwm_B, 20000, 10000);
-	pwm_set_dt(&mypwm_C, 20000, 0);
-	k_msleep(START);
+				pwm_write(&mypwm_A, 0.5f);
+				pwm_write(&mypwm_B, 0);
+				pwm_write(&mypwm_C, 0);
+				k_msleep(START);
 
-	pwm_set_dt(&mypwm_A, 20000, 10000);
-	pwm_set_dt(&mypwm_B, 20000, 0);
-	pwm_set_dt(&mypwm_C, 20000, 0);
-	k_msleep(START);
+				pwm_write(&mypwm_A, 0);
+				pwm_write(&mypwm_B, 0);
+				pwm_write(&mypwm_C, 0.5f);
+				k_msleep(START);
+				q++;
+			}
+		}
 
-	pwm_set_dt(&mypwm_A, 20000, 0);
-	pwm_set_dt(&mypwm_B, 20000, 0);
-	pwm_set_dt(&mypwm_C, 20000, 10000);
-	k_msleep(START);
-        q++;
-      }
-    }
+		//  s=0;
+		if (Vr_adc < 0.1f) {
+			q = 0;
+		}
 
-    //  s=0;
-    if (Vr_adc < 0.1f) {
-      q = 0;
-    }
+		usi = abs(ut2 - ut1);
+		Speed = 60 * (1.f / (7.0f * usi * 1E-6f));
+		printf("%d.%03d , %d.%03d \r", (int)Speed, (int)(Speed * 1000.0f) % 1000,
+		       (int)Vr_adc, (int)(Vr_adc * 1000.0f) % 1000);
+		// pc.write(message, sizeof(message));
+		// UP=HA; VP=HB; WP=HC;
+		// pc.printf("%d  ,%d ,%d\r" ,UP,VP,WP);
 
-    Speed = 60 * (1.f / (7.0f * k_cyc_to_us_floor64(abs(ut2 - ut1)) * 1E-6f));
-    printf("%d.%03d , %d.%03d \r", (int)Speed, (int)(Speed * 1000.0f) % 1000, 
-                                                             (int)Vr_adc, (int)(Vr_adc * 1000.0f) % 1000);
-    //pc.write(message, sizeof(message));
-    // UP=HA; VP=HB; WP=HC;
-    // pc.printf("%d  ,%d ,%d\r" ,UP,VP,WP);
-    //myled = !myled;
-#endif
-    gpio_pin_toggle_dt(&LED0);
-  }
+		gpio_pin_toggle_dt(&myled);
+	}
 }
-
