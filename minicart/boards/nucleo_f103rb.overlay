@@ -1,0 +1,111 @@
+/*
+&can1 {
+	status = "okay";
+	pinctrl-0 = <&can_rx_pa11>, <&can_rx_pb8>;
+	pinctrl-names = "default";
+                bus-speed = <125000>;
+                //sample-point = <875>;
+                //bus-speed-data = <1000000>;
+                //sample-point-data = <750>;
+};
+*/
+/ {
+	chosen {
+		zephyr,canbus = &can1;
+	};
+
+        leds {
+                compatible = "gpio-leds";
+                ul: ul {
+                        gpios = <&gpioc 10 GPIO_ACTIVE_HIGH>;
+                };
+                vl: vl {
+                        gpios = <&gpioc 11 GPIO_ACTIVE_HIGH>;
+                };
+                wl: wl {
+                        gpios = <&gpioc 12 GPIO_ACTIVE_HIGH>;
+                };
+        };
+ 
+        gpio_keys {
+                compatible = "gpio-keys";
+                u_in: u_in {
+                        gpios = <&gpioa 15 GPIO_ACTIVE_HIGH>;
+                };
+                v_in: v_in {
+                        gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
+                };
+                w_in: w_in {
+                        gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
+                };
+                direction: direction {
+                        gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
+                };
+        };
+ 
+        pwmleds {
+                compatible = "pwm-leds";
+                pwm_u: pwm_u {
+                        pwms = <&pwm1 1 PWM_USEC(20) PWM_POLARITY_NORMAL>;
+                };
+                pwm_v: pwm_v {
+                        pwms = <&pwm1 2 PWM_USEC(20) PWM_POLARITY_NORMAL>;
+                };
+                pwm_w: pwm_w {
+                        pwms = <&pwm1 3 PWM_USEC(20) PWM_POLARITY_NORMAL>;
+                };
+        };
+ 
+        //analog_axis {
+        zephyr,user {
+                io-channels = <&adc1 12>;
+        };
+        //};
+};
+ 
+
+&usart1 {
+        status = "disabled";
+};
+
+&timers1 {
+        status = "okay";
+        st,prescaler = <79>;
+
+        pwm1: pwm {
+                compatible = "st,stm32-pwm";
+                status = "okay";
+                pinctrl-0 = <&tim1_ch1_pwm_out_pa8>, <&tim1_ch2_pwm_out_pa9>, <&tim1_ch3_pwm_out_pa10>;
+                pinctrl-names = "default";
+                #pwm-cells = <3>;
+        };
+};
+ 
+&timers2 {
+        status = "okay";
+        st,prescaler = <7>;
+	pwm2 {
+		status = "disabled";
+	};
+
+	counter2: counter {
+		status = "okay";
+	};
+};
+
+&adc1 {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        pinctrl-0 = <&adc1_in12_pc2>;
+        pinctrl-names = "default";
+        status = "okay";
+ 
+        channel@12 {
+                reg = <12>;
+                zephyr,gain = "ADC_GAIN_1";
+                zephyr,reference = "ADC_REF_INTERNAL";
+                zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+                zephyr,resolution = <12>;
+        };
+};
