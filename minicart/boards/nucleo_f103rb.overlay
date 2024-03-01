@@ -30,13 +30,13 @@
         gpio_keys {
                 compatible = "gpio-keys";
                 u_in: u_in {
-                        gpios = <&gpioa 15 GPIO_ACTIVE_HIGH>;
+                        gpios = <&gpioa 15 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
                 };
                 v_in: v_in {
-                        gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
+                        gpios = <&gpiob 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
                 };
                 w_in: w_in {
-                        gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
+                        gpios = <&gpiob 10 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
                 };
                 direction: direction {
                         gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
@@ -63,10 +63,30 @@
         //};
 };
  
-
 &usart1 {
         status = "disabled";
 };
+
+&i2c1 {
+        status = "disabled";
+};
+
+&spi1 {
+        status = "disabled";
+};
+
+&spi2 {
+        status = "disabled";
+};
+/*
+&gpioa {
+        status = "okay";
+};
+
+&gpiob {
+        status = "okay";
+};
+*/
 
 &timers1 {
         status = "okay";
