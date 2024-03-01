@@ -83,8 +83,8 @@
  
 &timers2 {
         status = "okay";
-        st,prescaler = <7>;
-	pwm2 {
+        st,prescaler = <799>;
+	pwm {
 		status = "disabled";
 	};
 

@@ -33,7 +33,21 @@ static const struct gpio_dt_spec myled = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios)
 
 float Vr_adc = 0.0f;
 
+uint32_t top_cb_count;
+
+void top_callback(const struct device *dev, void *user_data)
+{
+	uint32_t* cnt = user_data;
+	*cnt = *cnt+1;
+}
+
 static const struct device *uT = DEVICE_DT_GET(DT_NODELABEL(counter2));
+static struct counter_top_cfg top_cfg = {
+	.ticks =  60000,
+	.callback = top_callback,
+	.user_data = &top_cb_count,
+};
+
 int64_t ut1 = 0, ut2 = 0, usi = 0;
 float Speed = 0;
 
@@ -89,18 +103,20 @@ void pwm_write(const struct pwm_dt_spec *dt, float ratio)
 
 void HAH()
 {
-
+	uint32_t tick;
 	s = r % 2;
 	if (s == 0) {
-		counter_get_value_64(uT, &ut1);
+		counter_get_value(uT, &tick);
+		ut1 = top_cb_count * top_cfg.ticks + counter_ticks_to_us(uT, tick);
 		r++;
 	}
 
 	if (s == 1) {
-		counter_get_value_64(uT, &ut2);
+		counter_get_value(uT, &tick);
+		ut2 = top_cb_count * top_cfg.ticks + counter_ticks_to_us(uT, tick);
 		r++;
-		counter_stop(uT);
-		counter_start(uT);
+		//counter_stop(uT);
+		//counter_start(uT);
 	}
 	pwm_write(&mypwm_A, Vr_adc);
 	pwm_write(&mypwm_B, 0);
@@ -231,7 +247,12 @@ int main()
 	gpio_pin_set_dt(&EN_2, 1);
 	gpio_pin_set_dt(&EN_3, 1);
 
-	counter_start(uT);
+	counter_set_top_value(uT, &top_cfg);
+	int er = counter_start(uT);
+
+	uint32_t tick = 0;
+
+	ut1 = top_cb_count * top_cfg.ticks + counter_get_value(uT, &tick);
 
 	while (1) {
 		Vr_adc = volume_read(&V_adc);
@@ -241,19 +262,19 @@ int main()
 		if ((Vr_adc > 0.15f) && (q == 0)) {
 			while (q < 50) {
 
-				pwm_write(&mypwm_A, 0);
-				pwm_write(&mypwm_B, 0.5f);
-				pwm_write(&mypwm_C, 0);
+				//pwm_write(&mypwm_A, 0);
+				//pwm_write(&mypwm_B, 0.5f);
+				//pwm_write(&mypwm_C, 0);
 				k_msleep(START);
 
-				pwm_write(&mypwm_A, 0.5f);
-				pwm_write(&mypwm_B, 0);
-				pwm_write(&mypwm_C, 0);
+				//pwm_write(&mypwm_A, 0.5f);
+				//pwm_write(&mypwm_B, 0);
+				//pwm_write(&mypwm_C, 0);
 				k_msleep(START);
 
-				pwm_write(&mypwm_A, 0);
-				pwm_write(&mypwm_B, 0);
-				pwm_write(&mypwm_C, 0.5f);
+				//pwm_write(&mypwm_A, 0);
+				//pwm_write(&mypwm_B, 0);
+				//pwm_write(&mypwm_C, 0.5f);
 				k_msleep(START);
 				q++;
 			}
@@ -264,13 +285,21 @@ int main()
 			q = 0;
 		}
 
+		counter_get_value(uT, &tick);
+		ut2 = top_cb_count * top_cfg.ticks + tick;
 		usi = abs(ut2 - ut1);
-		Speed = 60 * (1.f / (7.0f * usi * 1E-6f));
-		printf("%d.%03d , %d.%03d \r", (int)Speed, (int)(Speed * 1000.0f) % 1000,
-		       (int)Vr_adc, (int)(Vr_adc * 1000.0f) % 1000);
-		// pc.write(message, sizeof(message));
+		Speed = 60 * (1 / (7.0 * usi * 1E-6));
+		//Speed = 60 * (1.f / (7.0f * usi * 1E-6f));
+		int err = 0;
+		snprintf(message, sizeof(message), "%lld\n", counter_ticks_to_us(uT, usi));
+		//snprintf(message, sizeof(message), "%d.%03d , %d.%03d \r", (int)Speed, (int)(Speed * 1000.0) % 1000, 
+                //                                             (int)Vr_adc, (int)(Vr_adc * 1000.0) % 1000);
+		printf("%s", message);
+
 		// UP=HA; VP=HB; WP=HC;
 		// pc.printf("%d  ,%d ,%d\r" ,UP,VP,WP);
+
+		ut1 = ut2;
 
 		gpio_pin_toggle_dt(&myled);
 	}
