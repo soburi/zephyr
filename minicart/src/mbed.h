@@ -15,6 +15,10 @@ public:
 	{
 		gpio_pin_set_dt(&dt, v);
 	}
+	operator int()
+	{
+		return gpio_pin_get_dt(&dt);
+	}
 };
 class DigitalIn
 {
@@ -57,7 +61,7 @@ public:
 	}
 	void write(float duty)
 	{
-		pwm_set_dt(dt, period_usec * 1000, period_usec * 1000 * duty);
+		pwm_set_dt(&dt, period_usec * 1000, period_usec * 1000 * duty);
 	}
 	void period_us(int us)
 	{
@@ -124,19 +128,19 @@ const struct gpio_dt_spec EN_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(wl), gpios);
 static const struct gpio_dt_spec PC_10 = { 
 	.port = DEVICE_DT_GET(DT_NODELABEL(gpioc)),
 	.pin = 10,
-	.flags = GPIO_ACTIVE_HIGH,
+	.dt_flags = GPIO_ACTIVE_HIGH,
 };
 
 static const struct gpio_dt_spec PC_11 = { 
 	.port = DEVICE_DT_GET(DT_NODELABEL(gpioc)),
 	.pin = 11,
-	.flags = GPIO_ACTIVE_HIGH,
+	.dt_flags = GPIO_ACTIVE_HIGH,
 };
 
 static const struct gpio_dt_spec PC_12 = { 
 	.port = DEVICE_DT_GET(DT_NODELABEL(gpioc)),
 	.pin = 12,
-	.flags = GPIO_ACTIVE_HIGH,
+	.dt_flags = GPIO_ACTIVE_HIGH,
 };
 
 
