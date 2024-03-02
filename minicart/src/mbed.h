@@ -128,6 +128,7 @@ class Timer
 	const struct device *dev;
 	uint32_t top_cb_count;
 	struct counter_top_cfg top_cfg;
+	bool running;
 
 	static void top_callback(const struct device *dev, void *user_data)
        	{
@@ -136,7 +137,7 @@ class Timer
 	}
 
 public:
-	Timer() : dev(DEVICE_DT_GET(DT_NODELABEL(counter2)))
+	Timer() : dev(DEVICE_DT_GET(DT_NODELABEL(counter2))), running(false)
 	{
 		top_cfg.ticks = 60000;
 	       	top_cfg.callback = Timer::top_callback;
@@ -146,8 +147,16 @@ public:
 
 	void start()
 	{
+		running = true;
 		counter_start(dev);
 	}
+
+	void stop()
+	{
+		running = false;
+		counter_stop(dev);
+	}
+
 	void reset()
 	{
 		counter_stop(dev);

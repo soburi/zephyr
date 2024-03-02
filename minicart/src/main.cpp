@@ -28,43 +28,23 @@ DigitalOut myled(LED1);
 
 float Vr_adc = 0.0f;
 
+Timer uT;
+float ut1 = 0, ut2 = 0, usi = 0;
 float Speed = 0;
-
-const struct device *uT = DEVICE_DT_GET(DT_NODELABEL(counter2));
-int64_t ut1 = 0, ut2 = 0, usi = 0;
-
-uint32_t top_cb_count;
-
-static void top_callback(const struct device *dev, void *user_data);
-
-static struct counter_top_cfg top_cfg = {
-	.ticks = 60000,
-	.callback = top_callback,
-	.user_data = &top_cb_count,
-};
-
-void top_callback(const struct device *dev, void *user_data)
-{
-	uint32_t *cnt = static_cast<uint32_t*>(user_data);
-	*cnt = *cnt + 1;
-}
 
 void HAH()
 {
-	uint32_t tick;
+
 	s = r % 2;
 	if (s == 0) {
-		counter_get_value(uT, &tick);
-		ut1 = top_cb_count * top_cfg.ticks + tick;
+		ut1 = uT.read_us();
 		r++;
 	}
 
 	if (s == 1) {
-		counter_get_value(uT, &tick);
-		ut2 = top_cb_count * top_cfg.ticks + tick;
+		ut2 = uT.read_us();
 		r++;
-		counter_stop(uT);
-		counter_start(uT);
+		uT.reset();
 	}
 	mypwmA.write(Vr_adc);
 	mypwmB.write(0);
@@ -155,9 +135,6 @@ int main()
 	gpio_add_callback_dt(&H_C, &cb_H_C);
 	// gpio_add_callback_dt(&button, &cb_button);
 
-	counter_set_top_value(uT, &top_cfg);
-	int er = counter_start(uT);
-
 	EN1 = 1;
 	EN2 = 1;
 	EN3 = 1;
@@ -171,6 +148,7 @@ int main()
 	while (1) {
 
 		Vr_adc = V_adc.read();
+		uT.start();
 
 		if ((Vr_adc > 0.15f) && (q == 0)) {
 			while (q < 50) {
