@@ -90,7 +90,7 @@
 
 &timers1 {
         status = "okay";
-        st,prescaler = <79>;
+        st,prescaler = <7>;
 
 	pwm1: pwm {
 		compatible = "st,stm32-pwm";
