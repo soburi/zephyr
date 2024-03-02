@@ -9,7 +9,7 @@ unsigned int q = 0, r = 0, s = 0;
 int START = 8;
 
 const struct gpio_dt_spec myled = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-//static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_NODELABEL(user_button), gpios);
+// static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_NODELABEL(user_button), gpios);
 
 const struct gpio_dt_spec EN_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(ul), gpios);
 const struct gpio_dt_spec EN_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(vl), gpios);
@@ -31,7 +31,7 @@ struct gpio_callback cb_H_C;
 struct gpio_callback cb_button;
 
 // RawCAN can1(PA_11, PA_12);
-//unsigned int UP, VP, WP;
+// unsigned int UP, VP, WP;
 
 float Vr_adc = 0.0f;
 
@@ -40,7 +40,7 @@ uint32_t top_cb_count;
 static void top_callback(const struct device *dev, void *user_data);
 
 static struct counter_top_cfg top_cfg = {
-	.ticks =  60000,
+	.ticks = 60000,
 	.callback = top_callback,
 	.user_data = &top_cb_count,
 };
@@ -97,8 +97,8 @@ void send_can_msg()
 
 void top_callback(const struct device *dev, void *user_data)
 {
-	uint32_t* cnt = user_data;
-	*cnt = *cnt+1;
+	uint32_t *cnt = user_data;
+	*cnt = *cnt + 1;
 }
 
 void pwm_write(const struct pwm_dt_spec *dt, float ratio)
@@ -284,14 +284,13 @@ int main()
 
 		usi = abs(ut2 - ut1);
 		Speed = 60 * (1 / (7.0 * usi * 1E-6));
-		//Speed = 60 * (1.f / (7.0f * usi * 1E-6f));
-		int err = 0;
-		//snprintf(message, sizeof(message), "%lld\n", counter_ticks_to_us(uT, usi));
 
-		snprintf(message, sizeof(message), "%d.%03d , %d.%03d \r", (int)Speed, (int)(Speed * 1000.0) % 1000, 
-                                                             (int)Vr_adc, (int)(Vr_adc * 1000.0) % 1000);
-		//printf("%s", message);
-		//printf("%d  ,%d ,%d\r" ,gpio_pin_get_dt(&H_A),gpio_pin_get_dt(&H_B),gpio_pin_get_dt(&H_C));
+		/*
+		snprintf(message, sizeof(message), "%d.%03d , %d.%03d \r", (int)Speed,
+			 (int)(Speed * 1000.0) % 1000, (int)Vr_adc, (int)(Vr_adc * 1000.0) % 1000);
+		printf("%s", message);
+		printf("%d  ,%d ,%d\r" ,gpio_pin_get_dt(&H_A),gpio_pin_get_dt(&H_B),gpio_pin_get_dt(&H_C));
+		*/
 
 		gpio_pin_toggle_dt(&myled);
 	}
