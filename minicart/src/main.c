@@ -1,3 +1,4 @@
+#include "mbed.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <zephyr/drivers/gpio.h>
@@ -14,6 +15,12 @@ const struct gpio_dt_spec myled = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 const struct gpio_dt_spec EN_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(ul), gpios);
 const struct gpio_dt_spec EN_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(vl), gpios);
 const struct gpio_dt_spec EN_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(wl), gpios);
+
+
+DigitalOut EN1(PC_10);
+DigitalOut EN2(PC_11);
+DigitalOut EN3(PC_12);
+
 const struct gpio_dt_spec H_A = GPIO_DT_SPEC_GET(DT_NODELABEL(u_in), gpios);
 const struct gpio_dt_spec H_B = GPIO_DT_SPEC_GET(DT_NODELABEL(v_in), gpios);
 const struct gpio_dt_spec H_C = GPIO_DT_SPEC_GET(DT_NODELABEL(w_in), gpios);
@@ -218,9 +225,6 @@ int main()
 	// can1.frequency(500000);
 	// can1.mode(mbed::interface::can::Normal);
 	gpio_pin_configure_dt(&myled, GPIO_OUTPUT);
-	gpio_pin_configure_dt(&EN_1, GPIO_OUTPUT);
-	gpio_pin_configure_dt(&EN_2, GPIO_OUTPUT);
-	gpio_pin_configure_dt(&EN_3, GPIO_OUTPUT);
 
 	gpio_pin_configure_dt(&H_A, GPIO_INPUT);
 	gpio_pin_configure_dt(&H_B, GPIO_INPUT);
@@ -243,9 +247,9 @@ int main()
 
 	adc_channel_setup_dt(&V_adc);
 
-	gpio_pin_set_dt(&EN_1, 1);
-	gpio_pin_set_dt(&EN_2, 1);
-	gpio_pin_set_dt(&EN_3, 1);
+	EN1 = 1;
+	EN2 = 1;
+	EN3 = 1;
 
 	counter_set_top_value(uT, &top_cfg);
 	int er = counter_start(uT);
