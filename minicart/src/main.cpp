@@ -18,6 +18,7 @@ unsigned int UP, VP, WP;
 AnalogIn V_adc(PC_2); // gaibu Volume
 // AnalogIn V_adc(PB_1);   //Volume
 
+Serial pc(USBTX, USBRX);
 
 DigitalOut myled(LED1);
 
@@ -81,21 +82,28 @@ void HCL()
 
 int main()
 {
+	pc.baud(115200);
 
 	EN1 = 1;
 	EN2 = 1;
 	EN3 = 1;
 
 	mypwmA.period_us(20); // PWM 50KHz
-
 	mypwmB.period_us(20);
-
 	mypwmC.period_us(20);
+
+	HA.rise(&HCH); // HAH
+	HC.fall(&HBL); // HCL
+	HB.rise(&HAH); // HBH
+	HA.fall(&HCL); // HAL
+	HC.rise(&HBH); // HCH
+	HB.fall(&HAL); // HBL
+
+	uT.start();
 
 	while (1) {
 
 		Vr_adc = V_adc.read();
-		uT.start();
 
 		if ((Vr_adc > 0.15f) && (q == 0)) {
 			while (q < 50) {
@@ -118,12 +126,6 @@ int main()
 			}
 		}
 
-		HA.rise(&HCH); // HAH
-		HC.fall(&HBL); // HCL
-		HB.rise(&HAH); // HBH
-		HA.fall(&HCL); // HAL
-		HC.rise(&HBH); // HCH
-		HB.fall(&HAL); // HBL
 		//  s=0;
 		if (Vr_adc < 0.1f) {
 
@@ -132,15 +134,9 @@ int main()
 
 		usi = abs(ut2 - ut1);
 		Speed = 60 * (1 / (7.0 * usi * 1E-6));
-		printf("%.3f , %.3f \r", Speed, Vr_adc);
-
-		/*
-		snprintf(message, sizeof(message), "%d.%03d , %d.%03d \r", (int)Speed,
-			 (int)(Speed * 1000.0) % 1000, (int)Vr_adc, (int)(Vr_adc * 1000.0) % 1000);
-		printf("%s", message);
-		printf("%d  ,%d ,%d\r" ,gpio_pin_get_dt(&H_A),gpio_pin_get_dt(&H_B),gpio_pin_get_dt(&H_C));
-		*/
-
+		pc.printf("%.3f , %.3f \r", Speed, Vr_adc);
+		// UP=HA; VP=HB; WP=HC;
+		// pc.printf("%d  ,%d ,%d\r" ,UP,VP,WP);
 		myled = !myled;
 	}
 }
