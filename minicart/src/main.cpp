@@ -10,15 +10,6 @@ DigitalOut EN1(PC_10);
 DigitalOut EN2(PC_11);
 DigitalOut EN3(PC_12);
 
-const struct gpio_dt_spec H_A = GPIO_DT_SPEC_GET(DT_NODELABEL(u_in), gpios);
-const struct gpio_dt_spec H_B = GPIO_DT_SPEC_GET(DT_NODELABEL(v_in), gpios);
-const struct gpio_dt_spec H_C = GPIO_DT_SPEC_GET(DT_NODELABEL(w_in), gpios);
-
-struct gpio_callback cb_H_A;
-struct gpio_callback cb_H_B;
-struct gpio_callback cb_H_C;
-struct gpio_callback cb_button;
-
 InterruptIn HA(PA_15);
 InterruptIn HB(PB_3);
 InterruptIn HC(PB_10);
@@ -88,33 +79,6 @@ void HCL()
 	mypwmC.write(0);
 }
 
-void H_A_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
-{
-	if (gpio_pin_get_dt(&H_A)) {
-		HCH();
-	} else {
-		HCL();
-	}
-}
-
-void H_B_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
-{
-	if (gpio_pin_get_dt(&H_B)) {
-		HAH();
-	} else {
-		HAL();
-	}
-}
-
-void H_C_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
-{
-	if (gpio_pin_get_dt(&H_C)) {
-		HBH();
-	} else {
-		HBL();
-	}
-}
-
 int main()
 {
 
@@ -128,13 +92,6 @@ int main()
 
 	mypwmC.period_us(20);
 
-		HA.rise(&HCH); // HAH
-		HC.fall(&HBL); // HCL
-		HB.rise(&HAH); // HBH
-		HA.fall(&HCL); // HAL
-		HC.rise(&HBH); // HCH
-		HB.fall(&HAL); // HBL
-	
 	while (1) {
 
 		Vr_adc = V_adc.read();
@@ -161,6 +118,12 @@ int main()
 			}
 		}
 
+		HA.rise(&HCH); // HAH
+		HC.fall(&HBL); // HCL
+		HB.rise(&HAH); // HBH
+		HA.fall(&HCL); // HAL
+		HC.rise(&HBH); // HCH
+		HB.fall(&HAL); // HBL
 		//  s=0;
 		if (Vr_adc < 0.1f) {
 
@@ -169,6 +132,7 @@ int main()
 
 		usi = abs(ut2 - ut1);
 		Speed = 60 * (1 / (7.0 * usi * 1E-6));
+		printf("%.3f , %.3f \r", Speed, Vr_adc);
 
 		/*
 		snprintf(message, sizeof(message), "%d.%03d , %d.%03d \r", (int)Speed,
