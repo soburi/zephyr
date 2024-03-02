@@ -2,6 +2,12 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pwm.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/adc.h>
+#include <zephyr/drivers/pwm.h>
+#include <zephyr/drivers/counter.h>
 
 class DigitalOut
 {
@@ -74,18 +80,18 @@ class AnalogIn
 public:
 	AnalogIn(const struct adc_dt_spec &pdt) : dt(pdt)
 	{
+		adc_channel_setup_dt(&pdt);
 	}
 	float read()
 	{
 		uint16_t buf;
 		struct adc_sequence seq = {
 			.buffer = &buf,
-			/* buffer size in bytes, not number of samples */
 			.buffer_size = sizeof(buf),
 		};
 		(void)adc_sequence_init_dt(&dt, &seq);
 		adc_read_dt(&dt, &seq);
-		return 1.0f * buf / (2 << seq.resolution);
+		return (1.0f * buf) / BIT(seq.resolution);
 	}
 };
 class Timer
@@ -152,9 +158,6 @@ static const struct gpio_dt_spec PB_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(v_in), gpi
 static const struct gpio_dt_spec PB_10 = GPIO_DT_SPEC_GET(DT_NODELABEL(w_in), gpios);
 static const struct gpio_dt_spec PB_8 = GPIO_DT_SPEC_GET(DT_NODELABEL(direction), gpios);
 static const struct gpio_dt_spec LED1 = GPIO_DT_SPEC_GET(DT_NODELABEL(direction), gpios);
-static const struct adc_dt_spec PA_0 = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
-static const struct adc_dt_spec PC_1 = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
-static const struct adc_dt_spec PC_0 = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 static const struct adc_dt_spec PC_2 = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 static const struct pwm_dt_spec PA_8 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_u));
 static const struct pwm_dt_spec PA_9 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_v));
