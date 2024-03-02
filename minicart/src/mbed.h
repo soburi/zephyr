@@ -2,13 +2,14 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pwm.h>
+
 class DigitalOut
 {
 	const struct gpio_dt_spec &dt;
 public:
 	DigitalOut(const struct gpio_dt_spec &pdt) : dt(pdt)
 	{
-		gpio_pin_configure_dt(&dt, GPIO_OUTPUT_ACTIVE);
+		gpio_pin_configure_dt(&dt, GPIO_OUTPUT);
 	}
 	void operator=(int v)
 	{
@@ -114,6 +115,30 @@ static inline void wait_ms(int x)
 {
 	k_sleep(K_MSEC(x));
 }
+
+const struct gpio_dt_spec EN_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(ul), gpios);
+const struct gpio_dt_spec EN_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(vl), gpios);
+const struct gpio_dt_spec EN_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(wl), gpios);
+
+
+static const struct gpio_dt_spec PC_10 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpioc)),
+	.pin = 10,
+	.flags = GPIO_ACTIVE_HIGH,
+};
+
+static const struct gpio_dt_spec PC_11 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpioc)),
+	.pin = 11,
+	.flags = GPIO_ACTIVE_HIGH,
+};
+
+static const struct gpio_dt_spec PC_12 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpioc)),
+	.pin = 12,
+	.flags = GPIO_ACTIVE_HIGH,
+};
+
 
 static const struct gpio_dt_spec PA_7 = GPIO_DT_SPEC_GET(DT_NODELABEL(ul), gpios);
 static const struct gpio_dt_spec PB_0 = GPIO_DT_SPEC_GET(DT_NODELABEL(vl), gpios);
