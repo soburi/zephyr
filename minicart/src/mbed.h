@@ -56,7 +56,7 @@ class PwmOut
 	const struct pwm_dt_spec &dt;
 	int period_usec;
 public:
-	PwmOut(const struct pwm_dt_spec &pdt) : dt(pdt)
+	PwmOut(const struct pwm_dt_spec &pdt) : dt(pdt) , period_usec(20)
 	{
 	}
 	void write(float duty)
