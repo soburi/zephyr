@@ -19,6 +19,10 @@ struct gpio_callback cb_H_B;
 struct gpio_callback cb_H_C;
 struct gpio_callback cb_button;
 
+InterruptIn HA(PA_15);
+InterruptIn HB(PB_3);
+InterruptIn HC(PB_10);
+
 unsigned int UP, VP, WP;
 AnalogIn V_adc(PC_2); // gaibu Volume
 // AnalogIn V_adc(PB_1);   //Volume
@@ -113,18 +117,6 @@ void H_C_handler(const struct device *port, struct gpio_callback *cb, gpio_port_
 
 int main()
 {
-	// can1.frequency(500000);
-	// can1.mode(mbed::interface::can::Normal);
-
-	gpio_pin_configure_dt(&H_A, GPIO_INPUT);
-	gpio_pin_configure_dt(&H_B, GPIO_INPUT);
-	gpio_pin_configure_dt(&H_C, GPIO_INPUT);
-
-	gpio_pin_interrupt_configure_dt(&H_A, GPIO_INT_EDGE_BOTH);
-	gpio_pin_interrupt_configure_dt(&H_B, GPIO_INT_EDGE_BOTH);
-	gpio_pin_interrupt_configure_dt(&H_C, GPIO_INT_EDGE_BOTH);
-	// gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_BOTH);
-
 	gpio_init_callback(&cb_H_A, H_A_handler, BIT(H_A.pin));
 	gpio_init_callback(&cb_H_B, H_B_handler, BIT(H_B.pin));
 	gpio_init_callback(&cb_H_C, H_C_handler, BIT(H_C.pin));
