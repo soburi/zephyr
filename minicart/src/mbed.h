@@ -136,7 +136,7 @@ class Timer
 	}
 
 public:
-	Timer(const struct device *d) : dev(d)
+	Timer() : dev(DEVICE_DT_GET(DT_NODELABEL(counter2)))
 	{
 		top_cfg.ticks = 60000;
 	       	top_cfg.callback = Timer::top_callback;
