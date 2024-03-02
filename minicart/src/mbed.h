@@ -2,12 +2,24 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pwm.h>
+#include <zephyr/drivers/counter.h>
+#include <zephyr/drivers/uart.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/adc.h>
-#include <zephyr/drivers/pwm.h>
-#include <zephyr/drivers/counter.h>
+
+#define USBTX 0
+#define USBRX 0
+
+extern "C" {
+	typedef void (*InterruptIn_fn)();
+
+	struct InterruptIn_data {
+		struct gpio_callback cb;
+		const struct gpio_dt_spec *spec;
+		InterruptIn_fn rise_fn;
+		InterruptIn_fn fall_fn;
+	};
+}
 
 class DigitalOut
 {
@@ -26,6 +38,7 @@ public:
 		return gpio_pin_get_dt(&dt);
 	}
 };
+
 class DigitalIn
 {
 	const struct gpio_dt_spec &dt;
@@ -43,17 +56,6 @@ public:
 		return gpio_pin_get_dt(&dt);
 	}
 };
-
-extern "C" {
-	typedef void (*InterruptIn_fn)();
-
-	struct InterruptIn_data {
-		struct gpio_callback cb;
-		const struct gpio_dt_spec *spec;
-		InterruptIn_fn rise_fn;
-		InterruptIn_fn fall_fn;
-	};
-}
 
 class InterruptIn
 {
@@ -91,6 +93,7 @@ public:
 		data.fall_fn = fn;
 	}
 };
+
 class PwmOut
 {
 	const struct pwm_dt_spec &dt;
@@ -108,6 +111,7 @@ public:
 		period_usec = us;
 	}
 };
+
 class AnalogIn
 {
 	const struct adc_dt_spec &dt;
@@ -128,6 +132,7 @@ public:
 		return (1.0f * buf) / BIT(seq.resolution);
 	}
 };
+
 class Timer
 {
 	const struct device *dev;
@@ -174,6 +179,7 @@ public:
 		return top_cb_count * top_cfg.ticks + tick;
 	}
 };
+
 class Ticker
 {
 	const struct device *dev;
@@ -186,15 +192,45 @@ public:
 	}
 };
 
+class Serial
+{
+	const struct device *dev;
+public:
+	Serial(int tx, int rx)
+	{
+		if (tx == USBTX && rx == USBRX) {
+			dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+		}
+	}
+
+	void baud(uint32_t baud)
+	{
+		struct uart_config cfg;
+
+		if (dev) {
+			uart_config_get(dev, &cfg);
+			cfg.baudrate = baud;
+			uart_configure(dev, &cfg);
+		}
+	}
+
+	int printf(const char* fmt, ...)
+	{
+		va_list arg_ptr;
+		int ret;
+
+		va_start(arg_ptr, fmt);
+		ret = vprintf(fmt, arg_ptr);
+		va_end(arg_ptr);
+
+		return ret;
+	}
+};
+
 static inline void wait_ms(int x)
 {
 	k_sleep(K_MSEC(x));
 }
-
-const struct gpio_dt_spec EN_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(ul), gpios);
-const struct gpio_dt_spec EN_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(vl), gpios);
-const struct gpio_dt_spec EN_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(wl), gpios);
-
 
 static const struct gpio_dt_spec PC_10 = { 
 	.port = DEVICE_DT_GET(DT_NODELABEL(gpioc)),
@@ -214,15 +250,32 @@ static const struct gpio_dt_spec PC_12 = {
 	.dt_flags = GPIO_ACTIVE_HIGH,
 };
 
+static const struct gpio_dt_spec PA_15 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpioa)),
+	.pin = 15,
+	.dt_flags = (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN),
+};
 
-static const struct gpio_dt_spec PA_15 = GPIO_DT_SPEC_GET(DT_NODELABEL(u_in), gpios);
-static const struct gpio_dt_spec PB_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(v_in), gpios);
-static const struct gpio_dt_spec PB_10 = GPIO_DT_SPEC_GET(DT_NODELABEL(w_in), gpios);
+static const struct gpio_dt_spec PB_3 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpiob)),
+	.pin = 3,
+	.dt_flags = (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN),
+};
 
-static const struct gpio_dt_spec LED1 = GPIO_DT_SPEC_GET(DT_NODELABEL(direction), gpios);
+static const struct gpio_dt_spec PB_10 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpiob)),
+	.pin = 10,
+	.dt_flags = (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN),
+};
+
+static const struct gpio_dt_spec LED1 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpiob)),
+	.pin = 2,
+	.dt_flags = (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN),
+};
 
 static const struct adc_dt_spec PC_2 = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
+
 static const struct pwm_dt_spec PA_8 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_u));
 static const struct pwm_dt_spec PA_9 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_v));
-
 static const struct pwm_dt_spec PA_10 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_w));

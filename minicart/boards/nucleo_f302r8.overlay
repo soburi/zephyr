@@ -1,96 +1,50 @@
-/*
-&can1 {
-	status = "okay";
-	pinctrl-0 = <&can_rx_pa11>, <&can_rx_pb8>;
-	pinctrl-names = "default";
-                bus-speed = <125000>;
-                //sample-point = <875>;
-                //bus-speed-data = <1000000>;
-                //sample-point-data = <750>;
-};
-*/
 / {
-	chosen {
-		zephyr,canbus = &can1;
+	pwmleds {
+		compatible = "pwm-leds";
+		pwm_u: pwm_u {
+			pwms = <&pwm1 1 PWM_USEC(20) PWM_POLARITY_NORMAL>;
+		};
+		pwm_v: pwm_v {
+			pwms = <&pwm1 2 PWM_USEC(20) PWM_POLARITY_NORMAL>;
+		};
+		pwm_w: pwm_w {
+			pwms = <&pwm1 3 PWM_USEC(20) PWM_POLARITY_NORMAL>;
+		};
 	};
-
-        leds {
-                compatible = "gpio-leds";
-                ul: ul {
-                        gpios = <&gpioc 10 GPIO_ACTIVE_HIGH>;
-                };
-                vl: vl {
-                        gpios = <&gpioc 11 GPIO_ACTIVE_HIGH>;
-                };
-                wl: wl {
-                        gpios = <&gpioc 12 GPIO_ACTIVE_HIGH>;
-                };
-        };
  
-        gpio_keys {
-                compatible = "gpio-keys";
-                u_in: u_in {
-                        gpios = <&gpioa 15 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
-                };
-                v_in: v_in {
-                        gpios = <&gpiob 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
-                };
-                w_in: w_in {
-                        gpios = <&gpiob 10 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
-                };
-                direction: direction {
-                        gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
-                };
-        };
-
-        pwmleds {
-                compatible = "pwm-leds";
-                pwm_u: pwm_u {
-                        pwms = <&pwm1 1 PWM_USEC(20) PWM_POLARITY_NORMAL>;
-                };
-                pwm_v: pwm_v {
-                        pwms = <&pwm1 2 PWM_USEC(20) PWM_POLARITY_NORMAL>;
-                };
-                pwm_w: pwm_w {
-                        pwms = <&pwm1 3 PWM_USEC(20) PWM_POLARITY_NORMAL>;
-                };
-        };
- 
-        //analog_axis {
-        zephyr,user {
-                io-channels = <&adc1 8>;
-        };
-        //};
+	zephyr,user {
+		io-channels = <&adc1 8>;
+	};
 };
  
 &usart1 {
-        status = "disabled";
+	status = "disabled";
 };
 
 &usart3 {
-        status = "disabled";
+	status = "disabled";
 };
 
 &i2c1 {
-        status = "disabled";
+	status = "disabled";
 };
 
 &spi2 {
-        status = "disabled";
+	status = "disabled";
 };
 /*
 &gpioa {
-        status = "okay";
+	status = "okay";
 };
 
 &gpiob {
-        status = "okay";
+	status = "okay";
 };
 */
 
 &timers1 {
-        status = "okay";
-        st,prescaler = <7>;
+	status = "okay";
+	st,prescaler = <7>;
 
 	pwm1: pwm {
 		compatible = "st,stm32-pwm";
@@ -102,8 +56,8 @@
 };
 
 &timers2 {
-        status = "okay";
-        st,prescaler = <799>;
+	status = "okay";
+	st,prescaler = <799>;
 	pwm {
 		status = "disabled";
 	};
@@ -114,18 +68,18 @@
 };
 
 &adc1 {
-        #address-cells = <1>;
-        #size-cells = <0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
 
-        pinctrl-0 = <&adc1_in8_pc2>;
-        pinctrl-names = "default";
-        status = "okay";
+	pinctrl-0 = <&adc1_in8_pc2>;
+	pinctrl-names = "default";
+	status = "okay";
  
-        channel@8 {
-                reg = <8>;
-                zephyr,gain = "ADC_GAIN_1";
-                zephyr,reference = "ADC_REF_INTERNAL";
-                zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
-                zephyr,resolution = <12>;
-        };
+	channel@8 {
+		reg = <8>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+	};
 };
