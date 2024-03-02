@@ -210,15 +210,14 @@ static const struct gpio_dt_spec PC_12 = {
 };
 
 
-static const struct gpio_dt_spec PA_7 = GPIO_DT_SPEC_GET(DT_NODELABEL(ul), gpios);
-static const struct gpio_dt_spec PB_0 = GPIO_DT_SPEC_GET(DT_NODELABEL(vl), gpios);
-static const struct gpio_dt_spec PB_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(wl), gpios);
 static const struct gpio_dt_spec PA_15 = GPIO_DT_SPEC_GET(DT_NODELABEL(u_in), gpios);
 static const struct gpio_dt_spec PB_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(v_in), gpios);
 static const struct gpio_dt_spec PB_10 = GPIO_DT_SPEC_GET(DT_NODELABEL(w_in), gpios);
-static const struct gpio_dt_spec PB_8 = GPIO_DT_SPEC_GET(DT_NODELABEL(direction), gpios);
+
 static const struct gpio_dt_spec LED1 = GPIO_DT_SPEC_GET(DT_NODELABEL(direction), gpios);
+
 static const struct adc_dt_spec PC_2 = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 static const struct pwm_dt_spec PA_8 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_u));
 static const struct pwm_dt_spec PA_9 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_v));
+
 static const struct pwm_dt_spec PA_10 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_w));
