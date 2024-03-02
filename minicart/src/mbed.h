@@ -57,7 +57,7 @@ public:
 	}
 	void write(float duty)
 	{
-		pwm_set_dt(&dt, period_usec * 1000, period_usec * 1000 * duty);
+		pwm_set_dt(dt, period_usec * 1000, period_usec * 1000 * duty);
 	}
 	void period_us(int us)
 	{
