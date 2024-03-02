@@ -9,7 +9,6 @@
 unsigned int q = 0, r = 0, s = 0;
 int START = 8;
 
-const struct gpio_dt_spec myled = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 // static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_NODELABEL(user_button), gpios);
 
 PwmOut mypwmA(PA_8);  // PWM_OUT
@@ -35,6 +34,8 @@ struct gpio_callback cb_button;
 
 // RawCAN can1(PA_11, PA_12);
 // unsigned int UP, VP, WP;
+
+DigitalOut myled(LED1);
 
 float Vr_adc = 0.0f;
 
@@ -220,7 +221,7 @@ int main()
 {
 	// can1.frequency(500000);
 	// can1.mode(mbed::interface::can::Normal);
-	gpio_pin_configure_dt(&myled, GPIO_OUTPUT);
+	// gpio_pin_configure_dt(&myled, GPIO_OUTPUT);
 
 	gpio_pin_configure_dt(&H_A, GPIO_INPUT);
 	gpio_pin_configure_dt(&H_B, GPIO_INPUT);
