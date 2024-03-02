@@ -12,10 +12,9 @@ int START = 8;
 const struct gpio_dt_spec myled = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 // static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_NODELABEL(user_button), gpios);
 
-const struct gpio_dt_spec EN_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(ul), gpios);
-const struct gpio_dt_spec EN_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(vl), gpios);
-const struct gpio_dt_spec EN_3 = GPIO_DT_SPEC_GET(DT_NODELABEL(wl), gpios);
-
+PwmOut mypwmA(PA_8);  // PWM_OUT
+PwmOut mypwmB(PA_9);  // PWM_OUT
+PwmOut mypwmC(PA_10); // PWM_OUT
 
 DigitalOut EN1(PC_10);
 DigitalOut EN2(PC_11);
@@ -24,9 +23,6 @@ DigitalOut EN3(PC_12);
 const struct gpio_dt_spec H_A = GPIO_DT_SPEC_GET(DT_NODELABEL(u_in), gpios);
 const struct gpio_dt_spec H_B = GPIO_DT_SPEC_GET(DT_NODELABEL(v_in), gpios);
 const struct gpio_dt_spec H_C = GPIO_DT_SPEC_GET(DT_NODELABEL(w_in), gpios);
-const struct pwm_dt_spec mypwm_A = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_u));
-const struct pwm_dt_spec mypwm_B = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_v));
-const struct pwm_dt_spec mypwm_C = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_w));
 
 const struct adc_dt_spec V_adc = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 
@@ -130,42 +126,42 @@ void HAH()
 		counter_stop(uT);
 		counter_start(uT);
 	}
-	pwm_write(&mypwm_A, Vr_adc);
-	pwm_write(&mypwm_B, 0);
-	pwm_write(&mypwm_C, 0);
+	mypwmA.write(Vr_adc);
+	mypwmB.write(0);
+	mypwmC.write(0);
 }
 
 void HAL()
 {
 
-	pwm_write(&mypwm_A, 0);
-	pwm_write(&mypwm_C, 0);
+	mypwmA.write(0);
+	mypwmC.write(0);
 }
 void HBH()
 {
 
-	pwm_write(&mypwm_A, 0);
-	pwm_write(&mypwm_B, Vr_adc);
-	pwm_write(&mypwm_C, 0);
+	mypwmA.write(0);
+	mypwmB.write(Vr_adc);
+	mypwmC.write(0);
 }
 void HBL()
 {
 
-	pwm_write(&mypwm_A, 0);
-	pwm_write(&mypwm_B, 0);
+	mypwmA.write(0);
+	mypwmB.write(0);
 }
 void HCH()
 {
 
-	pwm_write(&mypwm_A, 0);
-	pwm_write(&mypwm_B, 0);
-	pwm_write(&mypwm_C, Vr_adc);
+	mypwmA.write(0);
+	mypwmB.write(0);
+	mypwmC.write(Vr_adc);
 }
 
 void HCL()
 {
-	pwm_write(&mypwm_B, 0);
-	pwm_write(&mypwm_C, 0);
+	mypwmB.write(0);
+	mypwmC.write(0);
 }
 
 void H_A_handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
@@ -263,19 +259,19 @@ int main()
 		if ((Vr_adc > 0.15f) && (q == 0)) {
 			while (q < 50) {
 
-				pwm_write(&mypwm_A, 0);
-				pwm_write(&mypwm_B, 0.5f);
-				pwm_write(&mypwm_C, 0);
+				mypwmA.write(0);
+				mypwmB.write(0.5f);
+				mypwmC.write(0);
 				k_msleep(START);
 
-				pwm_write(&mypwm_A, 0.5f);
-				pwm_write(&mypwm_B, 0);
-				pwm_write(&mypwm_C, 0);
+				mypwmA.write(0.5f);
+				mypwmB.write(0);
+				mypwmC.write(0);
 				k_msleep(START);
 
-				pwm_write(&mypwm_A, 0);
-				pwm_write(&mypwm_B, 0);
-				pwm_write(&mypwm_C, 0.5f);
+				mypwmA.write(0);
+				mypwmB.write(0);
+				mypwmC.write(0.5f);
 				k_msleep(START);
 				q++;
 			}
