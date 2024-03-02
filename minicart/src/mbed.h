@@ -64,9 +64,13 @@ class InterruptIn
 	{
 		struct InterruptIn_data *data = CONTAINER_OF(cb, struct InterruptIn_data, cb);
 		if (gpio_pin_get_dt(data->spec)) {
-			data->rise_fn();
+			if (data->rise_fn) {
+				data->rise_fn();
+			}
 		} else {
-			data->fall_fn();
+			if (data->fall_fn) {
+				data->fall_fn();
+			}
 		}
 	}
 public:
@@ -76,6 +80,7 @@ public:
 		gpio_pin_interrupt_configure_dt(&dt, GPIO_INT_EDGE_BOTH);
 		data.spec = &dt;
 	       	gpio_init_callback(&data.cb, InterruptIn_Handler, BIT(dt.pin));
+		gpio_add_callback_dt(&dt, &data.cb);
 	}
 	void rise(void (*fn)())
 	{

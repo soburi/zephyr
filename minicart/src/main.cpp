@@ -117,15 +117,6 @@ void H_C_handler(const struct device *port, struct gpio_callback *cb, gpio_port_
 
 int main()
 {
-	gpio_init_callback(&cb_H_A, H_A_handler, BIT(H_A.pin));
-	gpio_init_callback(&cb_H_B, H_B_handler, BIT(H_B.pin));
-	gpio_init_callback(&cb_H_C, H_C_handler, BIT(H_C.pin));
-	// gpio_init_callback(&cb_button, button_handler, BIT(button.pin));
-
-	gpio_add_callback_dt(&H_A, &cb_H_A);
-	gpio_add_callback_dt(&H_B, &cb_H_B);
-	gpio_add_callback_dt(&H_C, &cb_H_C);
-	// gpio_add_callback_dt(&button, &cb_button);
 
 	EN1 = 1;
 	EN2 = 1;
@@ -137,6 +128,13 @@ int main()
 
 	mypwmC.period_us(20);
 
+		HA.rise(&HCH); // HAH
+		HC.fall(&HBL); // HCL
+		HB.rise(&HAH); // HBH
+		HA.fall(&HCL); // HAL
+		HC.rise(&HBH); // HCH
+		HB.fall(&HAL); // HBL
+	
 	while (1) {
 
 		Vr_adc = V_adc.read();
