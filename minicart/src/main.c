@@ -97,7 +97,7 @@ void send_can_msg()
 
 void top_callback(const struct device *dev, void *user_data)
 {
-	uint32_t *cnt = user_data;
+	uint32_t *cnt = static_cast<uint32_t*>(user_data);
 	*cnt = *cnt + 1;
 }
 
