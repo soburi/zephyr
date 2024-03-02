@@ -43,18 +43,47 @@ public:
 		return gpio_pin_get_dt(&dt);
 	}
 };
+
+extern "C" {
+	typedef void (*InterruptIn_fn)();
+
+	struct InterruptIn_data {
+		struct gpio_callback cb;
+		const struct gpio_dt_spec *spec;
+		InterruptIn_fn rise_fn;
+		InterruptIn_fn fall_fn;
+	};
+}
+
 class InterruptIn
 {
 	const struct gpio_dt_spec &dt;
+	struct InterruptIn_data data;
+
+	static void InterruptIn_Handler(const struct device *port, struct gpio_callback *cb, gpio_port_pins_t pins)
+	{
+		struct InterruptIn_data *data = CONTAINER_OF(cb, struct InterruptIn_data, cb);
+		if (gpio_pin_get_dt(data->spec)) {
+			data->rise_fn();
+		} else {
+			data->fall_fn();
+		}
+	}
 public:
 	InterruptIn(const struct gpio_dt_spec &pdt) : dt(pdt)
 	{
+		gpio_pin_configure_dt(&dt, GPIO_INPUT);
+		gpio_pin_interrupt_configure_dt(&dt, GPIO_INT_EDGE_BOTH);
+		data.spec = &dt;
+	       	gpio_init_callback(&data.cb, InterruptIn_Handler, BIT(dt.pin));
 	}
 	void rise(void (*fn)())
 	{
+		data.rise_fn = fn;
 	}
 	void fall(void (*fn)())
 	{
+		data.fall_fn = fn;
 	}
 };
 class PwmOut
@@ -97,16 +126,38 @@ public:
 class Timer
 {
 	const struct device *dev;
+	uint32_t top_cb_count;
+	struct counter_top_cfg top_cfg;
+
+	static void top_callback(const struct device *dev, void *user_data)
+       	{
+		uint32_t *cnt = static_cast<uint32_t*>(user_data);
+		*cnt = *cnt + 1;
+	}
+
 public:
 	Timer(const struct device *d) : dev(d)
 	{
+		top_cfg.ticks = 60000;
+	       	top_cfg.callback = Timer::top_callback;
+	       	top_cfg.user_data = &top_cb_count;
+		counter_set_top_value(dev, &top_cfg);
 	}
+
 	void start()
 	{
+		counter_start(dev);
+	}
+	void reset()
+	{
+		counter_stop(dev);
+		counter_start(dev);
 	}
 	int read_us()
 	{
-		return 0;
+		uint32_t tick = 0;
+	       	counter_get_value(dev, &tick);
+		return top_cb_count * top_cfg.ticks + tick;
 	}
 };
 class Ticker
