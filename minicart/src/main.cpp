@@ -1,5 +1,7 @@
 #include "mbed.h"
 
+static const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
+
 unsigned int q = 0, r = 0, s = 0, START = 8;
 
 PwmOut mypwmA(PA_8);  // PWM_OUT
@@ -27,6 +29,73 @@ float Vr_adc = 0.0f;
 Timer uT;
 float ut1 = 0, ut2 = 0, usi = 0;
 float Speed = 0;
+
+
+static void send_engine_speed(const struct device *can_dev, struct can_frame *frame, int speed)
+{
+	memset(frame, 0, sizeof(struct can_frame));
+            //# Engine speed
+            //speed = self.simulator.get_engine_speed()
+            //if self.verbose:
+            //    print('engine speed = %d' % speed)
+            //if speed > 16383.75:
+            //    speed = 16383.75
+            //# Message is 1 byte unknown, 1 byte fuel level, 2 bytes engine speed (4x), fuel low @ bit 55
+
+       	//msg = [ 0, 0 ]
+	frame->data[0] = 0;
+	frame->data[1] = 0;
+        //speed *= 4
+        //msg.append(speed // 256)
+        //msg.append(speed % 256)
+	frame->data[2] = (speed * 4) / 256;
+	frame->data[3] = (speed * 4) % 256;
+        //# pad remaining bytes to make 8
+        //msg.append(0)
+        //msg.append(0)
+        //msg.append(0)
+        //msg.append(0)
+	frame->data[4] = 0;
+	frame->data[5] = 0;
+	frame->data[6] = 0;
+	frame->data[7] = 0;
+
+	frame->id = 0x3d9;
+	frame->flags = 0;
+	frame->dlc = 8;
+
+	can_send(can_dev, frame, K_FOREVER, tx_irq_callback, "send_engine_speed");
+}
+
+static void send_vehicle_speed(const struct device *can_dev, struct can_frame *frame, int speed)
+{
+	memset(frame, 0, sizeof(struct can_frame));
+        //# Vehicle speed
+        //speed = int(self.simulator.get_vehicle_speed()) % 256
+        /* Message is 15 bits speed (64x), left aligned */
+        /* Note: extra 2x to yield required left-alignment */
+	frame->data[0] = (speed * 128) / 256;
+	frame->data[1] = (speed * 128) % 256;
+        /* pad remaining bytes to make 8 */
+	frame->data[2] = 0;
+	frame->data[3] = 0;
+	frame->data[4] = 0;
+	frame->data[5] = 0;
+	frame->data[6] = 0;
+	frame->data[7] = 0;
+
+	frame->id = 0x3e9;
+	frame->flags = 0;
+	frame->dlc = 8;
+
+	can_send(can_dev, frame, K_FOREVER, tx_irq_callback, "send_vehicle_speed");
+}
+
+void send_can_data(struct can_frame *frame)
+{
+	send_engine_speed(can_dev, frame, 0);
+	send_vehicle_speed(can_dev, frame, 0);
+}
 
 void HAH()
 {
