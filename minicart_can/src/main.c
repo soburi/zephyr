@@ -27,8 +27,13 @@ static void tx_irq_callback(const struct device *dev, int error, void *arg)
 	}
 }
 
+int dummy_speed;
+
 static void send_engine_speed(const struct device *can_dev, struct can_frame *frame, int speed)
 {
+	speed = dummy_speed;
+	dummy_speed++;
+
 	memset(frame, 0, sizeof(struct can_frame));
             //# Engine speed
             //speed = self.simulator.get_engine_speed()
@@ -90,7 +95,7 @@ static void send_vehicle_speed(const struct device *can_dev, struct can_frame *f
 void send_can_data(struct can_frame *frame)
 {
 	send_engine_speed(can_dev, frame, 0);
-	send_vehicle_speed(can_dev, frame, 0);
+	//send_vehicle_speed(can_dev, frame, 0);
 }
 
 int main(void)
