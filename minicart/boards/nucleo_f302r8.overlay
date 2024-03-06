@@ -1,4 +1,8 @@
 / {
+        chosen {
+                zephyr,canbus = &can1;
+        };
+
 	pwmleds {
 		compatible = "pwm-leds";
 		pwm_u: pwm_u {
@@ -83,3 +87,14 @@
 		zephyr,resolution = <12>;
 	};
 };
+
+&can1 {
+        status = "okay";
+        pinctrl-0 = <&can_rx_pa11>, <&can_tx_pa12>;
+        pinctrl-names = "default";
+                bus-speed = <500000>;
+                //sample-point = <875>;
+                //bus-speed-data = <1000000>;
+                //sample-point-data = <750>;
+};
+
