@@ -71,9 +71,21 @@
 	};
 };
 
+&timers3 {
+	status = "okay";
+	st,prescaler = <7>;
+	pwm {
+		status = "disabled";
+	};
+
+	counter3: counter {
+		status = "okay";
+	};
+};
+
 &timers6 {
 	status = "okay";
-	st,prescaler = <799>;
+	st,prescaler = <79>;
 	pwm {
 		status = "disabled";
 	};
@@ -85,7 +97,7 @@
 
 &timers7 {
 	status = "okay";
-	st,prescaler = <799>;
+	st,prescaler = <79>;
 	pwm {
 		status = "disabled";
 	};
@@ -97,7 +109,7 @@
 
 &timers15 {
 	status = "okay";
-	st,prescaler = <799>;
+	st,prescaler = <79>;
 	pwm {
 		status = "disabled";
 	};
@@ -109,7 +121,7 @@
 
 &timers16 {
 	status = "okay";
-	st,prescaler = <799>;
+	st,prescaler = <79>;
 	pwm {
 		status = "disabled";
 	};
@@ -121,7 +133,7 @@
 
 &timers17 {
 	status = "okay";
-	st,prescaler = <799>;
+	st,prescaler = <79>;
 	pwm {
 		status = "disabled";
 	};
