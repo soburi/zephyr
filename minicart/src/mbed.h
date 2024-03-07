@@ -141,13 +141,13 @@ class Timer
 	bool running;
 
 	static void top_callback(const struct device *dev, void *user_data)
-       	{
+	{
 		uint32_t *cnt = static_cast<uint32_t*>(user_data);
 		*cnt = *cnt + 1;
 	}
 
 public:
-	Timer() : dev(DEVICE_DT_GET(DT_NODELABEL(counter2))), running(false)
+	Timer(const struct device *_dev) : dev(_dev), running(false)
 	{
 		top_cfg.ticks = 60000;
 	       	top_cfg.callback = Timer::top_callback;
@@ -180,15 +180,30 @@ public:
 	}
 };
 
+typedef void (*voidfn)();
+
 class Ticker
 {
 	const struct device *dev;
+	uint32_t top_cb_count;
+	struct counter_top_cfg top_cfg;
+
+	static void top_callback(const struct device *dev, void *user_data)
+	{
+		voidfn fnx  = reinterpret_cast<voidfn>(user_data);
+		fnx();
+	}
 public:
 	Ticker(const struct device *d) : dev(d)
 	{
 	}
-	void attach_us(void (*fn)(), float)
+
+	void attach_us(voidfn func, float us)
 	{
+		top_cfg.ticks = static_cast<uint32_t>(us);
+		top_cfg.callback = Ticker::top_callback;
+		top_cfg.user_data = reinterpret_cast<void*>(func);
+		counter_set_top_value(dev, &top_cfg);
 	}
 };
 
