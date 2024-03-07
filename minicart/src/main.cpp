@@ -1,4 +1,5 @@
 #include "mbed.h"
+#include <zephyr/drivers/can.h>
 
 static const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
@@ -30,9 +31,25 @@ Timer uT;
 float ut1 = 0, ut2 = 0, usi = 0;
 float Speed = 0;
 
+static void tx_irq_callback(const struct device *dev, int error, void *arg)
+{
+	char *sender = (char *)arg;
+
+	ARG_UNUSED(dev);
+
+	if (error != 0) {
+		printf("Callback! error-code: %d\nSender: %s\n",
+		       error, sender);
+	}
+}
+
+int dummy_speed;
 
 static void send_engine_speed(const struct device *can_dev, struct can_frame *frame, int speed)
 {
+	speed = dummy_speed;
+	dummy_speed++;
+
 	memset(frame, 0, sizeof(struct can_frame));
             //# Engine speed
             //speed = self.simulator.get_engine_speed()
@@ -64,7 +81,7 @@ static void send_engine_speed(const struct device *can_dev, struct can_frame *fr
 	frame->flags = 0;
 	frame->dlc = 8;
 
-	can_send(can_dev, frame, K_FOREVER, tx_irq_callback, "send_engine_speed");
+	can_send(can_dev, frame, K_FOREVER, tx_irq_callback, const_cast<char*>("send_engine_speed"));
 }
 
 static void send_vehicle_speed(const struct device *can_dev, struct can_frame *frame, int speed)
@@ -88,13 +105,13 @@ static void send_vehicle_speed(const struct device *can_dev, struct can_frame *f
 	frame->flags = 0;
 	frame->dlc = 8;
 
-	can_send(can_dev, frame, K_FOREVER, tx_irq_callback, "send_vehicle_speed");
+	can_send(can_dev, frame, K_FOREVER, tx_irq_callback, const_cast<char*>("send_vehicle_speed"));
 }
 
 void send_can_data(struct can_frame *frame)
 {
 	send_engine_speed(can_dev, frame, 0);
-	send_vehicle_speed(can_dev, frame, 0);
+	//send_vehicle_speed(can_dev, frame, 0);
 }
 
 void HAH()
@@ -151,6 +168,8 @@ void HCL()
 
 int main()
 {
+	struct can_frame change_led_frame;
+
 	pc.baud(115200);
 
 	EN1 = 1;
@@ -171,6 +190,7 @@ int main()
 	uT.start();
 
 	while (1) {
+		send_can_data(&change_led_frame);
 
 		Vr_adc = V_adc.read();
 
