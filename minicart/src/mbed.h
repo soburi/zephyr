@@ -204,6 +204,7 @@ public:
 		top_cfg.callback = Ticker::top_callback;
 		top_cfg.user_data = reinterpret_cast<void*>(func);
 		counter_set_top_value(dev, &top_cfg);
+		counter_start(dev);
 	}
 };
 

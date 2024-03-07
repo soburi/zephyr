@@ -48,8 +48,8 @@ DigitalIn  W_in(PB_10);
 DigitalIn Direction(PB_8);
 
 Timer uTimer(DEVICE_DT_GET(DT_NODELABEL(counter15)));
-Timer vTimer(DEVICE_DT_GET(DT_NODELABEL(counter16)));
-Timer wTimer(DEVICE_DT_GET(DT_NODELABEL(counter17)));
+Timer& vTimer = uTimer;//(DEVICE_DT_GET(DT_NODELABEL(counter6)));
+Timer& wTimer = uTimer;//(DEVICE_DT_GET(DT_NODELABEL(counter7)));
 //Timer Timer1; 
 
 //AnalogOut SWAVE(PA_4);
@@ -133,8 +133,8 @@ float s_kiSpeed = 0.0; /* 積分器中身 */
 float Speed_diff_norm=0.0;
 float Ajust=0.7; //Nrpm_S回転速度計算値の調整
 /*******Ticker*********************/
-Ticker Sp(DEVICE_DT_GET(DT_NODELABEL(counter6)));
-Ticker Cu(DEVICE_DT_GET(DT_NODELABEL(counter7)));
+Ticker Sp(DEVICE_DT_GET(DT_NODELABEL(counter16)));
+Ticker Cu(DEVICE_DT_GET(DT_NODELABEL(counter17)));
 
 /*******************************************/
  float  PWMDuty=0;
@@ -219,11 +219,17 @@ void Capture_w()
   } 
 
 /*********************************************/
-  
+
+int u_count;
+int ul_count;
+int v_count;
+int vl_count;
+int w_count;
+int wl_count;
  /* Hall_uにキャプチャ発生 */
 void Hall_u()
     {            
-
+u_count++;
   if(rt_pwm==1){
     
     if(Direct_R==0){
@@ -240,6 +246,7 @@ void Hall_u()
      }
  void Hall_ul() 
     {
+ul_count++;
       
     if(rt_pwm==1){
      
@@ -260,6 +267,7 @@ void Hall_u()
     /* Hall_vにキャプチャ発生 */
 void Hall_v()
     { 
+v_count++;
     
     if(rt_pwm==1){
         
@@ -278,6 +286,7 @@ void Hall_v()
     
 void Hall_vl() 
     {
+vl_count++;
      
      if(rt_pwm==1){
     if(Direct_R==0){
@@ -295,6 +304,7 @@ void Hall_vl()
     /* Hall_Wにキャプチャ発生 */
 void Hall_w()
     {
+w_count++;
       
  if(rt_pwm==1){
          
@@ -311,6 +321,7 @@ void Hall_w()
       }
 void Hall_wl() 
     { 
+wl_count++;
     
    if(rt_pwm==1){
         
@@ -327,7 +338,10 @@ void Hall_wl()
     Capture_w();//速度計算へ
         } 
 /****************************************/        
+int speed_pi_count;
 void Speed_PI(){
+	speed_pi_count++;
+#if 0
     /* ----------- */
     /* SpeedのPI制御 */
     /* ----------- */
@@ -357,9 +371,13 @@ void Speed_PI(){
         I_PI = -IMAX_SET; 
     }else{}
     }
+#endif
  }
+
+int current_pi_count;
  /***********************************/
  void Current_PI(){
+	 current_pi_count++;
  I_diff = (I_PI - (I_detect-0.5))*I_PII;
     s_kiCurrent += kiCurrent*(I_diff);
     if(s_kiCurrent > VMAX_SET)
@@ -404,7 +422,7 @@ int main() {
    
     PWM_W.period_us(25);
     
-    pc.baud(128000);
+    pc.baud(115200);
 
     wait_ms(500);    
     Vr_adc_i=V_adc.read();  
@@ -419,7 +437,19 @@ int main() {
   Cu.attach_us(&Current_PI, Cu_ticktime);
   Cu_tick=1;
 #endif
-      
+
+  while(1) {
+	  k_msleep(1000);
+	  printf("ticker %d %d\n", speed_pi_count, current_pi_count);
+	  printf("timer %d %d %d\n", uTimer.read_us(), vTimer.read_us(), wTimer.read_us());
+	  printf("adc V=%lf u=%lf v=%lf w=%lf\n", V_adc.read(), Curr_ui.read(), Curr_vi.read(), Curr_wi.read());
+
+	  printf("intr %d %d %d %d %d %d\n", u_count, ul_count, v_count, vl_count, w_count, wl_count);
+	  printf("In %d %d %d %d\n", (int)U_in, (int)V_in, (int)W_in, (int)Direction);
+	  printf("Out %d %d %d\n", (int)UL, (int)VL, (int)WL);
+  }
+
+#if 0  
  while(1) {
    //wait_us(50); //20
    //pc.printf("%.3f,%.3f,%.3f \r" ,du,dv,dw);
@@ -819,5 +849,6 @@ else{}//rt_pwm==0
          //SWAVE=(I_detect-0.5)*303;
          //SWAVE=Speed_diff_norm+0.5;
      }//while
+#endif
      }//main
 
