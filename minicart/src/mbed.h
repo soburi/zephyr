@@ -232,6 +232,21 @@ static inline void wait_ms(int x)
 	k_sleep(K_MSEC(x));
 }
 
+static const struct gpio_dt_spec PA_7 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpioa)),
+	.pin = 7,
+	.dt_flags = GPIO_ACTIVE_HIGH,
+};
+static const struct gpio_dt_spec PB_0 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpiob)),
+	.pin = 0,
+	.dt_flags = GPIO_ACTIVE_HIGH,
+};
+static const struct gpio_dt_spec PB_1 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpiob)),
+	.pin = 1,
+	.dt_flags = GPIO_ACTIVE_HIGH,
+};
 static const struct gpio_dt_spec PC_10 = { 
 	.port = DEVICE_DT_GET(DT_NODELABEL(gpioc)),
 	.pin = 10,
@@ -262,6 +277,12 @@ static const struct gpio_dt_spec PB_3 = {
 	.dt_flags = (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN),
 };
 
+static const struct gpio_dt_spec PB_8 = { 
+	.port = DEVICE_DT_GET(DT_NODELABEL(gpiob)),
+	.pin = 8,
+	.dt_flags = (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN),
+};
+
 static const struct gpio_dt_spec PB_10 = { 
 	.port = DEVICE_DT_GET(DT_NODELABEL(gpiob)),
 	.pin = 10,
@@ -274,7 +295,10 @@ static const struct gpio_dt_spec LED1 = {
 	.dt_flags = (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN),
 };
 
-static const struct adc_dt_spec PC_2 = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
+static const struct adc_dt_spec PA_0 = ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 0);
+static const struct adc_dt_spec PC_0 = ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 1);
+static const struct adc_dt_spec PC_1 = ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 2);
+static const struct adc_dt_spec PC_2 = ADC_DT_SPEC_GET_BY_IDX(DT_PATH(zephyr_user), 3);
 
 static const struct pwm_dt_spec PA_8 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_u));
 static const struct pwm_dt_spec PA_9 = PWM_DT_SPEC_GET(DT_NODELABEL(pwm_v));
