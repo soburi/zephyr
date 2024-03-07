@@ -31,6 +31,8 @@ Timer uT;
 float ut1 = 0, ut2 = 0, usi = 0;
 float Speed = 0;
 
+#define SLEEP_TIME K_MSEC(250)
+
 static void tx_irq_callback(const struct device *dev, int error, void *arg)
 {
 	char *sender = (char *)arg;
@@ -91,8 +93,8 @@ static void send_vehicle_speed(const struct device *can_dev, struct can_frame *f
         //speed = int(self.simulator.get_vehicle_speed()) % 256
         /* Message is 15 bits speed (64x), left aligned */
         /* Note: extra 2x to yield required left-alignment */
-	frame->data[0] = (speed * 128) / 256;
-	frame->data[1] = (speed * 128) % 256;
+	frame->data[0] = ((speed/60) * 128) / 256;
+	frame->data[1] = ((speed/60) * 128) % 256;
         /* pad remaining bytes to make 8 */
 	frame->data[2] = 0;
 	frame->data[3] = 0;
@@ -169,6 +171,28 @@ void HCL()
 int main()
 {
 	struct can_frame change_led_frame;
+	int ret;
+
+	if (!device_is_ready(can_dev)) {
+		printf("CAN: Device %s not ready.\n", can_dev->name);
+		return 0;
+	}
+
+#ifdef CONFIG_LOOPBACK_MODE
+	ret = can_set_mode(can_dev, CAN_MODE_LOOPBACK);
+	if (ret != 0) {
+		printf("Error setting CAN mode [%d]", ret);
+		return 0;
+	}
+#endif
+	ret = can_start(can_dev);
+	if (ret != 0) {
+		printf("Error starting CAN controller [%d]", ret);
+		return 0;
+	}
+
+	printf("Finished init.\n");
+
 
 	pc.baud(115200);
 
