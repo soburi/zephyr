@@ -71,6 +71,66 @@
 	};
 };
 
+&timers6 {
+	status = "okay";
+	st,prescaler = <799>;
+	pwm {
+		status = "disabled";
+	};
+
+	counter6: counter {
+		status = "okay";
+	};
+};
+
+&timers7 {
+	status = "okay";
+	st,prescaler = <799>;
+	pwm {
+		status = "disabled";
+	};
+
+	counter7: counter {
+		status = "okay";
+	};
+};
+
+&timers15 {
+	status = "okay";
+	st,prescaler = <799>;
+	pwm {
+		status = "disabled";
+	};
+
+	counter15: counter {
+		status = "okay";
+	};
+};
+
+&timers16 {
+	status = "okay";
+	st,prescaler = <799>;
+	pwm {
+		status = "disabled";
+	};
+
+	counter16: counter {
+		status = "okay";
+	};
+};
+
+&timers17 {
+	status = "okay";
+	st,prescaler = <799>;
+	pwm {
+		status = "disabled";
+	};
+
+	counter17: counter {
+		status = "okay";
+	};
+};
+
 &adc1 {
 	#address-cells = <1>;
 	#size-cells = <0>;

@@ -47,10 +47,10 @@ DigitalIn  W_in(PB_10);
 
 DigitalIn Direction(PB_8);
 
-Timer uTimer;
-Timer vTimer;
-Timer wTimer;
-Timer Timer1; 
+Timer uTimer(DEVICE_DT_GET(DT_NODELABEL(counter15)));
+Timer vTimer(DEVICE_DT_GET(DT_NODELABEL(counter16)));
+Timer wTimer(DEVICE_DT_GET(DT_NODELABEL(counter17)));
+//Timer Timer1; 
 
 //AnalogOut SWAVE(PA_4);
 
@@ -133,8 +133,8 @@ float s_kiSpeed = 0.0; /* 積分器中身 */
 float Speed_diff_norm=0.0;
 float Ajust=0.7; //Nrpm_S回転速度計算値の調整
 /*******Ticker*********************/
-Ticker Sp;
-Ticker Cu;
+Ticker Sp(DEVICE_DT_GET(DT_NODELABEL(counter6)));
+Ticker Cu(DEVICE_DT_GET(DT_NODELABEL(counter7)));
 
 /*******************************************/
  float  PWMDuty=0;
@@ -393,7 +393,7 @@ void Speed_PI(){
     
 /********main***********/
 int main() {
-    Timer1.start();  
+    //Timer1.start();  
     uTimer.start();
     vTimer.start();
     wTimer.start();
