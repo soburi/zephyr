@@ -341,7 +341,6 @@ wl_count++;
 int speed_pi_count;
 void Speed_PI(){
 	speed_pi_count++;
-#if 0
     /* ----------- */
     /* SpeedのPI制御 */
     /* ----------- */
@@ -371,7 +370,6 @@ void Speed_PI(){
         I_PI = -IMAX_SET; 
     }else{}
     }
-#endif
  }
 
 int current_pi_count;
@@ -438,6 +436,7 @@ int main() {
   Cu_tick=1;
 #endif
 
+#if PERIPH_CHECK
   while(1) {
 	  k_msleep(1000);
 	  printf("ticker %d %d\n", speed_pi_count, current_pi_count);
@@ -449,7 +448,7 @@ int main() {
 	  printf("Out %d %d %d\n", (int)UL, (int)VL, (int)WL);
   }
 
-#if 0  
+#else
  while(1) {
    //wait_us(50); //20
    //pc.printf("%.3f,%.3f,%.3f \r" ,du,dv,dw);
