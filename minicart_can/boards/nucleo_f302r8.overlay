@@ -3,38 +3,6 @@
 		zephyr,canbus = &can1;
 	};
 
-	leds {
-		compatible = "gpio-leds";
-		ul: ul {
-			gpios = <&gpioa 7 GPIO_ACTIVE_HIGH>;
-		};
-		vl: vl {
-			gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;
-		};
-		wl: wl {
-			gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
-		};
-		led: led {
-			gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
-		};
-	};
- 
-	gpio_keys {
-		compatible = "gpio-keys";
-		u_in: u_in {
-			gpios = <&gpioa 15 GPIO_ACTIVE_HIGH>;
-		};
-		v_in: v_in {
-			gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
-		};
-		w_in: w_in {
-			gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
-		};
-		direction: direction {
-			gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
-		};
-	};
- 
 	pwmleds {
 		compatible = "pwm-leds";
 		pwm_u: pwm_u {
