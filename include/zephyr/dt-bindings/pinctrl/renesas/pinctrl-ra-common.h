@@ -27,6 +27,14 @@
 	 (((port)&PORT_MASK) << PORT_POS) | ((((port) >> 3) & PORT4_MASK) << PORT4_POS) |          \
 	 (((opt)&OPT_MASK) << OPT_POS))
 
+#if RA_SOC_PINS >= 32
+#define RA_PINCFG__32(port, pin, psel, opt) RA_PINCFG(port, pin, psel, opt)
+#endif
+
+#if RA_SOC_PINS >= 36
+#define RA_PINCFG__36(port, pin, psel, opt) RA_PINCFG(port, pin, psel, opt)
+#endif
+
 #if RA_SOC_PINS >= 40
 #define RA_PINCFG__40(port, pin, psel, opt) RA_PINCFG(port, pin, psel, opt)
 #endif
