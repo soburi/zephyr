@@ -1,0 +1,15 @@
+/*
+ * Copyright (c) 2024 TOKITA Hiroshi <tokita.hiroshi@fujitsu.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/pinctrl/renesas/pinctrl-r7fa2a1xxxxxx.h>
+
+&pinctrl {
+	sci0_default: sci0_default {
+		group1 {
+			pinmux = <P204_RXD0>, <P411_TXD0>;
+		};
+	};
+};
