@@ -7,3 +7,15 @@ config RENESAS_RA_ICU
 	depends on DT_HAS_RENESAS_RA_INTERRUPT_CONTROLLER_UNIT_ENABLED
 	help
 	  Renesas RA series interrupt controller unit
+
+if RENESAS_RA_ICU
+
+config RA_ICU_ISR_ASSIGN_OFFSET
+	int "Specify the first interrupt used for dynamic assignment"
+	default 0
+	help
+	  Interrupts after this number will be used for dynamic assignment.
+	  When there are interrupts that need to be assigned fixedly,
+	  This option is used to exclude these interrupts.
+
+endif

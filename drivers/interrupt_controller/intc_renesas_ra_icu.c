@@ -47,7 +47,7 @@ int ra_icu_query_available_irq(uint32_t event)
 		return -EINVAL;
 	}
 
-	for (uint32_t i = 0; i < CONFIG_NUM_IRQS; i++) {
+	for (uint32_t i = CONFIG_RA_ICU_ISR_ASSIGN_OFFSET; i < CONFIG_NUM_IRQS; i++) {
 		if (_sw_isr_table[i].isr == z_irq_spurious) {
 			irq = i;
 			break;
