@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 PHYTEC Messtechnik GmbH
+ * Copyright (c) 2024 TOKITA Hiroshi
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -114,8 +115,12 @@ struct cfb_display {
 	/** Current font kerning */
 	int8_t kerning;
 
-	/** Inverted */
-	bool inverted;
+	/** Current foreground color */
+	uint32_t fg_color;
+
+	/** Current background color */
+	uint32_t bg_color;
+
 };
 
 struct cfb_display_init_param {
@@ -221,7 +226,7 @@ int cfb_draw_rect(struct cfb_framebuffer *fb, const struct cfb_position *start,
 int cfb_clear(struct cfb_framebuffer *fb, bool clear_display);
 
 /**
- * @brief Invert Pixels.
+ * @brief Inverts foreground and background colors
  *
  * @param fb Pointer to framebuffer to rendering
  *
@@ -282,6 +287,50 @@ int cfb_set_font(struct cfb_framebuffer *fb, uint8_t idx);
  * @return 0 on success, negative value otherwise
  */
 int cfb_set_kerning(struct cfb_framebuffer *fb, int8_t kerning);
+
+/**
+ * @brief Set foreground color.
+ *
+ * Set foreground color with RGBA values in 32-bit color representation
+ *
+ * This function simply stores the drawing command in the buffer,
+ * and the actual drawing will be done when cfb_finalize is executed.
+ * The setting keeps even after finalize is executed.
+ *
+ * @param fb Pointer to framebuffer instance
+ * @param r The red component of the foreground color in 32-bit color
+ * @param g The green component of the foreground color in 32-bit color
+ * @param b The blue component of the foreground color in 32-bit color
+ * @param a The alpha channel of the foreground color in 32-bit color
+ *
+ * @retval 0 on success
+ * @retval -ENOBUFS The command buffer does not have enough space
+ * @retval -errno  Negative errno for other failures.
+ */
+int cfb_set_fg_color(struct cfb_framebuffer *fb, uint8_t r, uint8_t g,
+				   uint8_t b, uint8_t a);
+
+/**
+ * @brief Set background color.
+ *
+ * Set background color with RGBA values in 32-bit color representation
+ *
+ * This function simply stores the drawing command in the buffer,
+ * and the actual drawing will be done when cfb_finalize is executed.
+ * The setting keeps even after finalize is executed.
+ *
+ * @param fb Pointer to framebuffer instance
+ * @param r The red component of the foreground color in 32-bit color
+ * @param g The green component of the foreground color in 32-bit color
+ * @param b The blue component of the foreground color in 32-bit color
+ * @param a The alpha channel of the foreground color in 32-bit color
+ *
+ * @retval 0 on success
+ * @retval -ENOBUFS The command buffer does not have enough space
+ * @retval -errno  Negative errno for other failures.
+ */
+int cfb_set_bg_color(struct cfb_framebuffer *fb, uint8_t r, uint8_t g,
+				   uint8_t b, uint8_t a);
 
 /**
  * @brief Get font size.
