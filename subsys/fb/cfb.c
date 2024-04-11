@@ -385,6 +385,8 @@ static uint8_t draw_char_color(struct cfb_framebuffer *fb, char c, int16_t x, in
 static inline void draw_point(struct cfb_framebuffer *fb, int16_t x, int16_t y, uint32_t fg_color)
 {
 	const bool need_reverse = ((fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0);
+	const size_t index = ((y / 8) * fb->width);
+	uint8_t m = BIT(y % 8);
 
 	if (x < 0 || x >= fb->width) {
 		return;
@@ -395,20 +397,20 @@ static inline void draw_point(struct cfb_framebuffer *fb, int16_t x, int16_t y, 
 	}
 
 	if (fb_is_tiled(fb)) {
-		const size_t index = (y / 8) * fb->width;
-		uint8_t m = BIT(y % 8);
+		const size_t index = (y_off / 8) * fb->width;
+		uint8_t m = BIT(y_off % 8);
 
 		if (need_reverse) {
 			m = byte_reverse(m);
 		}
 
 		if (fg_color) {
-			fb->buf[index + x] |= m;
+			fb->buf[index + x_off] |= m;
 		} else {
-			fb->buf[index + x] &= ~m;
+			fb->buf[index + x_off] &= ~m;
 		}
 	} else {
-		const size_t index = (y * fb->width + x) * fb_bpp(fb);
+		const size_t index = (y_off * fb->width + x_off) * fb_bpp(fb);
 
 		set_color_bytes(&fb->buf[index], fb_bpp(fb), fg_color);
 	}
@@ -606,13 +608,11 @@ int cfb_invert_area(struct cfb_framebuffer *fb, int16_t x, int16_t y,
 
 int cfb_clear(struct cfb_framebuffer *fb, bool clear_display)
 {
-	struct cfb_display *disp = CONTAINER_OF(fb, struct cfb_display, fb);
-
 	if (!fb || !fb->buf) {
 		return -ENODEV;
 	}
 
-	fill_fb(&disp->fb, disp->bg_color, bytes_per_pixel(disp->fb.pixel_format));
+	memset(fb->buf, 0, fb->size);
 
 	if (clear_display) {
 		cfb_finalize(fb);
@@ -623,11 +623,9 @@ int cfb_clear(struct cfb_framebuffer *fb, bool clear_display)
 
 int cfb_invert(struct cfb_framebuffer *fb)
 {
-	struct cfb_display *disp = CONTAINER_OF(fb, struct cfb_display, fb);
-	const uint32_t tmp_fg = disp->fg_color;
-
-	disp->fg_color = disp->bg_color;
-	disp->bg_color = tmp_fg;
+	const uint32_t tmp_fg = *state->fg_color;
+	*state->fg_color = *state->bg_color;
+	*state->bg_color = tmp_fg;
 
 	cfb_invert_area(fb, 0, 0, fb->width, fb->height);
 
@@ -715,26 +713,6 @@ int cfb_set_kerning(struct cfb_framebuffer *fb, int8_t kerning)
 	return 0;
 }
 
-int cfb_set_bg_color(struct cfb_framebuffer *fb,  uint8_t r, uint8_t g,
-				   uint8_t b, uint8_t a)
-{
-	struct cfb_display *disp = CONTAINER_OF(fb, struct cfb_display, fb);
-
-	disp->bg_color = rgba_to_color(fb->pixel_format, r, g, b, a);
-
-	return 0;
-}
-
-int cfb_set_fg_color(struct cfb_framebuffer *fb,  uint8_t r, uint8_t g,
-				   uint8_t b, uint8_t a)
-{
-	struct cfb_display *disp = CONTAINER_OF(fb, struct cfb_display, fb);
-
-	disp->fg_color = rgba_to_color(fb->pixel_format, r, g, b, a);
-
-	return 0;
-}
-
 int cfb_get_numof_fonts(void)
 {
 	static int numof_fonts;
@@ -746,7 +724,7 @@ int cfb_get_numof_fonts(void)
 	return numof_fonts;
 }
 
-int cfb_display_init_params(struct cfb_display *disp, const struct device *dev, uint8_t *buf, uint32_t len)
+int cfb_display_init(struct cfb_display *disp, const struct device *dev)
 {
 	struct display_capabilities cfg;
 
@@ -769,6 +747,7 @@ int cfb_display_init_params(struct cfb_display *disp, const struct device *dev, 
 		disp->fb.bpp_ppt = bytes_per_pixel(cfg.current_pixel_format);
 	}
 
+
 	if (cfg.current_pixel_format == PIXEL_FORMAT_MONO10) {
 		disp->bg_color = 0xFFFFFFFFU;
 		disp->fg_color = 0x0U;
@@ -777,38 +756,13 @@ int cfb_display_init_params(struct cfb_display *disp, const struct device *dev, 
 		disp->bg_color = 0x0U;
 	}
 
-	disp->fb.size = len;
-	disp->fb.buf = buf;
-
-	fill_fb(&disp->fb, disp->bg_color, bytes_per_pixel(disp->fb.pixel_format));
-
-	return 0;
-}
-
-int cfb_display_init(struct cfb_display *disp, const struct device *dev)
-{
-	struct display_capabilities cfg;
-	uint32_t fb_size;
-	uint8_t *fb_buf;
-	uint8_t bpp;
-
-	display_get_capabilities(dev, &cfg);
-
-	bpp = bytes_per_pixel(cfg.current_pixel_format);
-
-	if ((cfg.current_pixel_format == PIXEL_FORMAT_MONO01) ||
-	    (cfg.current_pixel_format == PIXEL_FORMAT_MONO10)) {
-		fb_size = (cfg.x_resolution * cfg.y_resolution) / 8;
-	} else {
-		fb_size = cfg.x_resolution * cfg.y_resolution * bpp;
-	}
-
-	fb_buf = k_malloc(fb_size);
-	if (!fb_buf) {
+	disp->fb.size = cfg.x_resolution * cfg.y_resolution * fb_bpp(fb);
+	disp->fb.buf = k_malloc(disp->fb.size);
+	if (!disp->fb.buf) {
 		return -ENOMEM;
 	}
 
-	cfb_display_init_params(disp, dev, fb_buf, fb_size);
+	fill_fb(&disp->fb, disp->bg_color, bytes_per_pixel(disp->fb.pixel_format));
 
 	return 0;
 }
