@@ -18,8 +18,6 @@ LOG_MODULE_REGISTER(print_rectspace1016, CONFIG_DISPLAY_LOG_LEVEL);
 static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 static const uint32_t display_width = DT_PROP(DT_CHOSEN(zephyr_display), width);
 static const uint32_t display_height = DT_PROP(DT_CHOSEN(zephyr_display), height);
-static const uint32_t fb_buffer_size = DT_PROP(DT_CHOSEN(zephyr_display), width) * DT_PROP(DT_CHOSEN(zephyr_display), height) * 4;
-static uint8_t fb_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) * DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
 static struct cfb_display disp;
 static struct cfb_framebuffer *fb;
 
@@ -41,7 +39,9 @@ static void cfb_test_before(void *text_fixture)
 	memset(read_buffer, 0, sizeof(read_buffer));
 	zassert_ok(display_write(dev, 0, 0, &desc, read_buffer));
 
-	zassert_ok(cfb_display_init_params(&disp, dev, fb_buffer, fb_buffer_size));
+	zassert_ok(display_blanking_off(dev));
+
+	zassert_ok(cfb_display_init(&disp, dev));
 	fb = cfb_display_get_framebuffer(&disp);
 
 	for (int idx = 0; idx < cfb_get_numof_fonts(); idx++) {
@@ -61,6 +61,7 @@ static void cfb_test_before(void *text_fixture)
 
 static void cfb_test_after(void *test_fixture)
 {
+	cfb_display_deinit(&disp);
 }
 
 /*
