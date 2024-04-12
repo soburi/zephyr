@@ -40,6 +40,7 @@ extern uint8_t read_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) *
 			   DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
 extern uint8_t transfer_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) *
 			       DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
+extern uint8_t command_buffer[CONFIG_TEST_CFB_COMMAND_BUF_SIZE];
 
 uint32_t display_buf_size(const struct device *dev);
 

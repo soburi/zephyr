@@ -21,6 +21,7 @@ int main(void)
 		.transfer_buf_size = sizeof(transfer_buffer),
 	};
 	struct cfb_display disp;
+	struct cfb_display_init_param param;
 	struct cfb_framebuffer *fb;
 	uint16_t x_res;
 	uint16_t y_res;

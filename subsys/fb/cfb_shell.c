@@ -7,6 +7,7 @@
 
 /*
  * Copyright (c) 2018 Diego Sueiro
+ * Copyright (c) 2024 TOKITA Hiroshi
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -56,8 +57,8 @@
 #define HELP_NONE "[none]"
 #define HELP_INIT "call \"cfb init\" first"
 #define HELP_DISPLAY_SELECT "<display_id>"
-#define HELP_PRINT "<col: pos> <row: pos> \"<text>\""
-#define HELP_DRAW_POINT "<x> <y0>"
+#define HELP_PRINT "<x> <y> \"<text>\""
+#define HELP_DRAW_POINT "<x> <y>"
 #define HELP_DRAW_LINE "<x0> <y0> <x1> <y1>"
 #define HELP_DRAW_RECT "<x0> <y0> <x1> <y1>"
 #define HELP_INVERT "[<x> <y> <width> <height>]"
@@ -549,7 +550,7 @@ static int cmd_get_device(const struct shell *sh, size_t argc, char *argv[])
 		return -ENODEV;
 	}
 
-	shell_print(sh, "Framebuffer Device: %s", dev->name);
+	shell_print(sh, "Framebuffer Device: %s", disp->dev->name);
 
 	return err;
 }
@@ -727,7 +728,51 @@ static int cmd_get_param_cols(const struct shell *sh, size_t argc,
 
 static int cmd_init(const struct shell *sh, size_t argc, char *argv[])
 {
+	enum display_pixel_format pix_fmt;
+	struct display_capabilities cfg;
+	const struct device *dev;
+	uint8_t xferbuf_size_idx = 0;
+	uint8_t cmdbuf_size_idx = 0;
+	uint8_t dev_name_idx = 0;
+	uint8_t pix_fmt_idx = 0;
+	size_t xferbuf_size = 8192;
+	size_t cmdbuf_size = 256;
 	int err;
+
+	if (argc == 1) {
+	} else if (argc == 2) {
+		pix_fmt_idx = 1;
+	} else if (argc == 3) {
+		pix_fmt_idx = 1;
+		xferbuf_size_idx = 2;
+	} else if (argc == 4) {
+		pix_fmt_idx = 1;
+		xferbuf_size_idx = 2;
+		cmdbuf_size_idx = 3;
+	} else if (argc == 5) {
+		dev_name_idx = 1;
+		pix_fmt_idx = 2;
+		xferbuf_size_idx = 3;
+		cmdbuf_size_idx = 4;
+	}
+
+	if (xferbuf_size_idx > 0) {
+		xferbuf_size = strtol(argv[xferbuf_size_idx], NULL, 10);
+	}
+
+	if (cmdbuf_size_idx > 0) {
+		cmdbuf_size = strtol(argv[cmdbuf_size_idx], NULL, 10);
+	}
+
+	if (dev_name_idx > 0) {
+		dev = device_get_binding(argv[dev_name_idx]);
+		if (!dev) {
+			shell_error(sh, "Not exists device.");
+			return -ENODEV;
+		}
+	} else {
+		dev = device_get_binding(DT_NODE_FULL_NAME(DT_CHOSEN(zephyr_display)));
+	}
 
 	if (!device_is_ready(dev)) {
 		shell_error(sh, "Display device not ready");
@@ -750,7 +795,8 @@ static int cmd_init(const struct shell *sh, size_t argc, char *argv[])
 		return -ENOMEM;
 	}
 
-	shell_print(sh, "Framebuffer initialized: %s", dev->name);
+	shell_print(sh, "Framebuffer initialized: xfer_buf: %u cmd_buf: %u", xferbuf_size,
+		    cmdbuf_size);
 	cmd_clear(sh, argc, argv);
 
 	return err;
@@ -790,7 +836,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_cmd_draw,
 );
 
 SHELL_STATIC_SUBCMD_SET_CREATE(cfb_cmds,
-	SHELL_CMD_ARG(init, NULL, HELP_NONE, cmd_init, 1, 0),
+	SHELL_CMD_ARG(init, NULL, HELP_INIT, cmd_init, 0, 5),
 	SHELL_CMD_ARG(get_device, NULL, HELP_NONE, cmd_get_device, 1, 0),
 	SHELL_CMD(display, &sub_cmd_display, "display configuration", NULL),
 	SHELL_CMD(get_param, &sub_cmd_get_param,
