@@ -783,38 +783,7 @@ int cfb_display_init(struct cfb_display *disp, const struct cfb_display_init_par
 		disp->bg_color = 0x0U;
 	}
 
-	disp->fb.size = len;
-	disp->fb.buf = buf;
-
 	fill_fb(&disp->fb, disp->bg_color, bytes_per_pixel(disp->fb.pixel_format));
-
-	return 0;
-}
-
-int cfb_display_init(struct cfb_display *disp, const struct device *dev)
-{
-	struct display_capabilities cfg;
-	uint32_t fb_size;
-	uint8_t *fb_buf;
-	uint8_t bpp;
-
-	display_get_capabilities(dev, &cfg);
-
-	bpp = bytes_per_pixel(cfg.current_pixel_format);
-
-	if ((cfg.current_pixel_format == PIXEL_FORMAT_MONO01) ||
-	    (cfg.current_pixel_format == PIXEL_FORMAT_MONO10)) {
-		fb_size = (cfg.x_resolution * cfg.y_resolution) / 8;
-	} else {
-		fb_size = cfg.x_resolution * cfg.y_resolution * bpp;
-	}
-
-	fb_buf = k_malloc(fb_size);
-	if (!fb_buf) {
-		return -ENOMEM;
-	}
-
-	cfb_display_init_params(disp, dev, fb_buf, fb_size);
 
 	return 0;
 }
