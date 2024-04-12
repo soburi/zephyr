@@ -22,6 +22,7 @@ uint8_t read_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) *
 		    DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
 uint8_t transfer_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) *
 		     DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
+uint8_t command_buffer[CONFIG_TEST_CFB_COMMAND_BUF_SIZE];
 
 uint8_t bytes_per_pixel(enum display_pixel_format pixel_format)
 {

@@ -74,6 +74,12 @@ static const char * const param_name[] = {
 static const char *const pixfmt_name[] = {"RGB_888",   "MONO01",  "MONO10",
 					  "ARGB_8888", "RGB_565", "BGR_565"};
 
+#if CONFIG_CFB_SHELL_TRANSFER_BUFFER_SIZE != 0
+static struct cfb_display display;
+static uint8_t transfer_buffer[CONFIG_CFB_SHELL_TRANSFER_BUFFER_SIZE];
+static uint8_t command_buffer[CONFIG_CFB_SHELL_COMMAND_BUFFER_SIZE];
+#endif
+
 static int cmd_clear(const struct shell *sh, size_t argc, char *argv[])
 {
 	int err;
@@ -717,6 +723,16 @@ static int cmd_init(const struct shell *sh, size_t argc, char *argv[])
 	struct display_capabilities cfg;
 	int err;
 
+#if CONFIG_CFB_SHELL_TRANSFER_BUFFER_SIZE != 0
+        struct cfb_display_init_param param = {
+                .dev = dev,
+                .transfer_buf = transfer_buffer,
+                .transfer_buf_size = sizeof(transfer_buffer),
+                .command_buf = command_buffer,
+                .command_buf_size = sizeof(transfer_buffer),
+        };
+#endif
+
 	if (!device_is_ready(dev)) {
 		shell_error(sh, "Display device not ready");
 		return -ENODEV;
@@ -728,6 +744,13 @@ static int cmd_init(const struct shell *sh, size_t argc, char *argv[])
 		return err;
 	}
 
+#if CONFIG_CFB_SHELL_TRANSFER_BUFFER_SIZE != 0
+        disp = &display;
+        if (cfb_display_init(disp, &param)) {
+                printf("Framebuffer initialization failed!\n");
+                return 0;
+        }
+#else
 	if (disp) {
 		cfb_display_free(disp);
 	}
@@ -737,6 +760,7 @@ static int cmd_init(const struct shell *sh, size_t argc, char *argv[])
 		shell_error(sh, "Framebuffer initialization failed!");
 		return -ENOMEM;
 	}
+#endif
 
 	display_get_capabilities(dev, &cfg);
 	pix_fmt = cfg.current_pixel_format ? u32_count_trailing_zeros(cfg.current_pixel_format) : 0;
