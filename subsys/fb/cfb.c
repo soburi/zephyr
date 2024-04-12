@@ -30,13 +30,21 @@ static inline uint8_t byte_reverse(uint8_t b)
 
 static inline uint8_t *get_glyph_ptr(const struct cfb_font *fptr, char c)
 {
+	if (c < fptr->first_char || c > fptr->last_char) {
+		return NULL;
+	}
+
 	return (uint8_t *)fptr->data +
 	       (c - fptr->first_char) * (fptr->width * ((fptr->height + 7U) / 8U));
 }
 
-static inline uint8_t get_glyph_byte(uint8_t *glyph_ptr, const struct cfb_font *fptr,
+static inline uint8_t get_glyph_byte(const uint8_t *glyph_ptr, const struct cfb_font *fptr,
 				     uint8_t x, uint8_t y)
 {
+	if (!glyph_ptr) {
+		return 0;
+	}
+
 	if (fptr->caps & CFB_FONT_MONO_VPACKED) {
 		return glyph_ptr[x * ((fptr->height + 7U) / 8U) + y];
 	} else if (fptr->caps & CFB_FONT_MONO_HPACKED) {
@@ -224,16 +232,7 @@ static uint8_t draw_char_vtmono(struct cfb_framebuffer *fb, char c, int16_t x, i
 	const bool font_is_msbfirst = (fptr->caps & CFB_FONT_MSB_FIRST) != 0;
 	const bool need_reverse =
 		((fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0) != font_is_msbfirst;
-	uint8_t *glyph_ptr;
-
-	if (c < fptr->first_char || c > fptr->last_char) {
-		c = ' ';
-	}
-
-	glyph_ptr = get_glyph_ptr(fptr, c);
-	if (!glyph_ptr) {
-		return 0;
-	}
+	const uint8_t *glyph_ptr = get_glyph_ptr(fptr, c);
 
 	for (size_t g_x = 0; g_x < fptr->width; g_x++) {
 		const int16_t fb_x = x + g_x;
@@ -354,16 +353,7 @@ static uint8_t draw_char_color(struct cfb_framebuffer *fb, char c, int16_t x, in
 			       const struct cfb_font *fptr, bool draw_bg, uint32_t fg_color,
 			       uint32_t bg_color)
 {
-	uint8_t *glyph_ptr;
-
-	if (c < fptr->first_char || c > fptr->last_char) {
-		c = ' ';
-	}
-
-	glyph_ptr = get_glyph_ptr(fptr, c);
-	if (!glyph_ptr) {
-		return 0;
-	}
+	const uint8_t *glyph_ptr = get_glyph_ptr(fptr, c);
 
 	for (size_t g_x = 0; g_x < fptr->width; g_x++) {
 		const int16_t fb_x = x + g_x;
