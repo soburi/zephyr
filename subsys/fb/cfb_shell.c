@@ -457,9 +457,9 @@ static int cmd_foreground(const struct shell *sh, size_t argc, char *argv[])
 		cfb_set_fg_color(&disp->fb, r, g, b, a);
 	}
 
-	shell_print(sh, "%08x: R=%02x G=%02x B=%02x A=%02x", disp->fg_color,
-		    (disp->fg_color >> 16) & 0xFF, (disp->fg_color >> 8) & 0xFF,
-		    disp->fg_color & 0xFF, (disp->fg_color >> 24) & 0xFF);
+	shell_print(sh, "%08x: R=%02x G=%02x B=%02x A=%02x", disp->state.fg_color,
+		    (disp->state.fg_color >> 16) & 0xFF, (disp->state.fg_color >> 8) & 0xFF,
+		    disp->state.fg_color & 0xFF, (disp->state.fg_color >> 24) & 0xFF);
 
 	return 0;
 }
@@ -478,9 +478,9 @@ static int cmd_background(const struct shell *sh, size_t argc, char *argv[])
 		cfb_set_bg_color(&disp->fb, r, g, b, a);
 	}
 
-	shell_print(sh, "%08x: R=%02x G=%02x B=%02x A=%02x", disp->bg_color,
-		    (disp->bg_color >> 16) & 0xFF, (disp->bg_color >> 8) & 0xFF,
-		    disp->fg_color & 0xFF, (disp->bg_color >> 24) & 0xFF);
+	shell_print(sh, "%08x: R=%02x G=%02x B=%02x A=%02x", disp->state.bg_color,
+		    (disp->state.bg_color >> 16) & 0xFF, (disp->state.bg_color >> 8) & 0xFF,
+		    disp->state.fg_color & 0xFF, (disp->state.bg_color >> 24) & 0xFF);
 
 	return 0;
 }
