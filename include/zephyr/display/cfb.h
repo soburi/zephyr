@@ -304,7 +304,7 @@ int cfb_get_numof_fonts(void);
  * @brief Initialize display
  *
  * @param disp Pointer to display instance to initialize
- * @param dev Pointer to device that use to displaying
+ * @param param Pointer to display initialize parameter
  *
  * @return 0 on success
  */
