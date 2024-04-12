@@ -36,6 +36,8 @@ static void cfb_test_before(void *text_fixture)
 		.dev = dev,
 		.transfer_buf = transfer_buffer,
 		.transfer_buf_size = sizeof(transfer_buffer),
+		.command_buf = command_buffer,
+		.command_buf_size = sizeof(command_buffer),
 	};
 
 	memset(read_buffer, 0, sizeof(read_buffer));
