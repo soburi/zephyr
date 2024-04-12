@@ -29,6 +29,15 @@ inline uint32_t mono_pixel_order(uint32_t order)
 	}
 }
 
+uint32_t display_buf_size(const struct device *dev)
+{
+	struct display_capabilities caps;
+
+	display_get_capabilities(dev, &caps);
+
+	return display_width * display_height / 8;
+}
+
 uint32_t display_pixel(int x, int y)
 {
 	const uint8_t *ptr = read_buffer + (display_width * (y / 8) + x);

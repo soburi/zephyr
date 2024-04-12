@@ -10,9 +10,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <zephyr/devicetree.h>
+#include <zephyr/device.h>
 
 extern uint8_t read_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) *
 			   DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
+
+uint32_t display_buf_size(const struct device *dev);
 
 uint32_t display_pixel(int x, int y);
 uint32_t image_pixel(const uint32_t *img, size_t width, int x, int y);

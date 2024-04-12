@@ -544,9 +544,6 @@ int cfb_display_init(struct cfb_display *disp, const struct cfb_display_init_par
 
 	disp->fb.size = param->fb_buf_size; //disp->x_res * disp->y_res / disp->fb.ppt;
 	disp->fb.buf = param->fb_buf; //k_malloc(disp->fb.size);
-	if (!disp->fb.buf) {
-		return -ENOMEM;
-	}
 
 	memset(disp->fb.buf, 0, disp->fb.size);
 
@@ -555,10 +552,7 @@ int cfb_display_init(struct cfb_display *disp, const struct cfb_display_init_par
 
 void cfb_display_deinit(struct cfb_display *disp)
 {
-	if (disp->fb.buf) {
-		k_free(disp->fb.buf);
-		disp->fb.buf = NULL;
-	}
+	memset(disp, 0, sizeof(struct cfb_display));
 }
 
 struct cfb_display *cfb_display_alloc(const struct device *dev)
@@ -591,6 +585,10 @@ struct cfb_display *cfb_display_alloc(const struct device *dev)
 	return disp;
 }
 
+void cfb_display_free(struct cfb_display *disp)
+{
+	k_free(disp);
+}
 
 struct cfb_framebuffer *cfb_display_get_framebuffer(struct cfb_display *disp)
 {

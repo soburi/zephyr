@@ -18,6 +18,7 @@ LOG_MODULE_REGISTER(clear, CONFIG_DISPLAY_LOG_LEVEL);
 static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 static const uint32_t display_width = DT_PROP(DT_CHOSEN(zephyr_display), width);
 static const uint32_t display_height = DT_PROP(DT_CHOSEN(zephyr_display), height);
+static uint8_t fb_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) * DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
 static struct cfb_display disp;
 static struct cfb_framebuffer *fb;
 
@@ -30,7 +31,12 @@ static void cfb_test_before(void *text_fixture)
 		.height = display_height,
 		.pitch = display_width,
 		.width = display_width,
-		.buf_size = display_height * display_width / 8,
+		.buf_size = display_buf_size(dev),
+	};
+	struct cfb_display_init_param param = {
+		.dev = dev,
+		.fb_buf = fb_buffer,
+		.fb_buf_size = sizeof(fb_buffer),
 	};
 
 	memset(read_buffer, 0xAA, sizeof(read_buffer));
@@ -38,7 +44,7 @@ static void cfb_test_before(void *text_fixture)
 
 	zassert_ok(display_blanking_off(dev));
 
-	zassert_ok(cfb_display_init(&disp, dev));
+	zassert_ok(cfb_display_init(&disp, &param));
 	fb = cfb_display_get_framebuffer(&disp);
 }
 
