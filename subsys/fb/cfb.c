@@ -755,19 +755,13 @@ int cfb_display_init(struct cfb_display *disp, const struct cfb_display_init_par
 	disp->dev = param->dev;
 	disp->x_res = cfg.x_resolution;
 	disp->y_res = cfg.y_resolution;
-	disp->fb.pixel_format = cfg.current_pixel_format;
-
 	disp->font_idx = 0U;
 	disp->kerning = 0U;
 
 	disp->fb.screen_info = cfg.screen_info;
 	disp->fb.width = cfg.x_resolution;
 	disp->fb.height = cfg.y_resolution;
-
-	disp->fb.size = param->fb_buf_size; //disp->x_res * disp->y_res / disp->fb.ppt;
-	disp->fb.buf = param->fb_buf; //k_malloc(disp->fb.size);
-
-	disp->fb.bpp_ppt = 1U;
+	disp->fb.pixel_format = cfg.current_pixel_format;
 	if ((cfg.current_pixel_format == PIXEL_FORMAT_MONO01) ||
 	    (cfg.current_pixel_format == PIXEL_FORMAT_MONO10)) {
 		disp->fb.bpp_ppt = -8;
@@ -783,6 +777,9 @@ int cfb_display_init(struct cfb_display *disp, const struct cfb_display_init_par
 		disp->bg_color = 0x0U;
 	}
 
+	disp->fb.size = param->fb_buf_size; //disp->x_res * disp->y_res / disp->fb.ppt;
+	disp->fb.buf = param->fb_buf; //k_malloc(disp->fb.size);
+
 	fill_fb(&disp->fb, disp->bg_color, bytes_per_pixel(disp->fb.pixel_format));
 
 	return 0;
@@ -795,24 +792,34 @@ void cfb_display_deinit(struct cfb_display *disp)
 
 struct cfb_display *cfb_display_alloc(const struct device *dev)
 {
-	struct display_capabilities cfg;
-	struct cfb_display *disp;
 	struct cfb_display_init_param param;
-	size_t buf_size;
+	struct display_capabilities cfg;
+	uint32_t fb_size;
+	uint8_t *fb_buf;
+	uint8_t bpp;
+	struct cfb_display *disp;
 	int err;
 
 	display_get_capabilities(dev, &cfg);
-	param.fb_buf_size = cfg.x_resolution * cfg.y_resolution / 8U;
 
-	buf_size = ROUND_UP(sizeof(struct cfb_display), sizeof(void *)) +
-		   ROUND_UP(param.fb_buf_size, sizeof(void *));
+	bpp = bytes_per_pixel(cfg.current_pixel_format);
 
-	disp = k_malloc(buf_size);
-	if (!disp) {
+	if ((cfg.current_pixel_format == PIXEL_FORMAT_MONO01) ||
+	    (cfg.current_pixel_format == PIXEL_FORMAT_MONO10)) {
+		fb_size = (cfg.x_resolution * cfg.y_resolution) / 8;
+	} else {
+		fb_size = cfg.x_resolution * cfg.y_resolution * bpp;
+	}
+
+	disp = k_malloc(sizeof(struct cfb_display));
+	fb_buf = k_malloc(fb_size);
+	if (!fb_buf) {
 		return NULL;
 	}
 
-	param.fb_buf = (uint8_t *)disp + ROUND_UP(sizeof(struct cfb_display), sizeof(void *));
+	param.dev = dev;
+	param.fb_buf = fb_buf;
+	param.fb_buf_size = fb_size;
 
 	err = cfb_display_init(disp, &param);
 	if (err) {
