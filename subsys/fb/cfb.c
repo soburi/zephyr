@@ -522,15 +522,15 @@ int cfb_get_numof_fonts(void)
 	return numof_fonts;
 }
 
-int cfb_display_init(struct cfb_display *disp, const struct device *dev)
+int cfb_display_init(struct cfb_display *disp, const struct cfb_display_init_param *param)
 {
 	struct display_capabilities cfg;
 
-	display_get_capabilities(dev, &cfg);
+	display_get_capabilities(param->dev, &cfg);
 
 	disp->x_res = cfg.x_resolution;
 	disp->y_res = cfg.y_resolution;
-	disp->dev = dev;
+	disp->dev = param->dev;
 	disp->fb.ppt = 8U;
 	disp->fb.pixel_format = cfg.current_pixel_format;
 	disp->fb.screen_info = cfg.screen_info;
@@ -542,8 +542,8 @@ int cfb_display_init(struct cfb_display *disp, const struct device *dev)
 
 	disp->font_idx = 0U;
 
-	disp->fb.size = disp->x_res * disp->y_res / disp->fb.ppt;
-	disp->fb.buf = k_malloc(disp->fb.size);
+	disp->fb.size = param->fb_buf_size; //disp->x_res * disp->y_res / disp->fb.ppt;
+	disp->fb.buf = param->fb_buf; //k_malloc(disp->fb.size);
 	if (!disp->fb.buf) {
 		return -ENOMEM;
 	}
@@ -560,6 +560,37 @@ void cfb_display_deinit(struct cfb_display *disp)
 		disp->fb.buf = NULL;
 	}
 }
+
+struct cfb_display *cfb_display_alloc(const struct device *dev)
+{
+	struct display_capabilities cfg;
+	struct cfb_display *disp;
+	struct cfb_display_init_param param;
+	size_t buf_size;
+	int err;
+
+	display_get_capabilities(dev, &cfg);
+	param.fb_buf_size = cfg.x_resolution * cfg.y_resolution / 8U;
+
+	buf_size = ROUND_UP(sizeof(struct cfb_display), sizeof(void *)) +
+		   ROUND_UP(param.fb_buf_size, sizeof(void *));
+
+	disp = k_malloc(buf_size);
+	if (!disp) {
+		return NULL;
+	}
+
+	param.fb_buf = (uint8_t *)disp + ROUND_UP(sizeof(struct cfb_display), sizeof(void *));
+
+	err = cfb_display_init(disp, &param);
+	if (err) {
+		k_free(disp);
+		return NULL;
+	}
+
+	return disp;
+}
+
 
 struct cfb_framebuffer *cfb_display_get_framebuffer(struct cfb_display *disp)
 {

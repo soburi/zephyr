@@ -114,6 +114,17 @@ struct cfb_display {
 	bool inverted;
 };
 
+struct cfb_display_init_param {
+	/** Pointer to device */
+	const struct device *dev;
+
+	/** Pointer to a buffer in RAM */
+	uint8_t *fb_buf;
+
+	/** Size of the framebuffer */
+	uint32_t fb_buf_size;
+};
+
 /**
  * @brief Macro for creating a font entry.
  *
@@ -290,14 +301,24 @@ int cfb_get_font_size(uint8_t idx, uint8_t *width, uint8_t *height);
 int cfb_get_numof_fonts(void);
 
 /**
- * @brief Initialize framebuffer.
+ * @brief Initialize display
  *
  * @param disp Pointer to display instance to initialize
  * @param dev Pointer to device that use to displaying
  *
  * @return 0 on success
  */
-int cfb_display_init(struct cfb_display *disp, const struct device *dev);
+int cfb_display_init(struct cfb_display *disp, const struct cfb_display_init_param *param);
+
+/**
+ * @brief Allocate full-screen buffer and initialize display object.
+ *
+ * @param dev Pointer to device that use to displaying
+ *
+ * @retval NULL If memory allocation failed.
+ * @retval Non-NULL on success
+ */
+struct cfb_display *cfb_display_alloc(const struct device *dev);
 
 /**
  * @brief Deinitialize Character Framebuffer.
