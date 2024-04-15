@@ -142,20 +142,32 @@ When you power on the Raspberry Pi 5, you will see the following output in the s
 XEN Dom0
 ========
 
-The Raspberry Pi 5 platform can be used to run as Xen Zephyr Dom0. For such
-purposes the ``xen_dom0`` snippet can be used.
+The Raspberry Pi 5 platform can be used to run as Xen Zephyr Dom0. For such purposes the
+``xen_dom0`` snippet can be used.
 
-Run below command as an example of RPI 5 Zephyr build as Dom0:
+The Dom0 build requires an application overlay that describes the Xen ``hypervisor`` node and
+the memory layout provided by the Xen boot flow. Once that overlay is available, build with:
 
 .. code-block:: bash
 
-   west build -b rpi_5 -p always -S xen_dom0 samples/hello_world
+   west build -b rpi_5 -p always -S xen_dom0 -DDTC_OVERLAY_FILE=<xen-dom0-overlay> samples/hello_world
 
 It is expected to be used with special application performing Xen Domain-0/Dom0 functions.
 
 .. note::
 
-   The "hypervisor@x" and "memory@x" DT nodes need to be specified in
-   DT application overlay with values provided on the Xen boot, because
-   normally Xen will update DT for the target Kernel, but this is not possible
-   in case of Zephyr. More details described in :ref:`xen_dom0`.
+   The ``hypervisor`` and ``memory`` nodes may need to be updated depending on the Xen boot
+   configuration, because Xen normally updates DT for the target kernel, but this is not possible
+   for Zephyr.
+
+XEN DomD with HW passthrough
+============================
+
+The Raspberry Pi 5 platform can be used to run as Xen Zephyr DomD with RPI 5 HW support.
+For such purposes the ``rpi_5_xen_domd`` snippet can be used.
+
+Run the command below as an example of RPI 5 Zephyr build as DomD:
+
+.. code-block:: bash
+
+   west build -b xenvm -S rpi_5_xen_domd samples/basic/blinky
