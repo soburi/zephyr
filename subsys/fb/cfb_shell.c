@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/display/cfb.h>
+#include <zephyr/sys/math_extras.h>
 
 #define DISPLAY_CONTROLLER_COMPATIBLES_0   zephyr_sdl_dc
 #define DISPLAY_CONTROLLER_COMPATIBLES_1   nxp_imx_elcdif
@@ -60,6 +61,9 @@
 #define HELP_DRAW_LINE "<x0> <y0> <x1> <y1>"
 #define HELP_DRAW_RECT "<x0> <y0> <x1> <y1>"
 #define HELP_INVERT "[<x> <y> <width> <height>]"
+#define HELP_FOREGROUND "[<red> [<green> [<blue> [<alpha>]]]"
+#define HELP_BACKGROUND "[<red> [<green> [<blue> [<alpha>]]]"
+#define HELP_PIXEL_FORMAT "[RGB_888|MONO01|MONO10|ARGB_8888|RGB_565|BGR_565]"
 
 static const struct device *const devices[] = {
 	LISTIFY(DISPLAY_CONTROLLER_COMPATIBLES_MAX, LIST_DISPLAY_DEVICES, ())};
@@ -67,6 +71,9 @@ static const struct device *dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 static struct cfb_display *disp;
 static const char * const param_name[] = {
 	"height", "width", "ppt", "rows", "cols"};
+
+static const char *const pixfmt_name[] = {"RGB_888",   "MONO01",  "MONO10",
+					  "ARGB_8888", "RGB_565", "BGR_565"};
 
 static int cmd_clear(const struct shell *sh, size_t argc, char *argv[])
 {
@@ -405,6 +412,79 @@ static int cmd_set_kerning(const struct shell *sh, size_t argc, char *argv[])
 	return err;
 }
 
+static void parse_color_args(size_t argc, char *argv[], uint8_t *r, uint8_t *g, uint8_t *b,
+			     uint8_t *a)
+{
+	struct display_capabilities cfg;
+	bool is_16bit = false;
+
+	display_get_capabilities(disp->dev, &cfg);
+
+	*r = 0;
+	*g = 0;
+	*b = 0;
+	*a = 0;
+
+	if (cfg.current_pixel_format == PIXEL_FORMAT_RGB_565 ||
+	    cfg.current_pixel_format == PIXEL_FORMAT_BGR_565) {
+		is_16bit = true;
+	}
+
+	switch (argc) {
+	case 5:
+		*a = strtol(argv[4], NULL, 0);
+	case 4:
+		*b = strtol(argv[3], NULL, 0);
+	case 3:
+		*g = strtol(argv[2], NULL, 0);
+	case 2:
+		*r = strtol(argv[1], NULL, 0);
+	default:
+	}
+}
+
+static int cmd_foreground(const struct shell *sh, size_t argc, char *argv[])
+{
+	uint8_t r, g, b, a;
+
+	if (!disp) {
+		shell_error(sh, HELP_INIT);
+		return -ENODEV;
+	}
+
+	if (argc != 1) {
+		parse_color_args(argc, argv, &r, &g, &b, &a);
+		cfb_set_fg_color(&disp->fb, r, g, b, a);
+	}
+
+	shell_print(sh, "%08x: R=%02x G=%02x B=%02x A=%02x", disp->fg_color,
+		    (disp->fg_color >> 16) & 0xFF, (disp->fg_color >> 8) & 0xFF,
+		    disp->fg_color & 0xFF, (disp->fg_color >> 24) & 0xFF);
+
+	return 0;
+}
+
+static int cmd_background(const struct shell *sh, size_t argc, char *argv[])
+{
+	uint8_t r, g, b, a;
+
+	if (!disp) {
+		shell_error(sh, HELP_INIT);
+		return -ENODEV;
+	}
+
+	if (argc != 1) {
+		parse_color_args(argc, argv, &r, &g, &b, &a);
+		cfb_set_bg_color(&disp->fb, r, g, b, a);
+	}
+
+	shell_print(sh, "%08x: R=%02x G=%02x B=%02x A=%02x", disp->bg_color,
+		    (disp->bg_color >> 16) & 0xFF, (disp->bg_color >> 8) & 0xFF,
+		    disp->fg_color & 0xFF, (disp->bg_color >> 24) & 0xFF);
+
+	return 0;
+}
+
 static int cmd_invert(const struct shell *sh, size_t argc, char *argv[])
 {
 	int err;
@@ -498,6 +578,45 @@ static int cmd_display(const struct shell *sh, size_t argc, char *argv[])
 	}
 
 	return 0;
+}
+
+static int cmd_pixel_format(const struct shell *sh, size_t argc, char *argv[])
+{
+	enum display_pixel_format pix_fmt;
+	struct display_capabilities cfg;
+	int err = 0;
+
+	if (argc == 2) {
+		if (strcmp(argv[1], "RGB_888") == 0) {
+			pix_fmt = PIXEL_FORMAT_RGB_888;
+		} else if (strcmp(argv[1], "MONO01") == 0) {
+			pix_fmt = PIXEL_FORMAT_MONO01;
+		} else if (strcmp(argv[1], "MONO10") == 0) {
+			pix_fmt = PIXEL_FORMAT_MONO10;
+		} else if (strcmp(argv[1], "ARGB_8888") == 0) {
+			pix_fmt = PIXEL_FORMAT_ARGB_8888;
+		} else if (strcmp(argv[1], "RGB_565") == 0) {
+			pix_fmt = PIXEL_FORMAT_RGB_565;
+		} else if (strcmp(argv[1], "BGR_565") == 0) {
+			pix_fmt = PIXEL_FORMAT_BGR_565;
+		} else {
+			shell_error(sh, "Invalid pixel format. use "
+					"RGB_888/MONO01/MONO10/ARGB_8888/RGB_565/BGR_565");
+			return -EINVAL;
+		}
+
+		err = display_set_pixel_format(dev, pix_fmt);
+		if (err) {
+			shell_error(sh, "Failed to set required pixel format: %d", err);
+			return err;
+		}
+	}
+
+	display_get_capabilities(dev, &cfg);
+	pix_fmt = cfg.current_pixel_format ? u32_count_trailing_zeros(cfg.current_pixel_format) : 0;
+	shell_print(sh, "Pixel format: %s", pixfmt_name[pix_fmt]);
+
+	return err;
 }
 
 static int cmd_get_param_all(const struct shell *sh, size_t argc,
@@ -607,20 +726,13 @@ static int cmd_get_param_cols(const struct shell *sh, size_t argc,
 
 static int cmd_init(const struct shell *sh, size_t argc, char *argv[])
 {
+	enum display_pixel_format pix_fmt;
+	struct display_capabilities cfg;
 	int err;
 
 	if (!device_is_ready(dev)) {
 		shell_error(sh, "Display device not ready");
 		return -ENODEV;
-	}
-
-	err = display_set_pixel_format(dev, PIXEL_FORMAT_MONO10);
-	if (err) {
-		err = display_set_pixel_format(dev, PIXEL_FORMAT_MONO01);
-		if (err) {
-			shell_error(sh, "Failed to set required pixel format: %d", err);
-			return err;
-		}
 	}
 
 	err = display_blanking_off(dev);
@@ -639,8 +751,10 @@ static int cmd_init(const struct shell *sh, size_t argc, char *argv[])
 		return -ENOMEM;
 	}
 
-	shell_print(sh, "Framebuffer initialized: %s", dev->name);
-	cmd_clear(sh, argc, argv);
+	display_get_capabilities(dev, &cfg);
+	pix_fmt = cfg.current_pixel_format ? u32_count_trailing_zeros(cfg.current_pixel_format) : 0;
+	shell_print(sh, "Initialized: %s [%dx%d@%s]", dev->name, cfg.x_resolution, cfg.y_resolution, pixfmt_name[pix_fmt]);
+	err = cfb_clear(&disp->fb, true);
 
 	return err;
 }
@@ -685,6 +799,9 @@ SHELL_STATIC_SUBCMD_SET_CREATE(cfb_cmds,
 		  "horizontal direction", NULL),
 	SHELL_CMD(draw, &sub_cmd_draw, "drawing text", NULL),
 	SHELL_CMD_ARG(clear, NULL, HELP_NONE, cmd_clear, 1, 0),
+	SHELL_CMD_ARG(foreground, NULL, HELP_FOREGROUND, cmd_foreground, 1, 4),
+	SHELL_CMD_ARG(background, NULL, HELP_BACKGROUND, cmd_background, 1, 4),
+	SHELL_CMD_ARG(pixel_format, NULL, HELP_PIXEL_FORMAT, cmd_pixel_format, 1, 1),
 	SHELL_SUBCMD_SET_END
 );
 
