@@ -171,14 +171,14 @@ static inline void color_to_rgba(const enum display_pixel_format pixel_format, u
 }
 
 #if defined(CONFIG_ZTEST)
-void test_color_to_rgba(const enum display_pixel_format pixel_format, uint32_t color,
-				 uint8_t *r, uint8_t *g, uint8_t *b, uint8_t *a)
+void test_color_to_rgba(const enum display_pixel_format pixel_format, uint32_t color, uint8_t *r,
+			uint8_t *g, uint8_t *b, uint8_t *a)
 {
 	color_to_rgba(pixel_format, color, r, g, b, a);
 }
 
-uint32_t test_rgba_to_color(const enum display_pixel_format pixel_format, uint8_t r,
-				     uint8_t g, uint8_t b, uint8_t a)
+uint32_t test_rgba_to_color(const enum display_pixel_format pixel_format, uint8_t r, uint8_t g,
+			    uint8_t b, uint8_t a)
 {
 	return rgba_to_color(pixel_format, r, g, b, a);
 }
