@@ -154,6 +154,7 @@ static inline void color_to_rgba(const enum display_pixel_format pixel_format, u
 		*b = (color >> 0) & 0xFF;
 		return;
 	case PIXEL_FORMAT_RGB_565:
+		color = sys_be16_to_cpu(color);
 		*a = 0;
 		*r = (color >> 8) & 0xF8;
 		*g = (color >> 3) & 0xFC;
