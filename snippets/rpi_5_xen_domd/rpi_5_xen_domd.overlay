@@ -1,0 +1,45 @@
+/*
+ * Copyright (C) 2024 EPAM Systems.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <mem.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	compatible = "raspberrypi,5-model-b-domd", "raspberrypi,5-model-b", "brcm,bcm2712";
+	model = "Raspberry Pi 5 Xen DomD";
+
+	chosen {
+		zephyr,shell-uart = &xen_hvc;
+	};
+
+	aliases {
+		led0 = &led_act;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_act: led-act {
+			gpios = <&gio_aon 9 GPIO_ACTIVE_LOW>;
+			label = "ACT";
+		};
+	};
+
+	gpio2@107d517c00 {
+		compatible = "simple-bus";
+		reg = <0x10 0x7d517c00 0x0 0x40>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+		gio_aon: gpio@0 {
+			compatible = "brcm,brcmstb-gpio";
+			reg = <0>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			ngpios = <17>;
+		};
+	};
+};
