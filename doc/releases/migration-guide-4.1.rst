@@ -614,6 +614,9 @@ CFB
 * :c:func:`cfb_get_font_size` and :c:func:`cfb_get_numof_fonts` take a
   :c:struct:`driver` pointer as a first argument, but not used it.
   Removed this argument.
+* Change using signed values to represent the coordinates.
+  As a result, :c:func:`cfb_print`, :c:func:`cfb_invert_area`,
+  and :c:struct:`cfb_position` definitions are changed.
 
 Flash map
 =========
