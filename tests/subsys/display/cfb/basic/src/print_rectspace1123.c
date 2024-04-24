@@ -203,5 +203,18 @@ ZTEST(print_rectspace1123, test_print_outside_bottom_left)
 
 	zassert_true(verify_image(0, display_height - 14, outside_bottom_left, 3, 14));
 }
+/*
+ZTEST(print_rectspace1123, test_print_wrap_to_3_lines)
+{
+	zassert_ok(
+		cfb_print(dev, "                                                     ", 160, 17));
+	zassert_ok(cfb_framebuffer_finalize(dev));
 
+	zassert_true(verify_image(160, 17, kerning_1_12rectspace1123, 155, 23));
+	zassert_true(verify_image(0, 40, kerning_1_12rectspace1123, 155, 23));
+	zassert_true(verify_image(156, 40, kerning_1_12rectspace1123, 155, 23));
+	zassert_true(verify_image(0, 63, kerning_1_12rectspace1123, 155, 23));
+	zassert_true(verify_image(12, 63, kerning_1_12rectspace1123, 155, 23));
+}
+*/
 ZTEST_SUITE(print_rectspace1123, NULL, NULL, cfb_test_before, cfb_test_after, NULL);
