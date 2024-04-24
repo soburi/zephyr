@@ -1,0 +1,4 @@
+name: rpi_5_xen_domd
+append:
+  EXTRA_DTC_OVERLAY_FILE: rpi_5_xen_domd.overlay
+  EXTRA_CONF_FILE: rpi_5_xen_domd.conf
