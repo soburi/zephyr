@@ -80,6 +80,13 @@ struct cfb_framebuffer {
 
 	/** Framebuffer height in pixels */
 	uint16_t height;
+
+	/** Resolution of a framebuffer in pixels in X direction */
+	struct cfb_position pos;
+
+	/** Resolution of a framebuffer in pixels in X direction */
+	struct cfb_position res;
+
 };
 
 /**
