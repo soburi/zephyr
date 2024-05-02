@@ -23,3 +23,13 @@ config UART_RA_SCI_B_UART_FIFO_ENABLE
 	  Enable RA SCI_B FIFO
 
 endif
+
+config UART_RA8_SCI
+	bool "Renesas RA SCI UART"
+	default y
+	depends on DT_HAS_RENESAS_RA8_UART_SCI_ENABLED
+	select SERIAL_HAS_DRIVER
+	select SERIAL_SUPPORT_INTERRUPT
+	select USE_RA_FSP_SCI_UART
+	help
+	  Enable Renesas RA SCI UART Driver.
