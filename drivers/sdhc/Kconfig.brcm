@@ -1,0 +1,34 @@
+# Copyright (c) 2024 EPAM Systems
+# SPDX-License-Identifier: Apache-2.0
+
+config BRCM_BCM2712_SDHCI
+	bool "BCM2712 SDHC (SD/MMC)"
+	default y
+	depends on DT_HAS_BRCM_BCM2712_SDHCI_ENABLED
+	select SDHCI_GENERIC
+	select REGULATOR
+	select GPIO
+	select CACHE_MANAGEMENT
+	select SDHC_SUPPORTS_UHS if SDMMC_STACK
+	help
+	  BCM2712 SDHC v3.0 cpapable.
+
+if BRCM_BCM2712_SDHCI
+
+# SDHC DMA needs 64 bit aligned buffers
+config SDHC_BUFFER_ALIGNMENT
+	default 64
+
+choice BRCM_BCM2712_XFER_MODE
+	bool "Select BCM2712 SDHC (SD/MMC) data transfer mode"
+	default BRCM_BCM2712_XFER_SDMA
+
+config BRCM_BCM2712_XFER_PIO
+	bool "BCM2712 SDHC PIO data transfer mode"
+
+config BRCM_BCM2712_XFER_SDMA
+	bool "BCM2712 SDHC SDMA data transfer mode"
+
+endchoice
+
+endif # BRCM_BCM2712_SDHCI
