@@ -1,5 +1,6 @@
 /*
  * Copyright 2024 Junho Lee <junho@tsnlab.com>
+ * Copyright (c) 2024 EPAM Systems
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +18,7 @@
 
 	aliases {
 		led0 = &led_act;
+		sdhc0 = &sdio1;
 	};
 
 	chosen {
@@ -34,6 +36,27 @@
 			gpios = <&gio_aon 9 GPIO_ACTIVE_LOW>;
 			label = "ACT";
 		};
+	};
+
+	sd_io_1v8_reg: sd_io_1v8_reg {
+		compatible = "regulator-gpio";
+		regulator-name = "vdd-sd-io";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+		gpios = <&gio_aon 3 GPIO_ACTIVE_HIGH>;
+		states = <1800000 0x1
+			  3300000 0x0>;
+		status = "okay";
+	};
+
+	sd_vcc_reg: sd_vcc_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-sd";
+		regulator-boot-on;
+		enable-gpios = <&gio_aon 4 GPIO_ACTIVE_HIGH>;
+		status = "okay";
 	};
 };
 
@@ -53,4 +76,20 @@
 
 &gpio0_0 {
 	status = "okay";
+};
+
+/* SDIO1 is used to drive removable the SD card */
+&sdio1 {
+	vqmmc-supply = <&sd_io_1v8_reg>;
+	vmmc-supply = <&sd_vcc_reg>;
+	bus-width = <4>;
+	cd-gpios = <&gio_aon 5 GPIO_ACTIVE_LOW>;
+	/* request freq from hw */
+	max-bus-freq = <0>;
+	status = "okay";
+
+	disk {
+		compatible = "zephyr,sdmmc-disk";
+		status = "okay";
+	};
 };
