@@ -86,11 +86,35 @@
 		};
 	};
 
+	axi: axi {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+
+		sdio1: mmc@1000fff000 {
+			compatible = "brcm,bcm2712-sdhci";
+			reg = <0x10 0x00fff000  0x0 0x260>,
+			      <0x10 0x00fff400  0x0 0x200>,
+			      <0x10 0x015040b0  0x0 0x4>,  // Bus isolation control
+			      <0x10 0x015200f0  0x0 0x24>; // LCPLL control misc0-8
+			reg-names = "host", "cfg", "busisol", "lcpll";
+			interrupts = <GIC_SPI 273 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+			clocks = <&clk_emmc2>;
+			status = "disabled";
+		};
+	};
+
 	clocks {
 		clk_uart: clk_uart {
 			compatible = "fixed-clock";
 			clock-frequency = <44236800>;
 			#clock-cells = <0>;
+		};
+
+		clk_emmc2: clk_emmc2 {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <200000000>;
 		};
 	};
 
