@@ -25,4 +25,7 @@ zephyr_library_sources_ifdef(CONFIG_SPI_SDHC sdhc_spi.c)
 zephyr_library_sources_ifdef(CONFIG_XLNX_SDHC xlnx_sdhc.c)
 # zephyr-keep-sorted-stop
 
+zephyr_library_sources_ifdef(CONFIG_SDHC_INFINEON_CAT1 ifx_cat1_sdio.c)
+zephyr_library_sources_ifdef(CONFIG_SDHCI_GENERIC sdhci_common.c)
+zephyr_library_sources_ifdef(CONFIG_BRCM_BCM2712_SDHCI brcm_bcm2712_sdhci.c)
 endif()

@@ -1,0 +1,9 @@
+# Copyright (c) 2024 EPAM Systems
+# SPDX-License-Identifier: Apache-2.0
+
+config SDHCI_GENERIC
+	bool
+	select SDHC_SUPPORTS_NATIVE_MODE
+	help
+	  SD Host Controller (SDHC) generic implementation module according to
+	  SD Host Controller Standard Specification (Version 3.0).

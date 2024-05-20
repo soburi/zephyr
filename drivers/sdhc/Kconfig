@@ -29,6 +29,9 @@ source "drivers/sdhc/Kconfig.stm32"
 source "drivers/sdhc/Kconfig.xlnx"
 # zephyr-keep-sorted-stop
 
+source "drivers/sdhc/Kconfig.sdhc"
+source "drivers/sdhc/Kconfig.brcm"
+
 config SDHC_INIT_PRIORITY
 	int "SDHC driver init priority"
 	default 85
