@@ -37,6 +37,11 @@
 	};
 };
 
+/* samples required more memory and RPI5 has it, set it to 4M */
+&sram0 {
+	reg = <0x0 0x200000 0x400000>;
+};
+
 &gio_aon {
 	status = "okay";
 };
