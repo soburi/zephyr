@@ -325,7 +325,7 @@ static int sdhc_stop_transfer(struct sdhci_common *sdhci_ctx)
 	hdc_cmd.opcode = SD_STOP_TRANSMISSION;
 	hdc_cmd.arg = 0;
 	hdc_cmd.response_type = SD_RSP_TYPE_R1;
-	hdc_cmd.timeout_ms = 1000;
+	hdc_cmd.timeout_ms = CONFIG_SD_CMD_TIMEOUT;
 
 	return sdhci_send_cmd(sdhci_ctx, &hdc_cmd, false);
 }
