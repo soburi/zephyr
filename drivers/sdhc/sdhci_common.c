@@ -477,9 +477,9 @@ static void sdhci_cmd_done(struct sdhci_common *sdhci_ctx, struct sdhc_command *
 	if (!long_resp) {
 		return;
 	}
-	cmd->response[1] = sys_read32(sdhci_ctx->reg_base + SDHCI_RESPONSE + 0x4);
-	cmd->response[2] = sys_read32(sdhci_ctx->reg_base + SDHCI_RESPONSE + 0x8);
-	cmd->response[3] = sys_read32(sdhci_ctx->reg_base + SDHCI_RESPONSE + 0xC);
+	cmd->response[1] = sys_read32(sdhci_ctx->reg_base + SDHCI_RESPONSE1);
+	cmd->response[2] = sys_read32(sdhci_ctx->reg_base + SDHCI_RESPONSE2);
+	cmd->response[3] = sys_read32(sdhci_ctx->reg_base + SDHCI_RESPONSE3);
 
 	/* 136-bit: RTS=01b, Response field R[127:8] - RESP3[23:0],
 	 * RESP2[31:0], RESP1[31:0], RESP0[31:0]
