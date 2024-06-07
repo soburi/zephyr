@@ -352,6 +352,10 @@ static int sdhci_poll_data_complete(struct sdhci_common *sdhci_ctx, int32_t time
 			break;
 		}
 
+		if (reg_normal_int_stat & SDHCI_INT_ERROR) {
+			break;
+		}
+
 		k_busy_wait(10);
 		timeout--;
 	}
@@ -504,6 +508,10 @@ static int sdhci_poll_cmd_complete(struct sdhci_common *sdhci_ctx, int32_t timeo
 		if (reg_normal_int_stat & SDHCI_INT_CMD_COMPLETE) {
 			sys_write32(SDHCI_INT_CMD_COMPLETE, sdhci_ctx->reg_base + SDHCI_INT_STATUS);
 			ret = 0;
+			break;
+		}
+
+		if (reg_normal_int_stat & SDHCI_INT_ERROR) {
 			break;
 		}
 
