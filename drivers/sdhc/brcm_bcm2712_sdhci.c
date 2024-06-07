@@ -44,8 +44,6 @@ LOG_MODULE_REGISTER(brcm_bcm2712_sdhci, CONFIG_SDHC_LOG_LEVEL);
 struct bcm2712_sdhci_config {
 	DEVICE_MMIO_NAMED_ROM(host);
 	DEVICE_MMIO_NAMED_ROM(cfg);
-	DEVICE_MMIO_NAMED_ROM(busisol);
-	DEVICE_MMIO_NAMED_ROM(lcpll);
 
 	const struct gpio_dt_spec gpio_cd;
 	const struct device *regulator_vqmmc;
@@ -65,8 +63,6 @@ struct bcm2712_sdhci_config {
 struct bcm2712_sdhci_data {
 	DEVICE_MMIO_NAMED_RAM(host);
 	DEVICE_MMIO_NAMED_RAM(cfg);
-	DEVICE_MMIO_NAMED_RAM(busisol);
-	DEVICE_MMIO_NAMED_RAM(lcpll);
 
 	struct sdhc_io host_io;
 	struct sdhc_host_props props;
@@ -389,8 +385,6 @@ static int bcm2712_sdhci_init(const struct device *dev)
 
 	DEVICE_MMIO_NAMED_MAP(dev, host, K_MEM_CACHE_NONE);
 	DEVICE_MMIO_NAMED_MAP(dev, cfg, K_MEM_CACHE_NONE);
-	DEVICE_MMIO_NAMED_MAP(dev, busisol, K_MEM_CACHE_NONE);
-	DEVICE_MMIO_NAMED_MAP(dev, lcpll, K_MEM_CACHE_NONE);
 
 	data->sdhci_ctx.reg_base = DEVICE_MMIO_NAMED_GET(dev, host);
 
@@ -457,8 +451,6 @@ static int bcm2712_sdhci_init(const struct device *dev)
 	static const struct bcm2712_sdhci_config bcm2712_sdhci_config_##inst = {                   \
 		DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(host, DT_DRV_INST(inst)),                       \
 		DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(cfg, DT_DRV_INST(inst)),                        \
-		DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(busisol, DT_DRV_INST(inst)),                    \
-		DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(lcpll, DT_DRV_INST(inst)),                      \
                                                                                                    \
 		.regulator_vqmmc = DEVICE_DT_GET(DT_INST_PHANDLE(inst, vqmmc_supply)),             \
 		.regulator_vmmc = DEVICE_DT_GET(DT_INST_PHANDLE(inst, vmmc_supply)),               \
