@@ -53,8 +53,6 @@ struct bcm2712_sdhci_config {
 	uint32_t max_bus_freq;
 	uint32_t min_bus_freq;
 	uint32_t power_delay_ms;
-	uint8_t hs200_mode: 1;
-	uint8_t hs400_mode: 1;
 	uint8_t bw_4bit: 1;
 	uint8_t bw_8bit: 1;
 	uint8_t non_removable: 1;
@@ -286,8 +284,6 @@ static int bcm2712_sdhci_init_host_props(const struct device *dev)
 	props->is_spi = 0;
 	props->power_delay = cfg->power_delay_ms;
 	host_caps->bus_4_bit_support = cfg->bw_4bit;
-	host_caps->hs200_support = cfg->hs200_mode;
-	host_caps->hs400_support = cfg->hs400_mode;
 
 	sdhci_init_caps(sdhci_ctx, props);
 
@@ -459,8 +455,6 @@ static int bcm2712_sdhci_init(const struct device *dev)
                                                                                                    \
 		.clk_freq = DT_INST_PROP_BY_PHANDLE(inst, clocks, clock_frequency),                \
                                                                                                    \
-		.hs200_mode = DT_INST_PROP_OR(inst, mmc_hs200_1_8v, 0),                            \
-		.hs400_mode = DT_INST_PROP_OR(inst, mmc_hs400_1_8v, 0),                            \
 		.bw_4bit = DT_INST_ENUM_HAS_VALUE(inst, bus_width, 4),                             \
 		.bw_8bit = DT_INST_ENUM_HAS_VALUE(inst, bus_width, 8),                             \
 		.max_bus_freq = DT_INST_PROP_OR(inst, max_bus_freq, 0),                            \
