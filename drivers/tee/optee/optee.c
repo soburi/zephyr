@@ -111,6 +111,36 @@ struct shm_cache_entry {
 	struct tee_shm *shm;
 };
 
+#if IS_ENABLED(CONFIG_MMU)
+extern int arch_page_phys_get(void *virt, uintptr_t *phys);
+
+/*
+ * Use arch_page_phys_get instead of z_mem_phys_addr for address
+ * conversion.
+ * According to the description of z_mem_phys_addr it uses
+ * Z_MEM_VM_OFFSET to make a conversion from virtual to physical
+ * address. And these macros are intended for assembly, linker code,
+ * and static initializers.
+ * So when external libraries, such as PICOLIBC or NEWLIB_LIBC
+ * uses internal mappings for dynamic memory allocation z_mem_phys_addr
+ * may not work properly and return wrong physical address.
+ */
+static uintptr_t optee_mem_phys_addr(void *virt)
+{
+	uintptr_t phys;
+	uint32_t offt = (uintptr_t)virt & (CONFIG_MMU_PAGE_SIZE - 1);
+
+	arch_page_phys_get((void *)((uintptr_t)virt - offt), &phys);
+	return phys + offt;
+}
+#else
+/*
+ * When MMU is disabled we should use common zephyr approach because
+ * there is no CONFIG_MMU_PAGE_SIZE definition.
+ */
+#define optee_mem_phys_addr(x) k_mem_phys_addr(x)
+#endif /* IS_ENABLED(CONFIG_MMU) */
+
 /* Wrapping functions so function pointer can be used */
 static void optee_smccc_smc(unsigned long a0, unsigned long a1, unsigned long a2, unsigned long a3,
 			    unsigned long a4, unsigned long a5, unsigned long a6, unsigned long a7,
