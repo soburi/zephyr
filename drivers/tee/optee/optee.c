@@ -657,11 +657,9 @@ out:
 	k_free(params);
 }
 
-static uint32_t handle_func_rpc_call(const struct device *dev, struct tee_shm *shm,
+static uint32_t handle_func_rpc_call(const struct device *dev, struct optee_msg_arg *arg,
 				     void **pages)
 {
-	struct optee_msg_arg *arg = shm->addr;
-
 	switch (arg->cmd) {
 	case OPTEE_RPC_CMD_SHM_ALLOC:
 		free_shm_pages(pages);
@@ -691,7 +689,7 @@ static uint32_t handle_func_rpc_call(const struct device *dev, struct tee_shm *s
 }
 
 static void handle_rpc_call(const struct device *dev, struct optee_rpc_param *param,
-			    void **pages)
+			    void **pages, struct optee_msg_arg *rpc_arg)
 {
 	struct tee_shm *shm = NULL;
 	uint32_t res = OPTEE_SMC_CALL_RETURN_FROM_RPC;
@@ -719,8 +717,12 @@ static void handle_rpc_call(const struct device *dev, struct optee_rpc_param *pa
 		/* Foreign interrupt was raised */
 		break;
 	case OPTEE_SMC_RPC_FUNC_CMD:
-		shm = (struct tee_shm *)regs_to_u64(param->a1, param->a2);
-		res = handle_func_rpc_call(dev, shm, pages);
+		if (!rpc_arg) {
+			shm = (struct tee_shm *)regs_to_u64(param->a1,
+							    param->a2);
+			rpc_arg = shm->addr;
+		}
+		res = handle_func_rpc_call(dev, rpc_arg, pages);
 		break;
 	default:
 		break;
@@ -776,7 +778,7 @@ static int optee_call(const struct device *dev, struct optee_msg_arg *arg, struc
 			param.a1 = res.a1;
 			param.a2 = res.a2;
 			param.a3 = res.a3;
-			handle_rpc_call(dev, &param, &pages);
+			handle_rpc_call(dev, &param, &pages, rpc_arg);
 		} else {
 			free_shm_pages(&pages);
 			k_sem_give(&data->call_sem);
