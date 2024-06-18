@@ -593,7 +593,7 @@ static int sdhci_send_cmd(struct sdhci_common *sdhci_ctx, struct sdhc_command *c
 int sdhci_send_req(struct sdhci_common *sdhci_ctx, struct sdhc_command *cmd, struct sdhc_data *data)
 {
 	uint32_t reg_present_state;
-	bool is_read;
+	bool is_read = false;
 	int ret = 0;
 
 	reg_present_state = sys_read32(sdhci_ctx->reg_base + SDHCI_PRESENT_STATE);
