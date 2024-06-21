@@ -7,3 +7,12 @@ config SDHCI_GENERIC
 	help
 	  SD Host Controller (SDHC) generic implementation module according to
 	  SD Host Controller Standard Specification (Version 3.0).
+
+config SDHCI_GENERIC_ADMA2_DESC_MAX_LEN
+	int "ADMA2 max xfer size per descriptor"
+	default 65532
+	range 1 65536
+	help
+	  Defines ADMA2 max xfer size per descriptor. The default value selected by
+	  taking into account that some SDHC HW implemtations may not handle
+	  properly descriptor "Length Field" == 0 case (65536 bytes xfer).
