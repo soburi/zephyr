@@ -7,6 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/cache.h>
 #include <zephyr/drivers/sdhc.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/logging/log.h>
 
 #include "sdhci_common.h"
@@ -432,6 +433,72 @@ static int sdhci_transfer_data(struct sdhci_common *sdhci_ctx, struct sdhc_data 
 	return sdhci_poll_data_complete(sdhci_ctx, timeout / 100);
 }
 
+static void sdhc_adma_desc_fill(struct sdhc_adma_desc *desc, uintptr_t dma_addr, uint16_t len,
+				bool end)
+{
+	uint16_t cmd;
+
+	cmd = SDHC_ADMA2_DESC_VALID | SDHC_ADMA2_DESC_ACT_TRAN;
+	if (end) {
+		cmd |= SDHC_ADMA2_DESC_END;
+	}
+
+	desc->cmd = sys_cpu_to_le16(cmd);
+	desc->len = sys_cpu_to_le16(len);
+	desc->addr = sys_cpu_to_le32(dma_addr);
+	LOG_DBG("sdhc:dma_desc: %016llx", *((uint64_t *)desc));
+}
+
+static void sdhc_prepare_adma_table(struct sdhci_common *sdhci_ctx, struct sdhc_data *data,
+				    uintptr_t dma_addr)
+{
+	uint32_t trans_bytes = data->block_size * data->blocks;
+	struct sdhc_adma_desc *desc = sdhci_ctx->adma_descs;
+	uintptr_t desc_dma_addr;
+	uint32_t desc_count, desc_count_idx;
+
+	desc_count = DIV_ROUND_UP(trans_bytes, SDHC_ADMA2_DESC_MAX_LEN);
+	desc_count_idx = desc_count;
+	desc_dma_addr = z_mem_phys_addr(sdhci_ctx->adma_descs);
+	while (--desc_count_idx) {
+		sdhc_adma_desc_fill(desc, dma_addr, SDHC_ADMA2_DESC_MAX_LEN, false);
+		dma_addr += SDHC_ADMA2_DESC_MAX_LEN;
+		trans_bytes -= SDHC_ADMA2_DESC_MAX_LEN;
+		desc++;
+	}
+
+	sdhc_adma_desc_fill(desc, dma_addr, trans_bytes, true);
+
+#if !defined(CONFIG_NOCACHE_MEMORY)
+	sys_cache_data_flush_range(sdhci_ctx->adma_descs,
+				   (desc_count * sizeof(struct sdhc_adma_desc)));
+#endif
+
+	sys_write32(desc_dma_addr, sdhci_ctx->reg_base + SDHCI_ADMA_ADDRESS_LOW);
+}
+
+static void sdhci_set_dma_sel(struct sdhci_common *sdhci_ctx)
+{
+	uint8_t ctrl;
+
+	if (!sdhci_ctx->f_use_dma) {
+		return;
+	}
+
+	/* Set DMA Select */
+	ctrl = sys_read8(sdhci_ctx->reg_base + SDHCI_HOST_CONTROL);
+
+	ctrl &= ~SDHCI_CTRL_DMA_MASK;
+	if (sdhci_ctx->dma_mode == SDHC_DMA_SDMA) {
+		ctrl |= SDHCI_CTRL_SDMA << SDHCI_CTRL_DMA_SHIFT;
+	} else if (sdhci_ctx->dma_mode == SDHC_DMA_ADMA2) {
+		ctrl |= SDHCI_CTRL_ADMA2 << SDHCI_CTRL_DMA_SHIFT;
+	}
+
+	LOG_DBG("sdhc:dma_sel: SDHCI_HOST_CONTROL:%02x", ctrl);
+	sys_write8(ctrl, sdhci_ctx->reg_base + SDHCI_HOST_CONTROL);
+}
+
 static void sdhci_prepare_dma(struct sdhci_common *sdhci_ctx, struct sdhc_data *data,
 			      bool is_read)
 {
@@ -441,7 +508,11 @@ static void sdhci_prepare_dma(struct sdhci_common *sdhci_ctx, struct sdhc_data *
 
 	dma_addr = z_mem_phys_addr(data->data);
 	LOG_DBG("sdhc:req: SDHCI_DMA_ADDRESS %08lx", dma_addr);
-	sys_write32(dma_addr, sdhci_ctx->reg_base + SDHCI_DMA_ADDRESS);
+	if (sdhci_ctx->dma_mode == SDHC_DMA_SDMA) {
+		sys_write32(dma_addr, sdhci_ctx->reg_base + SDHCI_DMA_ADDRESS);
+	} else {
+		sdhc_prepare_adma_table(sdhci_ctx, data, dma_addr);
+	}
 }
 
 static void sdhci_prepare_data(struct sdhci_common *sdhci_ctx, struct sdhc_command *cmd,
@@ -472,6 +543,50 @@ static void sdhci_prepare_data(struct sdhci_common *sdhci_ctx, struct sdhc_comma
 		    sdhci_ctx->reg_base + SDHCI_BLOCK_SIZE);
 	sys_write16(data->blocks, sdhci_ctx->reg_base + SDHCI_BLOCK_COUNT);
 	sys_write16(transfer_mode, sdhci_ctx->reg_base + SDHCI_TRANSFER_MODE);
+}
+
+static int sdhci_dma_check(struct sdhci_common *sdhci_ctx, struct sdhc_data *data)
+{
+	uint32_t trans_bytes;
+
+	if (!sdhci_ctx->f_use_dma) {
+		return 0;
+	}
+
+#if defined(CONFIG_64BIT)
+	/* Only 32bit DMA supported */
+	if (z_mem_phys_addr(data->data) >> 32) {
+		k_panic();
+		return -EIO;
+	}
+#endif
+
+	trans_bytes = data->block_size * data->blocks;
+
+	if (data->blocks > 65535) {
+		LOG_ERR("sdhc:sdma: max xfer blocks count (%d) overflow max:65535", data->blocks);
+		return -EIO;
+	}
+
+	if (sdhci_ctx->dma_mode == SDHC_DMA_SDMA) {
+		if (trans_bytes > SDHC_SDMA_XFER_MAX) {
+			LOG_ERR("sdhc:sdma: max xfer size overflow max:%08d", SDHC_SDMA_XFER_MAX);
+			return -EIO;
+		}
+	}
+
+	if (sdhci_ctx->dma_mode == SDHC_DMA_ADMA2) {
+		uint32_t desc_count;
+
+		desc_count = DIV_ROUND_UP(trans_bytes, SDHC_ADMA2_DESC_MAX_LEN);
+		if (desc_count > sdhci_ctx->adma_descs_num) {
+			LOG_ERR("sdhc:adma: xfer desc number (%u) overflow, max:%u ", desc_count,
+				sdhci_ctx->adma_descs_num);
+			return -EIO;
+		}
+	}
+
+	return 0;
 }
 
 static void sdhci_cmd_done(struct sdhci_common *sdhci_ctx, struct sdhc_command *cmd,
@@ -623,6 +738,10 @@ int sdhci_send_req(struct sdhci_common *sdhci_ctx, struct sdhc_command *cmd, str
 	}
 
 	if (data) {
+		ret = sdhci_dma_check(sdhci_ctx, data);
+		if (ret) {
+			return ret;
+		}
 		sdhci_prepare_data(sdhci_ctx, cmd, data, is_read);
 	}
 
@@ -695,14 +814,32 @@ static int sdhci_check_version(struct sdhci_common *sdhci_ctx)
 	return 0;
 }
 
-int sdhci_enable_dma(struct sdhci_common *sdhci_ctx, enum sdhc_dma_select dma_mode)
+int sdhci_enable_sdma(struct sdhci_common *sdhci_ctx)
 {
-	if (dma_mode != SDHC_DMA_SDMA) {
-		return -ENOTSUP;
+	sdhci_ctx->f_use_dma = true;
+	sdhci_ctx->dma_mode = SDHC_DMA_SDMA;
+
+	return 0;
+}
+
+int sdhci_enable_adma2(struct sdhci_common *sdhci_ctx, struct sdhc_adma_desc *descs_table,
+		       uint32_t descs_table_size)
+{
+	if (!descs_table || !descs_table_size) {
+		return -EINVAL;
 	}
 
+#if defined(CONFIG_64BIT)
+	/* Only 32bit DMA supported */
+	if (((uint64_t)descs_table >> 32)) {
+		k_panic();
+	}
+#endif
+
 	sdhci_ctx->f_use_dma = true;
-	sdhci_ctx->dma_mode = dma_mode;
+	sdhci_ctx->adma_descs = descs_table;
+	sdhci_ctx->adma_descs_num = descs_table_size;
+	sdhci_ctx->dma_mode = SDHC_DMA_ADMA2;
 
 	return 0;
 }
@@ -792,6 +929,8 @@ int sdhci_init_caps(struct sdhci_common *sdhci_ctx, struct sdhc_host_props *prop
 int sdhci_init(struct sdhci_common *sdhci_ctx)
 {
 	sdhci_reset(sdhci_ctx, SDHCI_RESET_ALL);
+
+	sdhci_set_dma_sel(sdhci_ctx);
 	/* Enable only interrupts served by the SD controller */
 	sys_write32(SDHCI_INT_DATA_MASK | SDHCI_INT_CMD_MASK,
 		    sdhci_ctx->reg_base + SDHCI_INT_ENABLE);
