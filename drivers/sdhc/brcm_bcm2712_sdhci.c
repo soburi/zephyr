@@ -50,6 +50,8 @@ struct bcm2712_sdhci_config {
 	const struct device *regulator_vmmc;
 	uint32_t clk_freq;
 
+	struct sdhc_adma_desc *adma_descs;
+
 	uint32_t max_bus_freq;
 	uint32_t min_bus_freq;
 	uint32_t power_delay_ms;
@@ -331,11 +333,19 @@ use_dt_freq:
 
 	sdhci_enable_auto_cmd12(sdhci_ctx, true);
 
-	if (IS_ENABLED(CONFIG_BRCM_BCM2712_XFER_SDMA)) {
-		ret = sdhci_enable_dma(sdhci_ctx, SDHC_DMA_SDMA);
+	if (IS_ENABLED(CONFIG_BRCM_BCM2712_XFER_ADMA2) && host_caps->adma_2_support) {
+		ret = sdhci_enable_adma2(sdhci_ctx, cfg->adma_descs,
+					 CONFIG_BRCM_BCM2712_ADMA2_DESCS_NUM);
 		if (ret) {
-			LOG_DEV_ERR(dev, "enable dma failed (%d)", ret);
+			LOG_DEV_ERR(dev, "enable adma failed (%d)", ret);
 		}
+		LOG_DEV_ERR(dev, "enable adma");
+	} else if (IS_ENABLED(CONFIG_BRCM_BCM2712_XFER_SDMA) && host_caps->sdma_support) {
+		ret = sdhci_enable_sdma(sdhci_ctx);
+		if (ret) {
+			LOG_DEV_ERR(dev, "enable sdma failed (%d)", ret);
+		}
+		LOG_DEV_ERR(dev, "enable sdma");
 	}
 
 	return ret;
@@ -443,7 +453,18 @@ static int bcm2712_sdhci_init(const struct device *dev)
 	return 0;
 }
 
+#if defined(CONFIG_BRCM_BCM2712_XFER_ADMA2)
+#define BRCM_BCM2712_ADMA2_DESCS(inst)                                                             \
+	static struct sdhc_adma_desc                                                               \
+		adma_descs_##inst[CONFIG_BRCM_BCM2712_ADMA2_DESCS_NUM] __nocache;
+#define BRCM_BCM2712_ADMA2_DESCS_INIT(inst) .adma_descs = adma_descs_##inst,
+#else
+#define BRCM_BCM2712_ADMA2_DESCS(inst)
+#define BRCM_BCM2712_ADMA2_DESCS_INIT(inst)
+#endif
+
 #define BCM2712_SDHCI_INIT(inst)                                                                   \
+	BRCM_BCM2712_ADMA2_DESCS(inst)                                                             \
 	static const struct bcm2712_sdhci_config bcm2712_sdhci_config_##inst = {                   \
 		DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(host, DT_DRV_INST(inst)),                       \
 		DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(cfg, DT_DRV_INST(inst)),                        \
@@ -461,6 +482,7 @@ static int bcm2712_sdhci_init(const struct device *dev)
 		.min_bus_freq = DT_INST_PROP_OR(inst, min_bus_freq, 400000),                       \
 		.power_delay_ms = DT_INST_PROP_OR(inst, power_delay_ms, 500),                      \
 		.non_removable = DT_INST_PROP_OR(inst, non_removable, 0),                          \
+		BRCM_BCM2712_ADMA2_DESCS_INIT(inst)                                                \
 	};                                                                                         \
 	static struct bcm2712_sdhci_data bcm2712_sdhci_data_##inst = {};                           \
 	DEVICE_DT_INST_DEFINE(inst, &bcm2712_sdhci_init, NULL, &bcm2712_sdhci_data_##inst,         \

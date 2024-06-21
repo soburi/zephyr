@@ -21,7 +21,7 @@ config SDHC_BUFFER_ALIGNMENT
 
 choice BRCM_BCM2712_XFER_MODE
 	bool "Select BCM2712 SDHC (SD/MMC) data transfer mode"
-	default BRCM_BCM2712_XFER_SDMA
+	default BRCM_BCM2712_XFER_ADMA2
 
 config BRCM_BCM2712_XFER_PIO
 	bool "BCM2712 SDHC PIO data transfer mode"
@@ -29,6 +29,14 @@ config BRCM_BCM2712_XFER_PIO
 config BRCM_BCM2712_XFER_SDMA
 	bool "BCM2712 SDHC SDMA data transfer mode"
 
+config BRCM_BCM2712_XFER_ADMA2
+	bool "BCM2712 SDHC ADMA2 data transfer mode"
+
 endchoice
+
+config BRCM_BCM2712_ADMA2_DESCS_NUM
+	int "BCM2712 SDHC ADMA number of descriptors"
+	default 16 if BRCM_BCM2712_XFER_ADMA2
+	default 0
 
 endif # BRCM_BCM2712_SDHCI
