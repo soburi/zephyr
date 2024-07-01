@@ -362,13 +362,40 @@ static int sdhci_poll_data_complete(struct sdhci_common *sdhci_ctx, int32_t time
 	}
 
 	if (reg_normal_int_stat & SDHCI_INT_ERROR) {
-		LOG_ERR("sdhc:req: data xfer error int_status:%08x", reg_normal_int_stat);
+		LOG_ERR("sdhc:req: data(poll) xfer error int_status:%08x", reg_normal_int_stat);
 		sys_write32(SDHCI_INT_ERROR_MASK, sdhci_ctx->reg_base + SDHCI_INT_STATUS);
 		ret = -EIO;
 	}
 
 	if (!timeout) {
-		LOG_ERR("sdhc:req: data xfer timeout int_status:%08x", reg_normal_int_stat);
+		LOG_ERR("sdhc:req: data(poll) xfer timeout int_status:%08x", reg_normal_int_stat);
+	}
+
+	return ret;
+}
+
+static int sdhci_wait_data_complete(struct sdhci_common *sdhci_ctx, uint32_t timeout)
+{
+	k_timeout_t wait_time;
+	uint32_t events;
+	int ret = 0;
+
+	if (timeout == SDHC_TIMEOUT_FOREVER) {
+		wait_time = K_FOREVER;
+	} else {
+		wait_time = K_MSEC(timeout);
+	}
+
+	events = k_event_wait(&sdhci_ctx->irq_event,
+			      SDHCI_INT_XFER_COMPLETE | SDHCI_INT_ERROR,
+			      false, wait_time);
+
+	if (events & SDHCI_INT_ERROR) {
+		LOG_ERR("sdhc:req: data(irq) xfer error int_status:%08x", events);
+		ret = -EIO;
+	} else if (!events) {
+		LOG_ERR("sdhc:req: data(irq) xfer timeout");
+		ret = -ETIMEDOUT;
 	}
 
 	return ret;
@@ -431,6 +458,48 @@ static int sdhci_transfer_data(struct sdhci_common *sdhci_ctx, struct sdhc_data 
 	}
 
 	return sdhci_poll_data_complete(sdhci_ctx, timeout / 100);
+}
+
+static int sdhci_transfer_data_irq(struct sdhci_common *sdhci_ctx, struct sdhc_data *data,
+				   bool is_read)
+{
+	uint8_t *data_ptr = data->data;
+	uint32_t block = data->blocks;
+	k_timeout_t wait_time;
+	uint32_t rdy_mask;
+	uint32_t events;
+
+	if (data->timeout_ms == SDHC_TIMEOUT_FOREVER) {
+		wait_time = K_FOREVER;
+	} else {
+		wait_time = K_MSEC(data->timeout_ms);
+	}
+
+	rdy_mask = SDHCI_INT_ERROR;
+	if (is_read) {
+		rdy_mask |= SDHCI_INT_BUF_RD_READY;
+	} else {
+		rdy_mask |= SDHCI_INT_BUF_WR_READY;
+	}
+
+	while (block) {
+		events = k_event_wait(&sdhci_ctx->irq_event, rdy_mask,
+				      false, wait_time);
+
+		if (events & SDHCI_INT_ERROR) {
+			LOG_ERR("sdhc:req: data(irq) io xfer error int_status:%08x", events);
+			return -EIO;
+		} else if (!events) {
+			LOG_ERR("sdhc:req: data(irq) io xfer timeout");
+			return -ETIMEDOUT;
+		}
+		k_event_clear(&sdhci_ctx->irq_event, rdy_mask);
+		sdhci_data_port_io(sdhci_ctx, data_ptr, data->block_size, is_read);
+		data_ptr += data->block_size;
+		block--;
+	};
+
+	return sdhci_wait_data_complete(sdhci_ctx, data->timeout_ms);
 }
 
 static void sdhc_adma_desc_fill(struct sdhc_adma_desc *desc, uintptr_t dma_addr, uint16_t len,
@@ -635,13 +704,40 @@ static int sdhci_poll_cmd_complete(struct sdhci_common *sdhci_ctx, int32_t timeo
 	}
 
 	if (reg_normal_int_stat & SDHCI_INT_ERROR) {
-		LOG_ERR("sdhc:req: cmd error int_status:%08x", reg_normal_int_stat);
+		LOG_ERR("sdhc:req: cmd(poll) error int_status:%08x", reg_normal_int_stat);
 		sys_write32(SDHCI_INT_ERROR_MASK, sdhci_ctx->reg_base + SDHCI_INT_STATUS);
 		ret = -EIO;
 	}
 
 	if (!timeout) {
-		LOG_ERR("sdhc:req: cmd timeout int_status:%08x", reg_normal_int_stat);
+		LOG_ERR("sdhc:req: cmd(poll) timeout int_status:%08x", reg_normal_int_stat);
+	}
+
+	return ret;
+}
+
+static int sdhc_wait_cmd_complete(struct sdhci_common *sdhci_ctx, int32_t timeout)
+{
+	k_timeout_t wait_time;
+	uint32_t events;
+	int ret = 0;
+
+	if (timeout == SDHC_TIMEOUT_FOREVER) {
+		wait_time = K_FOREVER;
+	} else {
+		wait_time = K_MSEC(timeout);
+	}
+
+	events = k_event_wait(&sdhci_ctx->irq_event,
+			      SDHCI_INT_CMD_COMPLETE | SDHCI_INT_ERROR,
+			      false, wait_time);
+
+	if (events & SDHCI_INT_ERROR) {
+		LOG_ERR("sdhc:req: cmd(irq) error int_status:%08x", events);
+		ret = -EIO;
+	} else if (!events) {
+		LOG_ERR("sdhc:req: cmd(irq) timeout");
+		ret = -ETIMEDOUT;
 	}
 
 	return ret;
@@ -653,7 +749,7 @@ static int sdhci_send_cmd(struct sdhci_common *sdhci_ctx, struct sdhc_command *c
 	bool long_resp = false;
 	uint16_t resp_type;
 	uint16_t cmd_flags;
-	int ret;
+	int ret = 0;
 
 	resp_type = (cmd->response_type & SDHC_NATIVE_RESPONSE_MASK);
 
@@ -704,7 +800,11 @@ static int sdhci_send_cmd(struct sdhci_common *sdhci_ctx, struct sdhc_command *c
 	sys_write16(SDHCI_MAKE_CMD(cmd->opcode, cmd_flags), sdhci_ctx->reg_base + SDHCI_COMMAND);
 
 	if (cmd->opcode != SD_SEND_TUNING_BLOCK) {
-		ret = sdhci_poll_cmd_complete(sdhci_ctx, cmd->timeout_ms);
+		if (sdhci_ctx->f_use_irq) {
+			ret = sdhc_wait_cmd_complete(sdhci_ctx, cmd->timeout_ms);
+		} else {
+			ret = sdhci_poll_cmd_complete(sdhci_ctx, cmd->timeout_ms);
+		}
 	}
 	if (!ret && resp_type != SD_RSP_TYPE_NONE) {
 		sdhci_cmd_done(sdhci_ctx, cmd, long_resp);
@@ -732,6 +832,7 @@ int sdhci_send_req(struct sdhci_common *sdhci_ctx, struct sdhc_command *cmd, str
 	}
 
 	sys_write32(SDHCI_INT_ALL_MASK, sdhci_ctx->reg_base + SDHCI_INT_STATUS);
+	k_event_clear(&sdhci_ctx->irq_event, SDHCI_INT_ALL_MASK);
 
 	if (cmd->opcode != SD_WRITE_SINGLE_BLOCK && cmd->opcode != SD_WRITE_MULTIPLE_BLOCK) {
 		is_read = true;
@@ -758,13 +859,21 @@ int sdhci_send_req(struct sdhci_common *sdhci_ctx, struct sdhc_command *cmd, str
 		data->block_size, data->data, data->block_addr);
 
 	if (sdhci_ctx->f_use_dma) {
-		ret = sdhci_poll_data_complete(sdhci_ctx, data->timeout_ms);
+		if (sdhci_ctx->f_use_irq) {
+			ret = sdhci_wait_data_complete(sdhci_ctx, data->timeout_ms);
+		} else {
+			ret = sdhci_poll_data_complete(sdhci_ctx, data->timeout_ms);
+		}
 
 		if (!ret && is_read) {
 			sys_cache_data_invd_range(data->data, data->blocks * data->block_size);
 		}
 	} else {
-		ret = sdhci_transfer_data(sdhci_ctx, data, is_read);
+		if (sdhci_ctx->f_use_irq) {
+			ret = sdhci_transfer_data_irq(sdhci_ctx, data, is_read);
+		} else {
+			ret = sdhci_transfer_data(sdhci_ctx, data, is_read);
+		}
 		if (ret) {
 			LOG_ERR("sdhc:req: data transfer failed (%d)", ret);
 			goto req_error;
@@ -934,8 +1043,29 @@ int sdhci_init(struct sdhci_common *sdhci_ctx)
 	/* Enable only interrupts served by the SD controller */
 	sys_write32(SDHCI_INT_DATA_MASK | SDHCI_INT_CMD_MASK,
 		    sdhci_ctx->reg_base + SDHCI_INT_ENABLE);
+
 	/* Mask all sdhci interrupt sources */
 	sys_write32(0x0, sdhci_ctx->reg_base + SDHCI_SIGNAL_ENABLE);
+	if (sdhci_ctx->f_use_irq) {
+		k_event_init(&sdhci_ctx->irq_event);
+		/* enable irqs */
+		sys_write32(SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK,
+			    sdhci_ctx->reg_base + SDHCI_SIGNAL_ENABLE);
+	}
 
 	return 0;
+}
+
+void sdhc_irq_cb(struct sdhci_common *sdhci_ctx)
+{
+	uint32_t irq_status;
+
+	/* save IRQ status */
+	irq_status = sys_read32(sdhci_ctx->reg_base + SDHCI_INT_STATUS);
+
+	/* clean irq status */
+	sys_write32(irq_status, sdhci_ctx->reg_base + SDHCI_INT_STATUS);
+	LOG_DBG("sdhc:irq: status %08x", irq_status);
+
+	k_event_post(&sdhci_ctx->irq_event, irq_status);
 }
