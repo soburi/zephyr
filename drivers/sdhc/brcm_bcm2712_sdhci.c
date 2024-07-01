@@ -49,6 +49,7 @@ struct bcm2712_sdhci_config {
 	const struct device *regulator_vqmmc;
 	const struct device *regulator_vmmc;
 	uint32_t clk_freq;
+	void (*irq_config)(const struct device *dev);
 
 	struct sdhc_adma_desc *adma_descs;
 
@@ -348,6 +349,10 @@ use_dt_freq:
 		LOG_DEV_ERR(dev, "enable sdma");
 	}
 
+	if (IS_ENABLED(CONFIG_BRCM_BCM2712_SDHC_USE_IRQ)) {
+		sdhc_enable_irq(sdhci_ctx, true);
+	}
+
 	return ret;
 }
 
@@ -450,8 +455,35 @@ static int bcm2712_sdhci_init(const struct device *dev)
 		}
 	}
 
+	if (IS_ENABLED(CONFIG_BRCM_BCM2712_SDHC_USE_IRQ)) {
+		cfg->irq_config(dev);
+	}
+
 	return 0;
 }
+
+#if defined(CONFIG_BRCM_BCM2712_SDHC_USE_IRQ)
+static void bcm2712_irq_handler(const void *arg)
+{
+	const struct device *dev = arg;
+	struct bcm2712_sdhci_data *data = dev->data;
+
+	sdhc_irq_cb(&data->sdhci_ctx);
+}
+
+#define BCM2712_SDHC_IRQ_CFG(inst)                                                                 \
+	static void irq_config_##inst(const struct device *dev)                                    \
+	{                                                                                          \
+		IRQ_CONNECT(DT_INST_IRQN(inst), DT_INST_IRQ(inst, priority), bcm2712_irq_handler,  \
+			    DEVICE_DT_INST_GET(inst), DT_INST_IRQ(inst, flags));                   \
+		irq_enable(DT_INST_IRQN(inst));                                                    \
+	}
+
+#define BCM2712_SDHC_IRQ_INIT(inst) .irq_config = irq_config_##inst,
+#else
+#define BCM2712_SDHC_IRQ_CFG(inst)
+#define BCM2712_SDHC_IRQ_INIT(inst)
+#endif /* CONFIG_BRCM_BCM2712_SDHC_USE_IRQ */
 
 #if defined(CONFIG_BRCM_BCM2712_XFER_ADMA2)
 #define BRCM_BCM2712_ADMA2_DESCS(inst)                                                             \
@@ -465,6 +497,7 @@ static int bcm2712_sdhci_init(const struct device *dev)
 
 #define BCM2712_SDHCI_INIT(inst)                                                                   \
 	BRCM_BCM2712_ADMA2_DESCS(inst)                                                             \
+	BCM2712_SDHC_IRQ_CFG(inst)                                                                 \
 	static const struct bcm2712_sdhci_config bcm2712_sdhci_config_##inst = {                   \
 		DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(host, DT_DRV_INST(inst)),                       \
 		DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(cfg, DT_DRV_INST(inst)),                        \
@@ -483,6 +516,7 @@ static int bcm2712_sdhci_init(const struct device *dev)
 		.power_delay_ms = DT_INST_PROP_OR(inst, power_delay_ms, 500),                      \
 		.non_removable = DT_INST_PROP_OR(inst, non_removable, 0),                          \
 		BRCM_BCM2712_ADMA2_DESCS_INIT(inst)                                                \
+		BCM2712_SDHC_IRQ_INIT(inst)                                                        \
 	};                                                                                         \
 	static struct bcm2712_sdhci_data bcm2712_sdhci_data_##inst = {};                           \
 	DEVICE_DT_INST_DEFINE(inst, &bcm2712_sdhci_init, NULL, &bcm2712_sdhci_data_##inst,         \

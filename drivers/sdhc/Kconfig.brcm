@@ -11,7 +11,7 @@ config BRCM_BCM2712_SDHCI
 	select CACHE_MANAGEMENT
 	select SDHC_SUPPORTS_UHS if SDMMC_STACK
 	help
-	  BCM2712 SDHC v3.0 cpapable.
+	  BCM2712 SDHC v3.0 capable with SD interface support.
 
 if BRCM_BCM2712_SDHCI
 
@@ -38,5 +38,12 @@ config BRCM_BCM2712_ADMA2_DESCS_NUM
 	int "BCM2712 SDHC ADMA number of descriptors"
 	default 16 if BRCM_BCM2712_XFER_ADMA2
 	default 0
+
+config BRCM_BCM2712_SDHC_USE_IRQ
+	bool "BCM2712 SDHC enable IRQ support"
+	select EVENTS
+	default y
+	help
+	  BCM2712 SDHC enable IRQ support for cmd/data transfers.
 
 endif # BRCM_BCM2712_SDHCI
