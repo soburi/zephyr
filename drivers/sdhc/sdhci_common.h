@@ -273,9 +273,11 @@ struct sdhci_common {
 	uint32_t clk_mul; /* Clock Multiplier value */
 	bool f_auto_cmd12; /* flag to Auto CMD12 Enable */
 	bool f_use_dma; /* flag to enable DMA */
+	bool f_use_irq; /* flag to enable IRQs */
 	enum sdhc_dma_select dma_mode; /* selected DMA mode */
 	struct sdhc_adma_desc *adma_descs; /* SDHC ADMA2 desc table */
 	uint32_t adma_descs_num; /* SDHC ADMA2 desc table size */
+	struct k_event irq_event; /* IRQ events */
 	/** @endcond */
 };
 
@@ -340,6 +342,22 @@ int sdhci_enable_adma2(struct sdhci_common *sdhci_ctx, struct sdhc_adma_desc *de
 static inline void sdhci_enable_auto_cmd12(struct sdhci_common *sdhci_ctx, bool enable)
 {
 	sdhci_ctx->f_auto_cmd12 = enable;
+}
+
+/**
+ * @brief Enable SDHC IRQ support.
+ *
+ * Enables SDHC IRQ support for command/data transfers.
+ * The SDHC drivers should call this API after @ref sdhci_init_caps.
+ * The consumer is responsible for SDHC IRQ requesting and enabling and should call
+ * @ref sdhc_irq_cb from its IRQ handler.
+ *
+ * @param sdhci_ctx: SDHC data context.
+ * @param enable: true to enable IRQ support.
+ */
+static inline void sdhc_enable_irq(struct sdhci_common *sdhci_ctx, bool enable)
+{
+	sdhci_ctx->f_use_irq = enable;
 }
 
 /**
@@ -477,5 +495,15 @@ int sdhci_set_uhs_timing(struct sdhci_common *sdhci_ctx, enum sdhc_timing_mode t
  */
 int sdhci_send_req(struct sdhci_common *sdhci_ctx, struct sdhc_command *cmd,
 		   struct sdhc_data *data);
+
+/**
+ * @brief SDHC IRQ handler callback.
+ *
+ * The consumer is responsible for SDHC IRQ requesting and enabling and should call
+ * @ref sdhc_irq_cb from its IRQ handler.
+ *
+ * @param sdhci_ctx: SDHC data context.
+ */
+void sdhc_irq_cb(struct sdhci_common *sdhci_ctx);
 
 #endif /* DRIVERS_SDHC_SDHCI_COMMON_H_ */
