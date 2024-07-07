@@ -3,7 +3,7 @@
 # Copyright (c) 2023 Sequans Communications.
 # SPDX-License-Identifier: Apache-2.0
 
-config RPI_PICO_HWSPINLOCK
+config HWSPINLOCK_RPI_PICO
 	bool "RaspberryPi Pico HW spinlock Driver"
 	default y
 	depends on DT_HAS_RASPBERRYPI_PICO_HWSPINLOCK_ENABLED
