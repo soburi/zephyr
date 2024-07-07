@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT hwspinlock_rpi_pico
+#define DT_DRV_COMPAT raspberrypi_pico_hwspinlock
 /*
  * Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
  *
