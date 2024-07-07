@@ -399,6 +399,10 @@ bool spin_lock_is_claimed(uint lock_num);
 
 #define remove_volatile_cast(t, x) ({__mem_fence_acquire(); (t)(x); })
 
+static_assert(PICO_SPINLOCK_ID_STRIPED_LAST >= PICO_SPINLOCK_ID_STRIPED_FIRST, "");
+static uint8_t striped_spin_lock_num = PICO_SPINLOCK_ID_STRIPED_FIRST;
+static uint32_t claimed;
+
 #ifdef __cplusplus
 }
 #endif
@@ -487,7 +491,7 @@ static void hwspinlock_rpi_pico_lock(const struct device *dev, uint32_t id)
 	}
 
 	while (sys_read8(get_lock_addr(dev, id)) != cpuid) {
-		k_busy_wait(CONFIG_HWSPINLOCK_RPI_PICO_RELAX_TIME);
+		//k_busy_wait(CONFIG_HWSPINLOCK_RPI_PICO_RELAX_TIME);
 		sys_write8(cpuid, get_lock_addr(dev, id));
 	}
 }
