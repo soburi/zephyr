@@ -17,5 +17,6 @@ config HWSPINLOCK_INIT_PRIORITY
 	  HW spinlock driver device initialization priority.
 
 source "drivers/hwspinlock/Kconfig.sqn"
+source "drivers/hwspinlock/Kconfig.rpi_pico"
 
 endif
