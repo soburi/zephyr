@@ -22,6 +22,11 @@
 extern "C" {
 #endif
 
+
+static void check_lock_num(uint __unused lock_num) {
+    //invalid_params_if(SYNC, lock_num >= 32);
+}
+
 /** \file hardware/sync.h
  *  \defgroup hardware_sync hardware_sync
  *
@@ -228,6 +233,11 @@ __force_inline static void restore_interrupts(uint32_t status) {
     __asm volatile ("msr PRIMASK,%0"::"r" (status) : );
 }
 
+static_assert(PICO_SPINLOCK_ID_STRIPED_LAST >= PICO_SPINLOCK_ID_STRIPED_FIRST, "");
+static uint8_t striped_spin_lock_num = PICO_SPINLOCK_ID_STRIPED_FIRST;
+static uint32_t claimed;
+
+
 /*! \brief Get HW Spinlock instance from number
  *  \ingroup hardware_sync
  *
@@ -324,12 +334,21 @@ __force_inline static void spin_unlock(spin_lock_t *lock, uint32_t saved_irq) {
  * \param lock_num The spin lock number
  * \return The spin lock instance
  */
-spin_lock_t *spin_lock_init(uint lock_num);
+spin_lock_t *spin_lock_init(uint lock_num) {
+    assert(lock_num < NUM_SPIN_LOCKS);
+    spin_lock_t *lock = spin_lock_instance(lock_num);
+    spin_unlock_unsafe(lock);
+    return lock;
+}
 
 /*! \brief Release all spin locks
  *  \ingroup hardware_sync
  */
-void spin_locks_reset(void);
+void spin_locks_reset(void) {
+    for (uint i = 0; i < NUM_SPIN_LOCKS; i++) {
+        spin_unlock_unsafe(spin_lock_instance(i));
+    }
+}
 
 /*! \brief Return a spin lock number from the _striped_ range
  *  \ingroup hardware_sync
@@ -346,7 +365,13 @@ void spin_locks_reset(void);
  * \see PICO_SPINLOCK_ID_STRIPED_FIRST
  * \see PICO_SPINLOCK_ID_STRIPED_LAST
  */
-uint next_striped_spin_lock_num(void);
+uint next_striped_spin_lock_num() {
+    uint rc = striped_spin_lock_num++;
+    if (striped_spin_lock_num > PICO_SPINLOCK_ID_STRIPED_LAST) {
+        striped_spin_lock_num = PICO_SPINLOCK_ID_STRIPED_FIRST;
+    }
+    return rc;
+}
 
 /*! \brief Mark a spin lock as used
  *  \ingroup hardware_sync
@@ -357,7 +382,10 @@ uint next_striped_spin_lock_num(void);
  *
  * \param lock_num the spin lock number
  */
-void spin_lock_claim(uint lock_num);
+void spin_lock_claim(uint lock_num) {
+    check_lock_num(lock_num);
+    hw_claim_or_assert((uint8_t *) &claimed, lock_num, "Spinlock %d is already claimed");
+}
 
 /*! \brief Mark multiple spin locks as used
  *  \ingroup hardware_sync
@@ -368,7 +396,12 @@ void spin_lock_claim(uint lock_num);
  *
  * \param lock_num_mask Bitfield of all required spin locks to claim (bit 0 == spin lock 0, bit 1 == spin lock 1 etc)
  */
-void spin_lock_claim_mask(uint32_t lock_num_mask);
+void spin_lock_claim_mask(uint32_t mask) {
+    for(uint i = 0; mask; i++, mask >>= 1u) {
+        if (mask & 1u) spin_lock_claim(i);
+    }
+}
+
 
 /*! \brief Mark a spin lock as no longer used
  *  \ingroup hardware_sync
@@ -377,7 +410,11 @@ void spin_lock_claim_mask(uint32_t lock_num_mask);
  *
  * \param lock_num the spin lock number to release
  */
-void spin_lock_unclaim(uint lock_num);
+void spin_lock_unclaim(uint lock_num) {
+    check_lock_num(lock_num);
+    spin_unlock_unsafe(spin_lock_instance(lock_num));
+    hw_claim_clear((uint8_t *) &claimed, lock_num);
+}
 
 /*! \brief Claim a free spin lock
  *  \ingroup hardware_sync
@@ -385,7 +422,9 @@ void spin_lock_unclaim(uint lock_num);
  * \param required if true the function will panic if none are available
  * \return the spin lock number or -1 if required was false, and none were free
  */
-int spin_lock_claim_unused(bool required);
+int spin_lock_claim_unused(bool required) {
+    return hw_claim_unused_from_range((uint8_t*)&claimed, required, PICO_SPINLOCK_ID_CLAIM_FREE_FIRST, PICO_SPINLOCK_ID_CLAIM_FREE_LAST, "No spinlocks are available");
+}
 
 /*! \brief Determine if a spin lock is claimed
  *  \ingroup hardware_sync
@@ -395,13 +434,12 @@ int spin_lock_claim_unused(bool required);
  * \see spin_lock_claim
  * \see spin_lock_claim_mask
  */
-bool spin_lock_is_claimed(uint lock_num);
+bool spin_lock_is_claimed(uint lock_num) {
+    check_lock_num(lock_num);
+    return hw_is_claimed((uint8_t *) &claimed, lock_num);
+}
 
 #define remove_volatile_cast(t, x) ({__mem_fence_acquire(); (t)(x); })
-
-static_assert(PICO_SPINLOCK_ID_STRIPED_LAST >= PICO_SPINLOCK_ID_STRIPED_FIRST, "");
-static uint8_t striped_spin_lock_num = PICO_SPINLOCK_ID_STRIPED_FIRST;
-static uint32_t claimed;
 
 #ifdef __cplusplus
 }
@@ -550,58 +588,5 @@ static int hwspinlock_rpi_pico_init(const struct device *dev)
 			      &hwspinlock_rpi_pico##idx##_config,                    \
 			      PRE_KERNEL_1, CONFIG_HWSPINLOCK_INIT_PRIORITY,    \
 			      &hwspinlock_api)
-
-
-
-static void check_lock_num(uint __unused lock_num) {
-    invalid_params_if(SYNC, lock_num >= 32);
-}
-
-void spin_locks_reset(void) {
-    for (uint i = 0; i < NUM_SPIN_LOCKS; i++) {
-        spin_unlock_unsafe(spin_lock_instance(i));
-    }
-}
-
-spin_lock_t *spin_lock_init(uint lock_num) {
-    assert(lock_num < NUM_SPIN_LOCKS);
-    spin_lock_t *lock = spin_lock_instance(lock_num);
-    spin_unlock_unsafe(lock);
-    return lock;
-}
-
-uint next_striped_spin_lock_num() {
-    uint rc = striped_spin_lock_num++;
-    if (striped_spin_lock_num > PICO_SPINLOCK_ID_STRIPED_LAST) {
-        striped_spin_lock_num = PICO_SPINLOCK_ID_STRIPED_FIRST;
-    }
-    return rc;
-}
-
-void spin_lock_claim(uint lock_num) {
-    check_lock_num(lock_num);
-    hw_claim_or_assert((uint8_t *) &claimed, lock_num, "Spinlock %d is already claimed");
-}
-
-void spin_lock_claim_mask(uint32_t mask) {
-    for(uint i = 0; mask; i++, mask >>= 1u) {
-        if (mask & 1u) spin_lock_claim(i);
-    }
-}
-
-void spin_lock_unclaim(uint lock_num) {
-    check_lock_num(lock_num);
-    spin_unlock_unsafe(spin_lock_instance(lock_num));
-    hw_claim_clear((uint8_t *) &claimed, lock_num);
-}
-
-int spin_lock_claim_unused(bool required) {
-    return hw_claim_unused_from_range((uint8_t*)&claimed, required, PICO_SPINLOCK_ID_CLAIM_FREE_FIRST, PICO_SPINLOCK_ID_CLAIM_FREE_LAST, "No spinlocks are available");
-}
-
-bool spin_lock_is_claimed(uint lock_num) {
-    check_lock_num(lock_num);
-    return hw_is_claimed((uint8_t *) &claimed, lock_num);
-}
 
 DT_INST_FOREACH_STATUS_OKAY(HWSPINLOCK_RPI_PICO_INIT);
