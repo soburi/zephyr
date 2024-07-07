@@ -249,6 +249,13 @@
 			status = "disabled";
 		};
 
+		hwspinlock: hwspinlock@9999999 {
+			compatible = "raspberrypi,pico-hwspinlock";
+			reg = <0x99999999 DT_SIZE_K(1)>;
+			num_locks = <1>;
+		};
+
+
 		uart1: uart@40038000 {
 			compatible = "raspberrypi,pico-uart", "arm,pl011";
 			reg = <0x40038000 DT_SIZE_K(4)>;
