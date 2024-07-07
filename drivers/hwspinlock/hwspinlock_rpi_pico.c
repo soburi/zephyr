@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT sqn_hwspinlock
+#define DT_DRV_COMPAT hwspinlock_rpi_pico
 
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
@@ -13,13 +13,13 @@
 
 #include <zephyr/sys/printk.h>
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(sqn_hwspinlock);
+LOG_MODULE_REGISTER(hwspinlock_rpi_pico);
 
-struct sqn_hwspinlock_data {
+struct hwspinlock_rpi_pico_data {
 	DEVICE_MMIO_RAM;
 };
 
-struct sqn_hwspinlock_config {
+struct hwspinlock_rpi_pico_config {
 	DEVICE_MMIO_ROM;
 	uint32_t num_locks;
 };
@@ -40,9 +40,9 @@ static uint8_t mpidr_to_cpuid(uint64_t mpidr_val)
 	return ++cpuid;
 }
 
-static int sqn_hwspinlock_trylock(const struct device *dev, uint32_t id)
+static int hwspinlock_rpi_pico_trylock(const struct device *dev, uint32_t id)
 {
-	const struct sqn_hwspinlock_config *config = dev->config;
+	const struct hwspinlock_rpi_pico_config *config = dev->config;
 	uint8_t cpuid;
 
 	if (id > config->num_locks)
@@ -66,9 +66,9 @@ static int sqn_hwspinlock_trylock(const struct device *dev, uint32_t id)
 	return -EBUSY;
 }
 
-static void sqn_hwspinlock_lock(const struct device *dev, uint32_t id)
+static void hwspinlock_rpi_pico_lock(const struct device *dev, uint32_t id)
 {
-	const struct sqn_hwspinlock_config *config = dev->config;
+	const struct hwspinlock_rpi_pico_config *config = dev->config;
 	uint8_t cpuid;
 
 	if (id > config->num_locks) {
@@ -88,14 +88,14 @@ static void sqn_hwspinlock_lock(const struct device *dev, uint32_t id)
 	}
 
 	while (sys_read8(get_lock_addr(dev, id)) != cpuid) {
-		k_busy_wait(CONFIG_SQN_HWSPINLOCK_RELAX_TIME);
+		k_busy_wait(CONFIG_HWSPINLOCK_RPI_PICO_RELAX_TIME);
 		sys_write8(cpuid, get_lock_addr(dev, id));
 	}
 }
 
-static void sqn_hwspinlock_unlock(const struct device *dev, uint32_t id)
+static void hwspinlock_rpi_pico_unlock(const struct device *dev, uint32_t id)
 {
-	const struct sqn_hwspinlock_config *config = dev->config;
+	const struct hwspinlock_rpi_pico_config *config = dev->config;
 	uint8_t cpuid;
 
 	if (id > config->num_locks) {
@@ -113,39 +113,39 @@ static void sqn_hwspinlock_unlock(const struct device *dev, uint32_t id)
 	sys_write8(cpuid, get_lock_addr(dev, id));
 }
 
-static uint32_t sqn_hwspinlock_get_max_id(const struct device *dev)
+static uint32_t hwspinlock_rpi_pico_get_max_id(const struct device *dev)
 {
-	const struct sqn_hwspinlock_config *config = dev->config;
+	const struct hwspinlock_rpi_pico_config *config = dev->config;
 
 	return config->num_locks;
 }
 
 static const struct hwspinlock_driver_api hwspinlock_api = {
-	.trylock = sqn_hwspinlock_trylock,
-	.lock = sqn_hwspinlock_lock,
-	.unlock = sqn_hwspinlock_unlock,
-	.get_max_id = sqn_hwspinlock_get_max_id,
+	.trylock = hwspinlock_rpi_pico_trylock,
+	.lock = hwspinlock_rpi_pico_lock,
+	.unlock = hwspinlock_rpi_pico_unlock,
+	.get_max_id = hwspinlock_rpi_pico_get_max_id,
 };
 
-static int sqn_hwspinlock_init(const struct device *dev)
+static int hwspinlock_rpi_pico_init(const struct device *dev)
 {
 	DEVICE_MMIO_MAP(dev, K_MEM_CACHE_NONE);
 
 	return 0;
 }
 
-#define SQN_HWSPINLOCK_INIT(idx)                                                \
-	static struct sqn_hwspinlock_data sqn_hwspinlock##idx##_data;           \
-	static const struct sqn_hwspinlock_config sqn_hwspinlock##idx##_config = {    \
+#define HWSPINLOCK_RPI_PICO_INIT(idx)                                                \
+	static struct hwspinlock_rpi_pico_data hwspinlock_rpi_pico##idx##_data;           \
+	static const struct hwspinlock_rpi_pico_config hwspinlock_rpi_pico##idx##_config = {    \
 		DEVICE_MMIO_ROM_INIT(DT_DRV_INST(idx)),                         \
-		.num_locks = DT_INST_PROP(idx, num_locks),                      \
+		.num_locks = 0,                      \
 	};                                                                      \
 	DEVICE_DT_INST_DEFINE(idx,                                              \
-			      sqn_hwspinlock_init,                              \
+			      hwspinlock_rpi_pico_init,                              \
 			      NULL,                                             \
-			      &sqn_hwspinlock##idx##_data,                      \
-			      &sqn_hwspinlock##idx##_config,                    \
+			      &hwspinlock_rpi_pico##idx##_data,                      \
+			      &hwspinlock_rpi_pico##idx##_config,                    \
 			      PRE_KERNEL_1, CONFIG_HWSPINLOCK_INIT_PRIORITY,    \
 			      &hwspinlock_api)
 
-DT_INST_FOREACH_STATUS_OKAY(SQN_HWSPINLOCK_INIT);
+DT_INST_FOREACH_STATUS_OKAY(HWSPINLOCK_RPI_PICO_INIT);
