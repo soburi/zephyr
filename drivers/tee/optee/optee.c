@@ -474,9 +474,10 @@ static void handle_cmd_get_time(const struct device *dev, struct optee_msg_arg *
 	}
 
 	ticks = k_uptime_ticks();
+	up_nsecs = k_ticks_to_ns_floor64(ticks);
 
-	up_secs = ticks / CONFIG_SYS_CLOCK_TICKS_PER_SEC;
-	up_nsecs = k_ticks_to_ns_floor64(ticks - up_secs * CONFIG_SYS_CLOCK_TICKS_PER_SEC);
+	up_secs = up_nsecs / Z_HZ_ns;
+	up_nsecs %= Z_HZ_ns;
 	arg->params[0].u.value.a = up_secs;
 	arg->params[0].u.value.b = up_nsecs;
 
