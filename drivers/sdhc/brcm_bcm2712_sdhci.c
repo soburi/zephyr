@@ -75,12 +75,15 @@ static int bcm2712_sdhci_request(const struct device *dev, struct sdhc_command *
 				 struct sdhc_data *sd_data)
 {
 	struct bcm2712_sdhci_data *data = dev->data;
+	unsigned int retry = cmd->retries;
 	int ret;
 
-	ret = sdhci_send_req(&data->sdhci_ctx, cmd, sd_data);
-	if (ret) {
-		LOG_DEV_ERR(dev, "sd cmd request failed (%d)", ret);
-	}
+	do {
+		ret = sdhci_send_req(&data->sdhci_ctx, cmd, sd_data);
+		if (ret) {
+			LOG_DEV_ERR(dev, "sd cmd request failed (%d)", ret);
+		}
+	} while (ret != 0 && retry--);
 	return ret;
 }
 
