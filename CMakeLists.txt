@@ -1308,6 +1308,8 @@ if(CONFIG_GEN_ISR_TABLES)
     --kernel $<TARGET_FILE:${ZEPHYR_LINK_STAGE_EXECUTABLE}>
     --intlist-section .intList
     --intlist-section intList
+    $<$<BOOL:${CONFIG_SW_ISR_TABLE_USE_FUNCTION_NUMBER}>:--use-function-number>
+    $<$<BOOL:${CONFIG_SW_ISR_TABLE_USE_FUNCTION_NUMBER}>:--max-function-number=${CONFIG_SW_ISR_TABLE_MAX_FUNCTION_NUMBER}>
     $<$<BOOL:${CONFIG_BIG_ENDIAN}>:--big-endian>
     $<$<BOOL:${CMAKE_VERBOSE_MAKEFILE}>:--debug>
     ${GEN_ISR_TABLE_EXTRA_ARG}

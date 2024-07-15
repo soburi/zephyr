@@ -295,6 +295,17 @@ int z_isr_uninstall(unsigned int irq, void (*routine)(const void *),
 #endif /* CONFIG_SHARED_INTERRUPTS */
 #endif
 
+#ifdef CONFIG_SW_ISR_TABLE_USE_FUNCTION_NUMBER
+#if CONFIG_SW_ISR_TABLE_MAX_FUNCTION_NUMBER < UINT8_MAX
+typedef uint8_t function_irq_table_entry_t;
+#define FUNCTION_IRQ_TABLE_ENTRY_INVALID UINT8_MAX
+#else
+typedef uint16_t function_irq_table_entry_t;
+#define FUNCTION_IRQ_TABLE_ENTRY_INVALID UINT16_MAX
+#endif
+extern const function_irq_table_entry_t function_irq_table[CONFIG_SW_ISR_TABLE_MAX_FUNCTION_NUMBER];
+#endif
+
 #ifdef __cplusplus
 }
 #endif

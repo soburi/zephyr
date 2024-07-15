@@ -298,6 +298,14 @@ def parse_args():
             help="Generate SW ISR table")
     parser.add_argument("-V", "--vector-table", action="store_true",
             help="Generate vector table")
+    parser.add_argument("--use-function-number", action="store_true",
+            help="Use the function number instead of the IRQ number."
+                  "This option is for interrupt controllers where the IRQ numbers are configurable."
+                  "Interrupt handlers are associated with IRQ numbers starting from 0 in the order"
+                  "they are found, and a table of correspondences between function numbers and"
+                  "interrupt numbers is generated.")
+    parser.add_argument("--max-function-number", type=int, default=255,
+            help="Specify the maximum function number.")
     parser.add_argument("-i", "--intlist-section", action="append", required=True,
             help="The name of the section to search for the interrupt data. "
                  "This is accumulative argument. The first section found would be used.")

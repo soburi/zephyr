@@ -132,7 +132,10 @@ typedef void (* ISR)(const void *);
         else:
             vt = None
         if self.__config.args.sw_isr_table:
-            swt = [[] for i in range(nvec)]
+            if self.__config.args.use_function_number:
+                swt = [[] for i in range(self.__config.args.max_function_number)]
+            else:
+                swt = [[] for i in range(nvec)]
         else:
             swt = None
 
@@ -239,6 +242,25 @@ typedef void (* ISR)(const void *);
 
         fp.write("};\n")
 
+    def __write_function_irq_table(self, fp):
+        fp.write(
+            "const function_irq_table_entry_t function_irq_table[CONFIG_SW_ISR_TABLE_MAX_FUNCTION_NUMBER] = {\n"
+        )
+        irqtbl = [
+            "FUNCTION_IRQ_TABLE_ENTRY_INVALID"
+            for i in range(self.__config.args.max_function_number)
+        ]
+        count = 0
+        for i, e in enumerate(self.__swt):
+            if len(e) != 0:
+                irqtbl[i] = count
+                count += 1
+
+        for i, e in enumerate(irqtbl):
+            fp.write("\t{0:>32}, /* {1:>3} */\n".format(e, i))
+
+        fp.write("};\n")
+
     def write_source(self, fp):
         fp.write(self.source_header)
 
@@ -262,15 +284,23 @@ typedef void (* ISR)(const void *);
         level2_offset = self.__config.get_irq_baseoffset(2)
         level3_offset = self.__config.get_irq_baseoffset(3)
 
+        swt = self.__swt
+        if self.__config.args.use_function_number:
+            swt = [sw for sw in self.__swt if not sw == []]
+            if len(swt) > self.__nv:
+                self.__log.error("Too many ISRs are defined.")
+            for i in range(len(swt), self.__nv):
+                swt.append([])
+
         for i in range(self.__nv):
-            if len(self.__swt[i]) == 0:
+            if len(swt[i]) == 0:
                 # Not used interrupt
                 param = "0x0"
                 func = self.__config.swt_spurious_handler
-            elif len(self.__swt[i]) == 1:
+            elif len(swt[i]) == 1:
                 # Single interrupt
-                param = "{0:#x}".format(self.__swt[i][0][0])
-                func = self.__swt[i][0][1]
+                param = "{0:#x}".format(swt[i][0][0])
+                func = swt[i][0][1]
             else:
                 # Shared interrupt
                 param = "&z_shared_sw_isr_table[{0}]".format(i)
@@ -290,3 +320,6 @@ typedef void (* ISR)(const void *);
 
             fp.write("\t{{(const void *){0}, (ISR){1}}}, /* {2} */\n".format(param, func_as_string, i))
         fp.write("};\n")
+
+        if self.__config.args.use_function_number:
+            self.__write_function_irq_table(fp)

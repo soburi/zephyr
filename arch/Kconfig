@@ -539,6 +539,24 @@ config ARCH_SW_ISR_TABLE_ALIGN
 	  to be aligned to architecture specific size.  The default
 	  size is 4.
 
+config SW_ISR_TABLE_USE_FUNCTION_NUMBER
+	bool
+	depends on GEN_SW_ISR_TABLE
+	help
+	  Use the function number instead of the IRQ number.
+	  This option is for interrupt controllers where the IRQ numbers are configurable.
+	  Interrupt handlers are associated with IRQ numbers starting from 0 in the order
+	  they are found, and generate a table of correspondences between function numbers
+	  and interrupt numbers.
+
+config SW_ISR_TABLE_MAX_FUNCTION_NUMBER
+	int
+	default 0
+	depends on SW_ISR_TABLE_USE_FUNCTION_NUMBER
+	help
+	  Max function number for ISR table generation
+	  Specify size of function-ISR table
+
 config GEN_IRQ_START_VECTOR
 	int
 	default 0
