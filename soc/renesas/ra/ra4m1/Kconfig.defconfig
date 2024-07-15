@@ -6,4 +6,7 @@ if SOC_SERIES_RA4M1
 config NUM_IRQS
 	default 32
 
+config SW_ISR_TABLE_MAX_FUNCTION_NUMBER
+	default 182
+
 endif # SOC_SERIES_RA4M1

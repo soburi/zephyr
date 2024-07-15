@@ -134,3 +134,6 @@ const struct opt_set_mem ops __attribute__((section(".opt_set_mem"))) = {
 	}
 };
 #endif
+
+const function_irq_table_entry_t __weak
+	function_irq_table[CONFIG_SW_ISR_TABLE_MAX_FUNCTION_NUMBER] = {};
