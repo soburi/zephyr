@@ -33,18 +33,22 @@ extern void z_arm_reserved(void);
 #define BIT_FROM_IRQ(irq) (irq % NUM_IRQS_PER_REG)
 
 #if !defined(CONFIG_ARM_CUSTOM_INTERRUPT_CONTROLLER)
+#define EXPORT_NVIC_IRQ static
+#else
+#define EXPORT_NVIC_IRQ
+#endif
 
-void arch_irq_enable(unsigned int irq)
+EXPORT_NVIC_IRQ void arm_irq_enable(unsigned int irq)
 {
 	NVIC_EnableIRQ((IRQn_Type)irq);
 }
 
-void arch_irq_disable(unsigned int irq)
+EXPORT_NVIC_IRQ void arm_irq_disable(unsigned int irq)
 {
 	NVIC_DisableIRQ((IRQn_Type)irq);
 }
 
-int arch_irq_is_enabled(unsigned int irq)
+EXPORT_NVIC_IRQ int arm_irq_is_enabled(unsigned int irq)
 {
 	return NVIC->ISER[REG_FROM_IRQ(irq)] & BIT(BIT_FROM_IRQ(irq));
 }
@@ -58,7 +62,7 @@ int arch_irq_is_enabled(unsigned int irq)
  * of priority levels is a little complex, as there are some hardware
  * priority levels which are reserved.
  */
-void z_arm_irq_priority_set(unsigned int irq, unsigned int prio, uint32_t flags)
+EXPORT_NVIC_IRQ void arm_irq_priority_set(unsigned int irq, unsigned int prio, uint32_t flags)
 {
 	/* The kernel may reserve some of the highest priority levels.
 	 * So we offset the requested priority level with the number
@@ -92,6 +96,26 @@ void z_arm_irq_priority_set(unsigned int irq, unsigned int prio, uint32_t flags)
 	NVIC_SetPriority((IRQn_Type)irq, prio);
 }
 
+#if !defined(CONFIG_ARM_CUSTOM_INTERRUPT_CONTROLLER)
+void arch_irq_enable(unsigned int irq)
+{
+	arm_irq_enable(irq);
+}
+
+void arch_irq_disable(unsigned int irq)
+{
+	arm_irq_disable(irq);
+}
+
+int arch_irq_is_enabled(unsigned int irq)
+{
+	return arm_irq_is_enabled(irq);
+}
+
+void z_arm_irq_priority_set(unsigned int irq, unsigned int prio, uint32_t flags)
+{
+	arm_irq_priority_set(irq, prio, flags);
+}
 #endif /* !defined(CONFIG_ARM_CUSTOM_INTERRUPT_CONTROLLER) */
 
 void z_arm_fatal_error(unsigned int reason, const struct arch_esf *esf);
