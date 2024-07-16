@@ -7,4 +7,5 @@ common:
   arch_allow: arm
 tests:
   arch.arm.custom_interrupt:
-    filter: not CONFIG_TRUSTED_EXECUTION_NONSECURE
+    filter: not CONFIG_TRUSTED_EXECUTION_NONSECURE and
+            not dt_compat_enabled("renesas,ra-interrupt-controller-unit")
