@@ -96,3 +96,7 @@
 		};
 	};
 };
+
+&icu {
+	interrupt-id-count = <142>;
+};

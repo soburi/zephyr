@@ -9,4 +9,8 @@ config NUM_IRQS
 config PINCTRL
 	default y
 
+config GEN_ISR_TABLES_SCIRPT
+	string
+	default "${ZEPHYR_BASE}/soc/renesas/ra/common/gen_isr_tables.py"
+
 endif # SOC_SERIES_RA2A1
