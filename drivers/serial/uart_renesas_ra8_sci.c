@@ -8,6 +8,7 @@
 #define DT_DRV_COMPAT renesas_ra8_uart_sci
 
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/interrupt_controller/intc_ra_icu.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/sys/util.h>
@@ -24,6 +25,10 @@ LOG_MODULE_REGISTER(ra8_uart_sci);
 struct uart_ra_sci_config {
 	R_SCI0_Type * const regs;
 	const struct pinctrl_dev_config *pcfg;
+	unsigned int rxi_event;
+	unsigned int txi_event;
+	unsigned int tei_event;
+	unsigned int eri_event;
 };
 
 struct uart_ra_sci_data {
@@ -356,16 +361,16 @@ static int uart_ra_sci_irq_rx_ready(const struct device *dev)
 
 static void uart_ra_sci_irq_err_enable(const struct device *dev)
 {
-	struct uart_ra_sci_data *data = dev->data;
+	const struct uart_ra_sci_config *cfg = dev->config;
 
-	NVIC_EnableIRQ(data->fsp_config.eri_irq);
+	irq_enable(cfg->eri_event);
 }
 
 static void uart_ra_sci_irq_err_disable(const struct device *dev)
 {
-	struct uart_ra_sci_data *data = dev->data;
+	const struct uart_ra_sci_config *cfg = dev->config;
 
-	NVIC_DisableIRQ(data->fsp_config.eri_irq);
+	irq_disable(cfg->eri_event);
 }
 
 static int uart_ra_sci_irq_is_pending(const struct device *dev)
@@ -463,52 +468,50 @@ static int uart_ra_sci_init(const struct device *dev)
 
 static void uart_ra_sci_rxi_isr(const struct device *dev)
 {
+	const struct uart_ra_sci_config *config = dev->config;
 	struct uart_ra_sci_data *data = dev->data;
 
 	if (data->user_cb != NULL) {
 		data->user_cb(dev, data->user_cb_data);
 	}
 
-	R_ICU->IELSR_b[data->fsp_config.rxi_irq].IR = 0U;
+	ra_icu_clear_event_flag(config->rxi_event);
 }
 
 static void uart_ra_sci_txi_isr(const struct device *dev)
 {
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN)
+	const struct uart_ra_sci_config *config = dev->config;
 	struct uart_ra_sci_data *data = dev->data;
 
 	if (data->user_cb != NULL) {
 		data->user_cb(dev, data->user_cb_data);
 	}
-#endif
 
-	R_ICU->IELSR_b[data->fsp_config.txi_irq].IR = 0U;
+	ra_icu_clear_event_flag(config->txi_event);
 }
 
 static void uart_ra_sci_tei_isr(const struct device *dev)
 {
+	const struct uart_ra_sci_config *config = dev->config;
 	struct uart_ra_sci_data *data = dev->data;
 
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN)
 	if (data->user_cb != NULL) {
 		data->user_cb(dev, data->user_cb_data);
 	}
-#endif
 
-	R_ICU->IELSR_b[data->fsp_config.tei_irq].IR = 0U;
+	ra_icu_clear_event_flag(config->tei_event);
 }
 
 static void uart_ra_sci_eri_isr(const struct device *dev)
 {
-#if defined(CONFIG_UART_INTERRUPT_DRIVEN)
+	const struct uart_ra_sci_config *config = dev->config;
 	struct uart_ra_sci_data *data = dev->data;
 
 	if (data->user_cb != NULL) {
 		data->user_cb(dev, data->user_cb_data);
 	}
-#endif
 
-	R_ICU->IELSR_b[data->fsp_config.eri_irq].IR = 0U;
+	ra_icu_clear_event_flag(config->eri_event);
 }
 
 #endif /* defined(CONFIG_UART_INTERRUPT_DRIVEN) */
@@ -527,27 +530,22 @@ static void uart_ra_sci_eri_isr(const struct device *dev)
 
 #define UART_RA_SCI_IRQ_CONFIG_INIT(index)                                                         \
 	do {                                                                                       \
-		R_ICU->IELSR[DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, irq)] =                    \
-			ELC_EVENT_SCI_RXI(DT_INST_PROP(index, channel));                           \
-		R_ICU->IELSR[DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, irq)] =                    \
-			ELC_EVENT_SCI_TXI(DT_INST_PROP(index, channel));                           \
-		R_ICU->IELSR[DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, irq)] =                    \
-			ELC_EVENT_SCI_TEI(DT_INST_PROP(index, channel));                           \
-		R_ICU->IELSR[DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, irq)] =                    \
-			ELC_EVENT_SCI_ERI(DT_INST_PROP(index, channel));                           \
-                                                                                                   \
-		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, irq),                       \
+		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, event),                     \
 			    DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, priority),                  \
 			    uart_ra_sci_rxi_isr, DEVICE_DT_INST_GET(index), 0);                    \
-		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, irq),                       \
+		irq_enable(DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, event));                     \
+		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, event),                     \
 			    DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, priority),                  \
 			    uart_ra_sci_txi_isr, DEVICE_DT_INST_GET(index), 0);                    \
-		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, irq),                       \
+		irq_enable(DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, event));                     \
+		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, event),                     \
 			    DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, priority),                  \
 			    uart_ra_sci_tei_isr, DEVICE_DT_INST_GET(index), 0);                    \
-		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, irq),                       \
+		irq_enable(DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, event));                     \
+		IRQ_CONNECT(DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, event),                     \
 			    DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, priority),                  \
 			    uart_ra_sci_eri_isr, DEVICE_DT_INST_GET(index), 0);                    \
+		irq_enable(DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, event));                     \
 	} while (0)
 
 #else
@@ -562,6 +560,10 @@ static void uart_ra_sci_eri_isr(const struct device *dev)
 	static const struct uart_ra_sci_config uart_ra_sci_config_##index = {                      \
 		.pcfg = PINCTRL_DT_DEV_CONFIG_GET(DT_INST_PARENT(index)),                          \
 		.regs = (R_SCI0_Type *)DT_REG_ADDR(DT_INST_PARENT(index)),                         \
+		.rxi_event = DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, event),                    \
+		.txi_event = DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, event),                    \
+		.tei_event = DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, event),                    \
+		.eri_event = DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, event),                    \
 	};                                                                                         \
                                                                                                    \
 	static struct uart_ra_sci_data uart_ra_sci_data_##index = {                                \
@@ -575,25 +577,24 @@ static void uart_ra_sci_eri_isr(const struct device *dev)
 							 (UART_CFG_FLOW_CTRL_RTS_CTS),             \
 							 (UART_CFG_FLOW_CTRL_NONE)),               \
 			},                                                                         \
-		.fsp_config =                                                                      \
-			{                                                                          \
-				.channel = DT_INST_PROP(index, channel),                           \
-				.rxi_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, priority),   \
-				.rxi_irq = DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, irq),        \
-				.txi_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, priority),   \
-				.txi_irq = DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, irq),        \
-				.tei_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, priority),   \
-				.tei_irq = DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, irq),        \
-				.eri_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, priority),   \
-				.eri_irq = DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, irq),        \
-			},                                                                         \
+		.fsp_config = {},                                                                  \
 		.fsp_config_extend = {},                                                           \
 		.fsp_baud_setting = {},                                                            \
 		.dev = DEVICE_DT_GET(DT_DRV_INST(index))};                                         \
                                                                                                    \
 	static int uart_ra_sci_init_##index(const struct device *dev)                              \
 	{                                                                                          \
+		struct uart_ra_sci_data *data = dev->data;                                         \
 		UART_RA_SCI_IRQ_CONFIG_INIT(index);                                                \
+		data->fsp_config.channel = DT_INST_PROP(index, channel);                           \
+		data->fsp_config.rxi_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, priority);   \
+		data->fsp_config.rxi_irq = function_irq_table[DT_IRQ_BY_NAME(DT_INST_PARENT(index), rxi, event)];      \
+		data->fsp_config.txi_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, priority);   \
+		data->fsp_config.txi_irq = function_irq_table[DT_IRQ_BY_NAME(DT_INST_PARENT(index), txi, event)];      \
+		data->fsp_config.tei_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, priority);   \
+		data->fsp_config.tei_irq = function_irq_table[DT_IRQ_BY_NAME(DT_INST_PARENT(index), tei, event)];      \
+		data->fsp_config.eri_ipl = DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, priority);   \
+		data->fsp_config.eri_irq = function_irq_table[DT_IRQ_BY_NAME(DT_INST_PARENT(index), eri, event)];      \
 		int err = uart_ra_sci_init(dev);                                                   \
 		if (err != 0) {                                                                    \
 			return err;                                                                \

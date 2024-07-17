@@ -43,3 +43,6 @@ static int renesas_ra2a1_init(void)
 }
 
 SYS_INIT(renesas_ra2a1_init, PRE_KERNEL_1, 0);
+
+const function_irq_table_entry_t __weak
+	function_irq_table[CONFIG_SW_ISR_TABLE_MAX_FUNCTION_NUMBER] = {};
