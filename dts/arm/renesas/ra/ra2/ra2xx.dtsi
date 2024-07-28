@@ -78,6 +78,10 @@
 			#gpio-cells = <2>;
 			ngpios = <16>;
 			status = "disabled";
+			interrupts = <RA_EVENT_ICU_IRQ6 0>;
+			interrupt-names = "ext-irq6";
+                        ext-irq6-pins = <6>;
+			num-ext-irqs = <8>;
 		};
 
 		ioport3: gpio@40040060 {
@@ -153,8 +157,8 @@
 
 		sci0: sci@40070000 {
 			compatible = "renesas,ra-sci";
-			interrupts = <RA_ELC_EVENT_SCI0_RXI 1>, <RA_ELC_EVENT_SCI0_TXI 1>,
-				     <RA_ELC_EVENT_SCI0_TEI 1>, <RA_ELC_EVENT_SCI0_ERI 1>;
+			interrupts = <RA_EVENT_SCI0_RXI 1>, <RA_EVENT_SCI0_TXI 1>,
+				     <RA_EVENT_SCI0_TEI 1>, <RA_EVENT_SCI0_ERI 1>;
 			interrupt-names = "rxi", "txi", "tei", "eri";
 			reg = <0x40070000 0x20>;
 			clocks = <&pclkb>;

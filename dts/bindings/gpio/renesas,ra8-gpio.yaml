@@ -19,6 +19,75 @@ properties:
     type: array
     description: Array of vbatt pin on port
 
+  ext-irq0-pins:
+    type: array
+    description: Pins allow to assign ext-irq0
+
+  ext-irq1-pins:
+    type: array
+    description: Pins allow to assign ext-irq1
+
+  ext-irq2-pins:
+    type: array
+    description: Pins allow to assign ext-irq2
+
+  ext-irq3-pins:
+    type: array
+    description: Pins allow to assign ext-irq3
+
+  ext-irq4-pins:
+    type: array
+    description: Pins allow to assign ext-irq4
+
+  ext-irq5-pins:
+    type: array
+    description: Pins allow to assign ext-irq5
+
+  ext-irq6-pins:
+    type: array
+    description: Pins allow to assign ext-irq6
+
+  ext-irq7-pins:
+    type: array
+    description: Pins allow to assign ext-irq7
+
+  ext-irq8-pins:
+    type: array
+    description: Pins allow to assign ext-irq8
+
+  ext-irq9-pins:
+    type: array
+    description: Pins allow to assign ext-irq9
+
+  ext-irq10-pins:
+    type: array
+    description: Pins allow to assign ext-irq10
+
+  ext-irq11-pins:
+    type: array
+    description: Pins allow to assign ext-irq11
+
+  ext-irq12-pins:
+    type: array
+    description: Pins allow to assign ext-irq12
+
+  ext-irq13-pins:
+    type: array
+    description: Pins allow to assign ext-irq13
+
+  ext-irq14-pins:
+    type: array
+    description: Pins allow to assign ext-irq14
+
+  ext-irq15-pins:
+    type: array
+    description: Pins allow to assign ext-irq15
+
+  num-ext-irqs:
+    type: int
+    required: true
+    description: Number of ext-irqs.
+
   "#gpio-cells":
     const: 2
 

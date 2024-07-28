@@ -4,6 +4,7 @@
 config GPIO_RA8
 	bool "Renesas RA8 GPIO driver"
 	default y
+	select GPIO_GET_CONFIG
 	depends on DT_HAS_RENESAS_RA8_GPIO_ENABLED
 	help
 	  Enable the Renesas RA8 GPIO driver.

@@ -96,24 +96,24 @@ void ra_icu_event_clear_flag(unsigned int event)
 
 void ra_icu_event_query_config(unsigned int event, uint32_t *intcfg)
 {
-	const unsigned int irq = event_to_irq(event);
+	const unsigned int extirq = event - 1;
 
-	if (irq == -1) {
+	if (extirq >= 16) {
 		return;
 	}
 
-	*intcfg = sys_read32(IELSRn_REG(irq));
+	*intcfg = sys_read8(IRQCRi_REG(extirq));
 }
 
 void ra_icu_event_configure(unsigned int event, uint32_t intcfg)
 {
-	const unsigned int irq = event_to_irq(event);
+	const unsigned int extirq = event - 1;
 
-	if (irq == RA_INVALID_INTR_ID) {
+	if (extirq >= 16) {
 		return;
 	}
 
 	sys_write8((intcfg & IRQCRi_IRQMD_MASK) |
-			   (sys_read8(IRQCRi_REG(irq)) & ~(IRQCRi_IRQMD_MASK)),
-		   IRQCRi_REG(irq));
+			   (sys_read8(IRQCRi_REG(extirq)) & ~(IRQCRi_IRQMD_MASK)),
+		   IRQCRi_REG(extirq));
 }
