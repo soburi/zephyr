@@ -47,56 +47,46 @@ enum {
 };
 
 struct gpio_ra_irq_info {
-	const uint8_t *const pins;
-	size_t num;
-	int port_irq;
+	const uint16_t pin_bits;
 	uint16_t event;
 	uint32_t priority;
-};
-
-struct gpio_ra_pin_irq_info {
-	const struct gpio_ra_irq_info *info;
-	uint8_t pin;
 };
 
 struct gpio_ra_config {
 	struct gpio_driver_config common;
 	mem_addr_t regs;
-	struct gpio_ra_irq_info *irq_info;
-	uint32_t irq_info_size;
+	struct gpio_ra_irq_info irq_info[16];
 	uint16_t port;
 };
 
 struct gpio_ra_data {
 	struct gpio_driver_data common;
-	struct gpio_ra_pin_irq_info port_irq_info[16];
+	uint8_t port_irq_info[16];
 	sys_slist_t callbacks;
 };
 
 static void gpio_ra_isr(const struct device *dev, uint32_t port_irq)
 {
+	const struct gpio_ra_config *config = dev->config;
 	struct gpio_ra_data *data = dev->data;
-	const struct gpio_ra_pin_irq_info *pin_irq = &data->port_irq_info[port_irq];
+	const uint8_t pin = data->port_irq_info[port_irq];
 
-	gpio_fire_callbacks(&data->callbacks, dev, BIT(pin_irq->pin));
-	ra_icu_event_clear_flag(pin_irq->info->event);
+	gpio_fire_callbacks(&data->callbacks, dev, BIT(pin));
+	ra_icu_event_clear_flag(config->irq_info[port_irq].event);
 }
 
-static const struct gpio_ra_irq_info *query_irq_info(const struct device *dev, uint32_t pin)
+static int query_irq_info(const struct device *dev, uint32_t pin)
 {
 	const struct gpio_ra_config *config = dev->config;
 
-	for (int i = 0; i < config->irq_info_size; i++) {
+	for (int i = 0; i < 16; i++) {
 		const struct gpio_ra_irq_info *info = &config->irq_info[i];
-
-		for (int j = 0; j < info->num; j++) {
-			if (info->pins[j] == pin) {
-				return info;
-			}
+		if (info->pin_bits & BIT(pin)) {
+			return i;
 		}
 	}
 
-	return NULL;
+	return -1;
 }
 
 static inline uint32_t reg_read(const struct device *dev, size_t offset)
@@ -167,7 +157,7 @@ static int gpio_ra_pin_configure(const struct device *dev, gpio_pin_t pin, gpio_
 	pincfg.port = config->port;
 
 	if (flags & GPIO_INT_ENABLE) {
-		const struct gpio_ra_irq_info *irq_info;
+		int irq;
 		uint32_t intcfg;
 
 		if (mode == GPIO_INT_MODE_LEVEL) {
@@ -194,16 +184,15 @@ static int gpio_ra_pin_configure(const struct device *dev, gpio_pin_t pin, gpio_
 			return -ENOTSUP;
 		}
 
-		irq_info = query_irq_info(dev, pin);
-		if (irq_info == NULL) {
+		irq = query_irq_info(dev, pin);
+		if (irq < 0) {
 			return -EINVAL;
 		}
 
-		ra_icu_event_configure(irq_info->event, intcfg);
-		data->port_irq_info[irq_info->port_irq].pin = pin;
-		data->port_irq_info[irq_info->port_irq].info = irq_info;
+		ra_icu_event_configure(config->irq_info[irq].event, intcfg);
+		data->port_irq_info[irq] = pin;
 
-		ra_icu_event_enable(irq_info->event);
+		ra_icu_event_enable(config->irq_info[irq].event);
 	}
 
 	return pinctrl_configure_pins(&pincfg, 1, PINCTRL_REG_NONE);
@@ -214,6 +203,7 @@ static int gpio_ra_pin_get_config(const struct device *dev, gpio_pin_t pin, gpio
 {
 	const struct gpio_ra_config *config = dev->config;
 	const struct gpio_ra_irq_info *irq_info;
+	int irq;
 	struct pinctrl_ra_pin pincfg;
 	uint32_t intcfg;
 	int err;
@@ -239,12 +229,12 @@ static int gpio_ra_pin_get_config(const struct device *dev, gpio_pin_t pin, gpio
 		*flags |= GPIO_PULL_UP;
 	}
 
-	irq_info = query_irq_info(dev, pin);
-	if (irq_info == NULL) {
+	irq = query_irq_info(dev, pin);
+	if (irq < 0) {
 		return 0;
 	}
 
-	ra_icu_event_query_config(irq_info->event, &intcfg);
+	ra_icu_event_query_config(config->irq_info[irq].event, &intcfg);
 
 	if (intcfg == ICU_FALLING) {
 		*flags |= GPIO_INT_TRIG_LOW;
@@ -361,21 +351,22 @@ static const struct gpio_driver_api gpio_ra_driver_api = {
 #define RA_NUM_PORT_IRQ14 14
 #define RA_NUM_PORT_IRQ15 15
 
-#define GPIO_RA_DECL_PINS(n, p, i)                                                                 \
-	IF_ENABLED(DT_NODE_HAS_PROP(n, UTIL_CAT(DT_STRING_TOKEN_BY_IDX(n, p, i), _pins)), (        \
-	const uint8_t _CONCAT(n, ___pins##i[]) = {DT_FOREACH_PROP_ELEM_SEP(                        \
-		n, _CONCAT(DT_STRING_TOKEN_BY_IDX(n, p, i), _pins), DT_PROP_BY_IDX, (,))};         \
-	))
+#define PIN_BITS(n, p, i) BIT(DT_PROP_BY_IDX(n, p, i))
 
 #define GPIO_RA_IRQ_INFO(n, p, i)                                                                  \
 	IF_ENABLED(DT_NODE_HAS_PROP(n, UTIL_CAT(DT_STRING_TOKEN_BY_IDX(n, p, i), _pins)), (        \
-	{                                                                                          \
-		.port_irq = _CONCAT(RA_NUM_, DT_STRING_UPPER_TOKEN_BY_IDX(n, p, i)),               \
+	[_CONCAT(RA_NUM_, DT_STRING_UPPER_TOKEN_BY_IDX(n, p, i))] = {                              \
 		.event = DT_IRQ_BY_IDX(n, i, event),                                               \
 		.priority = DT_IRQ_BY_IDX(n, i, priority),                                         \
-		.pins = _CONCAT(n, ___pins##i),                                                    \
-		.num = ARRAY_SIZE(_CONCAT(n, ___pins##i)),                                         \
-	},))
+		.pin_bits = COND_CODE_1(                                                           \
+			DT_NODE_HAS_PROP(n, UTIL_CAT(DT_STRING_TOKEN_BY_IDX(n, p, i), _pins)),     \
+			DT_FOREACH_PROP_ELEM_SEP(n,                                                \
+				                 _CONCAT(DT_STRING_TOKEN_BY_IDX(n, p, i), _pins),  \
+						 PIN_BITS, (|)                                     \
+			),                                                                         \
+			(0)                                                                        \
+		),                                                                                 \
+	}, ))
 
 #define GPIO_RA_ISR_DECL(n, p, i)                                                                  \
 	IF_ENABLED(DT_NODE_HAS_PROP(n, UTIL_CAT(DT_STRING_TOKEN_BY_IDX(n, p, i), _pins)), (        \
@@ -395,10 +386,7 @@ static const struct gpio_driver_api gpio_ra_driver_api = {
 
 #define GPIO_RA_INIT(idx)                                                                          \
 	static struct gpio_ra_data gpio_ra_data_##idx = {};                                        \
-	DT_INST_FOREACH_PROP_ELEM(idx, interrupt_names, GPIO_RA_DECL_PINS);                        \
 	DT_INST_FOREACH_PROP_ELEM(idx, interrupt_names, GPIO_RA_ISR_DECL);                         \
-	struct gpio_ra_irq_info gpio_ra_irq_info_##idx[] = {                                       \
-		DT_INST_FOREACH_PROP_ELEM(idx, interrupt_names, GPIO_RA_IRQ_INFO)};                \
 	static struct gpio_ra_config gpio_ra_config_##idx = {                                      \
 		.common = {                                                                        \
 			.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(idx),                     \
@@ -406,8 +394,7 @@ static const struct gpio_driver_api gpio_ra_driver_api = {
 		.regs = DT_INST_REG_ADDR(idx),                                                     \
 		.port = (DT_INST_REG_ADDR(idx) - DT_REG_ADDR(DT_NODELABEL(ioport0))) /             \
 			DT_INST_REG_SIZE(idx),                                                     \
-		.irq_info = gpio_ra_irq_info_##idx,                                                \
-		.irq_info_size = ARRAY_SIZE(gpio_ra_irq_info_##idx),                               \
+		.irq_info = {DT_INST_FOREACH_PROP_ELEM(idx, interrupt_names, GPIO_RA_IRQ_INFO)},   \
 	};                                                                                         \
                                                                                                    \
 	int gpio_ra_init_##idx(const struct device *dev)                                           \
