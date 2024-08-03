@@ -128,6 +128,12 @@ struct llext_symtable {
 			x ## _sym = {						\
 		.name = STRINGIFY(x), .addr = (const void *)&x,			\
 	}
+#define LL_EXTENSION_SYMBOL_2(x, x2)                                                  \
+        static const struct llext_const_symbol                                  \
+                        Z_GENERIC_SECTION(".exported_sym") __used               \
+                        x ## _sym = {                                           \
+                .name = STRINGIFY(x), .addr = (const void *)&x2,                 \
+        }
 #else
 #define LL_EXTENSION_SYMBOL(x)
 #endif
