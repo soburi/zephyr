@@ -24,4 +24,4 @@ void hello_world(void)
 	printk("Hello, world, from an llext!\n");
 #endif
 }
-LL_EXTENSION_SYMBOL(hello_world);
+LL_EXTENSION_SYMBOL(_ZN4myns11hello_worldEv);
