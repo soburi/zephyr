@@ -1,0 +1,32 @@
+name: arduino_core
+append:
+  EXTRA_CONF_FILE: arduino_core.conf
+
+boards:
+  arduino_mkrzero/samd21g18a:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/arduino_mkrzero.overlay
+  arduino_nano_33_ble/nrf52840:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/arduino_nano_33_ble.overlay
+  arduino_nano_33_ble/nrf52840/sense:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/arduino_nano_33_ble_sense.overlay
+  arduino_nano_33_iot/samd21g18a:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/arduino_nano_33_iot.overlay
+  beagleconnect_freedom/cc1352p7:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/beagleconnect_freedom.overlay
+  cc3220sf_launchxl/cc3220sf:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/cc3220sf_launchxl.overlay
+  nrf52840dk/nrf52840:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/nrf52840dk_nrf52840.overlay
+  nrf9160dk/nrf9160:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/nrf9160dk_nrf9160.overlay
+  rpi_pico/rp2040:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/rpi_pico.overlay
