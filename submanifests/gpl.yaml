@@ -1,0 +1,8 @@
+manifest:
+  projects:
+    - name: gsoc-2022-arduino-core
+      path: modules/lib/arduino-core
+      revision: pull/112/head
+      url: https://github.com/zephyrproject-rtos/gsoc-2022-arduino-core
+      groups:
+        - gpl
