@@ -1,0 +1,5 @@
+board:
+  name: pico_plus2
+  vendor: pimoroni
+  socs:
+  - name: rp2350b

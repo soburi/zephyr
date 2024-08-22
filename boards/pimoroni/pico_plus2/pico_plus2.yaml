@@ -1,0 +1,19 @@
+identifier: pico_plus2
+name: Pimoroni Pico Plus2
+type: mcu
+arch: arm
+flash: 16384
+ram: 8192
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+supported:
+  - adc
+  - clock
+  - counter
+  - gpio
+  - hwinfo
+  - i2c
+  - spi
+  - uart
