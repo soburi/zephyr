@@ -15,12 +15,17 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/logging/log_instance.h>
 #include <zephyr/drivers/mfd/axp192.h>
+#include <zephyr/drivers/mfd/axp2101.h>
 
 LOG_MODULE_REGISTER(regulator_axp192, CONFIG_REGULATOR_LOG_LEVEL);
 
 #define AXP192_NODE_HAS_CHILD(node, child) DT_NODE_HAS_STATUS_OKAY(DT_CHILD(node, child)) |
 #define AXP192_ANY_HAS_CHILD(child) \
 	(DT_FOREACH_STATUS_OKAY_VARGS(x_powers_axp192_regulator, AXP192_NODE_HAS_CHILD, child) 0)
+
+#define AXP2101_NODE_HAS_CHILD(node, child) DT_NODE_HAS_STATUS_OKAY(DT_CHILD(node, child)) |
+#define AXP2101_ANY_HAS_CHILD(child) \
+	(DT_FOREACH_STATUS_OKAY_VARGS(x_powers_axp2101_regulator, AXP2101_NODE_HAS_CHILD, child) 0)
 
 struct regulator_axp192_desc {
 	const uint8_t enable_reg;
@@ -393,6 +398,10 @@ static int regulator_axp192_init(const struct device *dev)
 	COND_CODE_1(DT_NODE_EXISTS(DT_CHILD(node, child)),                                         \
 		    (REGULATOR_AXP192_DEFINE(DT_CHILD(node, child), axp192_##child, child)), ())
 
+#define REGULATOR_AXP2101_DEFINE_COND(node, child)                                                  \
+	COND_CODE_1(DT_NODE_EXISTS(DT_CHILD(node, child)),                                         \
+		    (REGULATOR_AXP192_DEFINE(DT_CHILD(node, child), axp2101_##child, child)), ())
+
 #define REGULATOR_AXP192_DEFINE_ALL(inst)                                                          \
 	REGULATOR_AXP192_DEFINE_COND(inst, dcdc1)                                                  \
 	REGULATOR_AXP192_DEFINE_COND(inst, dcdc2)                                                  \
@@ -401,4 +410,21 @@ static int regulator_axp192_init(const struct device *dev)
 	REGULATOR_AXP192_DEFINE_COND(inst, ldo2)                                                   \
 	REGULATOR_AXP192_DEFINE_COND(inst, ldo3)
 
+#define REGULATOR_AXP2101_DEFINE_ALL(node)                                                         \
+	REGULATOR_AXP2101_DEFINE_COND(node, dcdc1)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, dcdc2)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, dcdc3)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, dcdc4)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, dcdc5)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, aldo1)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, aldo2)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, aldo3)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, aldo4)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, bldo1)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, bldo2)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, cldo1)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, dldo1)                                                 \
+	REGULATOR_AXP2101_DEFINE_COND(node, dldo2)
+
 DT_FOREACH_STATUS_OKAY(x_powers_axp192_regulator, REGULATOR_AXP192_DEFINE_ALL)
+DT_FOREACH_STATUS_OKAY(x_powers_axp2101_regulator, REGULATOR_AXP2101_DEFINE_ALL)
