@@ -62,6 +62,19 @@ extern "C" {
 	((var) = (set) ? ((var) | BIT(bit)) : ((var) & ~BIT(bit)))
 
 /**
+ * @brief Set or clear a bit depending on a boolean value
+ *
+ * The argument @p var is a 64bit variable whose value is written to as a
+ * side effect.
+ *
+ * @param var Variable to be altered
+ * @param bit Bit number
+ * @param set if 0, clears @p bit in @p var; any other value sets @p bit
+ */
+#define WRITE_BIT64(var, bit, set) \
+	((var) = (set) ? ((var) | BIT64(bit)) : ((var) & ~BIT64(bit)))
+
+/**
  * @brief Bit mask with bits 0 through <tt>n-1</tt> (inclusive) set,
  * or 0 if @p n is 0.
  */

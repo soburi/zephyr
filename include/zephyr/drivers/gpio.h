@@ -224,13 +224,29 @@ extern "C" {
 #define GPIO_DIR_MASK		(GPIO_INPUT | GPIO_OUTPUT)
 /** @endcond */
 
+#ifdef CONFIG_GPIO_64BIT_PORT
+#define GPIO_BIT(n) (gpio_port_pins_t)BIT64(n)
+#else
+#define GPIO_BIT(n) (gpio_port_pins_t)BIT(n)
+#endif
+
+typedef uint64_t gpio_64bit_port_pins_t;
+typedef uint32_t gpio_32bit_port_pins_t;
+
 /**
  * @brief Identifies a set of pins associated with a port.
  *
  * The pin with index n is present in the set if and only if the bit
  * identified by (1U << n) is set.
  */
-typedef uint32_t gpio_port_pins_t;
+#ifdef CONFIG_GPIO_64BIT_PORT
+typedef gpio_64bit_port_pins_t gpio_port_pins_t;
+#else
+typedef gpio_32bit_port_pins_t gpio_port_pins_t;
+#endif
+
+typedef uint64_t gpio_64bit_port_value_t;
+typedef uint32_t gpio_32bit_port_value_t;
 
 /**
  * @brief Provides values for a set of pins associated with a port.
@@ -243,7 +259,11 @@ typedef uint32_t gpio_port_pins_t;
  * Values of this type are often paired with a `gpio_port_pins_t` value
  * that specifies which encoded pin values are valid for the operation.
  */
-typedef uint32_t gpio_port_value_t;
+#ifdef CONFIG_GPIO_64BIT_PORT
+typedef gpio_64bit_port_value_t gpio_port_value_t;
+#else
+typedef gpio_32bit_port_value_t gpio_port_value_t;
+#endif
 
 /**
  * @brief Provides a type to hold a GPIO pin index.
@@ -904,11 +924,11 @@ static inline int z_impl_gpio_pin_interrupt_configure(const struct device *port,
 		 "At least one of GPIO_INT_LOW_0, GPIO_INT_HIGH_1 has to be "
 		 "enabled.");
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U,
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U,
 		 "Unsupported pin");
 
 	if (((flags & GPIO_INT_LEVELS_LOGICAL) != 0) &&
-	    ((data->invert & (gpio_port_pins_t)BIT(pin)) != 0)) {
+	    ((data->invert & GPIO_BIT(pin)) != 0)) {
 		/* Invert signal bits */
 		flags ^= (GPIO_INT_LOW_0 | GPIO_INT_HIGH_1);
 	}
@@ -1002,13 +1022,13 @@ static inline int z_impl_gpio_pin_configure(const struct device *port,
 
 	flags &= ~GPIO_OUTPUT_INIT_LOGICAL;
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U,
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U,
 		 "Unsupported pin");
 
 	if ((flags & GPIO_ACTIVE_LOW) != 0) {
-		data->invert |= (gpio_port_pins_t)BIT(pin);
+		data->invert |= GPIO_BIT(pin);
 	} else {
-		data->invert &= ~(gpio_port_pins_t)BIT(pin);
+		data->invert &= ~GPIO_BIT(pin);
 	}
 
 	return api->pin_configure(port, pin, flags);
@@ -1088,14 +1108,14 @@ static inline int gpio_pin_is_input(const struct device *port, gpio_pin_t pin)
 	__unused const struct gpio_driver_config *cfg =
 		(const struct gpio_driver_config *)port->config;
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U, "Unsupported pin");
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U, "Unsupported pin");
 
-	rv = gpio_port_get_direction(port, BIT(pin), &pins, NULL);
+	rv = gpio_port_get_direction(port, GPIO_BIT(pin), &pins, NULL);
 	if (rv < 0) {
 		return rv;
 	}
 
-	return (int)!!((gpio_port_pins_t)BIT(pin) & pins);
+	return (int)!!(GPIO_BIT(pin) & pins);
 }
 
 /**
@@ -1133,14 +1153,14 @@ static inline int gpio_pin_is_output(const struct device *port, gpio_pin_t pin)
 	__unused const struct gpio_driver_config *cfg =
 		(const struct gpio_driver_config *)port->config;
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U, "Unsupported pin");
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U, "Unsupported pin");
 
-	rv = gpio_port_get_direction(port, BIT(pin), NULL, &pins);
+	rv = gpio_port_get_direction(port, GPIO_BIT(pin), NULL, &pins);
 	if (rv < 0) {
 		return rv;
 	}
 
-	return (int)!!((gpio_port_pins_t)BIT(pin) & pins);
+	return (int)!!(GPIO_BIT(pin) & pins);
 }
 
 /**
@@ -1495,12 +1515,12 @@ static inline int gpio_pin_get_raw(const struct device *port, gpio_pin_t pin)
 	gpio_port_value_t value;
 	int ret;
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U,
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U,
 		 "Unsupported pin");
 
 	ret = gpio_port_get_raw(port, &value);
 	if (ret == 0) {
-		ret = (value & (gpio_port_pins_t)BIT(pin)) != 0 ? 1 : 0;
+		ret = (value & GPIO_BIT(pin)) != 0 ? 1 : 0;
 	}
 
 	return ret;
@@ -1532,12 +1552,12 @@ static inline int gpio_pin_get(const struct device *port, gpio_pin_t pin)
 	gpio_port_value_t value;
 	int ret;
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U,
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U,
 		 "Unsupported pin");
 
 	ret = gpio_port_get(port, &value);
 	if (ret == 0) {
-		ret = (value & (gpio_port_pins_t)BIT(pin)) != 0 ? 1 : 0;
+		ret = (value & GPIO_BIT(pin)) != 0 ? 1 : 0;
 	}
 
 	return ret;
@@ -1580,13 +1600,13 @@ static inline int gpio_pin_set_raw(const struct device *port, gpio_pin_t pin,
 		(const struct gpio_driver_config *)port->config;
 	int ret;
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U,
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U,
 		 "Unsupported pin");
 
 	if (value != 0)	{
-		ret = gpio_port_set_bits_raw(port, (gpio_port_pins_t)BIT(pin));
+		ret = gpio_port_set_bits_raw(port, GPIO_BIT(pin));
 	} else {
-		ret = gpio_port_clear_bits_raw(port, (gpio_port_pins_t)BIT(pin));
+		ret = gpio_port_clear_bits_raw(port, GPIO_BIT(pin));
 	}
 
 	return ret;
@@ -1621,10 +1641,10 @@ static inline int gpio_pin_set(const struct device *port, gpio_pin_t pin,
 	const struct gpio_driver_data *const data =
 			(const struct gpio_driver_data *)port->data;
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U,
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U,
 		 "Unsupported pin");
 
-	if (data->invert & (gpio_port_pins_t)BIT(pin)) {
+	if (data->invert & GPIO_BIT(pin)) {
 		value = (value != 0) ? 0 : 1;
 	}
 
@@ -1662,10 +1682,10 @@ static inline int gpio_pin_toggle(const struct device *port, gpio_pin_t pin)
 	__unused const struct gpio_driver_config *const cfg =
 		(const struct gpio_driver_config *)port->config;
 
-	__ASSERT((cfg->port_pin_mask & (gpio_port_pins_t)BIT(pin)) != 0U,
+	__ASSERT((cfg->port_pin_mask & GPIO_BIT(pin)) != 0U,
 		 "Unsupported pin");
 
-	return gpio_port_toggle_bits(port, (gpio_port_pins_t)BIT(pin));
+	return gpio_port_toggle_bits(port, GPIO_BIT(pin));
 }
 
 /**
