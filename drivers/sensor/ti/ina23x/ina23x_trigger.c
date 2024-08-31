@@ -11,7 +11,7 @@
 LOG_MODULE_REGISTER(INA23X_TRIGGER, CONFIG_SENSOR_LOG_LEVEL);
 
 static void ina23x_gpio_callback(const struct device *port,
-				 struct gpio_callback *cb, uint32_t pin)
+				 struct gpio_callback *cb, gpio_port_pins_t pin)
 {
 	ARG_UNUSED(pin);
 

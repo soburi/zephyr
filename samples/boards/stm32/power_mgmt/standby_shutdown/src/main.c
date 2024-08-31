@@ -55,7 +55,7 @@ void config_wakeup_features(void)
 }
 
 void button_pressed(const struct device *dev, struct gpio_callback *cb,
-		    uint32_t pins)
+		    gpio_port_pins_t pins)
 {
 	k_sem_give(&button_sem);
 }

@@ -56,7 +56,7 @@ int grow_r502a_trigger_set(const struct device *dev,
 }
 
 static void grow_r502a_gpio_callback(const struct device *dev,
-				     struct gpio_callback *cb, uint32_t pins)
+				     struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct grow_r502a_data *drv_data =
 		CONTAINER_OF(cb, struct grow_r502a_data, gpio_cb);

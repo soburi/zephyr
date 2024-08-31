@@ -238,7 +238,7 @@ static void lsm6dso16is_handle_interrupt(const struct device *dev)
 }
 
 static void lsm6dso16is_gpio_callback(const struct device *dev,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lsm6dso16is_data *lsm6dso16is =
 		CONTAINER_OF(cb, struct lsm6dso16is_data, gpio_cb);

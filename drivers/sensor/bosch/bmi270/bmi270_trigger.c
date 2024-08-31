@@ -29,7 +29,7 @@ static void bmi270_raise_int_flag(const struct device *dev, int bit)
 }
 
 static void bmi270_int1_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct bmi270_data *data =
 		CONTAINER_OF(cb, struct bmi270_data, int1_cb);
@@ -37,7 +37,7 @@ static void bmi270_int1_callback(const struct device *dev,
 }
 
 static void bmi270_int2_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct bmi270_data *data =
 		CONTAINER_OF(cb, struct bmi270_data, int2_cb);

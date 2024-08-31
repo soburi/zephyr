@@ -57,7 +57,7 @@ struct ti_hdc20xx_data {
 };
 
 static void ti_hdc20xx_int_callback(const struct device *dev,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct ti_hdc20xx_data *data = CONTAINER_OF(cb, struct ti_hdc20xx_data, cb_int);
 

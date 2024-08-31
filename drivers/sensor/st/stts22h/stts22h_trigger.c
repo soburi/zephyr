@@ -67,7 +67,7 @@ static void stts22h_handle_interrupt(const struct device *dev)
 }
 
 static void stts22h_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct stts22h_data *stts22h =
 		CONTAINER_OF(cb, struct stts22h_data, gpio_cb);

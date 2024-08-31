@@ -680,7 +680,7 @@ static void ads1x1x_work_fn(struct k_work *work)
 
 static void ads1x1x_conv_ready_cb(const struct device *gpio_dev,
 				      struct gpio_callback *cb,
-				      uint32_t pins)
+				      gpio_port_pins_t pins)
 {
 	struct ads1x1x_data *data;
 	const struct device *dev;

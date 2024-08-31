@@ -331,7 +331,7 @@ static int uart_smartbond_config_get(const struct device *dev,
 #if CONFIG_PM_DEVICE
 
 static void uart_smartbond_wake_handler(const struct device *gpio, struct gpio_callback *cb,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	struct uart_smartbond_data *data = CONTAINER_OF(cb, struct uart_smartbond_data,
 							rx_wake_cb);
@@ -347,7 +347,7 @@ static void uart_smartbond_wake_handler(const struct device *gpio, struct gpio_c
 }
 
 static void uart_smartbond_dtr_handler(const struct device *gpio, struct gpio_callback *cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	struct uart_smartbond_data *data = CONTAINER_OF(cb, struct uart_smartbond_data,
 							dtr_wake_cb);

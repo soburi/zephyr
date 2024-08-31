@@ -27,7 +27,7 @@ static struct gpio_callback button_callback;
 
 static void button_isr_callback(const struct device *port,
 				struct gpio_callback *cb,
-				uint32_t pins)
+				gpio_port_pins_t pins)
 {
 	ARG_UNUSED(port);
 	ARG_UNUSED(cb);

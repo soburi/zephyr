@@ -54,7 +54,7 @@ static void tmag5170_work_handler(struct k_work *work)
 
 static void tmag5170_gpio_callback(const struct device *port,
 				   struct gpio_callback *cb,
-				   uint32_t pin)
+				   gpio_port_pins_t pin)
 {
 	struct tmag5170_data *data = CONTAINER_OF(cb,
 						  struct tmag5170_data,

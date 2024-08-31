@@ -38,7 +38,7 @@ static void apds9960_handle_cb(struct apds9960_data *drv_data)
 }
 
 static void apds9960_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct apds9960_data *drv_data =
 		CONTAINER_OF(cb, struct apds9960_data, gpio_cb);

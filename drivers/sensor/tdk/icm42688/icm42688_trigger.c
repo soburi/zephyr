@@ -19,7 +19,7 @@
 LOG_MODULE_DECLARE(ICM42688, CONFIG_SENSOR_LOG_LEVEL);
 
 static void icm42688_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct icm42688_dev_data *data = CONTAINER_OF(cb, struct icm42688_dev_data, gpio_cb);
 

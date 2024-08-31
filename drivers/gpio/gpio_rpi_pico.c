@@ -28,9 +28,9 @@ struct gpio_rpi_config {
 struct gpio_rpi_data {
 	struct gpio_driver_data common;
 	sys_slist_t callbacks;
-	uint32_t int_enabled_mask;
-	uint32_t single_ended_mask;
-	uint32_t open_drain_mask;
+	gpio_port_pins_t int_enabled_mask;
+	gpio_port_pins_t single_ended_mask;
+	gpio_port_pins_t open_drain_mask;
 };
 
 static int gpio_rpi_configure(const struct device *dev,
@@ -80,57 +80,57 @@ static int gpio_rpi_configure(const struct device *dev,
 	return 0;
 }
 
-static int gpio_rpi_port_get_raw(const struct device *dev, uint32_t *value)
+static int gpio_rpi_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
-	*value = gpio_get_all();
+	*value = gpio_get_all64();
 	return 0;
 }
 
 static int gpio_rpi_port_set_masked_raw(const struct device *port,
-					uint32_t mask, uint32_t value)
+					gpio_port_pins_t mask, gpio_port_value_t value)
 {
 	struct gpio_rpi_data *data = port->data;
 	/* First handle push-pull pins: */
-	gpio_put_masked(mask & ~data->single_ended_mask, value);
+	gpio_put_masked64(mask & ~data->single_ended_mask, value);
 	/* Then handle open-drain pins: */
-	gpio_set_dir_masked(mask & data->single_ended_mask & data->open_drain_mask, ~value);
+	gpio_set_dir_masked64(mask & data->single_ended_mask & data->open_drain_mask, ~value);
 	/* Then handle open-source pins: */
-	gpio_set_dir_masked(mask & data->single_ended_mask & ~data->open_drain_mask, value);
+	gpio_set_dir_masked64(mask & data->single_ended_mask & ~data->open_drain_mask, value);
 	return 0;
 }
 
 static int gpio_rpi_port_set_bits_raw(const struct device *port,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	struct gpio_rpi_data *data = port->data;
 	/* First handle push-pull pins: */
-	gpio_set_mask(pins & ~data->single_ended_mask);
+	gpio_set_mask64(pins & ~data->single_ended_mask);
 	/* Then handle open-drain pins: */
-	gpio_set_dir_in_masked(pins & data->single_ended_mask & data->open_drain_mask);
+	gpio_set_dir_in_masked64(pins & data->single_ended_mask & data->open_drain_mask);
 	/* Then handle open-source pins: */
-	gpio_set_dir_out_masked(pins & data->single_ended_mask & ~data->open_drain_mask);
+	gpio_set_dir_out_masked64(pins & data->single_ended_mask & ~data->open_drain_mask);
 	return 0;
 }
 
 static int gpio_rpi_port_clear_bits_raw(const struct device *port,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	struct gpio_rpi_data *data = port->data;
 	/* First handle push-pull pins: */
-	gpio_clr_mask(pins & ~data->single_ended_mask);
+	gpio_clr_mask64(pins & ~data->single_ended_mask);
 	/* Then handle open-drain pins: */
-	gpio_set_dir_out_masked(pins & data->single_ended_mask & data->open_drain_mask);
+	gpio_set_dir_out_masked64(pins & data->single_ended_mask & data->open_drain_mask);
 	/* Then handle open-source pins: */
-	gpio_set_dir_in_masked(pins & data->single_ended_mask & ~data->open_drain_mask);
+	gpio_set_dir_in_masked64(pins & data->single_ended_mask & ~data->open_drain_mask);
 	return 0;
 }
 
 static int gpio_rpi_port_toggle_bits(const struct device *port,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	struct gpio_rpi_data *data = port->data;
 	/* First handle push-pull pins: */
-	gpio_xor_mask(pins & ~data->single_ended_mask);
+	gpio_xor_mask64(pins & ~data->single_ended_mask);
 	/* Then handle single-ended pins: */
 	/* (unfortunately there's no pico-sdk api call that can be used for this,
 	 * but it's possible by accessing the registers directly)
@@ -203,7 +203,7 @@ static void gpio_rpi_isr(const struct device *dev)
 		events = (*status_reg >> 4 * (pin % 8)) & ALL_EVENTS;
 		if (events) {
 			gpio_acknowledge_irq(pin, ALL_EVENTS);
-			gpio_fire_callbacks(&data->callbacks, dev, BIT(pin));
+			gpio_fire_callbacks(&data->callbacks, dev, BIT64(pin));
 		}
 	}
 }

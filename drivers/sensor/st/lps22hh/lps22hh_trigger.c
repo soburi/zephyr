@@ -105,7 +105,7 @@ static void lps22hh_intr_callback(struct lps22hh_data *lps22hh)
 }
 
 static void lps22hh_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lps22hh_data *lps22hh =
 		CONTAINER_OF(cb, struct lps22hh_data, gpio_cb);

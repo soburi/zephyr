@@ -106,7 +106,7 @@ static void pcf857x_work_handler(struct k_work *work)
 
 /** Callback for interrupt through some level changes on pcf857x pins*/
 static void pcf857x_int_gpio_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-				     uint32_t pins)
+				     gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

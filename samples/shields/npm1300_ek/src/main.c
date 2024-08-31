@@ -53,7 +53,8 @@ void configure_ui(void)
 	}
 }
 
-static void event_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void event_callback(const struct device *dev, struct gpio_callback *cb,
+			   gpio_port_pins_t pins)
 {
 	printk("Event detected\n");
 }

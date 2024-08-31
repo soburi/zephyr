@@ -263,7 +263,7 @@ static void pcal64xxa_work_handler(struct k_work *work)
 }
 
 static void pcal64xxa_int_gpio_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

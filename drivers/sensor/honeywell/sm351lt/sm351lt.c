@@ -52,7 +52,7 @@ static int sm351lt_trigger_set(const struct device *dev,
 }
 
 static void sm351lt_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct sm351lt_data *data =
 		CONTAINER_OF(cb, struct sm351lt_data, gpio_cb);

@@ -111,7 +111,7 @@ static void lis2de12_handle_interrupt(const struct device *dev)
 }
 
 static void lis2de12_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis2de12_data *lis2de12 =
 		CONTAINER_OF(cb, struct lis2de12_data, gpio_cb);

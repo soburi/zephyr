@@ -84,7 +84,7 @@ static void itds_work_handler(struct k_work *work)
 }
 
 static void itds_gpio_callback(const struct device *port,
-			       struct gpio_callback *cb, uint32_t pin)
+			       struct gpio_callback *cb, gpio_port_pins_t pin)
 {
 	struct itds_device_data *ddata =
 			CONTAINER_OF(cb, struct itds_device_data, gpio_cb);

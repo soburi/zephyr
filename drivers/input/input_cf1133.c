@@ -246,7 +246,8 @@ static void cf1133_work_handler(struct k_work *work)
 
 #ifdef CONFIG_INPUT_CF1133_INTERRUPT
 
-static void cf1133_isr_handler(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void cf1133_isr_handler(const struct device *dev, struct gpio_callback *cb,
+			       gpio_port_pins_t pins)
 {
 	struct cf1133_data *data = CONTAINER_OF(cb, struct cf1133_data, int_gpio_cb);
 

@@ -149,7 +149,7 @@ static void ft5336_work_handler(struct k_work *work)
 
 #ifdef CONFIG_INPUT_FT5336_INTERRUPT
 static void ft5336_isr_handler(const struct device *dev,
-			       struct gpio_callback *cb, uint32_t pins)
+			       struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct ft5336_data *data = CONTAINER_OF(cb, struct ft5336_data, int_gpio_cb);
 

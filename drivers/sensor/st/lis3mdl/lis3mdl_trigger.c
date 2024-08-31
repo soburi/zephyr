@@ -55,7 +55,7 @@ int lis3mdl_trigger_set(const struct device *dev,
 }
 
 static void lis3mdl_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis3mdl_data *drv_data =
 		CONTAINER_OF(cb, struct lis3mdl_data, gpio_cb);

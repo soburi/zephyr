@@ -956,7 +956,7 @@ static void sync_worker(struct k_work *work)
 
 static void isw_gpio_callback(const struct device *port,
 			      struct gpio_callback *cb,
-			      uint32_t pins)
+			      gpio_port_pins_t pins)
 {
 	struct ds3231_data *data = CONTAINER_OF(cb, struct ds3231_data,
 						isw_callback);

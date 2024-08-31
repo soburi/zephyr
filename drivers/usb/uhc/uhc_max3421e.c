@@ -717,7 +717,7 @@ static void uhc_max3421e_thread(void *p1, void *p2, void *p3)
 
 static void max3421e_gpio_cb(const struct device *dev,
 			     struct gpio_callback *cb,
-			     uint32_t pins)
+			     gpio_port_pins_t pins)
 {
 	struct max3421e_data *priv =
 		CONTAINER_OF(cb, struct max3421e_data, gpio_cb);

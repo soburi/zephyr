@@ -37,7 +37,7 @@ out:
 }
 
 static void mfd_adp5585_int_gpio_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-					 uint32_t pins)
+					 gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

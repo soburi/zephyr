@@ -30,13 +30,13 @@ static int left_line;
 static int right_line;
 
 static void left_irq(const struct device *dev, struct gpio_callback *cb,
-		     uint32_t pins)
+		     gpio_port_pins_t pins)
 {
 	left_line = gpio_pin_get_dt(&left_gpio);
 }
 
 static void right_irq(const struct device *dev, struct gpio_callback *cb,
-		      uint32_t pins)
+		      gpio_port_pins_t pins)
 {
 	right_line = gpio_pin_get_dt(&right_gpio);
 }

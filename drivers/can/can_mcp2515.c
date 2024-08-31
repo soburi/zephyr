@@ -869,7 +869,7 @@ static void mcp2515_int_thread(void *p1, void *p2, void *p3)
 }
 
 static void mcp2515_int_gpio_callback(const struct device *dev,
-				      struct gpio_callback *cb, uint32_t pins)
+				      struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct mcp2515_data *dev_data =
 		CONTAINER_OF(cb, struct mcp2515_data, int_gpio_cb);

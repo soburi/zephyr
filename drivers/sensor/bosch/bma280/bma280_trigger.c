@@ -69,7 +69,7 @@ int bma280_attr_set(const struct device *dev,
 }
 
 static void bma280_gpio_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct bma280_data *drv_data =
 		CONTAINER_OF(cb, struct bma280_data, gpio_cb);

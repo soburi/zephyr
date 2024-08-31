@@ -386,7 +386,7 @@ static int lan865x_default_config(const struct device *dev, uint8_t silicon_rev)
 
 static void lan865x_int_callback(const struct device *dev,
 				  struct gpio_callback *cb,
-				  uint32_t pins)
+				  gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

@@ -48,7 +48,7 @@ static void beep(struct k_work *work)
 }
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb,
-			   uint32_t pins)
+			   gpio_port_pins_t pins)
 {
 	struct mb_display *disp;
 

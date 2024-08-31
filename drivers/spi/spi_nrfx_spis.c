@@ -136,7 +136,7 @@ static int prepare_for_transfer(const struct device *dev,
 }
 
 static void wake_callback(const struct device *dev, struct gpio_callback *cb,
-			  uint32_t pins)
+			  gpio_port_pins_t pins)
 {
 	struct spi_nrfx_data *dev_data =
 		CONTAINER_OF(cb, struct spi_nrfx_data, wake_cb_data);

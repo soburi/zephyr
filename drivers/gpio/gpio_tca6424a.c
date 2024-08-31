@@ -236,7 +236,7 @@ static void tca6424a_work_handler(struct k_work *work)
  * @param pins Bitmask of pins that triggered interrupt
  */
 static void tca6424a_int_gpio_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-				      uint32_t pins)
+				      gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

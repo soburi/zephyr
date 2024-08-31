@@ -48,7 +48,7 @@ struct nct38xx_alert_data {
 };
 
 static void nct38xx_alert_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	ARG_UNUSED(pins);
 	struct nct38xx_alert_data *data = CONTAINER_OF(cb, struct nct38xx_alert_data, gpio_cb);

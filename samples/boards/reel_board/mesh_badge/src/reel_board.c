@@ -445,7 +445,7 @@ static bool button_is_pressed(void)
 
 static void button_interrupt(const struct device *dev,
 			     struct gpio_callback *cb,
-			     uint32_t pins)
+			     gpio_port_pins_t pins)
 {
 	if (button_is_pressed() == pressed) {
 		return;

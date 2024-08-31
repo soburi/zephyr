@@ -228,7 +228,7 @@ static void sx1509b_work_handler(struct k_work *work)
 
 static void sx1509_int_cb(const struct device *dev,
 			   struct gpio_callback *gpio_cb,
-			   uint32_t pins)
+			   gpio_port_pins_t pins)
 {
 	struct sx1509b_drv_data *drv_data = CONTAINER_OF(gpio_cb,
 		struct sx1509b_drv_data, gpio_cb);

@@ -25,7 +25,7 @@
 LOG_MODULE_REGISTER(gpio_rt1718s, CONFIG_GPIO_LOG_LEVEL);
 
 static void rt1718s_alert_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	ARG_UNUSED(pins);
 	struct rt1718s_data *data = CONTAINER_OF(cb, struct rt1718s_data, gpio_cb);

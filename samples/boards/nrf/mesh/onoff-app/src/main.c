@@ -414,7 +414,7 @@ static uint8_t pin_to_sw(uint32_t pin_pos)
 }
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb,
-			   uint32_t pin_pos)
+			   gpio_port_pins_t pin_pos)
 {
 	/*
 	 * One button press within a 1 second interval sends an on message

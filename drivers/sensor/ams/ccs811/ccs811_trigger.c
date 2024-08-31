@@ -87,7 +87,7 @@ static void process_irq(const struct device *dev)
 
 static void gpio_callback(const struct device *dev,
 			  struct gpio_callback *cb,
-			  uint32_t pins)
+			  gpio_port_pins_t pins)
 {
 	struct ccs811_data *data =
 		CONTAINER_OF(cb, struct ccs811_data, gpio_cb);

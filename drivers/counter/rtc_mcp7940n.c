@@ -380,7 +380,7 @@ static void mcp7940n_work_handler(struct k_work *work)
 }
 
 static void mcp7940n_init_cb(const struct device *dev,
-				 struct gpio_callback *gpio_cb, uint32_t pins)
+				 struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	struct mcp7940n_data *data =
 		CONTAINER_OF(gpio_cb, struct mcp7940n_data, int_callback);

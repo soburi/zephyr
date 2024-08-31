@@ -166,7 +166,7 @@ static uint8_t get_status(const struct device *dev)
  *****************/
 
 static inline void gpio0_int_handler(const struct device *port,
-				     struct gpio_callback *cb, uint32_t pins)
+				     struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct cc1200_context *cc1200 =
 		CONTAINER_OF(cb, struct cc1200_context, rx_tx_cb);

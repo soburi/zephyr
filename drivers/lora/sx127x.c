@@ -337,7 +337,7 @@ static void sx127x_dio_work_handle(struct k_work *work)
 }
 
 static void sx127x_irq_callback(const struct device *dev,
-				struct gpio_callback *cb, uint32_t pins)
+				struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	unsigned int i, pin;
 

@@ -42,14 +42,14 @@ static enum {
 static K_SEM_DEFINE(button_pressed, 0, 1);
 
 static void sw0_handler(const struct device *dev, struct gpio_callback *cb,
-			uint32_t pins)
+			gpio_port_pins_t pins)
 {
 	user_request = PERFORM_TRANSFER;
 	k_sem_give(&button_pressed);
 }
 
 static void sw1_handler(const struct device *dev, struct gpio_callback *cb,
-			uint32_t pins)
+			gpio_port_pins_t pins)
 {
 	user_request = SWITCH_PERIPHERAL;
 	k_sem_give(&button_pressed);

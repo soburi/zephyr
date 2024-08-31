@@ -78,7 +78,7 @@ static void stts751_handle_interrupt(const struct device *dev)
 }
 
 static void stts751_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct stts751_data *stts751 =
 		CONTAINER_OF(cb, struct stts751_data, gpio_cb);

@@ -172,7 +172,7 @@ static inline uint16_t bt_spi_get_evt(uint8_t *msg)
 
 static void bt_spi_isr(const struct device *unused1,
 		       struct gpio_callback *unused2,
-		       uint32_t unused3)
+		       gpio_port_pins_t unused3)
 {
 	LOG_DBG("");
 

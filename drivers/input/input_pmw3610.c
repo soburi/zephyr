@@ -252,7 +252,7 @@ static void pmw3610_motion_work_handler(struct k_work *work)
 
 static void pmw3610_motion_handler(const struct device *gpio_dev,
 				   struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct pmw3610_data *data = CONTAINER_OF(
 			cb, struct pmw3610_data, motion_cb);

@@ -11,7 +11,7 @@ static struct drv_data data;
 static int cb_cnt;
 
 static void callback(const struct device *dev,
-		     struct gpio_callback *gpio_cb, uint32_t pins)
+		     struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	/*= checkpoint: pins should be marked with correct pin number bit =*/
 	zassert_equal(pins, BIT(PIN_IN),

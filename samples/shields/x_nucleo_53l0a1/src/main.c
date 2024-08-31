@@ -99,7 +99,8 @@ static fsm_state modes[] = {
 	mode_show_presence,
 };
 
-static void change_mode(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void change_mode(const struct device *dev, struct gpio_callback *cb,
+			gpio_port_pins_t pins)
 {
 	(void) dev;
 	(void) cb;

@@ -65,7 +65,7 @@ static void iis2mdc_handle_interrupt(const struct device *dev)
 }
 
 static void iis2mdc_gpio_callback(const struct device *dev,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct iis2mdc_data *iis2mdc =
 		CONTAINER_OF(cb, struct iis2mdc_data, gpio_cb);

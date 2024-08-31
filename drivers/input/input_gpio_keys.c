@@ -118,7 +118,7 @@ static __maybe_unused void gpio_keys_change_deferred(struct k_work *work)
 }
 
 static void gpio_keys_interrupt(const struct device *dev, struct gpio_callback *cbdata,
-				uint32_t pins)
+				gpio_port_pins_t pins)
 {
 	struct gpio_keys_callback *keys_cb = CONTAINER_OF(
 			cbdata, struct gpio_keys_callback, gpio_cb);

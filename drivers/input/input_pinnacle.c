@@ -682,7 +682,7 @@ static int pinnacle_handle_interrupt(const struct device *dev)
 }
 
 static void pinnacle_data_ready_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-					      uint32_t pins)
+					      gpio_port_pins_t pins)
 {
 	struct pinnacle_data *drv_data = CONTAINER_OF(cb, struct pinnacle_data, dr_cb_data);
 

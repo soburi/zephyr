@@ -36,7 +36,8 @@ extern int run_peripheral_sample(int get_passkey_confirmation(struct bt_conn *co
 
 static struct k_poll_signal button_pressed_signal;
 
-static void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void button_pressed(const struct device *dev, struct gpio_callback *cb,
+			   gpio_port_pins_t pins)
 {
 	LOG_DBG("Button pressed...");
 

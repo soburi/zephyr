@@ -49,7 +49,7 @@ static K_SEM_DEFINE(toggle_transfer, 1, 1);
 
 #if DT_NODE_HAS_STATUS(SW0_NODE, okay)
 static void sw0_handler(const struct device *dev, struct gpio_callback *cb,
-			uint32_t pins)
+			gpio_port_pins_t pins)
 {
 	bool enable = !echo_enabled;
 

@@ -218,7 +218,7 @@ static void enc424j600_read_mem(const struct device *dev, uint8_t opcode,
 
 static void enc424j600_gpio_callback(const struct device *dev,
 				       struct gpio_callback *cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	struct enc424j600_runtime *context =
 		CONTAINER_OF(cb, struct enc424j600_runtime, gpio_cb);

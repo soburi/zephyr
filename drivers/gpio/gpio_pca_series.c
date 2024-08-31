@@ -1619,7 +1619,8 @@ static void gpio_pca_series_interrupt_worker_extended(struct k_work *work)
 }
 
 static void gpio_pca_series_gpio_int_handler(const struct device *dev,
-						 struct gpio_callback *gpio_cb, uint32_t pins)
+					     struct gpio_callback *gpio_cb,
+					     gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

@@ -170,7 +170,7 @@ static void gpio_pca953x_work_handler(struct k_work *work)
  * @param pins Bitmask of pins that triggered interrupt
  */
 static void gpio_pca953x_init_cb(const struct device *dev,
-				 struct gpio_callback *gpio_cb, uint32_t pins)
+				 struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	struct pca953x_drv_data *drv_data =
 		CONTAINER_OF(gpio_cb, struct pca953x_drv_data, gpio_cb);

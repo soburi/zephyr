@@ -75,7 +75,7 @@ int amg88xx_attr_set(const struct device *dev,
 }
 
 static void amg88xx_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct amg88xx_data *drv_data =
 		CONTAINER_OF(cb, struct amg88xx_data, gpio_cb);

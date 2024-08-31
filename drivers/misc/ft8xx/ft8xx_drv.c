@@ -28,7 +28,7 @@ static const struct gpio_dt_spec irq_gpio = GPIO_DT_SPEC_INST_GET(0, irq_gpios);
 static struct gpio_callback irq_cb_data;
 
 __weak void ft8xx_drv_irq_triggered(const struct device *dev,
-				     struct gpio_callback *cb, uint32_t pins)
+				     struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	/* Intentionally empty */
 }

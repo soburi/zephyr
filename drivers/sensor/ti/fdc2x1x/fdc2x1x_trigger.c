@@ -47,7 +47,7 @@ static void fdc2x1x_thread_cb(const struct device *dev)
 }
 
 static void fdc2x1x_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct fdc2x1x_data *drv_data =
 		CONTAINER_OF(cb, struct fdc2x1x_data, gpio_cb);

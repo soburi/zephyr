@@ -489,7 +489,7 @@ static int w5500_soft_reset(const struct device *dev)
 
 static void w5500_gpio_callback(const struct device *dev,
 				struct gpio_callback *cb,
-				uint32_t pins)
+				gpio_port_pins_t pins)
 {
 	struct w5500_runtime *ctx =
 		CONTAINER_OF(cb, struct w5500_runtime, gpio_cb);

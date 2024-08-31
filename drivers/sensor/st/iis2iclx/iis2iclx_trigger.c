@@ -165,7 +165,7 @@ static void iis2iclx_handle_interrupt(const struct device *dev)
 }
 
 static void iis2iclx_gpio_callback(const struct device *dev,
-				     struct gpio_callback *cb, uint32_t pins)
+				     struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct iis2iclx_data *iis2iclx =
 		CONTAINER_OF(cb, struct iis2iclx_data, gpio_cb);

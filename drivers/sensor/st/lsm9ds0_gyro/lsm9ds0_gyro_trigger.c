@@ -70,7 +70,7 @@ int lsm9ds0_gyro_trigger_set(const struct device *dev,
 }
 
 static void lsm9ds0_gyro_gpio_drdy_callback(const struct device *dev,
-					    struct gpio_callback *cb, uint32_t pins)
+					    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lsm9ds0_gyro_data *data =
 		CONTAINER_OF(cb, struct lsm9ds0_gyro_data, gpio_cb);

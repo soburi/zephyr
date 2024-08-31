@@ -177,7 +177,8 @@ static void cst816s_work_handler(struct k_work *work)
 }
 
 #ifdef CONFIG_INPUT_CST816S_INTERRUPT
-static void cst816s_isr_handler(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void cst816s_isr_handler(const struct device *dev, struct gpio_callback *cb,
+				gpio_port_pins_t pins)
 {
 	struct cst816s_data *data = CONTAINER_OF(cb, struct cst816s_data, int_gpio_cb);
 

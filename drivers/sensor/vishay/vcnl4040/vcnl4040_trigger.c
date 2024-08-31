@@ -24,7 +24,7 @@ static void vcnl4040_handle_cb(struct vcnl4040_data *data)
 
 static void vcnl4040_gpio_callback(const struct device *dev,
 				   struct gpio_callback *cb,
-				   uint32_t pin_mask)
+				   gpio_port_pins_t pin_mask)
 {
 	struct vcnl4040_data *data =
 		CONTAINER_OF(cb, struct vcnl4040_data, gpio_cb);

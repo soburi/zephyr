@@ -203,7 +203,7 @@ struct rm67162_data {
 };
 
 static void rm67162_te_isr_handler(const struct device *gpio_dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct rm67162_data *data = CONTAINER_OF(cb, struct rm67162_data, te_gpio_cb);
 

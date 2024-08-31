@@ -69,7 +69,7 @@ static void bmi08x_gyr_work_handler(struct k_work *work)
 #endif
 
 static void bmi08x_gyr_gpio_callback(const struct device *port, struct gpio_callback *cb,
-				     uint32_t pin)
+				     gpio_port_pins_t pin)
 {
 	struct bmi08x_gyro_data *data = CONTAINER_OF(cb, struct bmi08x_gyro_data, gpio_cb);
 

@@ -33,7 +33,7 @@ static void tsl2540_handle_int(const struct device *dev)
 }
 
 static void tsl2540_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				  uint32_t pin_mask)
+				  gpio_port_pins_t pin_mask)
 {
 	struct tsl2540_data *data = CONTAINER_OF(cb, struct tsl2540_data, gpio_cb);
 

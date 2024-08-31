@@ -16,7 +16,8 @@ static inline void tsl2591_setup_int(const struct device *dev, bool enable)
 	gpio_pin_interrupt_configure_dt(&config->int_gpio, flags);
 }
 
-static void tsl2591_gpio_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void tsl2591_gpio_callback(const struct device *dev, struct gpio_callback *cb,
+				  gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

@@ -380,7 +380,7 @@ static inline uint32_t get_cca(const struct device *dev)
 }
 
 static inline void sfd_int_handler(const struct device *port,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct cc2520_context *cc2520 =
 		CONTAINER_OF(cb, struct cc2520_context, sfd_cb);

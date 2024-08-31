@@ -328,7 +328,7 @@ static void eth_enc28j60_read_phy(const struct device *dev,
 
 static void eth_enc28j60_gpio_callback(const struct device *dev,
 				       struct gpio_callback *cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	struct eth_enc28j60_runtime *context =
 		CONTAINER_OF(cb, struct eth_enc28j60_runtime, gpio_cb);

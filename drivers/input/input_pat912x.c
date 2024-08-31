@@ -138,7 +138,7 @@ static void pat912x_motion_work_handler(struct k_work *work)
 
 static void pat912x_motion_handler(const struct device *gpio_dev,
 				   struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct pat912x_data *data = CONTAINER_OF(
 			cb, struct pat912x_data, motion_cb);

@@ -378,7 +378,7 @@ int lis2dh_acc_hp_filter_set(const struct device *dev, int32_t val)
 #endif
 
 static void lis2dh_gpio_int1_callback(const struct device *dev,
-				      struct gpio_callback *cb, uint32_t pins)
+				      struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis2dh_data *lis2dh =
 		CONTAINER_OF(cb, struct lis2dh_data, gpio_int1_cb);
@@ -398,7 +398,7 @@ static void lis2dh_gpio_int1_callback(const struct device *dev,
 }
 
 static void lis2dh_gpio_int2_callback(const struct device *dev,
-				      struct gpio_callback *cb, uint32_t pins)
+				      struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis2dh_data *lis2dh =
 		CONTAINER_OF(cb, struct lis2dh_data, gpio_int2_cb);

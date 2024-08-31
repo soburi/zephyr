@@ -1,4 +1,4 @@
-/* Bosch BMI160 inertial measurement unit driver, trigger implementation
+ /* Bosch BMI160 inertial measurement unit driver, trigger implementation
  *
  * Copyright (c) 2016 Intel Corporation
  *
@@ -94,7 +94,7 @@ static void bmi160_work_handler(struct k_work *work)
 extern struct bmi160_data bmi160_data;
 
 static void bmi160_gpio_callback(const struct device *port,
-				 struct gpio_callback *cb, uint32_t pin)
+				 struct gpio_callback *cb, gpio_port_pins_t pin)
 {
 	struct bmi160_data *data =
 		CONTAINER_OF(cb, struct bmi160_data, gpio_cb);

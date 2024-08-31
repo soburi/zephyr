@@ -615,7 +615,7 @@ static void wdt_nxp_fs26_int_thread(void *p1, void *p2, void *p3)
 
 static void wdt_nxp_fs26_int_callback(const struct device *dev,
 				      struct gpio_callback *cb,
-				      uint32_t pins)
+				      gpio_port_pins_t pins)
 {
 	struct wdt_nxp_fs26_data *data = CONTAINER_OF(cb, struct wdt_nxp_fs26_data,
 						      int_gpio_cb);

@@ -18,7 +18,7 @@
 LOG_MODULE_DECLARE(ADT7310, CONFIG_SENSOR_LOG_LEVEL);
 
 static void adt7310_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				  uint32_t pins)
+				  gpio_port_pins_t pins)
 {
 	struct adt7310_data *drv_data = CONTAINER_OF(cb, struct adt7310_data, gpio_cb);
 

@@ -20,7 +20,7 @@
 LOG_MODULE_REGISTER(TI_HDC, CONFIG_SENSOR_LOG_LEVEL);
 
 static void ti_hdc_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct ti_hdc_data *drv_data =
 		CONTAINER_OF(cb, struct ti_hdc_data, gpio_cb);

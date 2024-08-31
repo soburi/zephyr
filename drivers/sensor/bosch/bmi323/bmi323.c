@@ -1329,7 +1329,8 @@ static int bosch_bmi323_init(const struct device *dev)
 	BMI323_DEVICE_BUS(inst);                                                                   \
                                                                                                    \
 	static void bosch_bmi323_irq_callback##inst(const struct device *dev,                      \
-						    struct gpio_callback *cb, uint32_t pins)       \
+						    struct gpio_callback *cb,                      \
+						    gpio_port_pins_t pins)                         \
 	{                                                                                          \
 		bosch_bmi323_irq_callback(DEVICE_DT_INST_GET(inst));                               \
 	}                                                                                          \

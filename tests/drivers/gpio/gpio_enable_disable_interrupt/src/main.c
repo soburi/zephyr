@@ -14,7 +14,7 @@ static struct gpio_dt_spec irq_pin =
 static struct gpio_callback cb_data;
 static bool cb_called;
 
-static void callback(const struct device *dev, struct gpio_callback *gpio_cb, uint32_t pins)
+static void callback(const struct device *dev, struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	cb_called = true;
 }

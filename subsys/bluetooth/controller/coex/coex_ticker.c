@@ -149,7 +149,7 @@ static int coex_ticker_grant_start(const struct device *dev)
 
 
 static void coex_ticker_grant_irq_handler(const struct device *dev,
-					struct gpio_callback *cb, uint32_t pins)
+					struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

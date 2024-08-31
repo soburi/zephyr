@@ -72,7 +72,7 @@ static struct net_pkt rf2xx_ack_pkt = {
 /* Radio Transceiver ISR */
 static inline void trx_isr_handler(const struct device *port,
 				   struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct rf2xx_context *ctx = CONTAINER_OF(cb,
 						 struct rf2xx_context,

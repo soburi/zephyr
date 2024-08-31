@@ -58,7 +58,7 @@ static void bmm150_work_handler(struct k_work *work)
 
 static void bmm150_gpio_callback(const struct device *port,
 				 struct gpio_callback *cb,
-				 uint32_t pin)
+				 gpio_port_pins_t pin)
 {
 	struct bmm150_data *data = CONTAINER_OF(cb,
 						struct bmm150_data,

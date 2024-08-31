@@ -58,7 +58,7 @@ int icm42605_trigger_set(const struct device *dev,
 }
 
 static void icm42605_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct icm42605_data *drv_data =
 		CONTAINER_OF(cb, struct icm42605_data, gpio_cb);

@@ -434,7 +434,7 @@ static void stmpe811_work_handler(struct k_work *work)
 }
 
 static void stmpe811_interrupt_handler(const struct device *dev, struct gpio_callback *cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	struct stmpe811_data *data = CONTAINER_OF(cb, struct stmpe811_data, int_gpio_cb);
 

@@ -84,7 +84,7 @@ int hts221_trigger_set(const struct device *dev,
 }
 
 static void hts221_drdy_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct hts221_data *data =
 		CONTAINER_OF(cb, struct hts221_data, drdy_cb);

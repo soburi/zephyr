@@ -102,7 +102,8 @@ int pads_trigger_set(const struct device *dev, const struct sensor_trigger *trig
 	return 0;
 }
 
-static void pads_drdy_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void pads_drdy_callback(const struct device *dev, struct gpio_callback *cb,
+			       gpio_port_pins_t pins)
 {
 	struct pads_data *data = CONTAINER_OF(cb, struct pads_data, data_ready_cb);
 

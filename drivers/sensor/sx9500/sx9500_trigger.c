@@ -114,7 +114,7 @@ static void sx9500_thread_main(void *p1, void *p2, void *p3)
 #else /* CONFIG_SX9500_TRIGGER_GLOBAL_THREAD */
 
 static void sx9500_gpio_cb(const struct device *port,
-			   struct gpio_callback *cb, uint32_t pins)
+			   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct sx9500_data *data =
 		CONTAINER_OF(cb, struct sx9500_data, gpio_cb);

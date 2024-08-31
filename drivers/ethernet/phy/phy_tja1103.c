@@ -270,7 +270,7 @@ static void phy_tja1103_irq_offload_thread(void *p1, void *p2, void *p3)
 }
 
 static void phy_tja1103_handle_irq(const struct device *port, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	ARG_UNUSED(pins);
 	ARG_UNUSED(port);

@@ -67,7 +67,7 @@ int tmp007_attr_set(const struct device *dev,
 }
 
 static void tmp007_gpio_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct tmp007_data *drv_data =
 		CONTAINER_OF(cb, struct tmp007_data, gpio_cb);

@@ -45,7 +45,7 @@ enum uart_port_num {
 
 #ifdef CONFIG_PM_DEVICE
 void uart1_wui_isr(const struct device *gpio, struct gpio_callback *cb,
-		   uint32_t pins)
+		   gpio_port_pins_t pins)
 {
 	/* Disable interrupts on UART1 RX pin to avoid repeated interrupts. */
 	(void)gpio_pin_interrupt_configure(gpio, (find_msb_set(pins) - 1),
@@ -65,7 +65,7 @@ void uart1_wui_isr(const struct device *gpio, struct gpio_callback *cb,
 }
 
 void uart2_wui_isr(const struct device *gpio, struct gpio_callback *cb,
-		   uint32_t pins)
+		   gpio_port_pins_t pins)
 {
 	/* Disable interrupts on UART2 RX pin to avoid repeated interrupts. */
 	(void)gpio_pin_interrupt_configure(gpio, (find_msb_set(pins) - 1),

@@ -806,7 +806,7 @@ unmask_irqb:
 }
 
 static inline void irqb_int_handler(const struct device *port,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct mcr20a_context *mcr20a = CONTAINER_OF(cb,
 						     struct mcr20a_context,

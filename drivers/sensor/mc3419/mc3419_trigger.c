@@ -11,7 +11,7 @@ LOG_MODULE_DECLARE(MC3419, CONFIG_SENSOR_LOG_LEVEL);
 
 static void mc3419_gpio_callback(const struct device *dev,
 				 struct gpio_callback *cb,
-				 uint32_t pin_mask)
+				 gpio_port_pins_t pin_mask)
 {
 	struct mc3419_driver_data *data = CONTAINER_OF(cb,
 					  struct mc3419_driver_data, gpio_cb);

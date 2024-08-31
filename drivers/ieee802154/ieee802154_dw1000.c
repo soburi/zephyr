@@ -611,7 +611,7 @@ static void dwt_irq_work_handler(struct k_work *item)
 }
 
 static void dwt_gpio_callback(const struct device *dev,
-			      struct gpio_callback *cb, uint32_t pins)
+			      struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct dwt_context *ctx = CONTAINER_OF(cb, struct dwt_context, gpio_cb);
 

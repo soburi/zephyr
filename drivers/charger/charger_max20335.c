@@ -512,7 +512,7 @@ static int max20335_enable_interrupt_pin(const struct device *dev, bool enabled)
 }
 
 static void max20335_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct charger_max20335_data *data = CONTAINER_OF(cb, struct charger_max20335_data,
 							  gpio_cb);

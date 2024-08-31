@@ -708,7 +708,7 @@ static void lmp90xxx_acquisition_thread(void *p1, void *p2, void *p3)
 }
 
 static void lmp90xxx_drdyb_callback(const struct device *port,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lmp90xxx_data *data =
 		CONTAINER_OF(cb, struct lmp90xxx_data, drdyb_cb);

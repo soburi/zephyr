@@ -74,7 +74,7 @@ static void vl53l1x_worker(struct k_work *work)
 }
 
 static void vl53l1x_gpio_callback(const struct device *dev,
-		struct gpio_callback *cb, uint32_t pins)
+		struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct vl53l1x_data *drv_data = CONTAINER_OF(cb, struct vl53l1x_data, gpio_cb);
 

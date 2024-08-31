@@ -442,7 +442,7 @@ struct ads114s0x_data {
 };
 
 static void ads114s0x_data_ready_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-					 uint32_t pins)
+					 gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);

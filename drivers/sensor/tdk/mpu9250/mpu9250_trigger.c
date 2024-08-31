@@ -52,7 +52,7 @@ int mpu9250_trigger_set(const struct device *dev,
 }
 
 static void mpu9250_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct mpu9250_data *drv_data =
 		CONTAINER_OF(cb, struct mpu9250_data, gpio_cb);

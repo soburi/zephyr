@@ -142,7 +142,7 @@ int sht3xd_trigger_set(const struct device *dev,
 }
 
 static void sht3xd_gpio_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct sht3xd_data *data =
 		CONTAINER_OF(cb, struct sht3xd_data, alert_cb);

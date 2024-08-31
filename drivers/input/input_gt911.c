@@ -203,7 +203,8 @@ static void gt911_work_handler(struct k_work *work)
 }
 
 #ifdef CONFIG_INPUT_GT911_INTERRUPT
-static void gt911_isr_handler(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void gt911_isr_handler(const struct device *dev, struct gpio_callback *cb,
+			      gpio_port_pins_t pins)
 {
 	struct gt911_data *data = CONTAINER_OF(cb, struct gt911_data, int_gpio_cb);
 

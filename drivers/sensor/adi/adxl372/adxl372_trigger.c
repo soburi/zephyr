@@ -53,7 +53,7 @@ static void adxl372_thread_cb(const struct device *dev)
 }
 
 static void adxl372_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct adxl372_data *drv_data =
 		CONTAINER_OF(cb, struct adxl372_data, gpio_cb);

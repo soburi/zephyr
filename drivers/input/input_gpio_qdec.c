@@ -239,7 +239,7 @@ static void gpio_qdec_idle_worker(struct k_work *work)
 }
 
 static void gpio_qdec_cb(const struct device *gpio_dev, struct gpio_callback *cb,
-			 uint32_t pins)
+			 gpio_port_pins_t pins)
 {
 	struct gpio_qdec_data *data = CONTAINER_OF(
 			cb, struct gpio_qdec_data, gpio_cb);

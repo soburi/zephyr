@@ -47,7 +47,7 @@ static void lps2xdf_intr_callback(struct lps2xdf_data *lps2xdf)
 }
 
 static void lps2xdf_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lps2xdf_data *lps2xdf =
 		CONTAINER_OF(cb, struct lps2xdf_data, gpio_cb);

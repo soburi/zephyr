@@ -514,7 +514,7 @@ static void pi3usb9201_isr_work(struct k_work *item)
 }
 
 static void pi3usb9201_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				     uint32_t pins)
+				     gpio_port_pins_t pins)
 {
 	struct pi3usb9201_data *pi3usb9201_data = CONTAINER_OF(cb, struct pi3usb9201_data, gpio_cb);
 

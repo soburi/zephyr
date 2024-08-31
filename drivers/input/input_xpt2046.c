@@ -73,7 +73,8 @@ static uint8_t tbuf[9] = {
 	[6] = START | CHANNEL(CH_Y) | POWER_OFF,
 };
 
-static void xpt2046_isr_handler(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void xpt2046_isr_handler(const struct device *dev, struct gpio_callback *cb,
+				gpio_port_pins_t pins)
 {
 	struct xpt2046_data *data = CONTAINER_OF(cb, struct xpt2046_data, int_gpio_cb);
 	const struct xpt2046_config *config = data->dev->config;
