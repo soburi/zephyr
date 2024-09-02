@@ -7,3 +7,4 @@ family:
   - name: rp2350
     socs:
     - name: rp2350a
+    - name: rp2350b
