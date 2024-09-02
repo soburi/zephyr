@@ -1,0 +1,9 @@
+#include <arm/raspberrypi/rpi_pico/rp2350.dtsi>
+
+&gpio0 {
+	ngpios = <48>;
+};
+
+&die_temp {
+	io-channels = <&adc 8>;
+};

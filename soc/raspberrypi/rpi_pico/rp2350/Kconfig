@@ -15,6 +15,7 @@ config SOC_SERIES_RP2350
 	select XIP
 	select HAS_SEGGER_RTT if ZEPHYR_SEGGER_MODULE
 	select SOC_RESET_HOOK
+	select GPIO_64BIT_PORT
 	help
 	  Enable support for Raspberry Pi RP23 MCU series
 
