@@ -14,8 +14,8 @@
 
 static const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
-#define VMAX_SET  1.0/*PI制御最大電圧指令0.0～1.0*/
-#define IMAX_SET  0.4/* PI制御最大電流指令0.0～1.0*/
+#define VMAX_SET  1.0f/*PI制御最大電圧指令0.0～1.0*/
+#define IMAX_SET  0.4f/* PI制御最大電流指令0.0～1.0*/
 
 /**********PI制御周期設定*********************/
 /***コメントアウトでPI周期制御無し***********/
@@ -466,7 +466,7 @@ int current_pi_count;
  /***********************************/
  void Current_PI(){
 	 current_pi_count++;
- I_diff = (I_PI - (I_detect-0.5))*I_PII;
+ I_diff = (I_PI - (I_detect-0.5f))*I_PII;
     s_kiCurrent += kiCurrent*(I_diff);
     if(s_kiCurrent > VMAX_SET)
     {
@@ -569,7 +569,7 @@ int main() {
    vr_ad=V_adc.read();
    vr1_ad_p=(vr_ad-Vr_adc_i); //ボリュームを使う場合
    //vr1_ad_p=(vr_ad-Vr_adc_i)*1.3; //カート・キットのアクセルを使う場合
-   vr1_ad+=(vr1_ad_p-vr1_ad)*0.2;//0.1
+   vr1_ad+=(vr1_ad_p-vr1_ad)*0.2f;//0.1
      
     Timer_cnt_start = uTimer.read_us(); /* カウンタ値 */
     
@@ -618,9 +618,9 @@ int main() {
       
       }
       
-      curr_u += ((curr_ub) - curr_u )*0.1;
-      curr_v += ((curr_vb) - curr_v )*0.1;
-      curr_w += ((curr_wb) - curr_w )*0.1;
+      curr_u += ((curr_ub) - curr_u )*0.1f;
+      curr_v += ((curr_vb) - curr_v )*0.1f;
+      curr_w += ((curr_wb) - curr_w )*0.1f;
       
 
 /* *********************************************** */    
@@ -771,7 +771,7 @@ if(Sp_tick==0){
     /* ----------- */
    
  if(Cu_tick==0){
-    I_diff = (I_PI - (I_detect-0.5))*I_PII;
+    I_diff = (I_PI - (I_detect-0.5f))*I_PII;
     s_kiCurrent += kiCurrent*I_diff;
     if(s_kiCurrent > VMAX_SET)
     {
@@ -818,13 +818,13 @@ if(Sp_tick==0){
           }
 
 if(acc_vol==0){   //volume
-    if(vr1_ad>0.1){
+    if(vr1_ad>0.1f){
           Direct_R=0;
          
         }else{
             }
             
-     if(vr1_ad<-0.1){
+     if(vr1_ad<-0.1f){
           Direct_R=1;
           
         }else{
