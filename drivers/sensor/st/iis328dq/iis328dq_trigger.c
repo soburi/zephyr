@@ -203,7 +203,7 @@ static void iis328dq_handle_interrupt(const struct device *dev)
 }
 
 static void iis328dq_int1_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	struct iis328dq_data *iis328dq = CONTAINER_OF(cb, struct iis328dq_data, int1_cb);
 
@@ -219,7 +219,7 @@ static void iis328dq_int1_gpio_callback(const struct device *dev, struct gpio_ca
 }
 
 static void iis328dq_int2_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	struct iis328dq_data *iis328dq = CONTAINER_OF(cb, struct iis328dq_data, int2_cb);
 
@@ -301,7 +301,7 @@ int iis328dq_init_interrupt(const struct device *dev)
 			return ret;
 		}
 		gpio_init_callback(&iis328dq->int1_cb, iis328dq_int1_gpio_callback,
-				   BIT(cfg->gpio_int1.pin));
+				   GPIO_BIT(cfg->gpio_int1.pin));
 		if (gpio_add_callback(cfg->gpio_int1.port, &iis328dq->int1_cb) < 0) {
 			LOG_ERR("Could not set INT1 callback");
 			return -EIO;
@@ -315,7 +315,7 @@ int iis328dq_init_interrupt(const struct device *dev)
 			return ret;
 		}
 		gpio_init_callback(&iis328dq->int2_cb, iis328dq_int2_gpio_callback,
-				   BIT(cfg->gpio_int2.pin));
+				   GPIO_BIT(cfg->gpio_int2.pin));
 		if (gpio_add_callback(cfg->gpio_int2.port, &iis328dq->int2_cb) < 0) {
 			LOG_ERR("Could not set INT2 callback");
 			return -EIO;

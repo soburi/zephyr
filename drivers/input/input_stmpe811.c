@@ -434,7 +434,7 @@ static void stmpe811_work_handler(struct k_work *work)
 }
 
 static void stmpe811_interrupt_handler(const struct device *dev, struct gpio_callback *cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	struct stmpe811_data *data = CONTAINER_OF(cb, struct stmpe811_data, int_gpio_cb);
 
@@ -503,7 +503,7 @@ static int stmpe811_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->int_gpio_cb, stmpe811_interrupt_handler,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 	err = gpio_add_callback_dt(&config->int_gpio, &data->int_gpio_cb);
 	if (err < 0) {
 		LOG_ERR("Could not set GPIO callback (%d)", err);

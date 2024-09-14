@@ -53,7 +53,8 @@ void configure_ui(void)
 	}
 }
 
-static void event_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void event_callback(const struct device *dev, struct gpio_callback *cb,
+			   gpio_port_pins_t pins)
 {
 	printk("Event detected\n");
 }
@@ -68,7 +69,7 @@ void configure_events(void)
 	/* Setup callback for shiphold button press */
 	static struct gpio_callback event_cb;
 
-	gpio_init_callback(&event_cb, event_callback, BIT(NPM1300_EVENT_SHIPHOLD_PRESS));
+	gpio_init_callback(&event_cb, event_callback, GPIO_BIT(NPM1300_EVENT_SHIPHOLD_PRESS));
 
 	mfd_npm1300_add_callback(pmic, &event_cb);
 }

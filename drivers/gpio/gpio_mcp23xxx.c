@@ -203,7 +203,7 @@ done:
 	return ret;
 }
 
-static int mcp23xxx_port_get_raw(const struct device *dev, uint32_t *value)
+static int mcp23xxx_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	struct mcp23xxx_drv_data *drv_data = dev->data;
 	uint16_t buf;
@@ -224,7 +224,7 @@ static int mcp23xxx_port_get_raw(const struct device *dev, uint32_t *value)
 	return ret;
 }
 
-static int mcp23xxx_port_set_masked_raw(const struct device *dev, uint32_t mask, uint32_t value)
+static int mcp23xxx_port_set_masked_raw(const struct device *dev, gpio_port_pins_t mask, gpio_port_value_t value)
 {
 	struct mcp23xxx_drv_data *drv_data = dev->data;
 	uint16_t buf;
@@ -248,17 +248,17 @@ static int mcp23xxx_port_set_masked_raw(const struct device *dev, uint32_t mask,
 	return ret;
 }
 
-static int mcp23xxx_port_set_bits_raw(const struct device *dev, uint32_t mask)
+static int mcp23xxx_port_set_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return mcp23xxx_port_set_masked_raw(dev, mask, mask);
 }
 
-static int mcp23xxx_port_clear_bits_raw(const struct device *dev, uint32_t mask)
+static int mcp23xxx_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return mcp23xxx_port_set_masked_raw(dev, mask, 0);
 }
 
-static int mcp23xxx_port_toggle_bits(const struct device *dev, uint32_t mask)
+static int mcp23xxx_port_toggle_bits(const struct device *dev, gpio_port_pins_t mask)
 {
 	struct mcp23xxx_drv_data *drv_data = dev->data;
 	uint16_t buf;
@@ -543,7 +543,7 @@ int gpio_mcp23xxx_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&drv_data->int_gpio_cb, mcp23xxx_int_gpio_handler,
-				   BIT(config->gpio_int.pin));
+				   GPIO_BIT(config->gpio_int.pin));
 		err = gpio_add_callback(config->gpio_int.port, &drv_data->int_gpio_cb);
 		if (err != 0) {
 			LOG_ERR("Failed to add INT callback: %d", err);

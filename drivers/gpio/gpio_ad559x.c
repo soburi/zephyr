@@ -29,7 +29,7 @@ struct gpio_ad559x_data {
 	uint8_t gpio_pull_down;
 };
 
-static int gpio_ad559x_port_get_raw(const struct device *dev, uint32_t *value)
+static int gpio_ad559x_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	const struct gpio_ad559x_config *config = dev->config;
 	struct gpio_ad559x_data *drv_data = dev->data;

@@ -424,7 +424,7 @@ static int shi_ite_init(const struct device *dev)
 	}
 
 	/* Enable SPI chip select pin interrupt */
-	gpio_init_callback(&data->cs_cb, shi_ite_cs_callback, BIT(cfg->cs.pin));
+	gpio_init_callback(&data->cs_cb, shi_ite_cs_callback, GPIO_BIT(cfg->cs.pin));
 	ret = gpio_add_callback(cfg->cs.port, &data->cs_cb);
 	if (ret < 0) {
 		return -EINVAL;

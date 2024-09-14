@@ -386,7 +386,7 @@ void callback_work_handler(struct k_work *work)
 
 /* The function called when the clock alarm activates the interrupt*/
 void gpio_callback_function(const struct device *dev, struct gpio_callback *cb,
-		    uint32_t pins)
+		    gpio_port_pins_t pins)
 {
 	struct pcf8563_data *data = CONTAINER_OF(cb, struct pcf8563_data, int1_callback);
 
@@ -442,7 +442,7 @@ static int pcf8563_alarm_set_callback(const struct device *dev, uint16_t id,
 	}
 
 
-	gpio_init_callback(&data->int1_callback, gpio_callback_function, BIT(config->int1.pin));
+	gpio_init_callback(&data->int1_callback, gpio_callback_function, GPIO_BIT(config->int1.pin));
 	gpio_add_callback(config->int1.port, &data->int1_callback);
 	LOG_DBG("Alarm set");
 	return 0;

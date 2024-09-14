@@ -138,7 +138,7 @@ static void pat912x_motion_work_handler(struct k_work *work)
 
 static void pat912x_motion_handler(const struct device *gpio_dev,
 				   struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct pat912x_data *data = CONTAINER_OF(
 			cb, struct pat912x_data, motion_cb);
@@ -269,7 +269,7 @@ static int pat912x_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->motion_cb, pat912x_motion_handler,
-			   BIT(cfg->motion_gpio.pin));
+			   GPIO_BIT(cfg->motion_gpio.pin));
 
 	ret = pat912x_configure(dev);
 	if (ret != 0) {

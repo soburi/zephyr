@@ -97,14 +97,14 @@ static int bd8lb600fs_gpio_pin_configure(const struct device *dev, gpio_pin_t pi
 	return result;
 }
 
-static int bd8lb600fs_gpio_port_get_raw(const struct device *dev, uint32_t *value)
+static int bd8lb600fs_gpio_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	LOG_ERR("input pins are not available");
 	return -ENOTSUP;
 }
 
-static int bd8lb600fs_gpio_port_set_masked_raw(const struct device *dev, uint32_t mask,
-					       uint32_t value)
+static int bd8lb600fs_gpio_port_set_masked_raw(const struct device *dev, gpio_port_pins_t mask,
+					       gpio_port_value_t value)
 {
 	const struct bd8lb600fs_gpio_config *config = dev->config;
 	struct bd8lb600fs_gpio_data *data = dev->data;
@@ -124,17 +124,17 @@ static int bd8lb600fs_gpio_port_set_masked_raw(const struct device *dev, uint32_
 	return result;
 }
 
-static int bd8lb600fs_gpio_port_set_bits_raw(const struct device *dev, uint32_t mask)
+static int bd8lb600fs_gpio_port_set_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return bd8lb600fs_gpio_port_set_masked_raw(dev, mask, mask);
 }
 
-static int bd8lb600fs_gpio_port_clear_bits_raw(const struct device *dev, uint32_t mask)
+static int bd8lb600fs_gpio_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return bd8lb600fs_gpio_port_set_masked_raw(dev, mask, 0);
 }
 
-static int bd8lb600fs_gpio_port_toggle_bits(const struct device *dev, uint32_t mask)
+static int bd8lb600fs_gpio_port_toggle_bits(const struct device *dev, gpio_port_pins_t mask)
 {
 	const struct bd8lb600fs_gpio_config *config = dev->config;
 	struct bd8lb600fs_gpio_data *data = dev->data;

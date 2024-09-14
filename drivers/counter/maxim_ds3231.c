@@ -961,7 +961,7 @@ static void sync_worker(struct k_work *work)
 
 static void isw_gpio_callback(const struct device *port,
 			      struct gpio_callback *cb,
-			      uint32_t pins)
+			      gpio_port_pins_t pins)
 {
 	struct ds3231_data *data = CONTAINER_OF(cb, struct ds3231_data,
 						isw_callback);
@@ -1160,7 +1160,7 @@ static int ds3231_init(const struct device *dev)
 		k_work_init(&data->sync_work, sync_worker);
 		gpio_init_callback(&data->isw_callback,
 				   isw_gpio_callback,
-				   BIT(cfg->isw_gpios.pin));
+				   GPIO_BIT(cfg->isw_gpios.pin));
 
 		rc = gpio_pin_configure_dt(&cfg->isw_gpios, GPIO_INPUT);
 		if (rc >= 0) {

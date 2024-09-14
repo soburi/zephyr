@@ -132,7 +132,7 @@ static void tcn75a_handle_int(const struct device *dev)
 }
 
 static void tcn75a_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				 uint32_t pin_mask)
+				 gpio_port_pins_t pin_mask)
 {
 	struct tcn75a_data *data = CONTAINER_OF(cb, struct tcn75a_data, gpio_cb);
 	const struct tcn75a_config *config = data->dev->config;
@@ -191,7 +191,7 @@ int tcn75a_trigger_init(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&data->gpio_cb, tcn75a_gpio_callback, BIT(config->alert_gpios.pin));
+	gpio_init_callback(&data->gpio_cb, tcn75a_gpio_callback, GPIO_BIT(config->alert_gpios.pin));
 
 	ret = gpio_add_callback(config->alert_gpios.port, &data->gpio_cb);
 

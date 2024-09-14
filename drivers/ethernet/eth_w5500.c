@@ -489,7 +489,7 @@ static int w5500_soft_reset(const struct device *dev)
 
 static void w5500_gpio_callback(const struct device *dev,
 				struct gpio_callback *cb,
-				uint32_t pins)
+				gpio_port_pins_t pins)
 {
 	struct w5500_runtime *ctx =
 		CONTAINER_OF(cb, struct w5500_runtime, gpio_cb);
@@ -549,7 +549,7 @@ static int w5500_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&(ctx->gpio_cb), w5500_gpio_callback,
-			   BIT(config->interrupt.pin));
+			   GPIO_BIT(config->interrupt.pin));
 
 	if (gpio_add_callback(config->interrupt.port, &(ctx->gpio_cb))) {
 		return -EINVAL;

@@ -81,7 +81,7 @@ static void iis3dhhc_handle_interrupt(const struct device *dev)
 }
 
 static void iis3dhhc_gpio_callback(const struct device *dev,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct iis3dhhc_data *iis3dhhc =
 		CONTAINER_OF(cb, struct iis3dhhc_data, gpio_cb);
@@ -154,7 +154,7 @@ int iis3dhhc_init_interrupt(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&iis3dhhc->gpio_cb, iis3dhhc_gpio_callback, BIT(cfg->int_gpio.pin));
+	gpio_init_callback(&iis3dhhc->gpio_cb, iis3dhhc_gpio_callback, GPIO_BIT(cfg->int_gpio.pin));
 
 	if (gpio_add_callback(cfg->int_gpio.port, &iis3dhhc->gpio_cb) < 0) {
 		LOG_DBG("Could not set gpio callback");

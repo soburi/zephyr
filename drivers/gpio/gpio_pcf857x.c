@@ -88,7 +88,7 @@ static void pcf857x_work_handler(struct k_work *work)
 
 	k_sem_take(&drv_data->lock, K_FOREVER);
 
-	uint32_t changed_pins;
+	gpio_port_value_t changed_pins;
 	uint16_t input_port_last_temp = drv_data->input_port_last;
 	int rc = pcf857x_process_input(drv_data->dev, &changed_pins);
 
@@ -106,7 +106,7 @@ static void pcf857x_work_handler(struct k_work *work)
 
 /** Callback for interrupt through some level changes on pcf857x pins*/
 static void pcf857x_int_gpio_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-				     uint32_t pins)
+				     gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -364,7 +364,7 @@ static int pcf857x_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&drv_data->int_gpio_cb, pcf857x_int_gpio_handler,
-				   BIT(drv_cfg->gpio_int.pin));
+				   GPIO_BIT(drv_cfg->gpio_int.pin));
 		rc = gpio_add_callback(drv_cfg->gpio_int.port, &drv_data->int_gpio_cb);
 		if (rc != 0) {
 			LOG_ERR("%s: failed to add INT callback: %d", dev->name, rc);
