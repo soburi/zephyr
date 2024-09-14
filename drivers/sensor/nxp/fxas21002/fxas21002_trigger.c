@@ -14,13 +14,13 @@ LOG_MODULE_DECLARE(FXAS21002, CONFIG_SENSOR_LOG_LEVEL);
 
 static void fxas21002_gpio_callback(const struct device *dev,
 				    struct gpio_callback *cb,
-				    uint32_t pin_mask)
+				    gpio_port_pins_t pin_mask)
 {
 	struct fxas21002_data *data =
 		CONTAINER_OF(cb, struct fxas21002_data, gpio_cb);
 	const struct fxas21002_config *config = data->dev->config;
 
-	if ((pin_mask & BIT(config->int_gpio.pin)) == 0U) {
+	if ((pin_mask & GPIO_BIT(config->int_gpio.pin)) == 0U) {
 		return;
 	}
 
@@ -208,7 +208,7 @@ int fxas21002_trigger_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->gpio_cb, fxas21002_gpio_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	ret = gpio_add_callback(config->int_gpio.port, &data->gpio_cb);
 	if (ret < 0) {

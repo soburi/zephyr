@@ -46,11 +46,11 @@ static void button_send_pressed(struct k_work *work)
 }
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb,
-			   uint32_t pins)
+			   gpio_port_pins_t pins)
 {
 	struct mb_display *disp = mb_display_get();
 
-	if (pins & BIT(button_a.pin)) {
+	if (pins & GPIO_BIT(button_a.pin)) {
 		k_work_submit(&button_work);
 	} else {
 		uint16_t target = board_set_target();
@@ -260,7 +260,7 @@ static int configure_buttons(void)
 	}
 
 	gpio_init_callback(&button_cb, button_pressed,
-			   BIT(button_a.pin) | BIT(button_b.pin));
+			   GPIO_BIT(button_a.pin) | GPIO_BIT(button_b.pin));
 	return gpio_add_callback(button_a.port, &button_cb);
 }
 

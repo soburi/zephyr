@@ -695,7 +695,7 @@ void ps8xxx_init_work_cb(struct k_work *work)
 	/* Initialize alert interrupt */
 	gpio_pin_configure_dt(&cfg->alert_gpio, GPIO_INPUT);
 
-	gpio_init_callback(&data->alert_cb, ps8xxx_alert_cb, BIT(cfg->alert_gpio.pin));
+	gpio_init_callback(&data->alert_cb, ps8xxx_alert_cb, GPIO_BIT(cfg->alert_gpio.pin));
 	gpio_add_callback(cfg->alert_gpio.port, &data->alert_cb);
 	gpio_pin_interrupt_configure_dt(&cfg->alert_gpio, GPIO_INT_EDGE_TO_ACTIVE);
 

@@ -38,7 +38,7 @@ static void apds9960_handle_cb(struct apds9960_data *drv_data)
 }
 
 static void apds9960_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct apds9960_data *drv_data =
 		CONTAINER_OF(cb, struct apds9960_data, gpio_cb);
@@ -370,7 +370,7 @@ static int apds9960_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&drv_data->gpio_cb,
 			   apds9960_gpio_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	if (gpio_add_callback(config->int_gpio.port, &drv_data->gpio_cb) < 0) {
 		LOG_DBG("Failed to set gpio callback!");

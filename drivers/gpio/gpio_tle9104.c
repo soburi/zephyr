@@ -95,7 +95,7 @@ static int tle9104_gpio_pin_configure(const struct device *dev, gpio_pin_t pin, 
 	return result;
 }
 
-static int tle9104_gpio_port_get_raw(const struct device *dev, uint32_t *value)
+static int tle9104_gpio_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(value);
@@ -104,7 +104,8 @@ static int tle9104_gpio_port_get_raw(const struct device *dev, uint32_t *value)
 	return -ENOTSUP;
 }
 
-static int tle9104_gpio_port_set_masked_raw(const struct device *dev, uint32_t mask, uint32_t value)
+static int tle9104_gpio_port_set_masked_raw(const struct device *dev, gpio_port_pins_t mask,
+					    gpio_port_value_t value)
 {
 	const struct tle9104_gpio_config *config = dev->config;
 	struct tle9104_gpio_data *data = dev->data;
@@ -123,17 +124,17 @@ static int tle9104_gpio_port_set_masked_raw(const struct device *dev, uint32_t m
 	return result;
 }
 
-static int tle9104_gpio_port_set_bits_raw(const struct device *dev, uint32_t mask)
+static int tle9104_gpio_port_set_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return tle9104_gpio_port_set_masked_raw(dev, mask, mask);
 }
 
-static int tle9104_gpio_port_clear_bits_raw(const struct device *dev, uint32_t mask)
+static int tle9104_gpio_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return tle9104_gpio_port_set_masked_raw(dev, mask, 0);
 }
 
-static int tle9104_gpio_port_toggle_bits(const struct device *dev, uint32_t mask)
+static int tle9104_gpio_port_toggle_bits(const struct device *dev, gpio_port_pins_t mask)
 {
 	const struct tle9104_gpio_config *config = dev->config;
 	struct tle9104_gpio_data *data = dev->data;

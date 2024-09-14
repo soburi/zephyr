@@ -587,7 +587,7 @@ static void stm32_sdmmc_cd_handler(struct k_work *item)
 
 static void stm32_sdmmc_cd_callback(const struct device *gpiodev,
 				    struct gpio_callback *cb,
-				    uint32_t pin)
+				    gpio_port_pins_t pin)
 {
 	struct stm32_sdmmc_priv *priv = CONTAINER_OF(cb,
 						     struct stm32_sdmmc_priv,

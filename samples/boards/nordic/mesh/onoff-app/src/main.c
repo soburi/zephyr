@@ -400,13 +400,13 @@ static uint8_t dev_uuid[16] = { 0xdd, 0xdd };
  * Change to select different GPIO input pins
  */
 
-static uint8_t pin_to_sw(uint32_t pin_pos)
+static uint8_t pin_to_sw(gpio_port_pins_t pin_pos)
 {
 	switch (pin_pos) {
-	case BIT(DT_GPIO_PIN(DT_ALIAS(sw0), gpios)): return 0;
-	case BIT(DT_GPIO_PIN(DT_ALIAS(sw1), gpios)): return 1;
-	case BIT(DT_GPIO_PIN(DT_ALIAS(sw2), gpios)): return 2;
-	case BIT(DT_GPIO_PIN(DT_ALIAS(sw3), gpios)): return 3;
+	case GPIO_BIT(DT_GPIO_PIN(DT_ALIAS(sw0), gpios)): return 0;
+	case GPIO_BIT(DT_GPIO_PIN(DT_ALIAS(sw1), gpios)): return 1;
+	case GPIO_BIT(DT_GPIO_PIN(DT_ALIAS(sw2), gpios)): return 2;
+	case GPIO_BIT(DT_GPIO_PIN(DT_ALIAS(sw3), gpios)): return 3;
 	}
 
 	printk("No match for GPIO pin 0x%08x\n", pin_pos);
@@ -414,7 +414,7 @@ static uint8_t pin_to_sw(uint32_t pin_pos)
 }
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb,
-			   uint32_t pin_pos)
+			   gpio_port_pins_t pin_pos)
 {
 	/*
 	 * One button press within a 1 second interval sends an on message
@@ -589,8 +589,8 @@ int main(void)
 	k_timer_init(&sw.button_timer, button_cnt_timer, NULL);
 
 	gpio_init_callback(&button_cb, button_pressed,
-			   BIT(sw_device[0].pin) | BIT(sw_device[1].pin) |
-			   BIT(sw_device[2].pin) | BIT(sw_device[3].pin));
+			   GPIO_BIT(sw_device[0].pin) | GPIO_BIT(sw_device[1].pin) |
+			   GPIO_BIT(sw_device[2].pin) | GPIO_BIT(sw_device[3].pin));
 
 	for (i = 0; i < ARRAY_SIZE(sw_device); i++) {
 		if (!gpio_is_ready_dt(&sw_device[i])) {

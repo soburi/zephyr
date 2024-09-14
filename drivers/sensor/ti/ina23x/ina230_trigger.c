@@ -14,7 +14,7 @@
 LOG_MODULE_DECLARE(INA230, CONFIG_SENSOR_LOG_LEVEL);
 
 static void ina230_gpio_callback(const struct device *port,
-				 struct gpio_callback *cb, uint32_t pin)
+				 struct gpio_callback *cb, gpio_port_pins_t pin)
 {
 	struct ina230_data *ina230 = CONTAINER_OF(cb, struct ina230_data, gpio_cb);
 	const struct device *dev = (const struct device *)ina230->dev;
@@ -64,7 +64,7 @@ int ina230_trigger_mode_init(const struct device *dev)
 
 	gpio_init_callback(&ina230->gpio_cb,
 			   ina230_gpio_callback,
-			   BIT(config->alert_gpio.pin));
+			   GPIO_BIT(config->alert_gpio.pin));
 
 	ret = gpio_add_callback(config->alert_gpio.port, &ina230->gpio_cb);
 	if (ret < 0) {

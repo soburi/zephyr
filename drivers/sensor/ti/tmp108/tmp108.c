@@ -339,7 +339,7 @@ static int setup_interrupts(const struct device *dev)
 
 	gpio_init_callback(&drv_data->temp_alert_gpio_cb,
 			   tmp108_trigger_handle_alert,
-			   BIT(alert_gpio->pin));
+			   GPIO_BIT(alert_gpio->pin));
 
 	result = gpio_add_callback(alert_gpio->port,
 				   &drv_data->temp_alert_gpio_cb);

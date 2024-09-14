@@ -127,7 +127,7 @@ ZTEST(gpio_ite_it8xxx2_v2, test_interrupt_edge_rising)
 	zassert_true(device_is_ready(gpio_dev));
 	zassert_ok(gpio_pin_configure(gpio_dev, TEST_PIN, GPIO_INPUT | GPIO_ACTIVE_HIGH));
 
-	gpio_init_callback(&callback_struct, &callback, BIT(TEST_PIN));
+	gpio_init_callback(&callback_struct, &callback, GPIO_BIT(TEST_PIN));
 	zassert_ok(gpio_add_callback(gpio_dev, &callback_struct));
 	zassert_ok(gpio_pin_interrupt_configure(gpio_dev, TEST_PIN, GPIO_INT_EDGE_TO_ACTIVE));
 	zexpect_equal(registers.gpotr, 0, "gpotr=%x", registers.gpotr);
@@ -151,7 +151,7 @@ ZTEST(gpio_ite_it8xxx2_v2, test_interrupt_enable_disable)
 	zassert_true(device_is_ready(gpio_dev));
 	zassert_ok(gpio_pin_configure(gpio_dev, TEST_PIN, GPIO_INPUT | GPIO_ACTIVE_HIGH));
 
-	gpio_init_callback(&callback_struct, &callback, BIT(TEST_PIN));
+	gpio_init_callback(&callback_struct, &callback, GPIO_BIT(TEST_PIN));
 	zassert_ok(gpio_add_callback(gpio_dev, &callback_struct));
 	zassert_ok(gpio_pin_interrupt_configure(gpio_dev, TEST_PIN, GPIO_INT_EDGE_TO_ACTIVE));
 	zexpect_equal(registers.gpotr, 0, "gpotr=%x", registers.gpotr);
@@ -193,7 +193,7 @@ ZTEST(gpio_ite_it8xxx2_v2, test_interrupt_edge_falling)
 	zassert_true(device_is_ready(gpio_dev));
 	zassert_ok(gpio_pin_configure(gpio_dev, TEST_PIN, GPIO_INPUT | GPIO_ACTIVE_HIGH));
 
-	gpio_init_callback(&callback_struct, &callback, BIT(TEST_PIN));
+	gpio_init_callback(&callback_struct, &callback, GPIO_BIT(TEST_PIN));
 	zassert_ok(gpio_add_callback(gpio_dev, &callback_struct));
 	zassert_ok(gpio_pin_interrupt_configure(gpio_dev, TEST_PIN, GPIO_INT_EDGE_TO_INACTIVE));
 	zexpect_equal(registers.gpotr, 0, "gpotr=%x", registers.gpotr);
@@ -217,7 +217,7 @@ ZTEST(gpio_ite_it8xxx2_v2, test_interrupt_edge_both)
 	zassert_true(device_is_ready(gpio_dev));
 	zassert_ok(gpio_pin_configure(gpio_dev, TEST_PIN, GPIO_INPUT | GPIO_ACTIVE_HIGH));
 
-	gpio_init_callback(&callback_struct, &callback, BIT(TEST_PIN));
+	gpio_init_callback(&callback_struct, &callback, GPIO_BIT(TEST_PIN));
 	zassert_ok(gpio_add_callback(gpio_dev, &callback_struct));
 	zassert_ok(gpio_pin_interrupt_configure(gpio_dev, TEST_PIN, GPIO_INT_EDGE_BOTH));
 	zexpect_equal(registers.gpotr, 0, "gpotr=%x", registers.gpotr);
@@ -247,7 +247,7 @@ ZTEST(gpio_ite_it8xxx2_v2, test_interrupt_level_active)
 	zassert_true(device_is_ready(gpio_dev));
 	zassert_ok(gpio_pin_configure(gpio_dev, TEST_PIN, GPIO_INPUT | GPIO_ACTIVE_HIGH));
 
-	gpio_init_callback(&callback_struct, &callback, BIT(TEST_PIN));
+	gpio_init_callback(&callback_struct, &callback, GPIO_BIT(TEST_PIN));
 	zassert_ok(gpio_add_callback(gpio_dev, &callback_struct));
 	zassert_ok(gpio_pin_interrupt_configure(gpio_dev, TEST_PIN, GPIO_INT_LEVEL_ACTIVE));
 	zexpect_equal(registers.gpotr, 0, "gpotr=%x", registers.gpotr);
@@ -274,7 +274,7 @@ ZTEST(gpio_ite_it8xxx2_v2, test_interrupt_level_inactive)
 	zassert_true(device_is_ready(gpio_dev));
 	zassert_ok(gpio_pin_configure(gpio_dev, TEST_PIN, GPIO_INPUT | GPIO_ACTIVE_HIGH));
 
-	gpio_init_callback(&callback_struct, &callback, BIT(TEST_PIN));
+	gpio_init_callback(&callback_struct, &callback, GPIO_BIT(TEST_PIN));
 	zassert_ok(gpio_add_callback(gpio_dev, &callback_struct));
 	zassert_ok(gpio_pin_interrupt_configure(gpio_dev, TEST_PIN, GPIO_INT_LEVEL_INACTIVE));
 	zexpect_equal(registers.gpotr, 0, "gpotr=%x", registers.gpotr);

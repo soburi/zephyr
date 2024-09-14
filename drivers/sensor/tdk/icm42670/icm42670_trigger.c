@@ -16,7 +16,7 @@
 LOG_MODULE_DECLARE(ICM42670, CONFIG_SENSOR_LOG_LEVEL);
 
 static void icm42670_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -120,7 +120,7 @@ int icm42670_trigger_init(const struct device *dev)
 
 	data->dev = dev;
 	gpio_pin_configure_dt(&cfg->gpio_int, GPIO_INPUT);
-	gpio_init_callback(&data->gpio_cb, icm42670_gpio_callback, BIT(cfg->gpio_int.pin));
+	gpio_init_callback(&data->gpio_cb, icm42670_gpio_callback, GPIO_BIT(cfg->gpio_int.pin));
 	res = gpio_add_callback(cfg->gpio_int.port, &data->gpio_cb);
 
 	if (res < 0) {

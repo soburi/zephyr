@@ -203,7 +203,7 @@ struct rm67162_data {
 };
 
 static void rm67162_te_isr_handler(const struct device *gpio_dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct rm67162_data *data = CONTAINER_OF(cb, struct rm67162_data, te_gpio_cb);
 
@@ -333,7 +333,7 @@ static int rm67162_init(const struct device *dev)
 
 		/* Init and install GPIO callback */
 		gpio_init_callback(&data->te_gpio_cb, rm67162_te_isr_handler,
-				BIT(config->te_gpio.pin));
+				GPIO_BIT(config->te_gpio.pin));
 		gpio_add_callback(config->te_gpio.port, &data->te_gpio_cb);
 
 		/* Setup te pin semaphore */

@@ -49,7 +49,7 @@ static K_SEM_DEFINE(toggle_transfer, 1, 1);
 
 #if DT_NODE_HAS_STATUS(SW0_NODE, okay)
 static void sw0_handler(const struct device *dev, struct gpio_callback *cb,
-			uint32_t pins)
+			gpio_port_pins_t pins)
 {
 	bool enable = !echo_enabled;
 
@@ -93,7 +93,7 @@ static bool init_buttons(void)
 		return false;
 	}
 
-	gpio_init_callback(&sw0_cb_data, sw0_handler, BIT(sw0_spec.pin));
+	gpio_init_callback(&sw0_cb_data, sw0_handler, GPIO_BIT(sw0_spec.pin));
 	gpio_add_callback(sw0_spec.port, &sw0_cb_data);
 	printk("Press \"%s\" to toggle the echo effect\n", sw0_spec.port->name);
 #endif
@@ -121,7 +121,7 @@ static bool init_buttons(void)
 		return false;
 	}
 
-	gpio_init_callback(&sw1_cb_data, sw1_handler, BIT(sw1_spec.pin));
+	gpio_init_callback(&sw1_cb_data, sw1_handler, GPIO_BIT(sw1_spec.pin));
 	gpio_add_callback(sw1_spec.port, &sw1_cb_data);
 	printk("Press \"%s\" to stop/restart I2S streams\n", sw1_spec.port->name);
 #endif

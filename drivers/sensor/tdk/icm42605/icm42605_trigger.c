@@ -58,7 +58,7 @@ int icm42605_trigger_set(const struct device *dev,
 }
 
 static void icm42605_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct icm42605_data *drv_data =
 		CONTAINER_OF(cb, struct icm42605_data, gpio_cb);
@@ -116,7 +116,7 @@ int icm42605_init_interrupt(const struct device *dev)
 	drv_data->dev = dev;
 
 	gpio_pin_configure_dt(&cfg->gpio_int, GPIO_INPUT);
-	gpio_init_callback(&drv_data->gpio_cb, icm42605_gpio_callback, BIT(cfg->gpio_int.pin));
+	gpio_init_callback(&drv_data->gpio_cb, icm42605_gpio_callback, GPIO_BIT(cfg->gpio_int.pin));
 	result = gpio_add_callback(cfg->gpio_int.port, &drv_data->gpio_cb);
 
 	if (result < 0) {

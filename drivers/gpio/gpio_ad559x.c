@@ -29,7 +29,7 @@ struct gpio_ad559x_data {
 	uint8_t gpio_pull_down;
 };
 
-static int gpio_ad559x_port_get_raw(const struct device *dev, uint32_t *value)
+static int gpio_ad559x_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	const struct gpio_ad559x_config *config = dev->config;
 	struct gpio_ad559x_data *drv_data = dev->data;
@@ -104,20 +104,18 @@ static inline int gpio_ad559x_configure(const struct device *dev,
 		return -EINVAL;
 	}
 
-	val = BIT(pin);
+	val = GPIO_BIT(pin);
 	if ((flags & GPIO_OUTPUT) != 0U) {
 		data->gpio_in &= ~val;
 		data->gpio_out |= val;
 
 		if ((flags & GPIO_OUTPUT_INIT_HIGH) != 0U) {
-			ret = gpio_ad559x_port_set_bits_raw(
-				dev, (gpio_port_pins_t)BIT(pin));
+			ret = gpio_ad559x_port_set_bits_raw(dev, GPIO_BIT(pin));
 			if (ret < 0) {
 				return ret;
 			}
 		} else if ((flags & GPIO_OUTPUT_INIT_LOW) != 0U) {
-			ret = gpio_ad559x_port_clear_bits_raw(
-				dev, (gpio_port_pins_t)BIT(pin));
+			ret = gpio_ad559x_port_clear_bits_raw(dev, GPIO_BIT(pin));
 			if (ret < 0) {
 				return ret;
 			}

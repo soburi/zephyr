@@ -78,7 +78,7 @@ static void lis2mdl_handle_interrupt(const struct device *dev)
 }
 
 static void lis2mdl_gpio_callback(const struct device *dev,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis2mdl_data *lis2mdl =
 		CONTAINER_OF(cb, struct lis2mdl_data, gpio_cb);
@@ -151,7 +151,7 @@ int lis2mdl_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&lis2mdl->gpio_cb,
 			   lis2mdl_gpio_callback,
-			   BIT(cfg->gpio_drdy.pin));
+			   GPIO_BIT(cfg->gpio_drdy.pin));
 
 	if (gpio_add_callback(cfg->gpio_drdy.port, &lis2mdl->gpio_cb) < 0) {
 		LOG_ERR("Could not set gpio callback");

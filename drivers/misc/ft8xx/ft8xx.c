@@ -179,7 +179,7 @@ int ft8xx_get_touch_tag(void)
 }
 
 void ft8xx_drv_irq_triggered(const struct device *dev, struct gpio_callback *cb,
-			      uint32_t pins)
+			      gpio_port_pins_t pins)
 {
 	if (ft8xx_data.irq_callback != NULL) {
 		ft8xx_data.irq_callback();

@@ -369,7 +369,7 @@ int lm75_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&data->int_gpio_cb, lm75_int_gpio_callback_handler,
-				   BIT(cfg->int_gpio.pin));
+				   GPIO_BIT(cfg->int_gpio.pin));
 
 		ret = gpio_add_callback(cfg->int_gpio.port, &data->int_gpio_cb);
 		if (ret < 0) {

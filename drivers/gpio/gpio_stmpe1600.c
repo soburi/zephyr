@@ -177,7 +177,7 @@ static int stmpe1600_configure(const struct device *dev,
 	return ret;
 }
 
-static int stmpe1600_port_get_raw(const struct device *dev, uint32_t *value)
+static int stmpe1600_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	struct stmpe1600_drvdata *const drvdata = (struct stmpe1600_drvdata *const) dev->data;
 	uint16_t reg_value;
@@ -199,7 +199,7 @@ static int stmpe1600_port_get_raw(const struct device *dev, uint32_t *value)
 }
 
 static int stmpe1600_port_set_masked_raw(const struct device *dev,
-					 uint32_t mask, uint32_t value)
+					 gpio_port_pins_t mask, gpio_port_value_t value)
 {
 	struct stmpe1600_drvdata *const drvdata = dev->data;
 	uint16_t GPSR;
@@ -220,17 +220,17 @@ static int stmpe1600_port_set_masked_raw(const struct device *dev,
 	return ret;
 }
 
-static int stmpe1600_port_set_bits_raw(const struct device *dev, uint32_t mask)
+static int stmpe1600_port_set_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return stmpe1600_port_set_masked_raw(dev, mask, mask);
 }
 
-static int stmpe1600_port_clear_bits_raw(const struct device *dev, uint32_t mask)
+static int stmpe1600_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return stmpe1600_port_set_masked_raw(dev, mask, 0);
 }
 
-static int stmpe1600_port_toggle_bits(const struct device *dev, uint32_t mask)
+static int stmpe1600_port_toggle_bits(const struct device *dev, gpio_port_pins_t mask)
 {
 	struct stmpe1600_drvdata *const drvdata = dev->data;
 	uint16_t GPSR;

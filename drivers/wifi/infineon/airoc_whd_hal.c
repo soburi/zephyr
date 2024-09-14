@@ -320,7 +320,7 @@ void whd_bus_sdio_oob_irq_handler(const struct device *port, struct gpio_callbac
 	/* Check OOB state is correct */
 	int expected_event = (oob_config->is_falling_edge == WHD_TRUE) ? 0 : 1;
 
-	if (!(pins & BIT(host_oob_pin->pin)) || (gpio_pin_get_dt(host_oob_pin) != expected_event)) {
+	if (!(pins & GPIO_BIT(host_oob_pin->pin)) || (gpio_pin_get_dt(host_oob_pin) != expected_event)) {
 		WPRINT_WHD_ERROR(("Unexpected interrupt event %d\n", expected_event));
 		WHD_BUS_STATS_INCREMENT_VARIABLE(data->whd_drv->bus_priv, error_intrs);
 		return;
@@ -362,7 +362,7 @@ whd_result_t whd_bus_sdio_register_oob_intr(whd_driver_t whd_driver)
 
 	/* Initialize/add OOB pin callback */
 	gpio_init_callback(&data->host_oob_pin_cb, whd_bus_sdio_oob_irq_handler,
-			   BIT(host_oob_pin->pin));
+			   GPIO_BIT(host_oob_pin->pin));
 
 	ret = gpio_add_callback_dt(host_oob_pin, &data->host_oob_pin_cb);
 	if (ret != 0) {

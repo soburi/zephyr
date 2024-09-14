@@ -62,7 +62,7 @@ static int gpio_sn74hc595_config(const struct device *dev, gpio_pin_t pin, gpio_
 	return 0;
 }
 
-static int gpio_sn74hc595_port_get_raw(const struct device *dev, uint32_t *value)
+static int gpio_sn74hc595_port_get_raw(const struct device *dev, gpio_port_pins_t *value)
 {
 	struct gpio_sn74hc595_drv_data *drv_data = dev->data;
 
@@ -75,8 +75,8 @@ static int gpio_sn74hc595_port_get_raw(const struct device *dev, uint32_t *value
 	return 0;
 }
 
-static int gpio_sn74hc595_port_set_masked_raw(const struct device *dev, uint32_t mask,
-					      uint32_t value)
+static int gpio_sn74hc595_port_set_masked_raw(const struct device *dev, gpio_port_pins_t mask,
+					      gpio_port_value_t value)
 {
 	struct gpio_sn74hc595_drv_data *drv_data = dev->data;
 	int ret = 0;
@@ -102,17 +102,17 @@ unlock:
 	return ret;
 }
 
-static int gpio_sn74hc595_port_set_bits_raw(const struct device *dev, uint32_t mask)
+static int gpio_sn74hc595_port_set_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return gpio_sn74hc595_port_set_masked_raw(dev, mask, mask);
 }
 
-static int gpio_sn74hc595_port_clear_bits_raw(const struct device *dev, uint32_t mask)
+static int gpio_sn74hc595_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	return gpio_sn74hc595_port_set_masked_raw(dev, mask, 0U);
 }
 
-static int gpio_sn74hc595_port_toggle_bits(const struct device *dev, uint32_t mask)
+static int gpio_sn74hc595_port_toggle_bits(const struct device *dev, gpio_port_pins_t mask)
 {
 	struct gpio_sn74hc595_drv_data *drv_data = dev->data;
 	int ret;

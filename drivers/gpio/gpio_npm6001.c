@@ -42,7 +42,7 @@ struct gpio_npm6001_data {
 	struct gpio_driver_data common;
 };
 
-static int gpio_npm6001_port_get_raw(const struct device *dev, uint32_t *value)
+static int gpio_npm6001_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	const struct gpio_npm6001_config *config = dev->config;
 	uint8_t reg = NPM6001_GPIOIN;
@@ -127,7 +127,7 @@ static inline int gpio_npm6001_configure(const struct device *dev,
 			int ret;
 
 			ret = gpio_npm6001_port_set_bits_raw(
-				dev, (gpio_port_pins_t)BIT(pin));
+				dev, GPIO_BIT(pin));
 			if (ret < 0) {
 				return ret;
 			}
@@ -135,7 +135,7 @@ static inline int gpio_npm6001_configure(const struct device *dev,
 			int ret;
 
 			ret = gpio_npm6001_port_clear_bits_raw(
-				dev, (gpio_port_pins_t)BIT(pin));
+				dev, GPIO_BIT(pin));
 			if (ret < 0) {
 				return ret;
 			}
@@ -180,7 +180,7 @@ static int gpio_npm6001_port_set_masked_raw(const struct device *dev,
 static int gpio_npm6001_port_toggle_bits(const struct device *dev,
 					 gpio_port_pins_t pins)
 {
-	uint32_t val;
+	gpio_port_value_t val;
 	int ret;
 
 	ret = gpio_npm6001_port_get_raw(dev, &val);

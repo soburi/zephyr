@@ -769,7 +769,7 @@ continue_unlock:
 
 static void adin2111_int_callback(const struct device *dev,
 				  struct gpio_callback *cb,
-				  uint32_t pins)
+				  gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -1404,7 +1404,7 @@ static int adin2111_init(const struct device *dev)
 
 	gpio_init_callback(&(ctx->gpio_int_callback),
 			   adin2111_int_callback,
-			   BIT(cfg->interrupt.pin));
+			   GPIO_BIT(cfg->interrupt.pin));
 
 	ret = gpio_add_callback(cfg->interrupt.port, &ctx->gpio_int_callback);
 	if (ret < 0) {
