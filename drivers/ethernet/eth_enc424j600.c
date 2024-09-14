@@ -218,7 +218,7 @@ static void enc424j600_read_mem(const struct device *dev, uint8_t opcode,
 
 static void enc424j600_gpio_callback(const struct device *dev,
 				       struct gpio_callback *cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	struct enc424j600_runtime *context =
 		CONTAINER_OF(cb, struct enc424j600_runtime, gpio_cb);
@@ -678,7 +678,7 @@ static int enc424j600_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&(context->gpio_cb), enc424j600_gpio_callback,
-			   BIT(config->interrupt.pin));
+			   GPIO_BIT(config->interrupt.pin));
 
 	if (gpio_add_callback(config->interrupt.port, &(context->gpio_cb))) {
 		return -EINVAL;

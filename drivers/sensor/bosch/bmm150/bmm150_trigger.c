@@ -58,7 +58,7 @@ static void bmm150_work_handler(struct k_work *work)
 
 static void bmm150_gpio_callback(const struct device *port,
 				 struct gpio_callback *cb,
-				 uint32_t pin)
+				 gpio_port_pins_t pin)
 {
 	struct bmm150_data *data = CONTAINER_OF(cb,
 						struct bmm150_data,
@@ -158,7 +158,7 @@ int bmm150_trigger_mode_init(const struct device *dev)
 
 	gpio_init_callback(&data->gpio_cb,
 			   bmm150_gpio_callback,
-			   BIT(cfg->drdy_int.pin));
+			   GPIO_BIT(cfg->drdy_int.pin));
 
 	ret = gpio_add_callback(cfg->drdy_int.port, &data->gpio_cb);
 	if (ret < 0) {

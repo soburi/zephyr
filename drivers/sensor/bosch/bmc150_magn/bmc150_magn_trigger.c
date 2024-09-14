@@ -69,7 +69,7 @@ int bmc150_magn_trigger_set(const struct device *dev,
 
 static void bmc150_magn_gpio_drdy_callback(const struct device *dev,
 					   struct gpio_callback *cb,
-					   uint32_t pins)
+					   gpio_port_pins_t pins)
 {
 	struct bmc150_magn_data *data =
 		CONTAINER_OF(cb, struct bmc150_magn_data, gpio_cb);
@@ -162,7 +162,7 @@ int bmc150_magn_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&data->gpio_cb,
 			   bmc150_magn_gpio_drdy_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	if (gpio_add_callback(config->int_gpio.port, &data->gpio_cb) < 0) {
 		LOG_DBG("failed to set gpio callback");

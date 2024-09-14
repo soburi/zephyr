@@ -1159,7 +1159,7 @@ static void mcp251xfd_int_thread(const struct device *dev)
 }
 
 static void mcp251xfd_int_gpio_callback(const struct device *dev_gpio, struct gpio_callback *cb,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev_gpio);
 	struct mcp251xfd_data *dev_data = CONTAINER_OF(cb, struct mcp251xfd_data, int_gpio_cb);
@@ -1553,7 +1553,7 @@ static int mcp251xfd_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&dev_data->int_gpio_cb, mcp251xfd_int_gpio_callback,
-			   BIT(dev_cfg->int_gpio_dt.pin));
+			   GPIO_BIT(dev_cfg->int_gpio_dt.pin));
 
 	if (gpio_add_callback_dt(&dev_cfg->int_gpio_dt, &dev_data->int_gpio_cb) < 0) {
 		return -EINVAL;

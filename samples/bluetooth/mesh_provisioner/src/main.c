@@ -319,7 +319,8 @@ static uint8_t check_unconfigured(struct bt_mesh_cdb_node *node, void *data)
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(SW0_NODE, gpios, {0});
 static struct gpio_callback button_cb_data;
 
-static void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void button_pressed(const struct device *dev, struct gpio_callback *cb,
+			   gpio_port_pins_t pins)
 {
 	k_sem_give(&sem_button_pressed);
 }
@@ -344,7 +345,7 @@ static void button_init(void)
 		       button.port->name, button.pin);
 		return;
 	}
-	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
+	gpio_init_callback(&button_cb_data, button_pressed, GPIO_BIT(button.pin));
 	gpio_add_callback(button.port, &button_cb_data);
 }
 #endif

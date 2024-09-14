@@ -599,7 +599,7 @@ static int phy_rt_rtl8211f_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->gpio_callback, phy_rt_rtl8211f_interrupt_handler,
-				BIT(config->interrupt_gpio.pin));
+				GPIO_BIT(config->interrupt_gpio.pin));
 	ret = gpio_add_callback_dt(&config->interrupt_gpio, &data->gpio_callback);
 	if (ret) {
 		return ret;

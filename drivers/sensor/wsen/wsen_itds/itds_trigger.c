@@ -84,7 +84,7 @@ static void itds_work_handler(struct k_work *work)
 }
 
 static void itds_gpio_callback(const struct device *port,
-			       struct gpio_callback *cb, uint32_t pin)
+			       struct gpio_callback *cb, gpio_port_pins_t pin)
 {
 	struct itds_device_data *ddata =
 			CONTAINER_OF(cb, struct itds_device_data, gpio_cb);
@@ -119,7 +119,7 @@ int itds_trigger_mode_init(const struct device *dev)
 	gpio_pin_configure_dt(&cfg->int_gpio, GPIO_INPUT);
 
 	gpio_init_callback(&ddata->gpio_cb, itds_gpio_callback,
-			   BIT(cfg->int_gpio.pin));
+			   GPIO_BIT(cfg->int_gpio.pin));
 
 	gpio_add_callback(cfg->int_gpio.port, &ddata->gpio_cb);
 	gpio_pin_interrupt_configure_dt(&cfg->int_gpio, GPIO_INT_EDGE_TO_ACTIVE);

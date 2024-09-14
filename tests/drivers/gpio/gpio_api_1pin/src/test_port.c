@@ -9,7 +9,11 @@
 #include <zephyr/sys/util.h>
 #include "test_gpio_api.h"
 
+#ifdef CONFIG_GPIO_64BIT_PORT
+#define TEST_GPIO_PORT_VALUE_MAX         (0xFFFFFFFFFFFFFFFF)
+#else
 #define TEST_GPIO_PORT_VALUE_MAX         ((1LLU << GPIO_MAX_PINS_PER_PORT) - 1)
+#endif
 
 static void port_get_raw_and_verify(const struct device *port,
 				    gpio_port_pins_t mask,

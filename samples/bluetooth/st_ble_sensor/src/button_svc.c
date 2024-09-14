@@ -42,7 +42,7 @@ int button_init(gpio_callback_handler_t handler)
 
 	}
 
-	gpio_init_callback(&gpio_cb, handler, BIT(button.pin));
+	gpio_init_callback(&gpio_cb, handler, GPIO_BIT(button.pin));
 	gpio_add_callback(button.port, &gpio_cb);
 	ret = gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_TO_ACTIVE);
 	if (ret != 0) {

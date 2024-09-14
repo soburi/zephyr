@@ -1807,7 +1807,7 @@ static void espi_it8xxx2_trans_isr(const struct device *dev)
 }
 
 void espi_it8xxx2_espi_reset_isr(const struct device *port,
-				struct gpio_callback *cb, uint32_t pins)
+				struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct espi_it8xxx2_data *const data = ESPI_IT8XXX2_SOC_DEV->data;
 	struct espi_event evt = {ESPI_BUS_RESET, 0, 0};
@@ -1838,7 +1838,7 @@ static void espi_it8xxx2_enable_reset(void)
 		(IT8XXX2_GPIO_GCR_ESPI_RST_D2 << IT8XXX2_GPIO_GCR_ESPI_RST_POS);
 	/* enable eSPI reset isr */
 	gpio_init_callback(&espi_reset_cb, espi_it8xxx2_espi_reset_isr,
-				BIT(ESPI_IT8XXX2_ESPI_RESET_PIN));
+				GPIO_BIT(ESPI_IT8XXX2_ESPI_RESET_PIN));
 	gpio_add_callback(ESPI_IT8XXX2_ESPI_RESET_PORT, &espi_reset_cb);
 	gpio_pin_interrupt_configure(ESPI_IT8XXX2_ESPI_RESET_PORT,
 					ESPI_IT8XXX2_ESPI_RESET_PIN,

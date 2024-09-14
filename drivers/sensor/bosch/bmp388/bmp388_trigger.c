@@ -58,7 +58,7 @@ static void bmp388_work_handler(struct k_work *work)
 
 static void bmp388_gpio_callback(const struct device *port,
 				 struct gpio_callback *cb,
-				 uint32_t pin)
+				 gpio_port_pins_t pin)
 {
 	struct bmp388_data *data = CONTAINER_OF(cb,
 						struct bmp388_data,
@@ -153,7 +153,7 @@ int bmp388_trigger_mode_init(const struct device *dev)
 
 	gpio_init_callback(&data->gpio_cb,
 			   bmp388_gpio_callback,
-			   BIT(cfg->gpio_int.pin));
+			   GPIO_BIT(cfg->gpio_int.pin));
 
 	ret = gpio_add_callback(cfg->gpio_int.port, &data->gpio_cb);
 	if (ret < 0) {
