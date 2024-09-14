@@ -54,7 +54,7 @@ static void tmag5170_work_handler(struct k_work *work)
 
 static void tmag5170_gpio_callback(const struct device *port,
 				   struct gpio_callback *cb,
-				   uint32_t pin)
+				   gpio_port_pins_t pin)
 {
 	struct tmag5170_data *data = CONTAINER_OF(cb,
 						  struct tmag5170_data,
@@ -133,7 +133,7 @@ int tmag5170_trigger_init(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&data->gpio_cb, tmag5170_gpio_callback, BIT(cfg->int_gpio.pin));
+	gpio_init_callback(&data->gpio_cb, tmag5170_gpio_callback, GPIO_BIT(cfg->int_gpio.pin));
 
 	ret = gpio_add_callback(cfg->int_gpio.port, &data->gpio_cb);
 	if (ret < 0) {

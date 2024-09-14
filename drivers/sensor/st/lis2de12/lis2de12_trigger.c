@@ -111,7 +111,7 @@ static void lis2de12_handle_interrupt(const struct device *dev)
 }
 
 static void lis2de12_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis2de12_data *lis2de12 =
 		CONTAINER_OF(cb, struct lis2de12_data, gpio_cb);
@@ -183,7 +183,7 @@ int lis2de12_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&lis2de12->gpio_cb,
 			   lis2de12_gpio_callback,
-			   BIT(lis2de12->drdy_gpio->pin));
+			   GPIO_BIT(lis2de12->drdy_gpio->pin));
 
 	if (gpio_add_callback(lis2de12->drdy_gpio->port, &lis2de12->gpio_cb) < 0) {
 		LOG_ERR("Could not set gpio callback");

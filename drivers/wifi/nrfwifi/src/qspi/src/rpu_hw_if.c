@@ -133,7 +133,7 @@ int rpu_irq_config(struct gpio_callback *irq_callback_data, void (*irq_handler)(
 
 	gpio_init_callback(irq_callback_data,
 			irq_handler,
-			BIT(host_irq_spec.pin));
+			GPIO_BIT(host_irq_spec.pin));
 
 	ret = gpio_add_callback(host_irq_spec.port, irq_callback_data);
 	if (ret) {

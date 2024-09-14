@@ -20,7 +20,8 @@ static inline void ens160_setup_int(const struct device *dev, bool enable)
 	(void)gpio_pin_interrupt_configure_dt(&config->int_gpio, flags);
 }
 
-static void ens160_gpio_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void ens160_gpio_callback(const struct device *dev, struct gpio_callback *cb,
+				 gpio_port_pins_t pins)
 {
 	struct ens160_data *data = CONTAINER_OF(cb, struct ens160_data, gpio_cb);
 
@@ -123,7 +124,7 @@ int ens160_init_interrupt(const struct device *dev)
 
 	gpio_pin_configure_dt(&config->int_gpio, GPIO_INPUT);
 
-	gpio_init_callback(&data->gpio_cb, ens160_gpio_callback, BIT(config->int_gpio.pin));
+	gpio_init_callback(&data->gpio_cb, ens160_gpio_callback, GPIO_BIT(config->int_gpio.pin));
 
 	ret = gpio_add_callback(config->int_gpio.port, &data->gpio_cb);
 	if (ret < 0) {

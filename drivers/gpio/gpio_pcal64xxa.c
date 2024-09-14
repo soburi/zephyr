@@ -263,7 +263,7 @@ static void pcal64xxa_work_handler(struct k_work *work)
 }
 
 static void pcal64xxa_int_gpio_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -1052,7 +1052,7 @@ int pcal64xxa_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&drv_data->int_gpio_cb, pcal64xxa_int_gpio_handler,
-				   BIT(drv_cfg->gpio_interrupt.pin));
+				   GPIO_BIT(drv_cfg->gpio_interrupt.pin));
 		rc = gpio_add_callback(drv_cfg->gpio_interrupt.port, &drv_data->int_gpio_cb);
 		if (rc != 0) {
 			LOG_ERR("%s: failed to add INT callback: %d", dev->name, rc);

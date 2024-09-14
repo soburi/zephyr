@@ -19,7 +19,7 @@
 LOG_MODULE_DECLARE(ICM42688, CONFIG_SENSOR_LOG_LEVEL);
 
 static void icm42688_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct icm42688_dev_data *data = CONTAINER_OF(cb, struct icm42688_dev_data, gpio_cb);
 
@@ -130,7 +130,7 @@ int icm42688_trigger_init(const struct device *dev)
 
 	data->dev = dev;
 	gpio_pin_configure_dt(&cfg->gpio_int1, GPIO_INPUT);
-	gpio_init_callback(&data->gpio_cb, icm42688_gpio_callback, BIT(cfg->gpio_int1.pin));
+	gpio_init_callback(&data->gpio_cb, icm42688_gpio_callback, GPIO_BIT(cfg->gpio_int1.pin));
 	res = gpio_add_callback(cfg->gpio_int1.port, &data->gpio_cb);
 
 	if (res < 0) {

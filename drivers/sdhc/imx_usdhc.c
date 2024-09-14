@@ -1026,7 +1026,7 @@ static int imx_usdhc_init(const struct device *dev)
 			return ret;
 		}
 		gpio_init_callback(&data->cd_callback, card_detect_gpio_cb,
-				   BIT(cfg->detect_gpio.pin));
+				   GPIO_BIT(cfg->detect_gpio.pin));
 		ret = gpio_add_callback_dt(&cfg->detect_gpio, &data->cd_callback);
 		if (ret) {
 			return ret;

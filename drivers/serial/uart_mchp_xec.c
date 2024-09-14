@@ -441,7 +441,7 @@ static int uart_xec_config_get(const struct device *dev,
 #ifdef CONFIG_PM_DEVICE
 
 static void uart_xec_wake_handler(const struct device *gpio, struct gpio_callback *cb,
-		   uint32_t pins)
+		   gpio_port_pins_t pins)
 {
 	/* Disable interrupts on UART RX pin to avoid repeated interrupts. */
 	(void)gpio_pin_interrupt_configure(gpio, (find_msb_set(pins) - 1),
@@ -534,7 +534,7 @@ static int uart_xec_init(const struct device *dev)
 		static struct gpio_callback uart_xec_wake_cb;
 
 		gpio_init_callback(&uart_xec_wake_cb, uart_xec_wake_handler,
-				   BIT(dev_cfg->wakerx_gpio.pin));
+				   GPIO_BIT(dev_cfg->wakerx_gpio.pin));
 
 		ret = gpio_add_callback(dev_cfg->wakerx_gpio.port, &uart_xec_wake_cb);
 		if (ret < 0) {

@@ -47,7 +47,7 @@ static void adxl367_thread_cb(const struct device *dev)
 }
 
 static void adxl367_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct adxl367_data *drv_data =
 		CONTAINER_OF(cb, struct adxl367_data, gpio_cb);
@@ -156,7 +156,7 @@ int adxl367_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&drv_data->gpio_cb,
 			   adxl367_gpio_callback,
-			   BIT(cfg->interrupt.pin));
+			   GPIO_BIT(cfg->interrupt.pin));
 
 	ret = gpio_add_callback(cfg->interrupt.port, &drv_data->gpio_cb);
 	if (ret != 0) {

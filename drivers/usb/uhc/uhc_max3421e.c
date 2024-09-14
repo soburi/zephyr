@@ -717,7 +717,7 @@ static void uhc_max3421e_thread(void *p1, void *p2, void *p3)
 
 static void max3421e_gpio_cb(const struct device *dev,
 			     struct gpio_callback *cb,
-			     uint32_t pins)
+			     gpio_port_pins_t pins)
 {
 	struct max3421e_data *priv =
 		CONTAINER_OF(cb, struct max3421e_data, gpio_cb);
@@ -1065,7 +1065,7 @@ static int max3421e_driver_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&priv->gpio_cb, max3421e_gpio_cb,
-			   BIT(config->dt_int.pin));
+			   GPIO_BIT(config->dt_int.pin));
 	ret = gpio_add_callback(config->dt_int.port, &priv->gpio_cb);
 	if (ret) {
 		return ret;

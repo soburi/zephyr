@@ -14,7 +14,7 @@ static struct gpio_dt_spec irq_pin =
 static struct gpio_callback cb_data;
 static bool cb_called;
 
-static void callback(const struct device *dev, struct gpio_callback *gpio_cb, uint32_t pins)
+static void callback(const struct device *dev, struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	cb_called = true;
 }
@@ -45,7 +45,7 @@ static void gpio_enable_disable_interrupt_before(void *arg)
 	cb_called = false;
 
 	zassert_ok(gpio_pin_interrupt_configure_dt(fixture->irq_spec, GPIO_INT_DISABLE));
-	gpio_init_callback(&cb_data, callback, BIT(fixture->irq_spec->pin));
+	gpio_init_callback(&cb_data, callback, GPIO_BIT(fixture->irq_spec->pin));
 	zassert_ok(gpio_add_callback(fixture->irq_spec->port, &cb_data), "failed to add callback");
 }
 

@@ -14,7 +14,7 @@
 K_WORK_DEFINE(button_work, publish);
 
 static void button_pressed(const struct device *dev,
-			   struct gpio_callback *cb, uint32_t pins)
+			   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	k_work_submit(&button_work);
 }
@@ -79,7 +79,7 @@ void app_gpio_init(void)
 		gpio_pin_interrupt_configure_dt(&button_device[i],
 						GPIO_INT_EDGE_TO_ACTIVE);
 		gpio_init_callback(&button_cb[i], button_pressed,
-				   BIT(button_device[i].pin));
+				   GPIO_BIT(button_device[i].pin));
 		gpio_add_callback(button_device[i].port, &button_cb[i]);
 	}
 }

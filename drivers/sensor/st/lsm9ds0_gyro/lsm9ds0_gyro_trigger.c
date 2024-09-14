@@ -70,7 +70,7 @@ int lsm9ds0_gyro_trigger_set(const struct device *dev,
 }
 
 static void lsm9ds0_gyro_gpio_drdy_callback(const struct device *dev,
-					    struct gpio_callback *cb, uint32_t pins)
+					    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lsm9ds0_gyro_data *data =
 		CONTAINER_OF(cb, struct lsm9ds0_gyro_data, gpio_cb);
@@ -122,7 +122,7 @@ int lsm9ds0_gyro_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&data->gpio_cb,
 			   lsm9ds0_gyro_gpio_drdy_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	if (gpio_add_callback(config->int_gpio.port, &data->gpio_cb) < 0) {
 		LOG_DBG("failed to set gpio callback");

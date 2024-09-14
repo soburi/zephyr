@@ -26,9 +26,9 @@
 #include <zephyr/drivers/interrupt_controller/ioapic.h>
 #endif
 
-static int gpio_dw_port_set_bits_raw(const struct device *port, uint32_t mask);
+static int gpio_dw_port_set_bits_raw(const struct device *port, gpio_port_pins_t mask);
 static int gpio_dw_port_clear_bits_raw(const struct device *port,
-				       uint32_t mask);
+				       gpio_port_pins_t mask);
 
 /*
  * ARC architecture configure IP through IO auxiliary registers.
@@ -301,7 +301,7 @@ static inline int gpio_dw_config(const struct device *port,
 	return 0;
 }
 
-static int gpio_dw_port_get_raw(const struct device *port, uint32_t *value)
+static int gpio_dw_port_get_raw(const struct device *port, gpio_port_value_t *value)
 {
 	struct gpio_dw_runtime *context = port->data;
 	uint32_t base_addr = dw_base_to_block_base(context->base_addr);
@@ -314,7 +314,7 @@ static int gpio_dw_port_get_raw(const struct device *port, uint32_t *value)
 }
 
 static int gpio_dw_port_set_masked_raw(const struct device *port,
-				       uint32_t mask, uint32_t value)
+				       gpio_port_pins_t mask, gpio_port_value_t value)
 {
 	struct gpio_dw_runtime *context = port->data;
 	uint32_t base_addr = dw_base_to_block_base(context->base_addr);
@@ -329,7 +329,7 @@ static int gpio_dw_port_set_masked_raw(const struct device *port,
 	return 0;
 }
 
-static int gpio_dw_port_set_bits_raw(const struct device *port, uint32_t mask)
+static int gpio_dw_port_set_bits_raw(const struct device *port, gpio_port_pins_t mask)
 {
 	struct gpio_dw_runtime *context = port->data;
 	uint32_t base_addr = dw_base_to_block_base(context->base_addr);
@@ -345,7 +345,7 @@ static int gpio_dw_port_set_bits_raw(const struct device *port, uint32_t mask)
 }
 
 static int gpio_dw_port_clear_bits_raw(const struct device *port,
-				       uint32_t mask)
+				       gpio_port_pins_t mask)
 {
 	struct gpio_dw_runtime *context = port->data;
 	uint32_t base_addr = dw_base_to_block_base(context->base_addr);
@@ -360,7 +360,7 @@ static int gpio_dw_port_clear_bits_raw(const struct device *port,
 	return 0;
 }
 
-static int gpio_dw_port_toggle_bits(const struct device *port, uint32_t mask)
+static int gpio_dw_port_toggle_bits(const struct device *port, gpio_port_pins_t mask)
 {
 	struct gpio_dw_runtime *context = port->data;
 	uint32_t base_addr = dw_base_to_block_base(context->base_addr);

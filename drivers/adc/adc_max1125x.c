@@ -230,7 +230,7 @@ struct max1125x_data {
 };
 
 static void max1125x_data_ready_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -747,7 +747,7 @@ static int max1125x_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->callback_data_ready, max1125x_data_ready_handler,
-			   BIT(config->drdy_gpio.pin));
+			   GPIO_BIT(config->drdy_gpio.pin));
 	err = gpio_add_callback(config->drdy_gpio.port, &data->callback_data_ready);
 	if (err != 0) {
 		LOG_ERR("failed to add data ready callback (err %d)", err);

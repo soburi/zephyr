@@ -48,7 +48,7 @@ static void beep(struct k_work *work)
 }
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb,
-			   uint32_t pins)
+			   gpio_port_pins_t pins)
 {
 	struct mb_display *disp;
 
@@ -105,7 +105,7 @@ int main(void)
 	gpio_pin_interrupt_configure_dt(&sw1_gpio, GPIO_INT_EDGE_TO_ACTIVE);
 
 	gpio_init_callback(&button_cb_data, button_pressed,
-			   BIT(sw0_gpio.pin) | BIT(sw1_gpio.pin));
+			   GPIO_BIT(sw0_gpio.pin) | BIT(sw1_gpio.pin));
 
 	k_work_init(&beep_work, beep);
 	/* Notify with a beep that we've started */

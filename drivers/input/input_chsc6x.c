@@ -68,7 +68,8 @@ static void chsc6x_work_handler(struct k_work *work)
 	chsc6x_process(data->dev);
 }
 
-static void chsc6x_isr_handler(const struct device *dev, struct gpio_callback *cb, uint32_t mask)
+static void chsc6x_isr_handler(const struct device *dev, struct gpio_callback *cb,
+			       gpio_port_pins_t mask)
 {
 	struct chsc6x_data *data = CONTAINER_OF(cb, struct chsc6x_data, int_gpio_cb);
 
@@ -115,7 +116,7 @@ static int chsc6x_init(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&data->int_gpio_cb, chsc6x_isr_handler, BIT(config->int_gpio.pin));
+	gpio_init_callback(&data->int_gpio_cb, chsc6x_isr_handler, GPIO_BIT(config->int_gpio.pin));
 
 	ret = gpio_add_callback(config->int_gpio.port, &data->int_gpio_cb);
 	if (ret < 0) {

@@ -170,7 +170,7 @@ static void gpio_pca953x_work_handler(struct k_work *work)
  * @param pins Bitmask of pins that triggered interrupt
  */
 static void gpio_pca953x_init_cb(const struct device *dev,
-				 struct gpio_callback *gpio_cb, uint32_t pins)
+				 struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	struct pca953x_drv_data *drv_data =
 		CONTAINER_OF(gpio_cb, struct pca953x_drv_data, gpio_cb);
@@ -307,8 +307,8 @@ static int gpio_pca953x_port_write(const struct device *dev,
 
 	k_sem_give(&drv_data->lock);
 
-	LOG_DBG("write %x msk %08x val %08x => %x: %d", orig_out, mask,
-		value, out, rc);
+	//LOG_DBG("write %x msk %08x val %08x => %x: %d", orig_out, mask,
+	//	value, out, rc);
 
 	return rc;
 }
@@ -439,7 +439,7 @@ static int gpio_pca953x_init(const struct device *dev)
 
 		gpio_init_callback(&drv_data->gpio_cb,
 					gpio_pca953x_init_cb,
-					BIT(cfg->gpio_int.pin));
+					GPIO_BIT(cfg->gpio_int.pin));
 
 		rc = gpio_add_callback(cfg->gpio_int.port,
 					&drv_data->gpio_cb);

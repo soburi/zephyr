@@ -445,7 +445,7 @@ static bool button_is_pressed(void)
 
 static void button_interrupt(const struct device *dev,
 			     struct gpio_callback *cb,
-			     uint32_t pins)
+			     gpio_port_pins_t pins)
 {
 	if (button_is_pressed() == pressed) {
 		return;
@@ -513,7 +513,7 @@ static int configure_button(void)
 
 	gpio_pin_interrupt_configure_dt(&sw0_gpio, GPIO_INT_EDGE_BOTH);
 
-	gpio_init_callback(&button_cb, button_interrupt, BIT(sw0_gpio.pin));
+	gpio_init_callback(&button_cb, button_interrupt, GPIO_BIT(sw0_gpio.pin));
 
 	gpio_add_callback(sw0_gpio.port, &button_cb);
 

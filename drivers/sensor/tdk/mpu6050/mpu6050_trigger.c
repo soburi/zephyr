@@ -45,7 +45,7 @@ int mpu6050_trigger_set(const struct device *dev,
 }
 
 static void mpu6050_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct mpu6050_data *drv_data =
 		CONTAINER_OF(cb, struct mpu6050_data, gpio_cb);
@@ -117,7 +117,7 @@ int mpu6050_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&drv_data->gpio_cb,
 			   mpu6050_gpio_callback,
-			   BIT(cfg->int_gpio.pin));
+			   GPIO_BIT(cfg->int_gpio.pin));
 
 	if (gpio_add_callback(cfg->int_gpio.port, &drv_data->gpio_cb) < 0) {
 		LOG_ERR("Failed to set gpio callback");

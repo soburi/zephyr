@@ -97,7 +97,7 @@ static int button_init(struct k_work *button_pressed)
 
 	button_work = button_pressed;
 
-	gpio_init_callback(&gpio_cb, button_cb, BIT(BUTTON0_PIN));
+	gpio_init_callback(&gpio_cb, button_cb, GPIO_BIT(BUTTON0_PIN));
 	gpio_add_callback(button_dev, &gpio_cb);
 #else
 	printk("WARNING: Buttons not supported on this board.\n");

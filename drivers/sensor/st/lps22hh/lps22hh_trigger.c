@@ -105,7 +105,7 @@ static void lps22hh_intr_callback(struct lps22hh_data *lps22hh)
 }
 
 static void lps22hh_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lps22hh_data *lps22hh =
 		CONTAINER_OF(cb, struct lps22hh_data, gpio_cb);
@@ -214,7 +214,7 @@ int lps22hh_init_interrupt(const struct device *dev)
 
 		gpio_init_callback(&lps22hh->gpio_cb,
 				   lps22hh_gpio_callback,
-				   BIT(cfg->gpio_int.pin));
+				   GPIO_BIT(cfg->gpio_int.pin));
 
 		ret = gpio_add_callback(cfg->gpio_int.port, &lps22hh->gpio_cb);
 		if (ret < 0) {

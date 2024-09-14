@@ -48,7 +48,7 @@ struct nct38xx_alert_data {
 };
 
 static void nct38xx_alert_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	ARG_UNUSED(pins);
 	struct nct38xx_alert_data *data = CONTAINER_OF(cb, struct nct38xx_alert_data, gpio_cb);
@@ -142,7 +142,7 @@ static int nct38xx_alert_init(const struct device *dev)
 
 	gpio_pin_configure_dt(&config->irq_gpio, GPIO_INPUT);
 
-	gpio_init_callback(&data->gpio_cb, nct38xx_alert_callback, BIT(config->irq_gpio.pin));
+	gpio_init_callback(&data->gpio_cb, nct38xx_alert_callback, GPIO_BIT(config->irq_gpio.pin));
 
 	ret = gpio_add_callback(config->irq_gpio.port, &data->gpio_cb);
 	if (ret < 0) {

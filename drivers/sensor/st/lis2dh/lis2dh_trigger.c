@@ -378,7 +378,7 @@ int lis2dh_acc_hp_filter_set(const struct device *dev, int32_t val)
 #endif
 
 static void lis2dh_gpio_int1_callback(const struct device *dev,
-				      struct gpio_callback *cb, uint32_t pins)
+				      struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis2dh_data *lis2dh =
 		CONTAINER_OF(cb, struct lis2dh_data, gpio_int1_cb);
@@ -398,7 +398,7 @@ static void lis2dh_gpio_int1_callback(const struct device *dev,
 }
 
 static void lis2dh_gpio_int2_callback(const struct device *dev,
-				      struct gpio_callback *cb, uint32_t pins)
+				      struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis2dh_data *lis2dh =
 		CONTAINER_OF(cb, struct lis2dh_data, gpio_int2_cb);
@@ -582,7 +582,7 @@ int lis2dh_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&lis2dh->gpio_int1_cb,
 			   lis2dh_gpio_int1_callback,
-			   BIT(cfg->gpio_drdy.pin));
+			   GPIO_BIT(cfg->gpio_drdy.pin));
 
 	status = gpio_add_callback(cfg->gpio_drdy.port, &lis2dh->gpio_int1_cb);
 	if (status < 0) {
@@ -622,7 +622,7 @@ check_gpio_int:
 
 	gpio_init_callback(&lis2dh->gpio_int2_cb,
 			   lis2dh_gpio_int2_callback,
-			   BIT(cfg->gpio_int.pin));
+			   GPIO_BIT(cfg->gpio_int.pin));
 
 	/* callback is going to be enabled by trigger setting function */
 	status = gpio_add_callback(cfg->gpio_int.port, &lis2dh->gpio_int2_cb);

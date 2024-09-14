@@ -615,7 +615,7 @@ static void wdt_nxp_fs26_int_thread(void *p1, void *p2, void *p3)
 
 static void wdt_nxp_fs26_int_callback(const struct device *dev,
 				      struct gpio_callback *cb,
-				      uint32_t pins)
+				      gpio_port_pins_t pins)
 {
 	struct wdt_nxp_fs26_data *data = CONTAINER_OF(cb, struct wdt_nxp_fs26_data,
 						      int_gpio_cb);
@@ -652,7 +652,7 @@ static int wdt_nxp_fs26_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&(data->int_gpio_cb), wdt_nxp_fs26_int_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	if (gpio_add_callback(config->int_gpio.port, &(data->int_gpio_cb))) {
 		return -EINVAL;

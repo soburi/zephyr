@@ -11,7 +11,7 @@ LOG_MODULE_DECLARE(MC3419, CONFIG_SENSOR_LOG_LEVEL);
 
 static void mc3419_gpio_callback(const struct device *dev,
 				 struct gpio_callback *cb,
-				 uint32_t pin_mask)
+				 gpio_port_pins_t pin_mask)
 {
 	struct mc3419_driver_data *data = CONTAINER_OF(cb,
 					  struct mc3419_driver_data, gpio_cb);
@@ -158,7 +158,7 @@ int mc3419_trigger_init(const struct device *dev)
 	k_work_init(&data->work, mc3419_work_cb);
 #endif
 	gpio_init_callback(&data->gpio_cb, mc3419_gpio_callback,
-			   BIT(cfg->int_gpio.pin));
+			   GPIO_BIT(cfg->int_gpio.pin));
 	ret = gpio_add_callback(cfg->int_gpio.port, &data->gpio_cb);
 	if (ret < 0) {
 		LOG_ERR("Failed to set int callback");

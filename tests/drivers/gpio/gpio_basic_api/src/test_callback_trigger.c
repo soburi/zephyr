@@ -11,7 +11,7 @@ static struct drv_data data;
 static int cb_cnt;
 
 static void callback(const struct device *dev,
-		     struct gpio_callback *gpio_cb, uint32_t pins)
+		     struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	const struct drv_data *dd = CONTAINER_OF(gpio_cb,
 						 struct drv_data, gpio_cb);
@@ -61,7 +61,7 @@ static int test_callback(int mode)
 	}
 
 	drv_data->mode = mode;
-	gpio_init_callback(&drv_data->gpio_cb, callback, BIT(PIN_IN));
+	gpio_init_callback(&drv_data->gpio_cb, callback, GPIO_BIT(PIN_IN));
 	rc = gpio_add_callback(dev, &drv_data->gpio_cb);
 	if (rc == -ENOTSUP) {
 		TC_PRINT("interrupts not supported\n");

@@ -79,7 +79,8 @@ int hids_trigger_set(const struct device *dev, const struct sensor_trigger *trig
 	return 0;
 }
 
-static void hids_drdy_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void hids_drdy_callback(const struct device *dev, struct gpio_callback *cb,
+			       gpio_port_pins_t pins)
 {
 	struct hids_data *data = CONTAINER_OF(cb, struct hids_data, data_ready_cb);
 
@@ -138,7 +139,7 @@ int hids_init_interrupt(const struct device *dev)
 		return status;
 	}
 
-	gpio_init_callback(&data->data_ready_cb, hids_drdy_callback, BIT(cfg->gpio_drdy.pin));
+	gpio_init_callback(&data->data_ready_cb, hids_drdy_callback, GPIO_BIT(cfg->gpio_drdy.pin));
 
 	status = gpio_add_callback(cfg->gpio_drdy.port, &data->data_ready_cb);
 	if (status < 0) {

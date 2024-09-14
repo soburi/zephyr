@@ -228,7 +228,7 @@ static void sx1509b_work_handler(struct k_work *work)
 
 static void sx1509_int_cb(const struct device *dev,
 			   struct gpio_callback *gpio_cb,
-			   uint32_t pins)
+			   gpio_port_pins_t pins)
 {
 	struct sx1509b_drv_data *drv_data = CONTAINER_OF(gpio_cb,
 		struct sx1509b_drv_data, gpio_cb);
@@ -438,7 +438,7 @@ static int port_write(const struct device *dev,
 
 	k_sem_give(&drv_data->lock);
 
-	LOG_DBG("write %04x msk %04x val %04x => %04x: %d", orig_out, mask, value, out, rc);
+	//LOG_DBG("write %04x msk %04x val %04x => %04x: %d", orig_out, mask, value, out, rc);
 
 	return rc;
 }
@@ -563,7 +563,7 @@ static int sx1509b_init(const struct device *dev)
 					GPIO_INT_EDGE_TO_ACTIVE);
 
 	gpio_init_callback(&drv_data->gpio_cb, sx1509_int_cb,
-			   BIT(cfg->nint_gpio.pin));
+			   GPIO_BIT(cfg->nint_gpio.pin));
 	gpio_add_callback(cfg->nint_gpio.port, &drv_data->gpio_cb);
 
 	drv_data->irq_state = (struct sx1509b_irq_state) {

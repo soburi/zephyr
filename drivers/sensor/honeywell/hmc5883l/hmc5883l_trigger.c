@@ -46,7 +46,7 @@ int hmc5883l_trigger_set(const struct device *dev,
 }
 
 static void hmc5883l_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct hmc5883l_data *drv_data =
 		CONTAINER_OF(cb, struct hmc5883l_data, gpio_cb);
@@ -115,7 +115,7 @@ int hmc5883l_init_interrupt(const struct device *dev)
 	gpio_pin_configure_dt(&config->int_gpio, GPIO_INPUT);
 
 	gpio_init_callback(&drv_data->gpio_cb, hmc5883l_gpio_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	if (gpio_add_callback(config->int_gpio.port, &drv_data->gpio_cb) < 0) {
 		LOG_ERR("Failed to set gpio callback.");

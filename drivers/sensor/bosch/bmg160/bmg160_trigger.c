@@ -29,7 +29,7 @@ static inline int setup_int(const struct device *dev,
 
 static void bmg160_gpio_callback(const struct device *port,
 				 struct gpio_callback *cb,
-				 uint32_t pin)
+				 gpio_port_pins_t pin)
 {
 	struct bmg160_device_data *bmg160 =
 		CONTAINER_OF(cb, struct bmg160_device_data, gpio_cb);
@@ -265,7 +265,7 @@ int bmg160_trigger_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&bmg160->gpio_cb, bmg160_gpio_callback,
-			   BIT(cfg->int_gpio.pin));
+			   GPIO_BIT(cfg->int_gpio.pin));
 
 	ret = gpio_add_callback(cfg->int_gpio.port, &bmg160->gpio_cb);
 	if (ret < 0) {

@@ -118,7 +118,7 @@ static int pd_gpio_monitor_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->callback, pd_gpio_monitor_callback,
-						BIT(config->power_good_gpio.pin));
+						GPIO_BIT(config->power_good_gpio.pin));
 	rc = gpio_add_callback_dt(&config->power_good_gpio, &data->callback);
 	if (rc) {
 		LOG_ERR("Failed to add GPIO callback");

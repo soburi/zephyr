@@ -166,7 +166,7 @@ static uint8_t get_status(const struct device *dev)
  *****************/
 
 static inline void gpio0_int_handler(const struct device *port,
-				     struct gpio_callback *cb, uint32_t pins)
+				     struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct cc1200_context *cc1200 =
 		CONTAINER_OF(cb, struct cc1200_context, rx_tx_cb);
@@ -202,7 +202,7 @@ static int setup_gpio_callback(const struct device *dev)
 	const struct cc1200_config *cfg = dev->config;
 	struct cc1200_context *cc1200 = dev->data;
 
-	gpio_init_callback(&cc1200->rx_tx_cb, gpio0_int_handler, BIT(cfg->interrupt.pin));
+	gpio_init_callback(&cc1200->rx_tx_cb, gpio0_int_handler, GPIO_BIT(cfg->interrupt.pin));
 
 	if (gpio_add_callback(cfg->interrupt.port, &cc1200->rx_tx_cb) != 0) {
 		return -EIO;

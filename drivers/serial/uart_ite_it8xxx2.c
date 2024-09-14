@@ -45,7 +45,7 @@ enum uart_port_num {
 
 #ifdef CONFIG_PM_DEVICE
 void uart1_wui_isr(const struct device *gpio, struct gpio_callback *cb,
-		   uint32_t pins)
+		   gpio_port_pins_t pins)
 {
 	/* Disable interrupts on UART1 RX pin to avoid repeated interrupts. */
 	(void)gpio_pin_interrupt_configure(gpio, (find_msb_set(pins) - 1),
@@ -65,7 +65,7 @@ void uart1_wui_isr(const struct device *gpio, struct gpio_callback *cb,
 }
 
 void uart2_wui_isr(const struct device *gpio, struct gpio_callback *cb,
-		   uint32_t pins)
+		   gpio_port_pins_t pins)
 {
 	/* Disable interrupts on UART2 RX pin to avoid repeated interrupts. */
 	(void)gpio_pin_interrupt_configure(gpio, (find_msb_set(pins) - 1),
@@ -163,14 +163,14 @@ static int uart_it8xxx2_init(const struct device *dev)
 			static struct gpio_callback uart1_wui_cb;
 
 			gpio_init_callback(&uart1_wui_cb, uart1_wui_isr,
-					   BIT(config->gpio_wui.pin));
+					   GPIO_BIT(config->gpio_wui.pin));
 
 			ret = gpio_add_callback(config->gpio_wui.port, &uart1_wui_cb);
 		} else if (config->port == UART2) {
 			static struct gpio_callback uart2_wui_cb;
 
 			gpio_init_callback(&uart2_wui_cb, uart2_wui_isr,
-					   BIT(config->gpio_wui.pin));
+					   GPIO_BIT(config->gpio_wui.pin));
 
 			ret = gpio_add_callback(config->gpio_wui.port, &uart2_wui_cb);
 		}

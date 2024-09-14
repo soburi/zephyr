@@ -552,7 +552,7 @@ static int am1805_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->am1805_callback, am1805_gpio_callback_handler,
-			BIT(config->int_gpio.pin));
+			GPIO_BIT(config->int_gpio.pin));
 
 	err = gpio_add_callback_dt(&config->int_gpio, &data->am1805_callback);
 	if (err != 0) {

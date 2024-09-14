@@ -624,7 +624,7 @@ static int tcan4x5x_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&tcan_data->int_gpio_cb, tcan4x5x_int_gpio_callback_handler,
-			   BIT(tcan_config->int_gpio.pin));
+			   GPIO_BIT(tcan_config->int_gpio.pin));
 
 	err = gpio_add_callback_dt(&tcan_config->int_gpio, &tcan_data->int_gpio_cb);
 	if (err != 0) {

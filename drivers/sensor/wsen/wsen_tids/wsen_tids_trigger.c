@@ -108,7 +108,7 @@ int tids_trigger_set(const struct device *dev, const struct sensor_trigger *trig
 }
 
 static void tids_threshold_callback(const struct device *dev, struct gpio_callback *cb,
-				    uint32_t pins)
+				    gpio_port_pins_t pins)
 {
 	struct tids_data *data = CONTAINER_OF(cb, struct tids_data, threshold_cb);
 
@@ -200,7 +200,7 @@ int tids_init_interrupt(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->threshold_cb, tids_threshold_callback,
-			   BIT(cfg->gpio_threshold.pin));
+			   GPIO_BIT(cfg->gpio_threshold.pin));
 
 	status = gpio_add_callback(cfg->gpio_threshold.port, &data->threshold_cb);
 	if (status < 0) {

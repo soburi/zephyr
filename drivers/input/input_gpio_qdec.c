@@ -239,7 +239,7 @@ static void gpio_qdec_idle_worker(struct k_work *work)
 }
 
 static void gpio_qdec_cb(const struct device *gpio_dev, struct gpio_callback *cb,
-			 uint32_t pins)
+			 gpio_port_pins_t pins)
 {
 	struct gpio_qdec_data *data = CONTAINER_OF(
 			cb, struct gpio_qdec_data, gpio_cb);
@@ -263,7 +263,7 @@ static int gpio_qdec_init(const struct device *dev)
 	k_timer_user_data_set(&data->sample_timer, (void *)dev);
 
 	gpio_init_callback(&data->gpio_cb, gpio_qdec_cb,
-			   BIT(cfg->ab_gpio[0].pin) | BIT(cfg->ab_gpio[1].pin));
+			   GPIO_BIT(cfg->ab_gpio[0].pin) | BIT(cfg->ab_gpio[1].pin));
 	for (int i = 0; i < GPIO_QDEC_GPIO_NUM; i++) {
 		const struct gpio_dt_spec *gpio = &cfg->ab_gpio[i];
 

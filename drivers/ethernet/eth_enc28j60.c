@@ -328,7 +328,7 @@ static void eth_enc28j60_read_phy(const struct device *dev,
 
 static void eth_enc28j60_gpio_callback(const struct device *dev,
 				       struct gpio_callback *cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	struct eth_enc28j60_runtime *context =
 		CONTAINER_OF(cb, struct eth_enc28j60_runtime, gpio_cb);
@@ -785,7 +785,7 @@ static int eth_enc28j60_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&(context->gpio_cb), eth_enc28j60_gpio_callback,
-			   BIT(config->interrupt.pin));
+			   GPIO_BIT(config->interrupt.pin));
 
 	if (gpio_add_callback(config->interrupt.port, &(context->gpio_cb))) {
 		return -EINVAL;

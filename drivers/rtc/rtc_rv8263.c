@@ -354,7 +354,7 @@ static int rv8263c8_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->gpio_cb, rv8263c8_gpio_callback_handler,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	err = gpio_add_callback_dt(&config->int_gpio, &data->gpio_cb);
 	if (err < 0) {

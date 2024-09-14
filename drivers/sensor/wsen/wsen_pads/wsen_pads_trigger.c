@@ -102,7 +102,8 @@ int pads_trigger_set(const struct device *dev, const struct sensor_trigger *trig
 	return 0;
 }
 
-static void pads_drdy_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void pads_drdy_callback(const struct device *dev, struct gpio_callback *cb,
+			       gpio_port_pins_t pins)
 {
 	struct pads_data *data = CONTAINER_OF(cb, struct pads_data, data_ready_cb);
 
@@ -161,7 +162,7 @@ int pads_init_interrupt(const struct device *dev)
 		return status;
 	}
 
-	gpio_init_callback(&data->data_ready_cb, pads_drdy_callback, BIT(cfg->gpio_drdy.pin));
+	gpio_init_callback(&data->data_ready_cb, pads_drdy_callback, GPIO_BIT(cfg->gpio_drdy.pin));
 
 	status = gpio_add_callback(cfg->gpio_drdy.port, &data->data_ready_cb);
 	if (status < 0) {

@@ -100,7 +100,7 @@ static int auxdisplay_itron_init(const struct device *dev)
 
 		gpio_init_callback(&data->busy_wait_callback,
 				   auxdisplay_itron_busy_gpio_change_callback,
-				   BIT(config->busy_gpio.pin));
+				   GPIO_BIT(config->busy_gpio.pin));
 		rc = gpio_add_callback(config->busy_gpio.port, &data->busy_wait_callback);
 
 		if (rc != 0) {

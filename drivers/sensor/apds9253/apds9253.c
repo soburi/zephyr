@@ -36,7 +36,7 @@ static void apds9253_handle_cb(struct apds9253_data *drv_data)
 }
 
 static void apds9253_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct apds9253_data *drv_data = CONTAINER_OF(cb, struct apds9253_data, gpio_cb);
 
@@ -182,7 +182,7 @@ static int apds9253_init_interrupt(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&drv_data->gpio_cb, apds9253_gpio_callback, BIT(config->int_gpio.pin));
+	gpio_init_callback(&drv_data->gpio_cb, apds9253_gpio_callback, GPIO_BIT(config->int_gpio.pin));
 
 	if (gpio_add_callback(config->int_gpio.port, &drv_data->gpio_cb) < 0) {
 		LOG_ERR("Failed to set gpio callback!");

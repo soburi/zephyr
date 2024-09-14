@@ -80,7 +80,7 @@ void test_gpio_pin_interrupt_edge(unsigned int cfg_flags,
 	cb_count = 0;
 	cb_count_expected = 0;
 
-	gpio_init_callback(&gpio_cb, callback_edge, BIT(TEST_PIN));
+	gpio_init_callback(&gpio_cb, callback_edge, GPIO_BIT(TEST_PIN));
 	ret = gpio_add_callback(port, &gpio_cb);
 
 	ret = gpio_pin_interrupt_configure(port, TEST_PIN, int_flags);
@@ -160,7 +160,7 @@ void test_gpio_pin_interrupt_level(unsigned int cfg_flags,
 	cb_count_expected = 0;
 	cb_count_target = interrupt_calls;
 
-	gpio_init_callback(&gpio_cb, callback_level, BIT(TEST_PIN));
+	gpio_init_callback(&gpio_cb, callback_level, GPIO_BIT(TEST_PIN));
 	ret = gpio_add_callback(port, &gpio_cb);
 
 	ret = gpio_pin_interrupt_configure(port, TEST_PIN, int_flags);

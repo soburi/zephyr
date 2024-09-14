@@ -20,7 +20,7 @@
 LOG_MODULE_REGISTER(TI_HDC, CONFIG_SENSOR_LOG_LEVEL);
 
 static void ti_hdc_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct ti_hdc_data *drv_data =
 		CONTAINER_OF(cb, struct ti_hdc_data, gpio_cb);
@@ -152,7 +152,7 @@ static int ti_hdc_init(const struct device *dev)
 
 		gpio_init_callback(&drv_data->gpio_cb,
 				ti_hdc_gpio_callback,
-				BIT(cfg->drdy.pin));
+				GPIO_BIT(cfg->drdy.pin));
 
 		if (gpio_add_callback(cfg->drdy.port, &drv_data->gpio_cb) < 0) {
 			LOG_DBG("Failed to set GPIO callback");

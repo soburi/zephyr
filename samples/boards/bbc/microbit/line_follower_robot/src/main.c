@@ -30,13 +30,13 @@ static int left_line;
 static int right_line;
 
 static void left_irq(const struct device *dev, struct gpio_callback *cb,
-		     uint32_t pins)
+		     gpio_port_pins_t pins)
 {
 	left_line = gpio_pin_get_dt(&left_gpio);
 }
 
 static void right_irq(const struct device *dev, struct gpio_callback *cb,
-		      uint32_t pins)
+		      gpio_port_pins_t pins)
 {
 	right_line = gpio_pin_get_dt(&right_gpio);
 }
@@ -115,9 +115,9 @@ int main(void)
 	gpio_pin_interrupt_configure_dt(&left_gpio, GPIO_INT_EDGE_BOTH);
 	gpio_pin_interrupt_configure_dt(&right_gpio, GPIO_INT_EDGE_BOTH);
 
-	gpio_init_callback(&left_cb, left_irq, BIT(left_gpio.pin));
+	gpio_init_callback(&left_cb, left_irq, GPIO_BIT(left_gpio.pin));
 	gpio_add_callback(left_gpio.port, &left_cb);
-	gpio_init_callback(&right_cb, right_irq, BIT(right_gpio.pin));
+	gpio_init_callback(&right_cb, right_irq, GPIO_BIT(right_gpio.pin));
 	gpio_add_callback(right_gpio.port, &right_cb);
 
 	while (1) {

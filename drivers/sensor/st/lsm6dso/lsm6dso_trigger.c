@@ -211,7 +211,7 @@ static void lsm6dso_handle_interrupt(const struct device *dev)
 }
 
 static void lsm6dso_gpio_callback(const struct device *dev,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lsm6dso_data *lsm6dso =
 		CONTAINER_OF(cb, struct lsm6dso_data, gpio_cb);
@@ -287,7 +287,7 @@ int lsm6dso_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&lsm6dso->gpio_cb,
 			   lsm6dso_gpio_callback,
-			   BIT(cfg->gpio_drdy.pin));
+			   GPIO_BIT(cfg->gpio_drdy.pin));
 
 	if (gpio_add_callback(cfg->gpio_drdy.port, &lsm6dso->gpio_cb) < 0) {
 		LOG_DBG("Could not set gpio callback");

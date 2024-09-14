@@ -23,7 +23,8 @@
 
 LOG_MODULE_REGISTER(TMD2620, CONFIG_SENSOR_LOG_LEVEL);
 
-static void tmd2620_gpio_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void tmd2620_gpio_callback(const struct device *dev, struct gpio_callback *cb,
+				  gpio_port_pins_t pins)
 {
 	LOG_DBG("Interrupt Callback was called");
 
@@ -57,7 +58,7 @@ static int tmd2620_configure_interrupt(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&data->gpio_cb, tmd2620_gpio_callback, BIT(config->int_gpio.pin));
+	gpio_init_callback(&data->gpio_cb, tmd2620_gpio_callback, GPIO_BIT(config->int_gpio.pin));
 
 	ret = gpio_add_callback(config->int_gpio.port, &data->gpio_cb);
 	if (ret < 0) {

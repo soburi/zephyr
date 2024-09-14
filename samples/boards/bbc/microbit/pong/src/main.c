@@ -401,7 +401,7 @@ void pong_ball_received(int8_t x_pos, int8_t y_pos, int8_t x_vel, int8_t y_vel)
 }
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb,
-			   uint32_t pins)
+			   gpio_port_pins_t pins)
 {
 	/* Filter out spurious presses */
 	if (pins & BIT(sw0_gpio.pin)) {
@@ -512,7 +512,7 @@ static void configure_buttons(void)
 	gpio_pin_interrupt_configure_dt(&sw1_gpio, GPIO_INT_EDGE_TO_ACTIVE);
 
 	gpio_init_callback(&button_cb_data, button_pressed,
-			   BIT(sw0_gpio.pin) | BIT(sw1_gpio.pin));
+			   GPIO_BIT(sw0_gpio.pin) | BIT(sw1_gpio.pin));
 
 	gpio_add_callback(sw0_gpio.port, &button_cb_data);
 }

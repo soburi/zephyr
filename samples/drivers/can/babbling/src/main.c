@@ -91,7 +91,7 @@ int main(void)
 		return 0;
 	}
 
-	gpio_init_callback(&btn_cb_ctx.callback, button_callback, BIT(btn.pin));
+	gpio_init_callback(&btn_cb_ctx.callback, button_callback, GPIO_BIT(btn.pin));
 	gpio_add_callback(btn.port, &btn_cb_ctx.callback);
 #endif /* DT_NODE_EXISTS(BUTTON_NODE) */
 

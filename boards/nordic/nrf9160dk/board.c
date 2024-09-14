@@ -95,7 +95,7 @@ static const struct switch_cfg routing_switches[] = {
 
 #if USE_RESET_GPIO
 static void chip_reset(const struct device *gpio,
-		       struct gpio_callback *cb, uint32_t pins)
+		       struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	const uint32_t stamp = k_cycle_get_32();
 
@@ -136,7 +136,7 @@ static int reset_pin_configure(void)
 		return rc;
 	}
 
-	gpio_init_callback(&gpio_ctx, chip_reset, BIT(pin));
+	gpio_init_callback(&gpio_ctx, chip_reset, GPIO_BIT(pin));
 
 	rc = gpio_add_callback(gpio, &gpio_ctx);
 	if (rc) {

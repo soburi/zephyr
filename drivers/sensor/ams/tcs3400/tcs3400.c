@@ -77,7 +77,7 @@ static void tcs3400_setup_int(const struct tcs3400_config *config, bool enable)
 }
 
 static void tcs3400_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct tcs3400_data *data = CONTAINER_OF(cb, struct tcs3400_data,
 						 gpio_cb);
@@ -279,7 +279,7 @@ static int tcs3400_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->gpio_cb, tcs3400_gpio_callback,
-			   BIT(cfg->int_gpio.pin));
+			   GPIO_BIT(cfg->int_gpio.pin));
 
 	ret = gpio_add_callback(cfg->int_gpio.port, &data->gpio_cb);
 	if (ret < 0) {

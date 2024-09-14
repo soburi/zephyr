@@ -14,7 +14,7 @@ LOG_MODULE_DECLARE(FXLS8974, CONFIG_SENSOR_LOG_LEVEL);
 
 static void fxls8974_gpio_callback(const struct device *dev,
 				   struct gpio_callback *cb,
-				   uint32_t pin_mask)
+				   gpio_port_pins_t pin_mask)
 {
 	struct fxls8974_data *data =
 		CONTAINER_OF(cb, struct fxls8974_data, gpio_cb);
@@ -163,7 +163,7 @@ int fxls8974_trigger_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->gpio_cb, fxls8974_gpio_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	ret = gpio_add_callback(config->int_gpio.port, &data->gpio_cb);
 	if (ret < 0) {

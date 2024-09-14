@@ -32,7 +32,7 @@ struct gpio_axp192_data {
 	sys_slist_t cb_list_gpio;
 };
 
-static int gpio_axp192_port_get_raw(const struct device *dev, uint32_t *value)
+static int gpio_axp192_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	int ret;
 	uint8_t port_val;
@@ -144,7 +144,7 @@ static int gpio_axp192_port_toggle_bits(const struct device *dev, gpio_port_pins
 {
 	struct gpio_axp192_data *data = dev->data;
 	int ret;
-	uint32_t value;
+	gpio_port_value_t value;
 
 	k_mutex_lock(&data->mutex, K_FOREVER);
 

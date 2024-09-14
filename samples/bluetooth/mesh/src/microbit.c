@@ -30,7 +30,7 @@ static const struct mb_image onoff[] = {
 static struct k_work *button_work;
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb,
-			   uint32_t pins)
+			   gpio_port_pins_t pins)
 {
 	struct mb_display *disp = mb_display_get();
 
@@ -53,7 +53,7 @@ static void configure_button(void)
 	gpio_pin_configure_dt(&button, GPIO_INPUT);
 	gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_TO_ACTIVE);
 
-	gpio_init_callback(&button_cb, button_pressed, BIT(button.pin));
+	gpio_init_callback(&button_cb, button_pressed, GPIO_BIT(button.pin));
 
 	gpio_add_callback(button.port, &button_cb);
 }

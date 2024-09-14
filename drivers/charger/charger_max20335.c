@@ -512,7 +512,7 @@ static int max20335_enable_interrupt_pin(const struct device *dev, bool enabled)
 }
 
 static void max20335_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct charger_max20335_data *data = CONTAINER_OF(cb, struct charger_max20335_data,
 							  gpio_cb);
@@ -597,7 +597,7 @@ static int max20335_configure_interrupt_pin(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&data->gpio_cb, max20335_gpio_callback, BIT(config->int_gpio.pin));
+	gpio_init_callback(&data->gpio_cb, max20335_gpio_callback, GPIO_BIT(config->int_gpio.pin));
 	ret = gpio_add_callback_dt(&config->int_gpio, &data->gpio_cb);
 	if (ret < 0) {
 		LOG_ERR("Could not add interrupt GPIO callback");

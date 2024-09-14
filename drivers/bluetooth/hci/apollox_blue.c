@@ -63,7 +63,7 @@ static const struct device *clk32k_dev = DEVICE_DT_GET(CLK_32K_NODE);
 #endif /* CONFIG_SOC_SERIES_APOLLO4X */
 
 extern void bt_packet_irq_isr(const struct device *unused1, struct gpio_callback *unused2,
-			      uint32_t unused3);
+			      gpio_port_pins_t unused3);
 
 void bt_apollo_rcv_isr_preprocess(void)
 {
@@ -92,7 +92,7 @@ static bool clkreq_pin_state(void)
 }
 
 static void bt_clkreq_isr(const struct device *unused1, struct gpio_callback *unused2,
-			  uint32_t unused3)
+			  gpio_port_pins_t unused3)
 {
 	if (clkreq_pin_state()) {
 		/* Enable XO32MHz */
@@ -271,7 +271,7 @@ int bt_hci_transport_setup(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&irq_gpio_cb, bt_packet_irq_isr, BIT(irq_gpio.pin));
+	gpio_init_callback(&irq_gpio_cb, bt_packet_irq_isr, GPIO_BIT(irq_gpio.pin));
 	ret = gpio_add_callback(irq_gpio.port, &irq_gpio_cb);
 	if (ret) {
 		return ret;
@@ -283,7 +283,7 @@ int bt_hci_transport_setup(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&clkreq_gpio_cb, bt_clkreq_isr, BIT(clkreq_gpio.pin));
+	gpio_init_callback(&clkreq_gpio_cb, bt_clkreq_isr, GPIO_BIT(clkreq_gpio.pin));
 	ret = gpio_add_callback(clkreq_gpio.port, &clkreq_gpio_cb);
 	if (ret) {
 		return ret;

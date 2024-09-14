@@ -4871,7 +4871,8 @@ static void mdm_vgpio_work_cb(struct k_work *item)
 	hl7800_unlock();
 }
 
-void mdm_vgpio_callback_isr(const struct device *port, struct gpio_callback *cb, uint32_t pins)
+void mdm_vgpio_callback_isr(const struct device *port, struct gpio_callback *cb,
+			    gpio_port_pins_t pins)
 {
 	ARG_UNUSED(port);
 	ARG_UNUSED(cb);
@@ -4909,7 +4910,8 @@ void mdm_vgpio_callback_isr(const struct device *port, struct gpio_callback *cb,
 	k_work_submit_to_queue(&hl7800_workq, &iface_ctx.mdm_vgpio_work);
 }
 
-void mdm_uart_dsr_callback_isr(const struct device *port, struct gpio_callback *cb, uint32_t pins)
+void mdm_uart_dsr_callback_isr(const struct device *port, struct gpio_callback *cb,
+			       gpio_port_pins_t pins)
 {
 	ARG_UNUSED(port);
 	ARG_UNUSED(cb);
@@ -4935,7 +4937,8 @@ static void mark_sockets_for_reconfig(void)
 }
 #endif
 
-void mdm_gpio6_callback_isr(const struct device *port, struct gpio_callback *cb, uint32_t pins)
+void mdm_gpio6_callback_isr(const struct device *port, struct gpio_callback *cb,
+			    gpio_port_pins_t pins)
 {
 	ARG_UNUSED(port);
 	ARG_UNUSED(cb);
@@ -4974,7 +4977,8 @@ void mdm_gpio6_callback_isr(const struct device *port, struct gpio_callback *cb,
 #endif
 }
 
-void mdm_uart_cts_callback_isr(const struct device *port, struct gpio_callback *cb, uint32_t pins)
+void mdm_uart_cts_callback_isr(const struct device *port, struct gpio_callback *cb,
+			       gpio_port_pins_t pins)
 {
 	ARG_UNUSED(port);
 	ARG_UNUSED(cb);
@@ -6456,7 +6460,7 @@ static int hl7800_init(const struct device *dev)
 	/* setup input pin callbacks */
 	/* VGPIO */
 	gpio_init_callback(&iface_ctx.mdm_vgpio_cb, mdm_vgpio_callback_isr,
-			   BIT(hl7800_cfg.gpio[MDM_VGPIO].pin));
+			   GPIO_BIT(hl7800_cfg.gpio[MDM_VGPIO].pin));
 	ret = gpio_add_callback(hl7800_cfg.gpio[MDM_VGPIO].port,
 				&iface_ctx.mdm_vgpio_cb);
 	if (ret) {
@@ -6471,7 +6475,7 @@ static int hl7800_init(const struct device *dev)
 
 	/* UART DSR */
 	gpio_init_callback(&iface_ctx.mdm_uart_dsr_cb, mdm_uart_dsr_callback_isr,
-			   BIT(hl7800_cfg.gpio[MDM_UART_DSR].pin));
+			   GPIO_BIT(hl7800_cfg.gpio[MDM_UART_DSR].pin));
 	ret = gpio_add_callback(hl7800_cfg.gpio[MDM_UART_DSR].port,
 				&iface_ctx.mdm_uart_dsr_cb);
 	if (ret) {
@@ -6486,7 +6490,7 @@ static int hl7800_init(const struct device *dev)
 
 	/* GPIO6 */
 	gpio_init_callback(&iface_ctx.mdm_gpio6_cb, mdm_gpio6_callback_isr,
-			   BIT(hl7800_cfg.gpio[MDM_GPIO6].pin));
+			   GPIO_BIT(hl7800_cfg.gpio[MDM_GPIO6].pin));
 	ret = gpio_add_callback(hl7800_cfg.gpio[MDM_GPIO6].port,
 				&iface_ctx.mdm_gpio6_cb);
 	if (ret) {
@@ -6501,7 +6505,7 @@ static int hl7800_init(const struct device *dev)
 
 	/* UART CTS */
 	gpio_init_callback(&iface_ctx.mdm_uart_cts_cb, mdm_uart_cts_callback_isr,
-			   BIT(hl7800_cfg.gpio[MDM_UART_CTS].pin));
+			   GPIO_BIT(hl7800_cfg.gpio[MDM_UART_CTS].pin));
 	ret = gpio_add_callback(hl7800_cfg.gpio[MDM_UART_CTS].port,
 				&iface_ctx.mdm_uart_cts_cb);
 	if (ret) {

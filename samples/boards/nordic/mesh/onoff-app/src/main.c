@@ -414,7 +414,7 @@ static uint8_t pin_to_sw(uint32_t pin_pos)
 }
 
 static void button_pressed(const struct device *dev, struct gpio_callback *cb,
-			   uint32_t pin_pos)
+			   gpio_port_pins_t pin_pos)
 {
 	/*
 	 * One button press within a 1 second interval sends an on message
@@ -589,8 +589,8 @@ int main(void)
 	k_timer_init(&sw.button_timer, button_cnt_timer, NULL);
 
 	gpio_init_callback(&button_cb, button_pressed,
-			   BIT(sw_device[0].pin) | BIT(sw_device[1].pin) |
-			   BIT(sw_device[2].pin) | BIT(sw_device[3].pin));
+			   GPIO_BIT(sw_device[0].pin) | BIT(sw_device[1].pin) |
+			   GPIO_BIT(sw_device[2].pin) | BIT(sw_device[3].pin));
 
 	for (i = 0; i < ARRAY_SIZE(sw_device); i++) {
 		if (!gpio_is_ready_dt(&sw_device[i])) {

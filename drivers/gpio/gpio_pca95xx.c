@@ -490,7 +490,7 @@ done:
 	return ret;
 }
 
-static int gpio_pca95xx_port_get_raw(const struct device *dev, uint32_t *value)
+static int gpio_pca95xx_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
 	struct gpio_pca95xx_drv_data * const drv_data =
 		(struct gpio_pca95xx_drv_data * const)dev->data;
@@ -517,7 +517,7 @@ done:
 }
 
 static int gpio_pca95xx_port_set_masked_raw(const struct device *dev,
-					      uint32_t mask, uint32_t value)
+					      gpio_port_pins_t mask, gpio_port_value_t value)
 {
 	struct gpio_pca95xx_drv_data * const drv_data =
 		(struct gpio_pca95xx_drv_data * const)dev->data;
@@ -542,19 +542,19 @@ static int gpio_pca95xx_port_set_masked_raw(const struct device *dev,
 }
 
 static int gpio_pca95xx_port_set_bits_raw(const struct device *dev,
-					  uint32_t mask)
+					  gpio_port_pins_t mask)
 {
 	return gpio_pca95xx_port_set_masked_raw(dev, mask, mask);
 }
 
 static int gpio_pca95xx_port_clear_bits_raw(const struct device *dev,
-					    uint32_t mask)
+					    gpio_port_pins_t mask)
 {
 	return gpio_pca95xx_port_set_masked_raw(dev, mask, 0);
 }
 
 static int gpio_pca95xx_port_toggle_bits(const struct device *dev,
-					 uint32_t mask)
+					 gpio_port_pins_t mask)
 {
 	struct gpio_pca95xx_drv_data * const drv_data =
 		(struct gpio_pca95xx_drv_data * const)dev->data;
@@ -820,7 +820,7 @@ static int gpio_pca95xx_init(const struct device *dev)
 		/* Prepare GPIO callback for interrupt pin */
 		gpio_init_callback(&drv_data->gpio_callback,
 				   gpio_pca95xx_interrupt_callback,
-				   BIT(config->int_gpio.pin));
+				   GPIO_BIT(config->int_gpio.pin));
 		ret = gpio_add_callback(config->int_gpio.port, &drv_data->gpio_callback);
 		if (ret != 0) {
 			LOG_ERR("PCA95XX[0x%X]: failed to add interrupt callback for"

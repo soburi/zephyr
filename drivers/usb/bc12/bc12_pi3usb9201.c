@@ -514,7 +514,7 @@ static void pi3usb9201_isr_work(struct k_work *item)
 }
 
 static void pi3usb9201_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				     uint32_t pins)
+				     gpio_port_pins_t pins)
 {
 	struct pi3usb9201_data *pi3usb9201_data = CONTAINER_OF(cb, struct pi3usb9201_data, gpio_cb);
 
@@ -584,7 +584,7 @@ static int pi3usb9201_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&pi3usb9201_data->gpio_cb, pi3usb9201_gpio_callback,
-			   BIT(cfg->intb_gpio.pin));
+			   GPIO_BIT(cfg->intb_gpio.pin));
 	k_work_init(&pi3usb9201_data->work, pi3usb9201_isr_work);
 
 	rv = gpio_add_callback(cfg->intb_gpio.port, &pi3usb9201_data->gpio_cb);

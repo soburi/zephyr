@@ -74,7 +74,7 @@ static void vl53l1x_worker(struct k_work *work)
 }
 
 static void vl53l1x_gpio_callback(const struct device *dev,
-		struct gpio_callback *cb, uint32_t pins)
+		struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct vl53l1x_data *drv_data = CONTAINER_OF(cb, struct vl53l1x_data, gpio_cb);
 
@@ -102,7 +102,7 @@ static int vl53l1x_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&drv_data->gpio_cb,
 					vl53l1x_gpio_callback,
-					BIT(config->gpio1.pin));
+					GPIO_BIT(config->gpio1.pin));
 
 	ret = gpio_add_callback(config->gpio1.port, &drv_data->gpio_cb);
 	if (ret < 0) {

@@ -11,20 +11,20 @@ static struct drv_data cb_data[2];
 static int cb_cnt[2];
 
 static void callback_1(const struct device *dev,
-		       struct gpio_callback *gpio_cb, uint32_t pins)
+		       struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	TC_PRINT("%s triggered: %d\n", __func__, ++cb_cnt[0]);
 
 }
 
 static void callback_2(const struct device *dev,
-		       struct gpio_callback *gpio_cb, uint32_t pins)
+		       struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	TC_PRINT("%s triggered: %d\n", __func__, ++cb_cnt[1]);
 }
 
 static void callback_remove_self(const struct device *dev,
-				 struct gpio_callback *gpio_cb, uint32_t pins)
+				 struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	struct drv_data *dd = CONTAINER_OF(gpio_cb, struct drv_data, gpio_cb);
 
@@ -52,12 +52,12 @@ static int init_callback(const struct device *dev,
 	}
 
 	if (rc == 0) {
-		gpio_init_callback(&cb_data[0].gpio_cb, handler_1, BIT(PIN_IN));
+		gpio_init_callback(&cb_data[0].gpio_cb, handler_1, GPIO_BIT(PIN_IN));
 		rc = gpio_add_callback(dev, &cb_data[0].gpio_cb);
 	}
 
 	if (rc == 0) {
-		gpio_init_callback(&cb_data[1].gpio_cb, handler_2, BIT(PIN_IN));
+		gpio_init_callback(&cb_data[1].gpio_cb, handler_2, GPIO_BIT(PIN_IN));
 		rc = gpio_add_callback(dev, &cb_data[1].gpio_cb);
 	}
 

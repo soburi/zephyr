@@ -107,7 +107,7 @@ static void cap1203_work_handler(struct k_work *work)
 }
 
 static void cap1203_isr_handler(const struct device *dev,
-				struct gpio_callback *cb, uint32_t pins)
+				struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct cap1203_data *data = CONTAINER_OF(cb, struct cap1203_data, int_gpio_cb);
 
@@ -158,7 +158,7 @@ static int cap1203_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&data->int_gpio_cb, cap1203_isr_handler,
-				   BIT(config->int_gpio.pin));
+				   GPIO_BIT(config->int_gpio.pin));
 
 		r = gpio_add_callback(config->int_gpio.port, &data->int_gpio_cb);
 		if (r < 0) {

@@ -99,7 +99,8 @@ static fsm_state modes[] = {
 	mode_show_presence,
 };
 
-static void change_mode(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void change_mode(const struct device *dev, struct gpio_callback *cb,
+			gpio_port_pins_t pins)
 {
 	(void) dev;
 	(void) cb;
@@ -131,7 +132,7 @@ int main(void)
 
 	gpio_pin_configure_dt(&button, GPIO_INPUT);
 	gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_RISING);
-	gpio_init_callback(&button_cb_data, change_mode, BIT(button.pin));
+	gpio_init_callback(&button_cb_data, change_mode, GPIO_BIT(button.pin));
 	gpio_add_callback(button.port, &button_cb_data);
 
 	while (1) {

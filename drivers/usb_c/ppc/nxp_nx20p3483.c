@@ -386,7 +386,7 @@ static int nx20p3483_dev_init(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&data->irq_cb, nx20p3483_irq_handler, BIT(cfg->irq_gpio.pin));
+	gpio_init_callback(&data->irq_cb, nx20p3483_irq_handler, GPIO_BIT(cfg->irq_gpio.pin));
 	ret = gpio_add_callback(cfg->irq_gpio.port, &data->irq_cb);
 	if (ret != 0) {
 		return ret;

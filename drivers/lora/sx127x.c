@@ -337,7 +337,7 @@ static void sx127x_dio_work_handle(struct k_work *work)
 }
 
 static void sx127x_irq_callback(const struct device *dev,
-				struct gpio_callback *cb, uint32_t pins)
+				struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	unsigned int i, pin;
 
@@ -374,7 +374,7 @@ void SX127xIoIrqInit(DioIrqHandler **irqHandlers)
 
 		gpio_init_callback(&callbacks[i],
 				   sx127x_irq_callback,
-				   BIT(sx127x_dios[i].pin));
+				   GPIO_BIT(sx127x_dios[i].pin));
 
 		if (gpio_add_callback(sx127x_dios[i].port, &callbacks[i]) < 0) {
 			LOG_ERR("Could not set gpio callback.");

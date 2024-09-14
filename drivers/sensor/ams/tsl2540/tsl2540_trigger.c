@@ -33,7 +33,7 @@ static void tsl2540_handle_int(const struct device *dev)
 }
 
 static void tsl2540_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				  uint32_t pin_mask)
+				  gpio_port_pins_t pin_mask)
 {
 	struct tsl2540_data *data = CONTAINER_OF(cb, struct tsl2540_data, gpio_cb);
 
@@ -182,7 +182,7 @@ int tsl2540_trigger_init(const struct device *dev)
 		return rc;
 	}
 
-	gpio_init_callback(&data->gpio_cb, tsl2540_gpio_callback, BIT(config->int_gpio.pin));
+	gpio_init_callback(&data->gpio_cb, tsl2540_gpio_callback, GPIO_BIT(config->int_gpio.pin));
 
 	if (gpio_add_callback(config->int_gpio.port, &data->gpio_cb) < 0) {
 		LOG_ERR("Failed to set gpio callback!");

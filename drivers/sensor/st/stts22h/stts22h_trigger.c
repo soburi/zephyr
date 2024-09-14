@@ -67,7 +67,7 @@ static void stts22h_handle_interrupt(const struct device *dev)
 }
 
 static void stts22h_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct stts22h_data *stts22h =
 		CONTAINER_OF(cb, struct stts22h_data, gpio_cb);
@@ -140,7 +140,7 @@ int stts22h_init_interrupt(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&stts22h->gpio_cb, stts22h_gpio_callback, BIT(cfg->int_gpio.pin));
+	gpio_init_callback(&stts22h->gpio_cb, stts22h_gpio_callback, GPIO_BIT(cfg->int_gpio.pin));
 
 	if (gpio_add_callback(cfg->int_gpio.port, &stts22h->gpio_cb) < 0) {
 		LOG_DBG("Could not set gpio callback");

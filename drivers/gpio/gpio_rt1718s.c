@@ -25,7 +25,7 @@
 LOG_MODULE_REGISTER(gpio_rt1718s, CONFIG_GPIO_LOG_LEVEL);
 
 static void rt1718s_alert_callback(const struct device *dev, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	ARG_UNUSED(pins);
 	struct rt1718s_data *data = CONTAINER_OF(cb, struct rt1718s_data, gpio_cb);
@@ -106,7 +106,7 @@ static int rt1718s_init(const struct device *dev)
 		gpio_pin_configure_dt(&config->irq_gpio, GPIO_INPUT);
 
 		gpio_init_callback(&data->gpio_cb, rt1718s_alert_callback,
-				   BIT(config->irq_gpio.pin));
+				   GPIO_BIT(config->irq_gpio.pin));
 
 		ret = gpio_add_callback(config->irq_gpio.port, &data->gpio_cb);
 		if (ret < 0) {

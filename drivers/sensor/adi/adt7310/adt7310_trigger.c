@@ -18,7 +18,7 @@
 LOG_MODULE_DECLARE(ADT7310, CONFIG_SENSOR_LOG_LEVEL);
 
 static void adt7310_gpio_callback(const struct device *dev, struct gpio_callback *cb,
-				  uint32_t pins)
+				  gpio_port_pins_t pins)
 {
 	struct adt7310_data *drv_data = CONTAINER_OF(cb, struct adt7310_data, gpio_cb);
 
@@ -113,7 +113,7 @@ int adt7310_init_interrupt(const struct device *dev)
 		return -ENODEV;
 	}
 
-	gpio_init_callback(&drv_data->gpio_cb, adt7310_gpio_callback, BIT(cfg->int_gpio.pin));
+	gpio_init_callback(&drv_data->gpio_cb, adt7310_gpio_callback, GPIO_BIT(cfg->int_gpio.pin));
 
 	ret = gpio_pin_configure_dt(&cfg->int_gpio, GPIO_INPUT | GPIO_ACTIVE_LOW);
 	if (ret < 0) {

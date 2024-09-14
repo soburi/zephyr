@@ -67,7 +67,7 @@ static void process_int(const struct device *dev)
 }
 
 static void adt7420_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct adt7420_data *drv_data =
 		CONTAINER_OF(cb, struct adt7420_data, gpio_cb);
@@ -148,7 +148,7 @@ int adt7420_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&drv_data->gpio_cb,
 			   adt7420_gpio_callback,
-			   BIT(cfg->int_gpio.pin));
+			   GPIO_BIT(cfg->int_gpio.pin));
 
 	rc = gpio_pin_configure_dt(&cfg->int_gpio, GPIO_INPUT | cfg->int_gpio.dt_flags);
 	if (rc < 0) {

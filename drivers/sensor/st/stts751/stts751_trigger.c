@@ -78,7 +78,7 @@ static void stts751_handle_interrupt(const struct device *dev)
 }
 
 static void stts751_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct stts751_data *stts751 =
 		CONTAINER_OF(cb, struct stts751_data, gpio_cb);
@@ -149,7 +149,7 @@ int stts751_init_interrupt(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&stts751->gpio_cb, stts751_gpio_callback, BIT(cfg->int_gpio.pin));
+	gpio_init_callback(&stts751->gpio_cb, stts751_gpio_callback, GPIO_BIT(cfg->int_gpio.pin));
 
 	if (gpio_add_callback(cfg->int_gpio.port, &stts751->gpio_cb) < 0) {
 		LOG_DBG("Could not set gpio callback");

@@ -331,7 +331,7 @@ static int uart_smartbond_config_get(const struct device *dev,
 #if CONFIG_PM_DEVICE
 
 static void uart_smartbond_wake_handler(const struct device *gpio, struct gpio_callback *cb,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	struct uart_smartbond_data *data = CONTAINER_OF(cb, struct uart_smartbond_data,
 							rx_wake_cb);
@@ -347,7 +347,7 @@ static void uart_smartbond_wake_handler(const struct device *gpio, struct gpio_c
 }
 
 static void uart_smartbond_dtr_handler(const struct device *gpio, struct gpio_callback *cb,
-				       uint32_t pins)
+				       gpio_port_pins_t pins)
 {
 	struct uart_smartbond_data *data = CONTAINER_OF(cb, struct uart_smartbond_data,
 							dtr_wake_cb);
@@ -397,7 +397,7 @@ static int uart_smartbond_init(const struct device *dev)
 	/* If DTR pin is configured, use it for power management */
 	if (config->dtr_gpio.port != NULL) {
 		gpio_init_callback(&data->dtr_wake_cb, uart_smartbond_dtr_handler,
-				   BIT(config->dtr_gpio.pin));
+				   GPIO_BIT(config->dtr_gpio.pin));
 		ret = gpio_add_callback(config->dtr_gpio.port, &data->dtr_wake_cb);
 		if (ret == 0) {
 			ret = gpio_pin_interrupt_configure_dt(&config->dtr_gpio,
@@ -413,7 +413,7 @@ static int uart_smartbond_init(const struct device *dev)
 		k_work_init_delayable(&data->rx_timeout_work,
 				      uart_smartbond_rx_refresh_timeout);
 		gpio_init_callback(&data->rx_wake_cb, uart_smartbond_wake_handler,
-				   BIT(config->rx_wake_gpio.pin));
+				   GPIO_BIT(config->rx_wake_gpio.pin));
 
 		ret = gpio_add_callback(config->rx_wake_gpio.port, &data->rx_wake_cb);
 		if (ret == 0) {

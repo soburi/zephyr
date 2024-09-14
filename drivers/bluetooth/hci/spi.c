@@ -121,7 +121,7 @@ static inline uint16_t bt_spi_get_evt(uint8_t *msg)
 
 static void bt_spi_isr(const struct device *unused1,
 		       struct gpio_callback *unused2,
-		       uint32_t unused3)
+		       gpio_port_pins_t unused3)
 {
 	LOG_DBG("");
 
@@ -389,7 +389,7 @@ static int bt_spi_open(const struct device *dev, bt_hci_recv_t recv)
 		return err;
 	}
 
-	gpio_init_callback(&gpio_cb, bt_spi_isr, BIT(irq_gpio.pin));
+	gpio_init_callback(&gpio_cb, bt_spi_isr, GPIO_BIT(irq_gpio.pin));
 	err = gpio_add_callback(irq_gpio.port, &gpio_cb);
 	if (err) {
 		return err;

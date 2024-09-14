@@ -37,7 +37,7 @@ out:
 }
 
 static void mfd_adp5585_int_gpio_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-					 uint32_t pins)
+					 gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -111,7 +111,7 @@ static int mfd_adp5585_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&data->int_gpio_cb, mfd_adp5585_int_gpio_handler,
-				   BIT(config->nint_gpio.pin));
+				   GPIO_BIT(config->nint_gpio.pin));
 		ret = gpio_add_callback_dt(&config->nint_gpio, &data->int_gpio_cb);
 		if (ret != 0) {
 			LOG_ERR("%s: failed to add INT callback: %d", dev->name, ret);

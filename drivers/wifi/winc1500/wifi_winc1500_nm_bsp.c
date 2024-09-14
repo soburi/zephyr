@@ -73,7 +73,7 @@ void nm_bsp_register_isr(void (*isr_fun)(void))
 
 	gpio_init_callback(&winc1500.gpio_cb,
 			   chip_isr,
-			   BIT(winc1500_config.irq_gpio.pin));
+			   GPIO_BIT(winc1500_config.irq_gpio.pin));
 
 	gpio_add_callback(winc1500_config.irq_gpio.port, &winc1500.gpio_cb);
 }

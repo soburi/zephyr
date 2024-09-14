@@ -792,7 +792,7 @@ static int pcf8523_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&data->int1_callback, pcf8523_int1_callback_handler,
-				   BIT(config->int1.pin));
+				   GPIO_BIT(config->int1.pin));
 
 		err = gpio_add_callback_dt(&config->int1, &data->int1_callback);
 		if (err != 0) {

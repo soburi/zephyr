@@ -142,7 +142,7 @@ int sht3xd_trigger_set(const struct device *dev,
 }
 
 static void sht3xd_gpio_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct sht3xd_data *data =
 		CONTAINER_OF(cb, struct sht3xd_data, alert_cb);
@@ -204,7 +204,7 @@ int sht3xd_init_interrupt(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->alert_cb, sht3xd_gpio_callback,
-			   BIT(cfg->alert_gpio.pin));
+			   GPIO_BIT(cfg->alert_gpio.pin));
 	rc = gpio_add_callback(cfg->alert_gpio.port, &data->alert_cb);
 	if (rc < 0) {
 		LOG_DBG("Failed to set gpio callback!");

@@ -92,7 +92,7 @@ static void iis2dh_handle_interrupt(const struct device *dev)
 }
 
 static void iis2dh_gpio_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct iis2dh_data *iis2dh =
 		CONTAINER_OF(cb, struct iis2dh_data, gpio_cb);
@@ -169,7 +169,7 @@ int iis2dh_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&iis2dh->gpio_cb,
 			   iis2dh_gpio_callback,
-			   BIT(cfg->int_gpio.pin));
+			   GPIO_BIT(cfg->int_gpio.pin));
 
 	if (gpio_add_callback(cfg->int_gpio.port, &iis2dh->gpio_cb) < 0) {
 		LOG_DBG("Could not set gpio callback");

@@ -442,7 +442,7 @@ struct ads114s0x_data {
 };
 
 static void ads114s0x_data_ready_handler(const struct device *dev, struct gpio_callback *gpio_cb,
-					 uint32_t pins)
+					 gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -1386,7 +1386,7 @@ static int ads114s0x_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->callback_data_ready, ads114s0x_data_ready_handler,
-			   BIT(config->gpio_data_ready.pin));
+			   GPIO_BIT(config->gpio_data_ready.pin));
 	result = gpio_add_callback(config->gpio_data_ready.port, &data->callback_data_ready);
 	if (result != 0) {
 		LOG_ERR("%s: failed to add data ready callback", dev->name);

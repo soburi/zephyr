@@ -47,7 +47,7 @@ static void fdc2x1x_thread_cb(const struct device *dev)
 }
 
 static void fdc2x1x_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct fdc2x1x_data *drv_data =
 		CONTAINER_OF(cb, struct fdc2x1x_data, gpio_cb);
@@ -149,7 +149,7 @@ int fdc2x1x_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&drv_data->gpio_cb,
 			   fdc2x1x_gpio_callback,
-			   BIT(cfg->intb_gpio.pin));
+			   GPIO_BIT(cfg->intb_gpio.pin));
 
 	if (gpio_add_callback(cfg->intb_gpio.port, &drv_data->gpio_cb) < 0) {
 		LOG_ERR("Failed to set gpio callback!");

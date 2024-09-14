@@ -111,7 +111,7 @@ static ssize_t recv(struct bt_conn *conn,
 }
 
 static void button_callback(const struct device *gpiob, struct gpio_callback *cb,
-		     uint32_t pins)
+			    gpio_port_pins_t pins)
 {
 	int err;
 
