@@ -142,7 +142,7 @@ static CO_SDO_abortCode_t odf_2102(CO_ODF_arg_t *odf_arg)
  */
 static void button_isr_callback(const struct device *port,
 				struct gpio_callback *cb,
-				uint32_t pins)
+				gpio_port_pins_t pins)
 {
 	counter++;
 }
@@ -173,7 +173,7 @@ static void config_button(void)
 	}
 
 	gpio_init_callback(&button_callback, button_isr_callback,
-			   BIT(button_gpio.pin));
+			   GPIO_BIT(button_gpio.pin));
 
 	err = gpio_add_callback(button_gpio.port, &button_callback);
 	if (err) {

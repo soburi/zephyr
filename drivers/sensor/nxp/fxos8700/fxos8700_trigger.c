@@ -14,7 +14,7 @@ LOG_MODULE_DECLARE(FXOS8700, CONFIG_SENSOR_LOG_LEVEL);
 
 static void fxos8700_gpio_callback(const struct device *dev,
 				   struct gpio_callback *cb,
-				   uint32_t pin_mask)
+				   gpio_port_pins_t pin_mask)
 {
 	struct fxos8700_data *data =
 		CONTAINER_OF(cb, struct fxos8700_data, gpio_cb);
@@ -456,7 +456,7 @@ int fxos8700_trigger_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&data->gpio_cb, fxos8700_gpio_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	ret = gpio_add_callback(config->int_gpio.port, &data->gpio_cb);
 	if (ret < 0) {

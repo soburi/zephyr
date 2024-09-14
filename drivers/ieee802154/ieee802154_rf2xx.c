@@ -72,7 +72,7 @@ static struct net_pkt rf2xx_ack_pkt = {
 /* Radio Transceiver ISR */
 static inline void trx_isr_handler(const struct device *port,
 				   struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	struct rf2xx_context *ctx = CONTAINER_OF(cb,
 						 struct rf2xx_context,
@@ -924,7 +924,7 @@ static int power_on_and_setup(const struct device *dev)
 	rf2xx_iface_reg_write(dev, RF2XX_IRQ_MASK_REG, config);
 
 	gpio_init_callback(&ctx->irq_cb, trx_isr_handler,
-			   BIT(conf->irq_gpio.pin));
+			   GPIO_BIT(conf->irq_gpio.pin));
 
 	if (gpio_add_callback(conf->irq_gpio.port, &ctx->irq_cb) < 0) {
 		LOG_ERR("Could not set IRQ callback.");

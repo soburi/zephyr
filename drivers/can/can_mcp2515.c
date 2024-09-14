@@ -869,7 +869,7 @@ static void mcp2515_int_thread(void *p1, void *p2, void *p3)
 }
 
 static void mcp2515_int_gpio_callback(const struct device *dev,
-				      struct gpio_callback *cb, uint32_t pins)
+				      struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct mcp2515_data *dev_data =
 		CONTAINER_OF(cb, struct mcp2515_data, int_gpio_cb);
@@ -949,7 +949,7 @@ static int mcp2515_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&(dev_data->int_gpio_cb), mcp2515_int_gpio_callback,
-			   BIT(dev_cfg->int_gpio.pin));
+			   GPIO_BIT(dev_cfg->int_gpio.pin));
 
 	if (gpio_add_callback(dev_cfg->int_gpio.port,
 			      &(dev_data->int_gpio_cb))) {

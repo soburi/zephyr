@@ -24,7 +24,7 @@ static void vcnl4040_handle_cb(struct vcnl4040_data *data)
 
 static void vcnl4040_gpio_callback(const struct device *dev,
 				   struct gpio_callback *cb,
-				   uint32_t pin_mask)
+				   gpio_port_pins_t pin_mask)
 {
 	struct vcnl4040_data *data =
 		CONTAINER_OF(cb, struct vcnl4040_data, gpio_cb);
@@ -283,7 +283,7 @@ int vcnl4040_trigger_init(const struct device *dev)
 	gpio_pin_configure_dt(&config->int_gpio, GPIO_INPUT);
 
 	gpio_init_callback(&data->gpio_cb, vcnl4040_gpio_callback,
-			   BIT(config->int_gpio.pin));
+			   GPIO_BIT(config->int_gpio.pin));
 
 	if (gpio_add_callback(config->int_gpio.port, &data->gpio_cb) < 0) {
 		LOG_ERR("Failed to set gpio callback");

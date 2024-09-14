@@ -55,7 +55,7 @@ void config_wakeup_features(void)
 }
 
 void button_pressed(const struct device *dev, struct gpio_callback *cb,
-		    uint32_t pins)
+		    gpio_port_pins_t pins)
 {
 	k_sem_give(&button_sem);
 }
@@ -133,7 +133,7 @@ int main(void)
 		return 0;
 	}
 
-	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
+	gpio_init_callback(&button_cb_data, button_pressed, GPIO_BIT(button.pin));
 	gpio_add_callback(button.port, &button_cb_data);
 
 	printk("Device ready: %s\n\n\n", CONFIG_BOARD);

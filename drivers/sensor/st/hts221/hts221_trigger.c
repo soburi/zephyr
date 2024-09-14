@@ -84,7 +84,7 @@ int hts221_trigger_set(const struct device *dev,
 }
 
 static void hts221_drdy_callback(const struct device *dev,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct hts221_data *data =
 		CONTAINER_OF(cb, struct hts221_data, drdy_cb);
@@ -148,7 +148,7 @@ int hts221_init_interrupt(const struct device *dev)
 
 	gpio_init_callback(&data->drdy_cb,
 			   hts221_drdy_callback,
-			   BIT(cfg->gpio_drdy.pin));
+			   GPIO_BIT(cfg->gpio_drdy.pin));
 
 	status = gpio_add_callback(cfg->gpio_drdy.port, &data->drdy_cb);
 	if (status < 0) {

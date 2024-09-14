@@ -99,7 +99,7 @@ int bq274xx_trigger_mode_init(const struct device *dev)
 	}
 	gpio_init_callback(&data->ready_callback,
 			   bq274xx_ready_callback_handler,
-			   BIT(config->int_gpios.pin));
+			   GPIO_BIT(config->int_gpios.pin));
 
 	return 0;
 }

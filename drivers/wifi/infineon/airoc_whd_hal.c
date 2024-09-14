@@ -362,7 +362,7 @@ whd_result_t whd_bus_sdio_register_oob_intr(whd_driver_t whd_driver)
 
 	/* Initialize/add OOB pin callback */
 	gpio_init_callback(&data->host_oob_pin_cb, whd_bus_sdio_oob_irq_handler,
-			   BIT(host_oob_pin->pin));
+			   GPIO_BIT(host_oob_pin->pin));
 
 	ret = gpio_add_callback_dt(host_oob_pin, &data->host_oob_pin_cb);
 	if (ret != 0) {

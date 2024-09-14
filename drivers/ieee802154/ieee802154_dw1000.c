@@ -611,7 +611,7 @@ static void dwt_irq_work_handler(struct k_work *item)
 }
 
 static void dwt_gpio_callback(const struct device *dev,
-			      struct gpio_callback *cb, uint32_t pins)
+			      struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct dwt_context *ctx = CONTAINER_OF(cb, struct dwt_context, gpio_cb);
 
@@ -1552,7 +1552,7 @@ static int dw1000_init(const struct device *dev)
 	}
 
 	gpio_init_callback(&(ctx->gpio_cb), dwt_gpio_callback,
-			   BIT(hi_cfg->irq_gpio.pin));
+			   GPIO_BIT(hi_cfg->irq_gpio.pin));
 
 	if (gpio_add_callback(hi_cfg->irq_gpio.port, &(ctx->gpio_cb))) {
 		LOG_ERR("Failed to add IRQ callback");

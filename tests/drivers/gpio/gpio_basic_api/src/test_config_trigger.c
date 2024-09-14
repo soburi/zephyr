@@ -11,7 +11,7 @@ static struct drv_data data;
 static int cb_cnt;
 
 static void callback(const struct device *dev,
-		     struct gpio_callback *gpio_cb, uint32_t pins)
+		     struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	/*= checkpoint: pins should be marked with correct pin number bit =*/
 	zassert_equal(pins, BIT(PIN_IN),
@@ -34,7 +34,7 @@ ZTEST(after_flash_gpio_config_trigger, test_gpio_config_twice_trigger)
 	ret = gpio_pin_configure(dev, PIN_IN, GPIO_INPUT);
 	zassert_ok(ret, "config PIN_IN failed");
 
-	gpio_init_callback(&drv_data->gpio_cb, callback, BIT(PIN_IN));
+	gpio_init_callback(&drv_data->gpio_cb, callback, GPIO_BIT(PIN_IN));
 	ret = gpio_add_callback(dev, &drv_data->gpio_cb);
 	zassert_ok(ret, "add callback failed");
 
@@ -86,7 +86,7 @@ ZTEST(after_flash_gpio_config_trigger, test_gpio_config_trigger)
 	ret = gpio_pin_configure(dev, PIN_IN, GPIO_INPUT);
 	zassert_ok(ret, "config PIN_IN failed");
 
-	gpio_init_callback(&drv_data->gpio_cb, callback, BIT(PIN_IN));
+	gpio_init_callback(&drv_data->gpio_cb, callback, GPIO_BIT(PIN_IN));
 	ret = gpio_add_callback(dev, &drv_data->gpio_cb);
 	zassert_ok(ret, "add callback failed");
 

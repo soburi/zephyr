@@ -209,7 +209,7 @@ static void ism330dhcx_handle_interrupt(const struct device *dev)
 }
 
 static void ism330dhcx_gpio_callback(const struct device *dev,
-				     struct gpio_callback *cb, uint32_t pins)
+				     struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct ism330dhcx_data *ism330dhcx =
 		CONTAINER_OF(cb, struct ism330dhcx_data, gpio_cb);
@@ -281,7 +281,7 @@ int ism330dhcx_init_interrupt(const struct device *dev)
 		return ret;
 	}
 
-	gpio_init_callback(&ism330dhcx->gpio_cb, ism330dhcx_gpio_callback, BIT(cfg->drdy_gpio.pin));
+	gpio_init_callback(&ism330dhcx->gpio_cb, ism330dhcx_gpio_callback, GPIO_BIT(cfg->drdy_gpio.pin));
 
 	if (gpio_add_callback(cfg->drdy_gpio.port, &ism330dhcx->gpio_cb) < 0) {
 		LOG_ERR("Could not set gpio callback");

@@ -698,7 +698,7 @@ static int ec_host_cmd_spi_init(const struct ec_host_cmd_backend *backend,
 		return -EIO;
 	}
 
-	gpio_init_callback(&hc_spi->cs_callback, gpio_cb_nss, BIT(hc_spi->cs.pin));
+	gpio_init_callback(&hc_spi->cs_callback, gpio_cb_nss, GPIO_BIT(hc_spi->cs.pin));
 	gpio_add_callback(hc_spi->cs.port, &hc_spi->cs_callback);
 	gpio_pin_interrupt_configure(hc_spi->cs.port, hc_spi->cs.pin, GPIO_INT_EDGE_BOTH);
 

@@ -803,7 +803,7 @@ static int rv3028_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&data->int_callback, rv3028_int_handler,
-				   BIT(config->gpio_int.pin));
+				   GPIO_BIT(config->gpio_int.pin));
 
 		err = gpio_add_callback_dt(&config->gpio_int, &data->int_callback);
 		if (err) {

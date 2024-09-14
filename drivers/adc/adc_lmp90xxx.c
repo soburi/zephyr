@@ -708,7 +708,7 @@ static void lmp90xxx_acquisition_thread(void *p1, void *p2, void *p3)
 }
 
 static void lmp90xxx_drdyb_callback(const struct device *port,
-				    struct gpio_callback *cb, uint32_t pins)
+				    struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lmp90xxx_data *data =
 		CONTAINER_OF(cb, struct lmp90xxx_data, drdyb_cb);
@@ -991,7 +991,7 @@ static int lmp90xxx_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&data->drdyb_cb, lmp90xxx_drdyb_callback,
-				   BIT(config->drdyb.pin));
+				   GPIO_BIT(config->drdyb.pin));
 
 		err = gpio_add_callback(config->drdyb.port, &data->drdyb_cb);
 		if (err) {

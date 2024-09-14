@@ -136,7 +136,7 @@ static int prepare_for_transfer(const struct device *dev,
 }
 
 static void wake_callback(const struct device *dev, struct gpio_callback *cb,
-			  uint32_t pins)
+			  gpio_port_pins_t pins)
 {
 	struct spi_nrfx_data *dev_data =
 		CONTAINER_OF(cb, struct spi_nrfx_data, wake_cb_data);
@@ -326,7 +326,7 @@ static int spi_nrfx_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&dev_data->wake_cb_data, wake_callback,
-				   BIT(dev_config->wake_gpio.pin));
+				   GPIO_BIT(dev_config->wake_gpio.pin));
 		err = gpio_add_callback(dev_config->wake_gpio.port,
 					&dev_data->wake_cb_data);
 		if (err < 0) {
