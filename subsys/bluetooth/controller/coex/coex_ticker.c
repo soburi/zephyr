@@ -149,7 +149,7 @@ static int coex_ticker_grant_start(const struct device *dev)
 
 
 static void coex_ticker_grant_irq_handler(const struct device *dev,
-					struct gpio_callback *cb, uint32_t pins)
+					struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -181,7 +181,7 @@ static int coex_ticker_init(const struct device *dev)
 
 	gpio_init_callback(&data->grant_irq_cb,
 					   coex_ticker_grant_irq_handler,
-					   BIT(config->grant_spec.pin));
+					   GPIO_BIT(config->grant_spec.pin));
 
 	res = gpio_add_callback(config->grant_spec.port, &data->grant_irq_cb);
 	if (res) {

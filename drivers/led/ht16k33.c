@@ -264,7 +264,7 @@ static void ht16k33_irq_thread(void *p1, void *p2, void *p3)
 }
 
 static void ht16k33_irq_callback(const struct device *gpiob,
-				 struct gpio_callback *cb, uint32_t pins)
+				 struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct ht16k33_data *data;
 
@@ -361,7 +361,7 @@ static int ht16k33_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&data->irq_cb, &ht16k33_irq_callback,
-				   BIT(config->irq.pin));
+				   GPIO_BIT(config->irq.pin));
 
 		err = gpio_add_callback(config->irq.port, &data->irq_cb);
 		if (err) {

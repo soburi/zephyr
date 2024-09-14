@@ -69,7 +69,7 @@ static void bmi08x_acc_work_handler(struct k_work *work)
 #endif
 
 static void bmi08x_acc_gpio_callback(const struct device *port, struct gpio_callback *cb,
-				     uint32_t pin)
+				     gpio_port_pins_t pin)
 {
 	struct bmi08x_accel_data *data = CONTAINER_OF(cb, struct bmi08x_accel_data, gpio_cb);
 
@@ -157,7 +157,7 @@ int bmi08x_acc_trigger_mode_init(const struct device *dev)
 
 	gpio_pin_configure_dt(&cfg->int_gpio, GPIO_INPUT);
 
-	gpio_init_callback(&data->gpio_cb, bmi08x_acc_gpio_callback, BIT(cfg->int_gpio.pin));
+	gpio_init_callback(&data->gpio_cb, bmi08x_acc_gpio_callback, GPIO_BIT(cfg->int_gpio.pin));
 
 	ret = gpio_add_callback(cfg->int_gpio.port, &data->gpio_cb);
 

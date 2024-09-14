@@ -233,7 +233,7 @@ static int gpio_kbd_matrix_init(const struct device *dev)
 		gpio_cb = &cfg->gpio_cb[i];
 
 		gpio_init_callback(gpio_cb, cfg->gpio_cb_handler,
-				   BIT(gpio->pin));
+				   GPIO_BIT(gpio->pin));
 
 		ret = gpio_add_callback_dt(gpio, gpio_cb);
 		if (ret < 0) {
@@ -294,7 +294,7 @@ static const struct input_kbd_matrix_api gpio_kbd_matrix_api = {
 	IF_ENABLED(DT_INST_ENUM_HAS_VALUE(n, idle_mode, interrupt), (				\
 	static struct gpio_callback gpio_kbd_matrix_gpio_cb_##n[DT_INST_PROP_LEN(n, row_gpios)];\
 	static void gpio_kbd_matrix_cb_##n(const struct device *gpio_dev,			\
-					   struct gpio_callback *cb, uint32_t pins)		\
+					   struct gpio_callback *cb, gpio_port_pins_t pins)	\
 	{											\
 		input_kbd_matrix_poll_start(DEVICE_DT_INST_GET(n));				\
 	}											\

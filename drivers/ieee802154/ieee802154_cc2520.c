@@ -380,7 +380,7 @@ static inline uint32_t get_cca(const struct device *dev)
 }
 
 static inline void sfd_int_handler(const struct device *port,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct cc2520_context *cc2520 =
 		CONTAINER_OF(cb, struct cc2520_context, sfd_cb);
@@ -432,13 +432,13 @@ static inline int setup_gpio_callbacks(const struct device *dev)
 	const struct cc2520_config *cfg = dev->config;
 	struct cc2520_context *cc2520 = dev->data;
 
-	gpio_init_callback(&cc2520->sfd_cb, sfd_int_handler, BIT(cfg->sfd.pin));
+	gpio_init_callback(&cc2520->sfd_cb, sfd_int_handler, GPIO_BIT(cfg->sfd.pin));
 	if (gpio_add_callback(cfg->sfd.port, &cc2520->sfd_cb) != 0) {
 		return -EIO;
 	}
 
 
-	gpio_init_callback(&cc2520->fifop_cb, fifop_int_handler, BIT(cfg->fifop.pin));
+	gpio_init_callback(&cc2520->fifop_cb, fifop_int_handler, GPIO_BIT(cfg->fifop.pin));
 	if (gpio_add_callback(cfg->fifop.port, &cc2520->fifop_cb) != 0) {
 		return -EIO;
 	}

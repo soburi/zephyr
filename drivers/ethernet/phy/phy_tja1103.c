@@ -270,7 +270,7 @@ static void phy_tja1103_irq_offload_thread(void *p1, void *p2, void *p3)
 }
 
 static void phy_tja1103_handle_irq(const struct device *port, struct gpio_callback *cb,
-				   uint32_t pins)
+				   gpio_port_pins_t pins)
 {
 	ARG_UNUSED(pins);
 	ARG_UNUSED(port);
@@ -302,7 +302,7 @@ static void phy_tja1103_cfg_irq_poll(const struct device *dev)
 		}
 
 		gpio_init_callback(&(data->phy_tja1103_int_callback), phy_tja1103_handle_irq,
-				   BIT(cfg->gpio_interrupt.pin));
+				   GPIO_BIT(cfg->gpio_interrupt.pin));
 
 		/* Add callback structure to global syslist */
 		ret = gpio_add_callback(cfg->gpio_interrupt.port, &data->phy_tja1103_int_callback);

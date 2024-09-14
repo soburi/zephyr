@@ -118,7 +118,7 @@ static __maybe_unused void gpio_keys_change_deferred(struct k_work *work)
 }
 
 static void gpio_keys_interrupt(const struct device *dev, struct gpio_callback *cbdata,
-				uint32_t pins)
+				gpio_port_pins_t pins)
 {
 	struct gpio_keys_callback *keys_cb = CONTAINER_OF(
 			cbdata, struct gpio_keys_callback, gpio_cb);
@@ -137,7 +137,7 @@ static int gpio_keys_interrupt_configure(const struct gpio_dt_spec *gpio_spec,
 {
 	int ret;
 
-	gpio_init_callback(&cb->gpio_cb, gpio_keys_interrupt, BIT(gpio_spec->pin));
+	gpio_init_callback(&cb->gpio_cb, gpio_keys_interrupt, GPIO_BIT(gpio_spec->pin));
 
 	ret = gpio_add_callback(gpio_spec->port, &cb->gpio_cb);
 	if (ret < 0) {

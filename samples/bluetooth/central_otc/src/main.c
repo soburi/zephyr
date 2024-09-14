@@ -178,7 +178,8 @@ static void otc_checksum_work_fn(struct k_work *work)
 	}
 }
 
-static void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void button_pressed(const struct device *dev, struct gpio_callback *cb,
+			   gpio_port_pins_t pins)
 {
 	otc_btn_work.pins = pins;
 	k_work_schedule(&otc_btn_work.work, K_MSEC(100));

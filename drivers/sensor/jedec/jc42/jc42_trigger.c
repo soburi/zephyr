@@ -118,7 +118,7 @@ int jc42_trigger_set(const struct device *dev,
 }
 
 static void alert_cb(const struct device *dev, struct gpio_callback *cb,
-		     uint32_t pins)
+		     gpio_port_pins_t pins)
 {
 	struct jc42_data *data =
 		CONTAINER_OF(cb, struct jc42_data, alert_cb);
@@ -192,7 +192,7 @@ int jc42_setup_interrupt(const struct device *dev)
 	}
 
 	if (rc == 0) {
-		gpio_init_callback(&data->alert_cb, alert_cb, BIT(cfg->int_gpio.pin));
+		gpio_init_callback(&data->alert_cb, alert_cb, GPIO_BIT(cfg->int_gpio.pin));
 
 		rc = gpio_add_callback(cfg->int_gpio.port, &data->alert_cb);
 	}

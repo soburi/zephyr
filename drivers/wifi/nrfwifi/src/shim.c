@@ -743,7 +743,8 @@ static void irq_work_handler(struct k_work *work)
 
 extern struct k_work_q zep_wifi_intr_q;
 
-static void zep_shim_irq_handler(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void zep_shim_irq_handler(const struct device *dev, struct gpio_callback *cb,
+				 gpio_port_pins_t pins)
 {
 	ARG_UNUSED(cb);
 	ARG_UNUSED(pins);

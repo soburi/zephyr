@@ -16,7 +16,7 @@
 LOG_MODULE_DECLARE(LIS2DS12, CONFIG_SENSOR_LOG_LEVEL);
 
 static void lis2ds12_gpio_callback(const struct device *dev,
-				   struct gpio_callback *cb, uint32_t pins)
+				   struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lis2ds12_data *data =
 		CONTAINER_OF(cb, struct lis2ds12_data, gpio_cb);
@@ -151,7 +151,7 @@ int lis2ds12_trigger_init(const struct device *dev)
 
 	gpio_init_callback(&data->gpio_cb,
 			   lis2ds12_gpio_callback,
-			   BIT(cfg->gpio_int.pin));
+			   GPIO_BIT(cfg->gpio_int.pin));
 
 	ret = gpio_add_callback(cfg->gpio_int.port, &data->gpio_cb);
 	if (ret < 0) {

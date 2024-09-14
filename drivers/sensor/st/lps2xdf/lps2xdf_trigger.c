@@ -47,7 +47,7 @@ static void lps2xdf_intr_callback(struct lps2xdf_data *lps2xdf)
 }
 
 static void lps2xdf_gpio_callback(const struct device *dev,
-				  struct gpio_callback *cb, uint32_t pins)
+				  struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct lps2xdf_data *lps2xdf =
 		CONTAINER_OF(cb, struct lps2xdf_data, gpio_cb);
@@ -152,7 +152,7 @@ int lps2xdf_init_interrupt(const struct device *dev, enum sensor_variant variant
 
 		gpio_init_callback(&lps2xdf->gpio_cb,
 				   lps2xdf_gpio_callback,
-				   BIT(cfg->gpio_int.pin));
+				   GPIO_BIT(cfg->gpio_int.pin));
 
 		ret = gpio_add_callback(cfg->gpio_int.port, &lps2xdf->gpio_cb);
 		if (ret < 0) {

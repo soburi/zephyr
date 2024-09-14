@@ -80,7 +80,7 @@ static const struct event_reg_t event_reg[NPM1300_EVENT_MAX] = {
 	[NPM1300_EVENT_GPIO4_EDGE] = {0x22U, 0x10U},
 };
 
-static void gpio_callback(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+static void gpio_callback(const struct device *dev, struct gpio_callback *cb, gpio_port_pins_t pins)
 {
 	struct mfd_npm1300_data *data = CONTAINER_OF(cb, struct mfd_npm1300_data, gpio_cb);
 
@@ -155,7 +155,7 @@ static int mfd_npm1300_init(const struct device *dev)
 		}
 
 		gpio_init_callback(&mfd_data->gpio_cb, gpio_callback,
-				   BIT(config->host_int_gpios.pin));
+				   GPIO_BIT(config->host_int_gpios.pin));
 
 		ret = gpio_add_callback(config->host_int_gpios.port, &mfd_data->gpio_cb);
 		if (ret < 0) {

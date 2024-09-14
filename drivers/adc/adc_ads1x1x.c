@@ -680,7 +680,7 @@ static void ads1x1x_work_fn(struct k_work *work)
 
 static void ads1x1x_conv_ready_cb(const struct device *gpio_dev,
 				      struct gpio_callback *cb,
-				      uint32_t pins)
+				      gpio_port_pins_t pins)
 {
 	struct ads1x1x_data *data;
 	const struct device *dev;
@@ -726,7 +726,7 @@ static int ads1x1x_init_interrupt(const struct device *dev)
 		return rc;
 	}
 	gpio_init_callback(&data->gpio_cb, ads1x1x_conv_ready_cb,
-			   BIT(config->alert_rdy.pin));
+			   GPIO_BIT(config->alert_rdy.pin));
 	rc = gpio_add_callback(config->alert_rdy.port, &data->gpio_cb);
 	if (rc) {
 		LOG_ERR("Could not set gpio callback.");

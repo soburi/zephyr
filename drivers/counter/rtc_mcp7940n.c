@@ -385,7 +385,7 @@ static void mcp7940n_work_handler(struct k_work *work)
 }
 
 static void mcp7940n_init_cb(const struct device *dev,
-				 struct gpio_callback *gpio_cb, uint32_t pins)
+				 struct gpio_callback *gpio_cb, gpio_port_pins_t pins)
 {
 	struct mcp7940n_data *data =
 		CONTAINER_OF(gpio_cb, struct mcp7940n_data, int_callback);
@@ -710,7 +710,7 @@ static int mcp7940n_init(const struct device *dev)
 						GPIO_INT_EDGE_TO_ACTIVE);
 
 		gpio_init_callback(&data->int_callback, mcp7940n_init_cb,
-				   BIT(cfg->int_gpios.pin));
+				   GPIO_BIT(cfg->int_gpios.pin));
 
 		gpio_add_callback(cfg->int_gpios.port, &data->int_callback);
 
