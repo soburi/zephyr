@@ -26,7 +26,7 @@ LOG_MODULE_REGISTER(bosch_bmi323);
 #define IMU_BOSCH_DIE_TEMP_MICRO_DEG_CELCIUS_LSB    (1953L)
 
 typedef void (*bosch_bmi323_gpio_callback_ptr)(const struct device *dev, struct gpio_callback *cb,
-					       uint32_t pins);
+					       gpio_port_pins_t pins);
 
 struct bosch_bmi323_config {
 	const struct bosch_bmi323_bus *bus;
