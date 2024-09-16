@@ -1,0 +1,53 @@
+/ {
+	chosen {
+		zephyr,pcie-controller = &test_pcie_controller;
+	};
+
+        test {
+                #address-cells = <1>;
+                #size-cells = <1>;
+
+                test_gpio: gpio@deadbeef {
+                        compatible = "vnd,gpio";
+                        gpio-controller;
+                        reg = <0xdeadbeef 0x1000>;
+                        #gpio-cells = <0x2>;
+                        status = "okay";
+                };
+
+		test_intc: intc@cafe {
+                        compatible = "vnd,intc";
+                        reg = <0xcafe 0x1000>;
+
+                        interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+                test_pcie: spi@33334444 {
+                        compatible = "vnd,pcie";
+			reg = <0x33334444 0x1000>;
+			status = "okay";
+
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			test_pcie_controller: pcie@33335555 {
+				compatible = "pcie-controller";
+				reg = <0x33335555 0x1000>;
+				status = "okay";
+
+				#address-cells = <1>;
+				#size-cells = <1>;
+				kvaser: kvarserx {
+					compatible = "kvaser,pcican";
+					status = "okay";
+					vendor-id = <0x10e8>;
+					device-id = <0x8406>;
+					interrupts = <0 0>;
+					interrupt-parent = <&test_intc>;
+				};
+			};
+
+		};
+	};
+};
