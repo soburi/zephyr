@@ -1113,3 +1113,9 @@ test_i2c_mmc56x3: mmc56x3@92 {
 	magn-odr = <0>;
 	auto-self-reset;
 };
+
+test_sbs_guage: sbs_gauge@97 {
+	compatible = "sbs,sbs-gauge";
+	reg = <0x97>;
+	status = "okay";
+};
