@@ -197,6 +197,13 @@ Regulator
           status = "okay";
       };
 
+Video
+=====
+
+* The vendor prefix for ``gc,gc2145`` has been corrected.
+  It now uses the :dtcompatible:`galaxycore,gc2145` compatible string instead
+  to the ``gc,gc2145`` to
+
 Bluetooth
 *********
 
