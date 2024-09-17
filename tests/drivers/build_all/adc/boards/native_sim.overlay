@@ -350,6 +350,13 @@
 					#io-channel-cells = <1>;
 				};
 			};
+
+			test_spi_tla2021: tla2021@20 {
+				compatible = "ti,tla2021";
+				reg = <0x20>;
+				spi-max-frequency = <0>;
+				#io-channel-cells = <1>;
+			};
 		};
 	};
 };
