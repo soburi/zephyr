@@ -80,6 +80,15 @@
 					#address-cells = <1>;
 					#size-cells = <0>;
 
+					ethernet-phy@0 {
+						reg = <0x0>;
+						compatible = "microchip,ksz8081";
+						status = "okay";
+						reset-gpios = <&test_gpio 0 0>;
+						int-gpios = <&test_gpio 0 0>;
+						microchip,interface-type = "rmii";
+					};
+
 					ethernet-phy@1 {
 						reg = <0x1>;
 						compatible = "adi,adin2111-phy";
@@ -110,13 +119,15 @@
 
 					ethernet-phy@1 {
 						reg = <0x1>;
-						compatible = "adi,adin2111-phy";
+						compatible = "realtek,rtl8211f";
 						status = "okay";
 					};
 					ethernet-phy@2 {
 						reg = <0x2>;
-						compatible = "adi,adin2111-phy";
+						compatible = "nxp,tja1103";
 						status = "okay";
+						int-gpios = <&test_gpio 5 0>;
+						master-slave = "slave";
 					};
 				};
 			};
