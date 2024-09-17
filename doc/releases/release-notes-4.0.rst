@@ -233,6 +233,8 @@ Drivers and Sensors
 
 * Video
 
+  * gc2145: Renamed the ``compatible`` from ``gc,gc2145`` to :dtcompatible:`galaxycore,gc2145`.
+
 * Watchdog
 
 * Wi-Fi
