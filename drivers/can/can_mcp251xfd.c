@@ -1518,7 +1518,7 @@ static int mcp251xfd_init(const struct device *dev)
 	dev_data->dev = dev;
 
 	if (dev_cfg->clk_dev != NULL) {
-		uint32_t clk_id = dev_cfg->clk_id;
+		uintptr_t clk_id = dev_cfg->clk_id;
 
 		if (!device_is_ready(dev_cfg->clk_dev)) {
 			LOG_ERR("Clock controller not ready");
