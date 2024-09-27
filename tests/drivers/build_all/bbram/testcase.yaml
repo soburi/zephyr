@@ -1,0 +1,21 @@
+# Copyright (c) 2024 TOKITA hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+tests:
+  drivers.bbram.build:
+    tags:
+      - drivers
+      - bbram
+    build_only: true
+    platform_allow:
+      - native_sim
+
+  drivers.bbram.emul.build:
+    tags:
+      - drivers
+      - bbram
+    build_only: true
+    platform_allow:
+      - native_sim
+    extra_configs:
+      - CONFIG_EMUL=y
