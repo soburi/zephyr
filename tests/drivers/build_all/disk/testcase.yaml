@@ -2,20 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 tests:
-  drivers.flash.build:
+  drivers.disk.build:
     tags:
       - drivers
-      - flash
+      - disk
     build_only: true
     platform_allow:
       - native_sim
-
-  drivers.flash.emul.build:
-    tags:
-      - drivers
-      - flash
-    build_only: true
-    platform_allow:
-      - native_sim
-    extra_configs:
-      - CONFIG_EMUL=y
