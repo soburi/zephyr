@@ -9,7 +9,11 @@
 #include <zephyr/sys/util.h>
 #include "test_gpio_api.h"
 
+#ifdef CONFIG_GPIO_64BIT_PORT
+#define TEST_GPIO_PORT_VALUE_MAX         0xFFFFFFFFFFFFFFFFLLU
+#else
 #define TEST_GPIO_PORT_VALUE_MAX         ((1LLU << GPIO_MAX_PINS_PER_PORT) - 1)
+#endif
 
 static void port_get_raw_and_verify(const struct device *port,
 				    gpio_port_pins_t mask,
@@ -127,18 +131,18 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_toggle)
 	}
 	zassert_equal(ret, 0, "Failed to configure the pin");
 
-	port_set_bits_raw_and_verify(port, BIT(TEST_PIN), 0);
+	port_set_bits_raw_and_verify(port, GPIO_BIT(TEST_PIN), 0);
 
-	val_expected = BIT(TEST_PIN);
+	val_expected = GPIO_BIT(TEST_PIN);
 
 	for (int i = 0; i < 5; i++) {
-		ret = gpio_port_toggle_bits(port, BIT(TEST_PIN));
+		ret = gpio_port_toggle_bits(port, GPIO_BIT(TEST_PIN));
 		zassert_equal(ret, 0, "Failed to toggle pin value");
 		k_busy_wait(TEST_GPIO_MAX_RISE_FALL_TIME_US);
 
-		val_expected ^= BIT(TEST_PIN);
+		val_expected ^= GPIO_BIT(TEST_PIN);
 
-		port_get_raw_and_verify(port, BIT(TEST_PIN), val_expected, i);
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), val_expected, i);
 	}
 }
 
@@ -148,19 +152,19 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_masked_get_raw)
 	int ret;
 
 	const gpio_port_value_t test_vector[] = {
-		0xEE11EE11,
-		0x11EE11EE,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xEE11EE11EE11EE11), (0xEE11EE11)),
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x11EE11EE11EE11EE), (0x11EE11EE)),
 		TEST_GPIO_PORT_VALUE_MAX,
 		TEST_GPIO_PORT_VALUE_MAX,
-		0x00000000,
-		0x00000000,
-		0x55555555,
-		0xAAAAAAAA,
-		0x00000000,
-		0x00000000,
+		0x0000000000000000,
+		0x0000000000000000,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x5555555555555555), (0x55555555)),
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xAAAAAAAAAAAAAAAA), (0xAAAAAAAA)),
+		0x0000000000000000,
+		0x0000000000000000,
 		TEST_GPIO_PORT_VALUE_MAX,
 		TEST_GPIO_PORT_VALUE_MAX,
-		0x00000000,
+		0x0000000000000000,
 	};
 
 	port = DEVICE_DT_GET(TEST_NODE);
@@ -177,8 +181,8 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_masked_get_raw)
 	zassert_equal(ret, 0, "Failed to configure the pin");
 
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
-		port_set_masked_raw_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_raw_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
+		port_set_masked_raw_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
 	}
 }
 
@@ -188,19 +192,19 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_masked_get)
 	int ret;
 
 	const gpio_port_value_t test_vector[] = {
-		0xEE11EE11,
-		0x11EE11EE,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xEE11EE11EE11EE11), (0xEE11EE11)),
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x11EE11EE11EE11EE), (0x11EE11EE)),
 		TEST_GPIO_PORT_VALUE_MAX,
 		TEST_GPIO_PORT_VALUE_MAX,
-		0x00000000,
-		0x00000000,
-		0x55555555,
-		0xAAAAAAAA,
-		0x00000000,
-		0x00000000,
+		0x0000000000000000,
+		0x0000000000000000,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x5555555555555555), (0x55555555)),
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xAAAAAAAAAAAAAAAA), (0xAAAAAAAA)),
+		0x0000000000000000,
+		0x0000000000000000,
 		TEST_GPIO_PORT_VALUE_MAX,
 		TEST_GPIO_PORT_VALUE_MAX,
-		0x00000000,
+		0x0000000000000000,
 	};
 
 	port = DEVICE_DT_GET(TEST_NODE);
@@ -217,8 +221,8 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_masked_get)
 	zassert_equal(ret, 0, "Failed to configure the pin");
 
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
-		port_set_masked_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
+		port_set_masked_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
 	}
 }
 
@@ -228,20 +232,20 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_masked_get_active_high)
 	int ret;
 
 	const gpio_port_value_t test_vector[] = {
-		0xCC33CC33,
-		0x33CC33CC,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xCC33CC33CC33CC33), (0xCC33CC33)),
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x33CC33CC33CC33CC), (0x33CC33CC)),
 		TEST_GPIO_PORT_VALUE_MAX,
 		TEST_GPIO_PORT_VALUE_MAX,
 		TEST_GPIO_PORT_VALUE_MAX,
-		0x00000000,
-		0x00000000,
-		0x00000000,
-		0x55555555,
-		0x00000000,
-		0xAAAAAAAA,
-		0x00000000,
+		0x0000000000000000,
+		0x0000000000000000,
+		0x0000000000000000,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x5555555555555555), (0x55555555)),
+		0x0000000000000000,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xAAAAAAAAAAAAAAAA), (0xAAAAAAAA)),
+		0x0000000000000000,
 		TEST_GPIO_PORT_VALUE_MAX,
-		0x00000000,
+		0x0000000000000000,
 	};
 
 	port = DEVICE_DT_GET(TEST_NODE);
@@ -260,16 +264,16 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_masked_get_active_high)
 
 	TC_PRINT("Step 1: Set logical, get logical and physical port value\n");
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
-		port_set_masked_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_raw_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
+		port_set_masked_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
 	}
 
 	TC_PRINT("Step 2: Set physical, get logical and physical port value\n");
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
-		port_set_masked_raw_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_raw_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
+		port_set_masked_raw_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
 	}
 }
 
@@ -279,20 +283,20 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_masked_get_active_low)
 	int ret;
 
 	const gpio_port_value_t test_vector[] = {
-		0xCC33CC33,
-		0x33CC33CC,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xCC33CC33CC33CC33), (0xCC33CC33)),
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x33CC33CC33CC33CC), (0x33CC33CC)),
 		TEST_GPIO_PORT_VALUE_MAX,
 		TEST_GPIO_PORT_VALUE_MAX,
 		TEST_GPIO_PORT_VALUE_MAX,
-		0x00000000,
-		0x00000000,
-		0x00000000,
-		0x55555555,
-		0x00000000,
-		0xAAAAAAAA,
-		0x00000000,
+		0x0000000000000000,
+		0x0000000000000000,
+		0x0000000000000000,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x5555555555555555), (0x55555555)),
+		0x0000000000000000,
+		COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xAAAAAAAAAAAAAAAA), (0xAAAAAAAA)),
+		0x0000000000000000,
 		TEST_GPIO_PORT_VALUE_MAX,
-		0x00000000,
+		0x0000000000000000,
 	};
 
 	port = DEVICE_DT_GET(TEST_NODE);
@@ -311,16 +315,16 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_masked_get_active_low)
 
 	TC_PRINT("Step 1: Set logical, get logical and physical port value\n");
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
-		port_set_masked_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_raw_and_verify(port, BIT(TEST_PIN), ~test_vector[i], i);
+		port_set_masked_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), ~test_vector[i], i);
 	}
 
 	TC_PRINT("Step 2: Set physical, get logical and physical port value\n");
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
-		port_set_masked_raw_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
-		port_get_and_verify(port, BIT(TEST_PIN), ~test_vector[i], i);
-		port_get_raw_and_verify(port, BIT(TEST_PIN), test_vector[i], i);
+		port_set_masked_raw_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
+		port_get_and_verify(port, GPIO_BIT(TEST_PIN), ~test_vector[i], i);
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), test_vector[i], i);
 	}
 }
 
@@ -329,14 +333,21 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_bits_clear_bits_raw)
 	const struct device *port;
 	gpio_port_value_t val_expected = 0;
 	int ret;
+		
+		
 
 	const gpio_port_value_t test_vector[][2] = {
 		/* set value, clear value */
-		{0xEE11EE11, 0xEE11EE11},
-		{0x11EE11EE, TEST_GPIO_PORT_VALUE_MAX},
-		{0x00000000, 0x55555555},
-		{TEST_GPIO_PORT_VALUE_MAX, 0xAAAAAAAA},
-		{TEST_GPIO_PORT_VALUE_MAX, TEST_GPIO_PORT_VALUE_MAX},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xEE11EE11EE11EE11), (0xEE11EE11)),
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xEE11EE11EE11EE11), (0xEE11EE11))},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x11EE11EE11EE11EE), (0x11EE11EE)),
+		 TEST_GPIO_PORT_VALUE_MAX},
+		{0x0000000000000000,
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x5555555555555555), (0x55555555)),},
+		{TEST_GPIO_PORT_VALUE_MAX,
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xAAAAAAAAAAAAAAAA), (0xAAAAAAAA)),},
+		{TEST_GPIO_PORT_VALUE_MAX,
+		 TEST_GPIO_PORT_VALUE_MAX},
 	};
 
 	port = DEVICE_DT_GET(TEST_NODE);
@@ -356,12 +367,12 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_bits_clear_bits_raw)
 
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
 		port_set_bits_raw_and_verify(port, test_vector[i][0], i);
-		val_expected |= test_vector[i][0] & (BIT(TEST_PIN));
-		port_get_raw_and_verify(port, BIT(TEST_PIN), val_expected, i);
+		val_expected |= test_vector[i][0] & (GPIO_BIT(TEST_PIN));
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), val_expected, i);
 
 		port_clear_bits_raw_and_verify(port, test_vector[i][1], i);
-		val_expected &= ~(test_vector[i][1] & (BIT(TEST_PIN)));
-		port_get_raw_and_verify(port, BIT(TEST_PIN), val_expected, i);
+		val_expected &= ~(test_vector[i][1] & (GPIO_BIT(TEST_PIN)));
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), val_expected, i);
 	}
 }
 
@@ -373,11 +384,16 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_bits_clear_bits)
 
 	const gpio_port_value_t test_vector[][2] = {
 		/* set value, clear value */
-		{TEST_GPIO_PORT_VALUE_MAX, 0xAAAAAAAA},
-		{0x00000000, TEST_GPIO_PORT_VALUE_MAX},
-		{0xCC33CC33, 0x33CC33CC},
-		{0x33CC33CC, 0x33CC33CC},
-		{0x00000000, 0x55555555},
+		{TEST_GPIO_PORT_VALUE_MAX,
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xAAAAAAAAAAAAAAAA), (0xAAAAAAAA)),},
+		{0x0000000000000000,
+		 TEST_GPIO_PORT_VALUE_MAX},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xCC33CC33CC33CC33), (0xCC33CC33)),
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x33CC33CC33CC33CC), (0x33CC33CC)),},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x33CC33CC33CC33CC), (0x33CC33CC)),
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x33CC33CC33CC33CC), (0x33CC33CC)),},
+		{0x0000000000000000,
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x5555555555555555), (0x55555555)),},
 	};
 
 	port = DEVICE_DT_GET(TEST_NODE);
@@ -395,12 +411,12 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_bits_clear_bits)
 
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
 		port_set_bits_and_verify(port, test_vector[i][0], i);
-		val_expected |= test_vector[i][0] & (BIT(TEST_PIN));
-		port_get_and_verify(port, BIT(TEST_PIN), val_expected, i);
+		val_expected |= test_vector[i][0] & (GPIO_BIT(TEST_PIN));
+		port_get_and_verify(port, GPIO_BIT(TEST_PIN), val_expected, i);
 
 		port_clear_bits_and_verify(port, test_vector[i][1], i);
-		val_expected &= ~(test_vector[i][1] & (BIT(TEST_PIN)));
-		port_get_and_verify(port, BIT(TEST_PIN), val_expected, i);
+		val_expected &= ~(test_vector[i][1] & (GPIO_BIT(TEST_PIN)));
+		port_get_and_verify(port, GPIO_BIT(TEST_PIN), val_expected, i);
 	}
 }
 
@@ -412,13 +428,20 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_clr_bits_raw)
 
 	const gpio_port_value_t test_vector[][2] = {
 		/* set value, clear value */
-		{0xEE11EE11, 0x11EE11EE},
-		{0x00000000, TEST_GPIO_PORT_VALUE_MAX},
-		{0x55555555, 0x00000000},
-		{TEST_GPIO_PORT_VALUE_MAX, 0x00000000},
-		{0x00000000, 0x00000000},
-		{0xAAAAAAAA, 0x00000000},
-		{0x00000000, TEST_GPIO_PORT_VALUE_MAX},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xEE11EE11EE11EE11), (0xEE11EE11)),
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x11EE11EE11EE11EE), (0x11EE11EE))},
+		{0x0000000000000000,
+		 TEST_GPIO_PORT_VALUE_MAX},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x5555555555555555), (0x55555555)),
+		 0x0000000000000000},
+		{TEST_GPIO_PORT_VALUE_MAX,
+		 0x0000000000000000},
+		{0x0000000000000000,
+		 0x0000000000000000},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xAAAAAAAAAAAAAAAA), (0xAAAAAAAA)),
+		 0x0000000000000000},
+		{0x0000000000000000,
+		 TEST_GPIO_PORT_VALUE_MAX},
 	};
 
 	port = DEVICE_DT_GET(TEST_NODE);
@@ -436,9 +459,9 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_clr_bits_raw)
 
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
 		port_set_clr_bits_raw(port, test_vector[i][0], test_vector[i][1], i);
-		val_expected |= test_vector[i][0] & (BIT(TEST_PIN));
-		val_expected &= ~(test_vector[i][1] & (BIT(TEST_PIN)));
-		port_get_raw_and_verify(port, BIT(TEST_PIN), val_expected, i);
+		val_expected |= test_vector[i][0] & (GPIO_BIT(TEST_PIN));
+		val_expected &= ~(test_vector[i][1] & (GPIO_BIT(TEST_PIN)));
+		port_get_raw_and_verify(port, GPIO_BIT(TEST_PIN), val_expected, i);
 	}
 }
 
@@ -450,12 +473,18 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_clr_bits)
 
 	const gpio_port_value_t test_vector[][2] = {
 		/* set value, clear value */
-		{0xEE11EE11, 0x11EE11EE},
-		{0x00000000, TEST_GPIO_PORT_VALUE_MAX},
-		{0x55555555, 0x00000000},
-		{TEST_GPIO_PORT_VALUE_MAX, 0x00000000},
-		{0xAAAAAAAA, 0x00000000},
-		{0x00000000, TEST_GPIO_PORT_VALUE_MAX},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xEE11EE11EE11EE11), (0xEE11EE11)),
+		 COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x11EE11EE11EE11EE), (0x11EE11EE))},
+		{0x0000000000000000,
+		 TEST_GPIO_PORT_VALUE_MAX},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0x5555555555555555), (0x55555555)),
+		 0x0000000000000000},
+		{TEST_GPIO_PORT_VALUE_MAX,
+		 0x0000000000000000},
+		{COND_CODE_1(CONFIG_GPIO_64BIT_PORT, (0xAAAAAAAAAAAAAAAA), (0xAAAAAAAA)),
+		 0x0000000000000000},
+		{0x0000000000000000,
+		 TEST_GPIO_PORT_VALUE_MAX},
 	};
 
 	port = DEVICE_DT_GET(TEST_NODE);
@@ -473,9 +502,9 @@ ZTEST(gpio_api_1pin_port, test_gpio_port_set_clr_bits)
 
 	for (int i = 0; i < ARRAY_SIZE(test_vector); i++) {
 		port_set_clr_bits(port, test_vector[i][0], test_vector[i][1], i);
-		val_expected |= test_vector[i][0] & (BIT(TEST_PIN));
-		val_expected &= ~(test_vector[i][1] & (BIT(TEST_PIN)));
-		port_get_and_verify(port, BIT(TEST_PIN), val_expected, i);
+		val_expected |= test_vector[i][0] & (GPIO_BIT(TEST_PIN));
+		val_expected &= ~(test_vector[i][1] & (GPIO_BIT(TEST_PIN)));
+		port_get_and_verify(port, GPIO_BIT(TEST_PIN), val_expected, i);
 	}
 }
 
