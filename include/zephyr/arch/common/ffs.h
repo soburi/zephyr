@@ -37,6 +37,14 @@ static ALWAYS_INLINE unsigned int find_msb_set(uint32_t op)
 	return 32 - __builtin_clz(op);
 }
 
+static ALWAYS_INLINE unsigned int find_msb_set64(uint64_t op)
+{
+        if (op == 0) {
+                return 0;
+        }
+
+        return 64 - __builtin_clzll(op);
+}
 
 /**
  *
@@ -64,6 +72,23 @@ static ALWAYS_INLINE unsigned int find_lsb_set(uint32_t op)
 	op = op ^ (op & (op - 1));
 
 	return find_msb_set(op);
+#endif /* CONFIG_TOOLCHAIN_HAS_BUILTIN_FFS */
+}
+
+static ALWAYS_INLINE unsigned int find_lsb_set64(uint64_t op)
+{
+#ifdef CONFIG_TOOLCHAIN_HAS_BUILTIN_FFS
+        return __builtin_ffsll(op);
+
+#else
+        /*
+         * Toolchain does not have __builtin_ffs(). Leverage find_lsb_set()
+         * by first clearing all but the lowest set bit.
+         */
+
+        op = op ^ (op & (op - 1));
+
+        return find_msb_set64(op);
 #endif /* CONFIG_TOOLCHAIN_HAS_BUILTIN_FFS */
 }
 

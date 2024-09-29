@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 #define GPIO_PORT_PIN_MASK_FROM_NGPIOS(ngpios)			\
-	((gpio_port_pins_t)(((uint64_t)1 << (ngpios)) - 1U))
+	(ngpios == 64 ? 0xFFFFFFFFFFFFFFFF : (gpio_port_pins_t)(((uint64_t)1 << (ngpios)) - 1U))
 
 /**
  * @brief Makes a bitmask of allowed GPIOs from the @p "gpio-reserved-ranges"
@@ -88,7 +88,7 @@ static inline int gpio_manage_callback(sys_slist_t *callbacks,
  */
 static inline void gpio_fire_callbacks(sys_slist_t *list,
 					const struct device *port,
-					uint32_t pins)
+					gpio_port_pins_t pins)
 {
 	struct gpio_callback *cb, *tmp;
 
