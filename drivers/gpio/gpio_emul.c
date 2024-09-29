@@ -23,6 +23,12 @@ LOG_MODULE_REGISTER(gpio_emul);
 	(GPIO_INT_DISABLE | GPIO_INT_ENABLE | GPIO_INT_LEVELS_LOGICAL |	\
 	 GPIO_INT_EDGE | GPIO_INT_LOW_0 | GPIO_INT_HIGH_1)
 
+#ifdef CONFIG_GPIO_64BIT_PORT
+#define FIND_LSB_SET(n) find_lsb_set64(n)
+#else
+#define FIND_LSB_SET(n) find_lsb_set(n)
+#endif
+
 /**
  * @brief GPIO Emulator interrupt capabilities
  *
@@ -124,7 +130,7 @@ get_pins_with_flags(const struct device *port, gpio_port_pins_t mask,
 
 	for (i = 0; i < config->num_pins; ++i) {
 		if ((drv_data->flags[i] & mask) == flags) {
-			matched |= BIT(i);
+			matched |= GPIO_BIT(i);
 		}
 	}
 
@@ -207,16 +213,16 @@ static void gpio_emul_gen_interrupt_bits(const struct device *port,
 		case GPIO_INT_EDGE_RISING:
 			if (gpio_emul_config_has_caps(port, GPIO_EMUL_INT_CAP_EDGE_RISING)) {
 				if (detect_edge && !prev_bit && bit) {
-					drv_data->interrupts |= BIT(i);
-					*interrupts |= (BIT(i) & drv_data->enabled_interrupts);
+					drv_data->interrupts |= GPIO_BIT(i);
+					*interrupts |= (GPIO_BIT(i) & drv_data->enabled_interrupts);
 				}
 			}
 			break;
 		case GPIO_INT_EDGE_FALLING:
 			if (gpio_emul_config_has_caps(port, GPIO_EMUL_INT_CAP_EDGE_FALLING)) {
 				if (detect_edge && prev_bit && !bit) {
-					drv_data->interrupts |= BIT(i);
-					*interrupts |= (BIT(i) & drv_data->enabled_interrupts);
+					drv_data->interrupts |= GPIO_BIT(i);
+					*interrupts |= (GPIO_BIT(i) & drv_data->enabled_interrupts);
 				}
 			}
 			break;
@@ -224,24 +230,24 @@ static void gpio_emul_gen_interrupt_bits(const struct device *port,
 			if (gpio_emul_config_has_caps(port,
 				GPIO_EMUL_INT_CAP_EDGE_RISING | GPIO_EMUL_INT_CAP_EDGE_FALLING)) {
 				if (detect_edge && prev_bit != bit) {
-					drv_data->interrupts |= BIT(i);
-					*interrupts |= (BIT(i) & drv_data->enabled_interrupts);
+					drv_data->interrupts |= GPIO_BIT(i);
+					*interrupts |= (GPIO_BIT(i) & drv_data->enabled_interrupts);
 				}
 			}
 			break;
 		case GPIO_INT_LEVEL_LOW:
 			if (gpio_emul_config_has_caps(port, GPIO_EMUL_INT_CAP_LEVEL_LOW)) {
 				if (!bit) {
-					drv_data->interrupts |= BIT(i);
-					*interrupts |= (BIT(i) & drv_data->enabled_interrupts);
+					drv_data->interrupts |= GPIO_BIT(i);
+					*interrupts |= (GPIO_BIT(i) & drv_data->enabled_interrupts);
 				}
 			}
 			break;
 		case GPIO_INT_LEVEL_HIGH:
 			if (gpio_emul_config_has_caps(port, GPIO_EMUL_INT_CAP_LEVEL_HIGH)) {
 				if (bit) {
-					drv_data->interrupts |= BIT(i);
-					*interrupts |= (BIT(i) & drv_data->enabled_interrupts);
+					drv_data->interrupts |= GPIO_BIT(i);
+					*interrupts |= (GPIO_BIT(i) & drv_data->enabled_interrupts);
 				}
 			}
 			break;
@@ -389,7 +395,7 @@ int gpio_emul_flags_get(const struct device *port, gpio_pin_t pin, gpio_flags_t 
 		return -EINVAL;
 	}
 
-	if ((config->common.port_pin_mask & BIT(pin)) == 0) {
+	if ((config->common.port_pin_mask & GPIO_BIT(pin)) == 0) {
 		return -EINVAL;
 	}
 
@@ -424,7 +430,7 @@ static int gpio_emul_pin_configure(const struct device *port, gpio_pin_t pin,
 		return -ENOTSUP;
 	}
 
-	if ((config->common.port_pin_mask & BIT(pin)) == 0) {
+	if ((config->common.port_pin_mask & GPIO_BIT(pin)) == 0) {
 		return -EINVAL;
 	}
 
@@ -432,37 +438,37 @@ static int gpio_emul_pin_configure(const struct device *port, gpio_pin_t pin,
 	drv_data->flags[pin] = flags;
 	if (flags & GPIO_OUTPUT) {
 		if (flags & GPIO_OUTPUT_INIT_LOW) {
-			drv_data->output_vals &= ~BIT(pin);
+			drv_data->output_vals &= ~GPIO_BIT(pin);
 			if (flags & GPIO_INPUT) {
 				/* for push-pull mode to generate interrupts */
 				rv = gpio_emul_input_set_masked_int(
-					port, BIT(pin), drv_data->output_vals);
+					port, GPIO_BIT(pin), drv_data->output_vals);
 				__ASSERT_NO_MSG(rv == 0);
 			}
 		} else if (flags & GPIO_OUTPUT_INIT_HIGH) {
-			drv_data->output_vals |= BIT(pin);
+			drv_data->output_vals |= GPIO_BIT(pin);
 			if (flags & GPIO_INPUT) {
 				/* for push-pull mode to generate interrupts */
 				rv = gpio_emul_input_set_masked_int(
-					port, BIT(pin), drv_data->output_vals);
+					port, GPIO_BIT(pin), drv_data->output_vals);
 				__ASSERT_NO_MSG(rv == 0);
 			}
 		}
 	} else if (flags & GPIO_INPUT) {
 		if (flags & GPIO_PULL_UP) {
-			rv = gpio_emul_input_set_masked_int(port, BIT(pin), BIT(pin));
+			rv = gpio_emul_input_set_masked_int(port, GPIO_BIT(pin), GPIO_BIT(pin));
 			__ASSERT_NO_MSG(rv == 0);
 		} else if (flags & GPIO_PULL_DOWN) {
 			rv = gpio_emul_input_set_masked_int(
-				port, BIT(pin), 0);
+				port, GPIO_BIT(pin), 0);
 			__ASSERT_NO_MSG(rv == 0);
 		}
 	}
 
 	k_spin_unlock(&drv_data->lock, key);
-	gpio_fire_callbacks(&drv_data->callbacks, port, BIT(pin));
+	gpio_fire_callbacks(&drv_data->callbacks, port, GPIO_BIT(pin));
 	/* GPIO pin configuration changed so clear the pending interrupt. */
-	drv_data->interrupts &= ~((gpio_port_pins_t)BIT(pin));
+	drv_data->interrupts &= ~GPIO_BIT(pin);
 
 	return 0;
 }
@@ -481,7 +487,7 @@ static int gpio_emul_pin_get_config(const struct device *port, gpio_pin_t pin,
 			~(GPIO_OUTPUT_INIT_LOW | GPIO_OUTPUT_INIT_HIGH
 				| GPIO_OUTPUT_INIT_LOGICAL);
 	if (drv_data->flags[pin] & GPIO_OUTPUT) {
-		if (drv_data->output_vals & BIT(pin)) {
+		if (drv_data->output_vals & GPIO_BIT(pin)) {
 			*out_flags |= GPIO_OUTPUT_HIGH;
 		} else {
 			*out_flags |= GPIO_OUTPUT_LOW;
@@ -669,7 +675,7 @@ static int gpio_emul_pin_interrupt_configure(const struct device *port, gpio_pin
 		(const struct gpio_emul_config *)port->config;
 	k_spinlock_key_t key;
 
-	if ((BIT(pin) & config->common.port_pin_mask) == 0) {
+	if ((GPIO_BIT(pin) & config->common.port_pin_mask) == 0) {
 		return -EINVAL;
 	}
 
@@ -708,10 +714,10 @@ static int gpio_emul_pin_interrupt_configure(const struct device *port, gpio_pin
 	 * interrupts.
 	 */
 	if (!(mode & GPIO_INT_ENABLE_DISABLE_ONLY)) {
-		drv_data->interrupts &= ~((gpio_port_pins_t)BIT(pin));
+		drv_data->interrupts &= ~GPIO_BIT(pin);
 	}
 #else
-	drv_data->interrupts &= ~((gpio_port_pins_t)BIT(pin));
+	drv_data->interrupts &= ~GPIO_BIT(pin);
 #endif /* CONFIG_GPIO_ENABLE_DISABLE_INTERRUPT */
 
 	switch (mode) {
@@ -722,7 +728,7 @@ static int gpio_emul_pin_interrupt_configure(const struct device *port, gpio_pin
 		__fallthrough;
 	case GPIO_INT_MODE_DISABLE_ONLY:
 #endif /* CONFIG_GPIO_ENABLE_DISABLE_INTERRUPT */
-		drv_data->enabled_interrupts &= ~((gpio_port_pins_t)BIT(pin));
+		drv_data->enabled_interrupts &= ~GPIO_BIT(pin);
 		break;
 	case GPIO_INT_MODE_LEVEL:
 	case GPIO_INT_MODE_EDGE:
@@ -732,7 +738,7 @@ static int gpio_emul_pin_interrupt_configure(const struct device *port, gpio_pin
 		__fallthrough;
 	case GPIO_INT_MODE_ENABLE_ONLY:
 #endif /* CONFIG_GPIO_ENABLE_DISABLE_INTERRUPT */
-		drv_data->enabled_interrupts |= BIT(pin);
+		drv_data->enabled_interrupts |= GPIO_BIT(pin);
 		break;
 	default:
 		ret = -EINVAL;
@@ -745,9 +751,9 @@ unlock:
 	k_spin_unlock(&drv_data->lock, key);
 
 	/* Trigger callback if this pin has pending interrupt */
-	if (BIT(pin) & (drv_data->interrupts & drv_data->enabled_interrupts)) {
-		gpio_fire_callbacks(&drv_data->callbacks, port, BIT(pin));
-		drv_data->interrupts &= ~((gpio_port_pins_t)BIT(pin));
+	if (GPIO_BIT(pin) & (drv_data->interrupts & drv_data->enabled_interrupts)) {
+		gpio_fire_callbacks(&drv_data->callbacks, port, GPIO_BIT(pin));
+		drv_data->interrupts &= ~GPIO_BIT(pin);
 	}
 
 	return ret;
@@ -783,18 +789,18 @@ static int gpio_emul_port_get_direction(const struct device *port, gpio_port_pin
 	map &= config->common.port_pin_mask;
 
 	if (inputs != NULL) {
-		for (i = find_lsb_set(map) - 1; map;
-		     map &= ~BIT(i), i = find_lsb_set(map) - 1) {
-			ip |= !!(drv_data->flags[i] & GPIO_INPUT) * BIT(i);
+		for (i = FIND_LSB_SET(map) - 1; map;
+		     map &= ~GPIO_BIT(i), i = FIND_LSB_SET(map) - 1) {
+			ip |= !!(drv_data->flags[i] & GPIO_INPUT) * GPIO_BIT(i);
 		}
 
 		*inputs = ip;
 	}
 
 	if (outputs != NULL) {
-		for (i = find_lsb_set(map) - 1; map;
-		     map &= ~BIT(i), i = find_lsb_set(map) - 1) {
-			op |= !!(drv_data->flags[i] & GPIO_OUTPUT) * BIT(i);
+		for (i = FIND_LSB_SET(map) - 1; map;
+		     map &= ~GPIO_BIT(i), i = FIND_LSB_SET(map) - 1) {
+			op |= !!(drv_data->flags[i] & GPIO_OUTPUT) * GPIO_BIT(i);
 		}
 
 		*outputs = op;

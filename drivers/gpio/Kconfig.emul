@@ -17,3 +17,11 @@ config GPIO_EMUL
 	  such a configuration is in
 	  tests/drivers/gpio/gpio_basic_api/boards/native_sim.overlay
 	  If unsure, say N.
+
+if GPIO_EMUL
+
+config GPIO_EMUL_USE_64BIT_PORT
+	bool "use 64bit port"
+	select GPIO_64BIT_PORT
+
+endif

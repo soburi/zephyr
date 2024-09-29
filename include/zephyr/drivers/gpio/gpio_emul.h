@@ -69,7 +69,7 @@ int gpio_emul_input_set_masked(const struct device *port, gpio_port_pins_t pins,
 static inline int gpio_emul_input_set(const struct device *port, gpio_pin_t pin,
 				     int value)
 {
-	return gpio_emul_input_set_masked(port, BIT(pin), value ? BIT(pin) : 0);
+	return gpio_emul_input_set_masked(port, GPIO_BIT(pin), value ? GPIO_BIT(pin) : 0);
 }
 
 /**
@@ -99,9 +99,9 @@ static inline int gpio_emul_output_get(const struct device *port, gpio_pin_t pin
 	int ret;
 	gpio_port_value_t values;
 
-	ret = gpio_emul_output_get_masked(port, BIT(pin), &values);
+	ret = gpio_emul_output_get_masked(port, GPIO_BIT(pin), &values);
 	if (ret == 0) {
-		ret = (values & BIT(pin)) ? 1 : 0;
+		ret = (values & GPIO_BIT(pin)) ? 1 : 0;
 	}
 
 	return ret;
