@@ -167,6 +167,8 @@ ZTEST(gpio_api_1pin_conf, test_gpio_pin_configure_single_ended)
 	unsigned int cfg_flag;
 	int ret;
 
+	Z_TEST_SKIP_IFDEF(CONFIG_SOC_SERIES_RP2350);
+
 	port = DEVICE_DT_GET(TEST_NODE);
 	zassert_true(device_is_ready(port), "GPIO dev is not ready");
 
