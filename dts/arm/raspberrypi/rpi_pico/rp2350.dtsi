@@ -373,51 +373,6 @@
 			status = "disabled";
 		};
 
-		usbd: usbd@50100000 {
-			compatible = "raspberrypi,pico-usbd";
-			reg = <0x50100000 0x10000>;
-			resets = <&reset RPI_PICO_RESETS_RESET_USBCTRL>;
-			clocks = <&clocks RPI_PICO_CLKID_CLK_USB>;
-			interrupts = <14 RPI_PICO_DEFAULT_IRQ_PRIORITY>;
-			interrupt-names = "usbctrl";
-			num-bidir-endpoints = <16>;
-			status = "disabled";
-		};
-
-	};
-
-		timer0: timer@400b0000 {
-			compatible = "raspberrypi,pico-timer";
-			reg = <0x400b0000 DT_SIZE_K(4)>;
-			resets = <&reset RPI_PICO_RESETS_RESET_TIMER0>;
-			clocks = <&clocks RPI_PICO_CLKID_CLK_REF>;
-			interrupts = <0 RPI_PICO_DEFAULT_IRQ_PRIORITY>,
-				     <1 RPI_PICO_DEFAULT_IRQ_PRIORITY>,
-				     <2 RPI_PICO_DEFAULT_IRQ_PRIORITY>,
-				     <3 RPI_PICO_DEFAULT_IRQ_PRIORITY>;
-			interrupt-names = "TIMER0_IRQ_0",
-					  "TIMER0_IRQ_1",
-					  "TIMER0_IRQ_2",
-					  "TIMER0_IRQ_3";
-			status = "disabled";
-		};
-
-		timer1: timer@400b8000 {
-			compatible = "raspberrypi,pico-timer";
-			reg = <0x400b8000 DT_SIZE_K(4)>;
-			resets = <&reset RPI_PICO_RESETS_RESET_TIMER1>;
-			clocks = <&clocks RPI_PICO_CLKID_CLK_REF>;
-			interrupts = <4 RPI_PICO_DEFAULT_IRQ_PRIORITY>,
-				     <5 RPI_PICO_DEFAULT_IRQ_PRIORITY>,
-				     <6 RPI_PICO_DEFAULT_IRQ_PRIORITY>,
-				     <7 RPI_PICO_DEFAULT_IRQ_PRIORITY>;
-			interrupt-names = "TIMER1_IRQ_0",
-					  "TIMER1_IRQ_1",
-					  "TIMER1_IRQ_2",
-					  "TIMER1_IRQ_3";
-			status = "disabled";
-		};
-
 		dma: dma@50000000 {
 			compatible = "raspberrypi,pico-dma";
 			reg = <0x50000000 DT_SIZE_K(64)>;
@@ -431,6 +386,17 @@
 			dma-channels = <12>;
 			status = "disabled";
 			#dma-cells = <3>;
+		};
+
+		usbd: usbd@50100000 {
+			compatible = "raspberrypi,pico-usbd";
+			reg = <0x50100000 0x10000>;
+			resets = <&reset RPI_PICO_RESETS_RESET_USBCTRL>;
+			clocks = <&clocks RPI_PICO_CLKID_CLK_USB>;
+			interrupts = <14 RPI_PICO_DEFAULT_IRQ_PRIORITY>;
+			interrupt-names = "usbctrl";
+			num-bidir-endpoints = <16>;
+			status = "disabled";
 		};
 
 		pio0: pio@50200000 {
