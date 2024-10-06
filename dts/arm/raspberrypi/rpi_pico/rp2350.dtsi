@@ -287,7 +287,7 @@
 		};
 
 		i2c0: i2c@40090000 {
-			compatible = "raspberrypi,pico-i2c", "snps,designware-i2c";
+			compatible = "snps,designware-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x40090000 DT_SIZE_K(4)>;
@@ -299,7 +299,7 @@
 		};
 
 		i2c1: i2c@40098000 {
-			compatible = "raspberrypi,pico-i2c", "snps,designware-i2c";
+			compatible = "snps,designware-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x40098000 DT_SIZE_K(4)>;
