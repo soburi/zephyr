@@ -5,15 +5,4 @@ description: Raspberry Pi Pico GPIO
 
 compatible: "raspberrypi,pico-gpio"
 
-include: [gpio-controller.yaml, base.yaml]
-
-properties:
-  reg:
-    required: true
-
-  "#gpio-cells":
-    const: 2
-
-gpio-cells:
-  - pin
-  - flags
+include: [gpio-nexus.yaml, base.yaml]

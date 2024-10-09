@@ -15,29 +15,90 @@
 
 #include <zephyr/drivers/gpio/gpio_utils.h>
 
-#define DT_DRV_COMPAT raspberrypi_pico_gpio
-
 #define ALL_EVENTS (GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE \
 		| GPIO_IRQ_LEVEL_LOW | GPIO_IRQ_LEVEL_HIGH)
 
 struct gpio_rpi_config {
-	struct gpio_driver_config common;
 	void (*bank_config_func)(void);
 };
 
 struct gpio_rpi_data {
-	struct gpio_driver_data common;
 	sys_slist_t callbacks;
+};
+
+struct gpio_port_rpi_config {
+	struct gpio_driver_config common;
+	bool high;
+};
+
+struct gpio_port_rpi_data {
+	struct gpio_driver_data common;
 	uint32_t int_enabled_mask;
 	uint32_t single_ended_mask;
 	uint32_t open_drain_mask;
 };
 
-static int gpio_rpi_configure(const struct device *dev,
+static inline void gpio_hi_set_mask(uint32_t mask) {
+#if PICO_USE_GPIO_COPROCESSOR
+    gpioc_hi_out_set(mask);
+#else
+    sio_hw->gpio_hi_set = mask;
+#endif
+}
+
+static inline void gpio_hi_clr_mask(uint32_t mask) {
+#if PICO_USE_GPIO_COPROCESSOR
+    gpioc_hi_out_clr(mask);
+#else
+    sio_hw->gpio_hi_clr = mask;
+#endif
+}
+
+static inline void gpio_hi_xor_mask(uint32_t mask) {
+#if PICO_USE_GPIO_COPROCESSOR
+    gpioc_hi_out_xor(mask);
+#else
+    sio_hw->gpio_hi_togl = mask;
+#endif
+}
+
+static inline void gpio_hi_set_dir_masked(uint32_t mask, uint32_t value) {
+#if PICO_USE_GPIO_COPROCESSOR
+	gpioc_hi_oe_xor((gpioc_hi_oe_get() ^ value) & mask);
+#else
+	sio_hw->gpio_hi_oe_togl = (sio_hw->gpio_hi_oe ^ value) & mask;
+#endif
+}
+
+static inline void gpio_hi_set_dir_in_masked(uint32_t mask) {
+#if PICO_USE_GPIO_COPROCESSOR
+	gpioc_hi_oe_clr(mask);
+#else
+	sio_hw->gpio_hi_oe_clr = mask;
+#endif
+}
+
+static inline void gpio_hi_set_dir_out_masked(uint32_t mask) {
+#if PICO_USE_GPIO_COPROCESSOR
+	gpioc_hi_oe_set(mask);
+#else
+	sio_hw->gpio_hi_oe_set = mask;
+#endif
+}
+
+static inline void gpio_hi_put_masked(uint32_t mask, uint32_t value) {
+#if PICO_USE_GPIO_COPROCESSOR
+	gpioc_hi_out_xor((gpioc_hi_out_get() ^ value) & mask);
+#else
+	sio_hw->gpio_hi_togl = (sio_hw->gpio_hi_out ^ value) & mask;
+#endif
+}
+
+static int gpio_port_rpi_configure(const struct device *dev,
 				gpio_pin_t pin,
 				gpio_flags_t flags)
 {
-	struct gpio_rpi_data *data = dev->data;
+	struct gpio_port_rpi_data *data = dev->data;
 
 	gpio_set_pulls(pin,
 		(flags & GPIO_PULL_UP) != 0U,
@@ -89,53 +150,102 @@ static int gpio_rpi_port_get_raw(const struct device *dev, uint32_t *value)
 static int gpio_rpi_port_set_masked_raw(const struct device *port,
 					uint32_t mask, uint32_t value)
 {
-	struct gpio_rpi_data *data = port->data;
-	/* First handle push-pull pins: */
-	gpio_put_masked(mask & ~data->single_ended_mask, value);
-	/* Then handle open-drain pins: */
-	gpio_set_dir_masked(mask & data->single_ended_mask & data->open_drain_mask, ~value);
-	/* Then handle open-source pins: */
-	gpio_set_dir_masked(mask & data->single_ended_mask & ~data->open_drain_mask, value);
+	const struct gpio_port_rpi_config *config = port->config;
+	struct gpio_port_rpi_data *data = port->data;
+
+	if (config->high) {
+		/* First handle push-pull pins: */
+		gpio_hi_put_masked(mask & ~data->single_ended_mask, value);
+		/* Then handle open-drain pins: */
+		gpio_hi_set_dir_masked(mask & data->single_ended_mask & data->open_drain_mask, ~value);
+		/* Then handle open-source pins: */
+		gpio_hi_set_dir_masked(mask & data->single_ended_mask & ~data->open_drain_mask, value);
+	} else {
+		/* First handle push-pull pins: */
+		gpio_put_masked(mask & ~data->single_ended_mask, value);
+		/* Then handle open-drain pins: */
+		gpio_set_dir_masked(mask & data->single_ended_mask & data->open_drain_mask, ~value);
+		/* Then handle open-source pins: */
+		gpio_set_dir_masked(mask & data->single_ended_mask & ~data->open_drain_mask, value);
+	}
 	return 0;
 }
 
 static int gpio_rpi_port_set_bits_raw(const struct device *port,
 					uint32_t pins)
 {
-	struct gpio_rpi_data *data = port->data;
-	/* First handle push-pull pins: */
-	gpio_set_mask(pins & ~data->single_ended_mask);
-	/* Then handle open-drain pins: */
-	gpio_set_dir_in_masked(pins & data->single_ended_mask & data->open_drain_mask);
-	/* Then handle open-source pins: */
-	gpio_set_dir_out_masked(pins & data->single_ended_mask & ~data->open_drain_mask);
+	const struct gpio_port_rpi_config *config = port->config;
+	struct gpio_port_rpi_data *data = port->data;
+
+	if (config->high) {
+		/* First handle push-pull pins: */
+		gpio_hi_set_mask(pins & ~data->single_ended_mask);
+		/* Then handle open-drain pins: */
+		gpio_hi_set_dir_in_masked(pins & data->single_ended_mask & data->open_drain_mask);
+		/* Then handle open-source pins: */
+		gpio_hi_set_dir_out_masked(pins & data->single_ended_mask & ~data->open_drain_mask);
+	} else {
+		/* First handle push-pull pins: */
+		gpio_set_mask(pins & ~data->single_ended_mask);
+		/* Then handle open-drain pins: */
+		gpio_set_dir_in_masked(pins & data->single_ended_mask & data->open_drain_mask);
+		/* Then handle open-source pins: */
+		gpio_set_dir_out_masked(pins & data->single_ended_mask & ~data->open_drain_mask);
+	}
+
 	return 0;
 }
 
 static int gpio_rpi_port_clear_bits_raw(const struct device *port,
 					uint32_t pins)
 {
-	struct gpio_rpi_data *data = port->data;
-	/* First handle push-pull pins: */
-	gpio_clr_mask(pins & ~data->single_ended_mask);
-	/* Then handle open-drain pins: */
-	gpio_set_dir_out_masked(pins & data->single_ended_mask & data->open_drain_mask);
-	/* Then handle open-source pins: */
-	gpio_set_dir_in_masked(pins & data->single_ended_mask & ~data->open_drain_mask);
+	const struct gpio_port_rpi_config *config = port->config;
+	struct gpio_port_rpi_data *data = port->data;
+
+	if (config->high) {
+		/* First handle push-pull pins: */
+		gpio_hi_clr_mask(pins & ~data->single_ended_mask);
+		/* Then handle open-drain pins: */
+		gpio_hi_set_dir_out_masked(pins & data->single_ended_mask & data->open_drain_mask);
+		/* Then handle open-source pins: */
+		gpio_hi_set_dir_in_masked(pins & data->single_ended_mask & ~data->open_drain_mask);
+	} else {
+		/* First handle push-pull pins: */
+		gpio_clr_mask(pins & ~data->single_ended_mask);
+		/* Then handle open-drain pins: */
+		gpio_set_dir_out_masked(pins & data->single_ended_mask & data->open_drain_mask);
+		/* Then handle open-source pins: */
+		gpio_set_dir_in_masked(pins & data->single_ended_mask & ~data->open_drain_mask);
+	}
+
 	return 0;
 }
 
 static int gpio_rpi_port_toggle_bits(const struct device *port,
 					uint32_t pins)
 {
-	struct gpio_rpi_data *data = port->data;
-	/* First handle push-pull pins: */
-	gpio_xor_mask(pins & ~data->single_ended_mask);
-	/* Then handle single-ended pins: */
-	/* (unfortunately there's no pico-sdk api call that can be used for this,
-	 * but it's possible by accessing the registers directly)
-	 */
-	sio_hw->gpio_oe_togl = (pins & data->single_ended_mask);
+	const struct gpio_port_rpi_config *config = port->config;
+	struct gpio_port_rpi_data *data = port->data;
+
+	if (config->high) {
+		/* First handle push-pull pins: */
+		gpio_hi_xor_mask(pins & ~data->single_ended_mask);
+		/* Then handle single-ended pins: */
+		/* (unfortunately there's no pico-sdk api call that can be used for this,
+		 * but it's possible by accessing the registers directly)
+		 */
+		sio_hw->gpio_hi_oe_togl = (pins & data->single_ended_mask);
+	} else {
+		/* First handle push-pull pins: */
+		gpio_xor_mask(pins & ~data->single_ended_mask);
+		/* Then handle single-ended pins: */
+		/* (unfortunately there's no pico-sdk api call that can be used for this,
+		 * but it's possible by accessing the registers directly)
+		 */
+		sio_hw->gpio_oe_togl = (pins & data->single_ended_mask);
+
+	}
+
 	return 0;
 }
 
@@ -144,7 +254,7 @@ static int gpio_rpi_pin_interrupt_configure(const struct device *dev,
 						enum gpio_int_mode mode,
 						enum gpio_int_trig trig)
 {
-	struct gpio_rpi_data *data = dev->data;
+	struct gpio_port_rpi_data *data = dev->data;
 	uint32_t events = 0;
 
 	gpio_set_irq_enabled(pin, ALL_EVENTS, false);
@@ -173,13 +283,13 @@ static int gpio_rpi_pin_interrupt_configure(const struct device *dev,
 static int gpio_rpi_manage_callback(const struct device *dev,
 				struct gpio_callback *callback, bool set)
 {
-	struct gpio_rpi_data *data = dev->data;
+	struct gpio_port_rpi_data *data = dev->data;
 
 	return gpio_manage_callback(&data->callbacks, callback, set);
 }
 
 static const struct gpio_driver_api gpio_rpi_driver_api = {
-	.pin_configure = gpio_rpi_configure,
+	.pin_configure = gpio_port_rpi_configure,
 	.port_get_raw = gpio_rpi_port_get_raw,
 	.port_set_masked_raw = gpio_rpi_port_set_masked_raw,
 	.port_set_bits_raw = gpio_rpi_port_set_bits_raw,
@@ -191,7 +301,7 @@ static const struct gpio_driver_api gpio_rpi_driver_api = {
 
 static void gpio_rpi_isr(const struct device *dev)
 {
-	struct gpio_rpi_data *data = dev->data;
+	struct gpio_port_rpi_data *data = dev->data;
 	io_bank0_irq_ctrl_hw_t *irq_ctrl_base;
 	const io_rw_32 *status_reg;
 	uint32_t events;
@@ -210,11 +320,29 @@ static void gpio_rpi_isr(const struct device *dev)
 
 static int gpio_rpi_bank_init(const struct device *dev)
 {
-	const struct gpio_rpi_config *config = dev->config;
+	const struct gpio_port_rpi_config *config = dev->config;
 
 	config->bank_config_func();
 	return 0;
 }
+
+#define GPIO_PORT_RPI_INIT(idx)							\
+	static const struct gpio_port_rpi_config gpio_port_rpi_##idx##_config = {	\
+		.common =							\
+		{								\
+			.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(idx),	\
+		}								\
+	};									\
+										\
+	static struct gpio_port_rpi_data gpio_port_rpi_##idx##_data;		\
+										\
+	DEVICE_DT_INST_DEFINE(idx, NULL, NULL, &gpio_port_rpi_##idx##_data,	\
+				&gpio_port_rpi_##idx##_config,			\
+				POST_KERNEL, CONFIG_GPIO_INIT_PRIORITY,		\
+				&gpio_rpi_driver_api);
+
+#define DT_DRV_COMPAT raspberrypi_pico_gpio_port
+DT_INST_FOREACH_STATUS_OKAY(GPIO_PORT_RPI_INIT)
 
 #define GPIO_RPI_INIT(idx)							\
 	static void bank_##idx##_config_func(void)				\
@@ -223,20 +351,15 @@ static int gpio_rpi_bank_init(const struct device *dev)
 			    gpio_rpi_isr, DEVICE_DT_INST_GET(idx), 0);		\
 		irq_enable(DT_INST_IRQN(idx));					\
 	}									\
-	static const struct gpio_rpi_config gpio_rpi_##idx##_config = {		\
+	static const struct gpio_port_rpi_config gpio_rpi_##idx##_config = {	\
 		.bank_config_func = bank_##idx##_config_func,			\
-		.common =							\
-		{								\
-			.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(idx),	\
-		}								\
 	};									\
-										\
-	static struct gpio_rpi_data gpio_rpi_##idx##_data;			\
-										\
-	DEVICE_DT_INST_DEFINE(idx, gpio_rpi_bank_init, NULL,			\
-				&gpio_rpi_##idx##_data,				\
-				&gpio_rpi_##idx##_config,			\
+	static struct gpio_rpi_data gpio_rpi_##idx##_data;		\
+	DEVICE_DT_INST_DEFINE(idx, gpio_rpi_bank_init, NULL, &gpio_rpi_##idx##_data,		\
+				&gpio_port_rpi_##idx##_config,			\
 				POST_KERNEL, CONFIG_GPIO_INIT_PRIORITY,		\
-				&gpio_rpi_driver_api);
+				NULL);
 
-DT_INST_FOREACH_STATUS_OKAY(GPIO_RPI_INIT)
+
+#define DT_DRV_COMPAT raspberrypi_pico_gpio
+DT_INST_FOREACH_STATUS_OKAY(GPIO_kPI_INIT)
