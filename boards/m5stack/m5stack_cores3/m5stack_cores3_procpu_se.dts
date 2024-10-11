@@ -117,6 +117,12 @@
 		compatible = "x-powers,axp2101";
 		reg = <0x34>;
 		status = "okay";
+
+		axp2101_led: axp2101_led {
+			compatible = "x-powers,axp2101-led";
+			status = "okay";
+			x-powers,mode = "by-reg";
+		};
 	};
 };
 
