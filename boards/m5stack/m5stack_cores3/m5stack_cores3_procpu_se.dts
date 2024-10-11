@@ -113,6 +113,11 @@
 		status = "okay";
 	};
 
+	axp2101_pmic: axp2101@34 {
+		compatible = "x-powers,axp2101";
+		reg = <0x34>;
+		status = "okay";
+	};
 };
 
 &i2c1 {
