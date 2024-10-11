@@ -29,6 +29,12 @@ extern "C" {
 #define AXP192_REG_GPIO0_CONTROL         0x90U
 #define AXP192_REG_LDOIO0_VOLTAGE        0x91U
 
+#define AXP192_REG_PWROFF_BATTCHK_CHGLED 0x32
+#define AXP192_REG_CHGLED AXP192_REG_PWROFF_BATTCHK_CHGLED
+
+#define AXP192_CHGLED_CTRL_MASK   0x2
+#define AXP192_CHGLED_CTRL_OFFSET 2
+
 /**
  * @brief GPIO function type. Only one function can be configured per GPIO.
  */
