@@ -71,6 +71,77 @@
 	pinctrl-0 = <&i2c0_default>;
 	pinctrl-names = "default";
 
+	axp2101@34 {
+		compatible = "x-powers,axp2101";
+		reg = <0x34>;
+		status = "okay";
+
+		axp2101_regulator: axp2101_regulator {
+			compatible = "x-powers,axp2101-regulator";
+			status = "okay";
+
+			vdd_3v3: DCDC1 {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3400000>;
+				status = "okay";
+			};
+
+			vcc_3v3: DCDC3 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3400000>;
+				status = "okay";
+			};
+
+			axp_ps: DCDC5 {
+				regulator-min-microvolt = <1400000>;
+				regulator-max-microvolt = <3700000>;
+				status = "okay";
+			};
+
+			vdd_1v8: ALDO1 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			vdda_3v3: ALDO2 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			vddcam_3v3: ALDO3 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			vdd_3v3_sd: ALDO4 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			avdd: BLDO1 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			dvdd: BLDO2 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			vcc_bl: DLDO1 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3400000>;
+				status = "okay";
+			};
+		};
+	};
+
 	bm8563_rtc: bm8563@51 {
 		compatible = "nxp,pcf8563";
 		reg = <0x51>;
