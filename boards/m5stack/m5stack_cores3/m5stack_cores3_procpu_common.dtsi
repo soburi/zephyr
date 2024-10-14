@@ -27,6 +27,7 @@
 		i2c-0 = &i2c0;
 		i2c-1 = &i2c1;
 		watchdog0 = &wdt0;
+		led0 = &axp2101_led;
 	};
 };
 
@@ -68,6 +69,104 @@
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 	pinctrl-0 = <&i2c0_default>;
 	pinctrl-names = "default";
+
+	axp2101@34 {
+		compatible = "x-powers,axp2101";
+		reg = <0x34>;
+		status = "okay";
+
+		axp2101_regulator: axp2101_regulator {
+			compatible = "x-powers,axp2101-regulator";
+			status = "okay";
+
+			DCDC1: DCDC1 {
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3400000>;
+				status = "okay";
+			};
+
+			DCDC2: DCDC2 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1540000>;
+				status = "okay";
+			};
+
+			DCDC3: DCDC3 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3400000>;
+				status = "okay";
+			};
+
+			DCDC4: DCDC4 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1840000>;
+				status = "okay";
+			};
+
+			DCDC5: DCDC5 {
+				regulator-min-microvolt = <1400000>;
+				regulator-max-microvolt = <3700000>;
+				status = "okay";
+			};
+
+			ALDO1: ALDO1 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			ALDO2: ALDO2 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			ALDO3: ALDO3 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+			ALDO4: ALDO4 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+			BLDO1: BLDO1 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+			BLDO2: BLDO2 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3500000>;
+				status = "okay";
+			};
+
+			CLDO1: CLDO1 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1400000>;
+				status = "okay";
+			};
+
+			DLDO1: DLDO1 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3400000>;
+				status = "okay";
+			};
+
+			DLDO2: DLDO2 {
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3400000>;
+				status = "okay";
+			};
+		};
+
+		axp2101_led: axp2101_led {
+			compatible = "x-powers,axp2101-led";
+			status = "okay";
+			x-powers,mode = "by-reg";
+		};
+	};
 };
 
 &i2c1 {
