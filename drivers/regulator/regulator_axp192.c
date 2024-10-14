@@ -183,8 +183,8 @@ __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc1_desc = {
 };
 
 static const struct linear_range axp2101_dcdc2_ranges[] = {
-	LINEAR_RANGE_INIT(500000U, 10000U, 0x00U, 0x46U),
-	LINEAR_RANGE_INIT(1220000U, 20000U, 0x00U, 0x10U),
+	LINEAR_RANGE_INIT(500000U, 10000U, 0, 70),
+	LINEAR_RANGE_INIT(1220000U, 20000U, 71, 87),
 };
 
 __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc2_desc = {
@@ -192,7 +192,7 @@ __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc2_desc = {
 	.enable_mask = 0x02U,
 	.enable_val = 0x02U,
 	.vsel_reg = AXP2101_REG_DCDC2_VOLTAGE,
-	.vsel_mask = 0x3FU,
+	.vsel_mask = 0x7FU,
 	.vsel_bitpos = 0U,
 	.max_ua = 2000000U,
 	.ranges = axp2101_dcdc2_ranges,
@@ -203,9 +203,10 @@ __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc2_desc = {
 };
 
 static const struct linear_range axp2101_dcdc3_ranges[] = {
-	LINEAR_RANGE_INIT(500000U, 10000U, 0x00U, 0x46U),
-	LINEAR_RANGE_INIT(1220000U, 20000U, 0x00U, 0x10U),
-	LINEAR_RANGE_INIT(1600000U, 100000U, 0x00U, 0x12U),
+	LINEAR_RANGE_INIT(500000U, 10000U, 0, 69),
+	LINEAR_RANGE_INIT(1200000U, 20000U, 70, 87),
+	LINEAR_RANGE_INIT(1540000U, 60000U, 88, 88),
+	LINEAR_RANGE_INIT(1600000U, 100000U, 89, 118),
 };
 
 __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc3_desc = {
@@ -213,7 +214,7 @@ __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc3_desc = {
 	.enable_mask = 0x04U,
 	.enable_val = 0x04U,
 	.vsel_reg = AXP2101_REG_DCDC3_VOLTAGE,
-	.vsel_mask = 0x3FU,
+	.vsel_mask = 0x7FU,
 	.vsel_bitpos = 0U,
 	.max_ua = 2000000U,
 	.ranges = axp2101_dcdc3_ranges,
@@ -224,8 +225,8 @@ __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc3_desc = {
 };
 
 static const struct linear_range axp2101_dcdc4_ranges[] = {
-	LINEAR_RANGE_INIT(500000U, 10000U, 0x0, 0x46),
-	LINEAR_RANGE_INIT(1220000U, 20000U, 0x47, 0x66),
+	LINEAR_RANGE_INIT(500000U, 10000U, 0, 69),
+	LINEAR_RANGE_INIT(1200000U, 20000U, 70, 102),
 };
 
 __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc4_desc = {
@@ -233,7 +234,7 @@ __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc4_desc = {
 	.enable_mask = 0x08U,
 	.enable_val = 0x08U,
 	.vsel_reg = AXP2101_REG_DCDC4_VOLTAGE,
-	.vsel_mask = 0x3FU,
+	.vsel_mask = 0x7FU,
 	.vsel_bitpos = 0U,
 	.max_ua = 1500000U,
 	.ranges = axp2101_dcdc4_ranges,
@@ -252,7 +253,7 @@ __maybe_unused static const struct regulator_axp192_desc axp2101_dcdc5_desc = {
 	.enable_mask = 0x10U,
 	.enable_val = 0x10U,
 	.vsel_reg = AXP2101_REG_DCDC5_VOLTAGE,
-	.vsel_mask = 0x0FU,
+	.vsel_mask = 0x1FU,
 	.vsel_bitpos = 0U,
 	.max_ua = 1000000U,
 	.ranges = axp2101_dcdc5_ranges,
