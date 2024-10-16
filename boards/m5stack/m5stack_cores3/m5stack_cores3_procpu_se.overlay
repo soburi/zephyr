@@ -1,0 +1,10 @@
+/*
+ * Copyright (c) 2024 TOKITA Hiroshi
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	model = "M5Stack CoreS3 SE PROCPU";
+	compatible = "m5stack,cores3-se";
+};

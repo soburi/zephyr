@@ -1,0 +1,7 @@
+if (NOT DEFINED BOARD_REVISION)
+  set(BOARD_REVISION "standard")
+else ()
+  if (NOT (BOARD_REVISION STREQUAL "standard") AND NOT (BOARD_REVISION STREQUAL "se"))
+    message(FATAL_ERROR "Invalid board revision, ${BOARD_REVISION}, valid revisions are: standard, se")
+  endif()
+endif()

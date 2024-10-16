@@ -10,9 +10,6 @@
 #include "m5stack_cores3-pinctrl.dtsi"
 
 / {
-	model = "M5Stack CoreS3 APPCPU";
-	compatible = "espressif,esp32s3";
-
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,ipc_shm = &shm0;
