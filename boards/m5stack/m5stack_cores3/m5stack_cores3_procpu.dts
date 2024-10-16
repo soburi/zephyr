@@ -10,9 +10,6 @@
 #include "m5stack_cores3-pinctrl.dtsi"
 
 / {
-	model = "M5Stack CoreS3 PROCPU";
-	compatible = "m5stack,cores3";
-
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,console = &usb_serial;
@@ -25,8 +22,6 @@
 	aliases {
 		i2c-0 = &i2c0;
 		watchdog0 = &wdt0;
-		accel0 = &bmi270;
-		magn0 = &bmm150;
 	};
 };
 
@@ -46,17 +41,6 @@
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 	pinctrl-0 = <&i2c0_default>;
 	pinctrl-names = "default";
-
-	bmi270: bmi270@69 {
-		compatible = "bosch,bmi270";
-		reg = <0x69>;
-	};
-
-	bmm150: bmm150@10 {
-		compatible = "bosch,bmm150";
-		status = "okay";
-		reg = <0x10>;
-	};
 };
 
 &spi2 {

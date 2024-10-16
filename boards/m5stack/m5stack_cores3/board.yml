@@ -4,3 +4,9 @@ board:
   vendor: m5stack
   socs:
   - name: esp32s3
+  revision:
+    format: "custom"
+    default: "standard"
+    revisions:
+    - name: "standard"
+    - name: "se"
