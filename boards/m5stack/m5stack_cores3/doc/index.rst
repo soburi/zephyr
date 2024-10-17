@@ -1,31 +1,33 @@
 .. _m5stack_cores3:
 
-M5Stack CoreS3
-##############
+M5Stack CoreS3/M5Stack CoreS3 SE
+################################
 
 Overview
 ********
 
 M5Stack CoreS3 is an ESP32-based development board from M5Stack. It is the third generation of the M5Stack Core series.
+M5Stack CoreS3 SE is the compact version of CoreS3. It has the same form factor as the original M5Stack,
+and some features were reduced from CoreS3.
 
-M5Stack CoreS3 features consist of:
+M5Stack CoreS3/CoreS3 SE features consist of:
 
 - ESP32-S3 chip (dual-core Xtensa LX7 processor @240MHz, WIFI, OTG and CDC functions)
 - PSRAM 8MB
 - Flash 16MB
 - LCD ISP 2", 320x240 pixel ILI9342C
 - Capacitive multi touch FT6336U
-- Camera 30W pixel GC0308
 - Speaker 1W AW88298
 - Dual Microphones ES7210 Audio decoder
 - RTC BM8563
 - USB-C
 - SD-Card slot
-- Geomagnetic sensor BMM150
-- Proximity sensor LTR-553ALS-WA
-- 6-Axis IMU BMI270
 - PMIC AXP2101
 - Battery 500mAh 3.7 V
+- Camera 30W pixel GC0308 (Not available for CoreS3 SE)
+- Geomagnetic sensor BMM150 (Not available for CoreS3 SE)
+- Proximity sensor LTR-553ALS-WA (Not available for CoreS3 SE)
+- 6-Axis IMU BMI270 (Not available for CoreS3 SE)
 
 .. figure:: img/m5stack_cores3.webp
         :align: center
@@ -33,6 +35,14 @@ M5Stack CoreS3 features consist of:
         :width: 400 px
 
         M5Stack CoreS3 module
+
+.. figure:: img/m5stack_cores3_se.webp
+        :align: center
+        :alt: M5Stack-CoreS3_SE
+        :width: 400 px
+
+        M5Stack CoreS3 SE module
+
 
 Start Application Development
 *****************************
@@ -63,18 +73,36 @@ Building & Flashing
 Build and flash applications as usual (see :ref:`build_an_application` and
 :ref:`application_run` for more details).
 
+For M5Stack CoreS3,
+
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world
    :board: m5stack_cores3/esp32s3/procpu
+   :goals: build
+
+For M5Stack CoreS3 SE,
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/hello_world
+   :board: m5stack_cores3/esp32s3/procpu/se
    :goals: build
 
 The usual ``flash`` target will work with the ``m5stack_cores3/esp32s3/procpu`` board
 configuration. Here is an example for the :zephyr:code-sample:`hello_world`
 application.
 
+For M5Stack CoreS3,
+
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world
    :board: m5stack_cores3/esp32s3/procpu
+   :goals: flash
+
+For M5Stack CoreS3 SE,
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/hello_world
+   :board: m5stack_cores3/esp32s3/procpu/se
    :goals: flash
 
 The baud rate of 921600bps is set by default. If experiencing issues when flashing,
@@ -114,4 +142,6 @@ Related Documents
 *****************
 
 - `M5Stack CoreS3 official docs <http://docs.m5stack.com/en/core/CoreS3>`_
+- `M5Stack CoreS3 SE official docs <https://docs.m5stack.com/en/core/M5CoreS3%20SE>`_
 - `M5Stack CoreS3 schematic <https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/docs/datasheet/core/K128%20CoreS3/Sch_M5_CoreS3_v1.0.pdf>`_ (PDF)
+- `M5Stack CoreS3 SE schematic <https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/docs/products/core/M5CORES3%20SE/M5_CoreS3SE.pdf>`_ (PDF)
