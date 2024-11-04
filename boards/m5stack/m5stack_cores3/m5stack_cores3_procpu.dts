@@ -18,6 +18,7 @@
 		zephyr,shell-uart = &usb_serial;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
+		zephyr,rtc = &pfc8563_rtc;
 		zephyr,bt-hci = &esp32_bt_hci;
 	};
 
@@ -25,6 +26,7 @@
 		uart-0 = &uart0;
 		i2c-0 = &i2c0;
 		watchdog0 = &wdt0;
+		rtc = &pfc8563_rtc;
 		led0 = &axp2101_led;
 	};
 };
@@ -70,6 +72,12 @@
 			status = "okay";
 			x-powers,mode = "by-reg";
 		};
+	};
+
+	pfc8563_rtc: pfc8563@51 {
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+		status = "okay";
 	};
 };
 
