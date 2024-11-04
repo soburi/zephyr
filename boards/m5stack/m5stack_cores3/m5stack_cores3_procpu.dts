@@ -8,6 +8,8 @@
 
 #include <espressif/esp32s3/esp32s3.dtsi>
 #include "m5stack_cores3-pinctrl.dtsi"
+#include "m5stack_mbus_connectors.dtsi"
+#include "grove_connectors.dtsi"
 
 / {
 	chosen {
@@ -20,6 +22,7 @@
 	};
 
 	aliases {
+		uart-0 = &uart0;
 		i2c-0 = &i2c0;
 		watchdog0 = &wdt0;
 	};
@@ -36,10 +39,31 @@
 	pinctrl-names = "default";
 };
 
+&uart1 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart1_default>;
+	pinctrl-names = "default";
+};
+
+&uart2 {
+	status = "disabled";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart2_default>;
+	pinctrl-names = "default";
+};
+
 &i2c0 {
 	status = "okay";
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 	pinctrl-0 = <&i2c0_default>;
+	pinctrl-names = "default";
+};
+
+&i2c1 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+	pinctrl-0 = <&i2c1_default>;
 	pinctrl-names = "default";
 };
 
