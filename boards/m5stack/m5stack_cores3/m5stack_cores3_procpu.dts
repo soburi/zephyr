@@ -27,6 +27,7 @@
 		i2c-0 = &i2c0;
 		watchdog0 = &wdt0;
 		rtc = &pfc8563_rtc;
+		sdhc0 = &sd0;
 		led0 = &axp2101_led;
 	};
 };
@@ -94,6 +95,21 @@
 	status = "okay";
 	pinctrl-0 = <&spim2_default>;
 	pinctrl-names = "default";
+	clock-frequency = <20000000>;
+	cs-gpios = <&gpio0 3 GPIO_ACTIVE_LOW>, /* LCD     */
+		   <&gpio0 4 GPIO_ACTIVE_LOW>; /* TF-CARD */
+
+	sd0: sd@1 {
+		compatible = "zephyr,sdhc-spi-slot";
+		reg = <1>;
+		status = "okay";
+		spi-max-frequency = <20000000>;
+		mmc {
+			compatible = "zephyr,sdmmc-disk";
+			disk-name = "SD";
+			status = "okay";
+		};
+	};
 };
 
 &wdt0 {
