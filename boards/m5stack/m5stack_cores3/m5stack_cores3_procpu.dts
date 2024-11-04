@@ -20,6 +20,7 @@
 		zephyr,code-partition = &slot0_partition;
 		zephyr,rtc = &pfc8563_rtc;
 		zephyr,bt-hci = &esp32_bt_hci;
+		zephyr,touch = &ft6336;
 	};
 
 	aliases {
@@ -29,6 +30,11 @@
 		rtc = &pfc8563_rtc;
 		sdhc0 = &sd0;
 		led0 = &axp2101_led;
+	};
+
+	lvgl_pointer {
+		compatible = "zephyr,lvgl-pointer-input";
+		input = <&ft6336>;
 	};
 };
 
@@ -73,6 +79,14 @@
 			status = "okay";
 			x-powers,mode = "by-reg";
 		};
+	};
+
+	ft6336: ft5336@38 {
+		compatible = "focaltech,ft5336";
+		reg = <0x38>;
+		status = "okay";
+		int-gpios = <&aw9523b_gpio 10 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&aw9523b_gpio 0 GPIO_ACTIVE_LOW>;
 	};
 
 	pfc8563_rtc: pfc8563@51 {
