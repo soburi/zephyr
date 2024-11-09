@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_LOG_BACKEND_NET_H_
-#define ZEPHYR_LOG_BACKEND_NET_H_
+#ifndef ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_NET_H_
+#define ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_NET_H_
 
 #include <stdbool.h>
 #include <zephyr/net/net_ip.h>
@@ -81,4 +81,4 @@ void log_backend_net_start(void);
 }
 #endif
 
-#endif /* ZEPHYR_LOG_BACKEND_NET_H_ */
+#endif /* ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_NET_H_ */

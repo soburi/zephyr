@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_MGMT_SERIAL_H_
-#define ZEPHYR_INCLUDE_MGMT_SERIAL_H_
+#ifndef ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SERIAL_H_
+#define ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SERIAL_H_
 
 #include <zephyr/types.h>
 
@@ -83,4 +83,4 @@ int mcumgr_serial_tx_pkt(const uint8_t *data, int len, mcumgr_serial_tx_cb cb);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_MGMT_SERIAL_H_ */
+#endif /* ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SERIAL_H_ */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_BRG_CFG_CLI_H__
-#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_BRG_CFG_CLI_H__
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_BRG_CFG_CLI_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_BRG_CFG_CLI_H_
 
 #include <zephyr/bluetooth/mesh/brg_cfg.h>
 
@@ -316,4 +316,4 @@ extern const struct bt_mesh_model_cb _bt_mesh_brg_cfg_cli_cb;
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_BRG_CFG_CLI_H__ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_BRG_CFG_CLI_H_ */

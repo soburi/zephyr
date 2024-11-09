@@ -288,4 +288,4 @@ ssize_t boot_get_trailer_status_offset(size_t area_size);
  * @}
  */
 
-#endif  /* ZEPHYR_INCLUDE_DFU_MCUBOOT_H_ */
+#endif /* ZEPHYR_INCLUDE_DFU_MCUBOOT_H_ */

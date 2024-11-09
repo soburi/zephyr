@@ -126,4 +126,4 @@ static inline void socketcan_from_can_filter(const struct can_filter *zfilter,
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_NET_SOCKETCAN_H_ */
+#endif /* ZEPHYR_INCLUDE_NET_SOCKETCAN_UTILS_H_ */

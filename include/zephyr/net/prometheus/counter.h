@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_PROMETHEUS_COUNTER_H_
-#define ZEPHYR_INCLUDE_PROMETHEUS_COUNTER_H_
+#ifndef ZEPHYR_INCLUDE_NET_PROMETHEUS_COUNTER_H_
+#define ZEPHYR_INCLUDE_NET_PROMETHEUS_COUNTER_H_
 
 /**
  * @file
@@ -74,4 +74,4 @@ int prometheus_counter_inc(struct prometheus_counter *counter);
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_PROMETHEUS_COUNTER_H_ */
+#endif /* ZEPHYR_INCLUDE_NET_PROMETHEUS_COUNTER_H_ */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_INPUT_PAW32XX_H_
-#define ZEPHYR_INCLUDE_INPUT_PAW32XX_H_
+#ifndef ZEPHYR_INCLUDE_INPUT_INPUT_PAW32XX_H_
+#define ZEPHYR_INCLUDE_INPUT_INPUT_PAW32XX_H_
 
 /**
  * @brief Set resolution on a paw32xx device
@@ -23,4 +23,4 @@ int paw32xx_set_resolution(const struct device *dev, uint16_t res_cpi);
  */
 int paw32xx_force_awake(const struct device *dev, bool enable);
 
-#endif /* ZEPHYR_INCLUDE_INPUT_PAW32XX_H_ */
+#endif /* ZEPHYR_INCLUDE_INPUT_INPUT_PAW32XX_H_ */

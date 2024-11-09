@@ -9,8 +9,8 @@
  * @brief Public API for Shared Multi-Heap framework
  */
 
-#ifndef ZEPHYR_INCLUDE_MULTI_HEAP_MANAGER_SMH_H_
-#define ZEPHYR_INCLUDE_MULTI_HEAP_MANAGER_SMH_H_
+#ifndef ZEPHYR_INCLUDE_MULTI_HEAP_SHARED_MULTI_HEAP_H_
+#define ZEPHYR_INCLUDE_MULTI_HEAP_SHARED_MULTI_HEAP_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -184,4 +184,4 @@ int shared_multi_heap_add(struct shared_multi_heap_region *region, void *user_da
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_MULTI_HEAP_MANAGER_SMH_H_ */
+#endif /* ZEPHYR_INCLUDE_MULTI_HEAP_SHARED_MULTI_HEAP_H_ */

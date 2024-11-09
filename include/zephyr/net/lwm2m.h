@@ -1626,5 +1626,5 @@ int lwm2m_set_default_sockopt(struct lwm2m_ctx *ctx);
 }
 #endif
 
-#endif	/* ZEPHYR_INCLUDE_NET_LWM2M_H_ */
+#endif /* ZEPHYR_INCLUDE_NET_LWM2M_H_ */
 /**@}  */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_LLEXT_SYMBOL_H
-#define ZEPHYR_LLEXT_SYMBOL_H
+#ifndef ZEPHYR_INCLUDE_LLEXT_SYMBOL_H_
+#define ZEPHYR_INCLUDE_LLEXT_SYMBOL_H_
 
 #include <zephyr/sys/iterable_sections.h>
 #include <zephyr/toolchain.h>
@@ -163,4 +163,4 @@ struct llext_symtable {
 #endif
 
 
-#endif /* ZEPHYR_LLEXT_SYMBOL_H */
+#endif /* ZEPHYR_INCLUDE_LLEXT_SYMBOL_H_ */

@@ -166,4 +166,4 @@ struct ec_host_cmd_backend *ec_host_cmd_backend_get_spi(struct gpio_dt_spec *cs)
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_MGMT_EC_HOST_CMD_EC_HOST_CMD_BACKEND_H_ */
+#endif /* ZEPHYR_INCLUDE_MGMT_EC_HOST_CMD_BACKEND_H_ */

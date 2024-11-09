@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_INPUT_H_
-#define ZEPHYR_INCLUDE_INPUT_H_
+#ifndef ZEPHYR_INCLUDE_INPUT_INPUT_H_
+#define ZEPHYR_INCLUDE_INPUT_INPUT_H_
 
 /**
  * @brief Input Interface
@@ -164,4 +164,4 @@ struct input_callback {
 
 /** @} */
 
-#endif /* ZEPHYR_INCLUDE_INPUT_H_ */
+#endif /* ZEPHYR_INCLUDE_INPUT_INPUT_H_ */

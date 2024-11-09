@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_DRIVERS_ACPI_H_
-#define ZEPHYR_INCLUDE_DRIVERS_ACPI_H_
+#ifndef ZEPHYR_INCLUDE_ACPI_ACPI_H_
+#define ZEPHYR_INCLUDE_ACPI_ACPI_H_
 #include <acpica/source/include/acpi.h>
 #include <zephyr/drivers/pcie/pcie.h>
 
@@ -299,4 +299,4 @@ ACPI_MADT_LOCAL_APIC *acpi_local_apic_get(int cpu_num);
  */
 int acpi_invoke_method(char *path, ACPI_OBJECT_LIST *arg_list, ACPI_OBJECT *ret_obj);
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_ACPI_H_ */
+#endif /* ZEPHYR_INCLUDE_ACPI_ACPI_H_ */

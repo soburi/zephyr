@@ -209,4 +209,4 @@ int sdio_write_addr(struct sdio_func *func, uint32_t reg, uint8_t *data,
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SD_SDMMC_H_ */
+#endif /* ZEPHYR_INCLUDE_SD_SDIO_H_ */

@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __XEN_CONSOLE_H__
-#define __XEN_CONSOLE_H__
+#ifndef ZEPHYR_INCLUDE_XEN_CONSOLE_H_
+#define ZEPHYR_INCLUDE_XEN_CONSOLE_H_
 
 #include <zephyr/init.h>
 #include <zephyr/device.h>
@@ -25,4 +25,4 @@ struct hvc_xen_data {
 
 int xen_console_init(const struct device *dev);
 
-#endif /* __XEN_CONSOLE_H__ */
+#endif /* ZEPHYR_INCLUDE_XEN_CONSOLE_H_ */

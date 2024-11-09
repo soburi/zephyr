@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_BBRAM_H
-#define ZEPHYR_INCLUDE_DRIVERS_BBRAM_H
+#ifndef ZEPHYR_INCLUDE_DRIVERS_BBRAM_H_
+#define ZEPHYR_INCLUDE_DRIVERS_BBRAM_H_
 
 #include <errno.h>
 
@@ -263,4 +263,4 @@ int bbram_emul_set_power_state(const struct device *dev, bool failure);
 
 #include <zephyr/syscalls/bbram.h>
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_BBRAM_H */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_BBRAM_H_ */

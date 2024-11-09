@@ -340,4 +340,4 @@ static inline int z_impl_led_off(const struct device *dev, uint32_t led)
 
 #include <zephyr/syscalls/led.h>
 
-#endif	/* ZEPHYR_INCLUDE_DRIVERS_LED_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_LED_H_ */

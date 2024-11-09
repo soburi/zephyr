@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_INA237_H_
-#define ZEPHYR_INCLUDE_DT_BINDINGS_INA237_H_
+#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_INA237_H_
+#define ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_INA237_H_
 
 #include <zephyr/dt-bindings/dt-util.h>
 
@@ -88,4 +88,4 @@
 		      avg)  \
 	(((mode) << 12) | ((vbusct) << 9) | ((vshct) << 6) | ((vtct) << 3) | (avg))
 
-#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_INA237_H_ */
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_INA237_H_ */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_SENSING_H_
-#define ZEPHYR_INCLUDE_SENSING_H_
+#ifndef ZEPHYR_INCLUDE_SENSING_SENSING_H_
+#define ZEPHYR_INCLUDE_SENSING_SENSING_H_
 
 /**
  * @defgroup sensing Sensing
@@ -290,4 +290,4 @@ const struct sensing_sensor_info *sensing_get_sensor_info(
  * @}
  */
 
-#endif /*ZEPHYR_INCLUDE_SENSING_H_*/
+#endif /* ZEPHYR_INCLUDE_SENSING_SENSING_H_ */

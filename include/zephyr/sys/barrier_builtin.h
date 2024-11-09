@@ -7,7 +7,7 @@
 #ifndef ZEPHYR_INCLUDE_SYS_BARRIER_BUILTIN_H_
 #define ZEPHYR_INCLUDE_SYS_BARRIER_BUILTIN_H_
 
-#ifndef ZEPHYR_INCLUDE_SYS_BARRIER_H_
+#ifndef ZEPHYR_INCLUDE_SYS_BARRIER_BUILTIN_H_
 #error Please include <zephyr/sys/barrier.h>
 #endif
 

@@ -87,4 +87,4 @@
 	 NXP_S32_PINMUX_IMCR_IDX(imcr_idx) |                                                       \
 	 NXP_S32_PINMUX_IMCR_SSS(imcr_sss))
 
-#endif	/* ZEPHYR_INCLUDE_DT_BINDINGS_PINCTRL_NXP_NXP_S32_PINCTRL_H_ */
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_PINCTRL_NXP_S32_PINCTRL_H_ */

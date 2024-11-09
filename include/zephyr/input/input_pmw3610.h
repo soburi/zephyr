@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_INPUT_PMW3610_H_
-#define ZEPHYR_INCLUDE_INPUT_PMW3610_H_
+#ifndef ZEPHYR_INCLUDE_INPUT_INPUT_PMW3610_H_
+#define ZEPHYR_INCLUDE_INPUT_INPUT_PMW3610_H_
 
 /**
  * @brief Set resolution on a pmw3610 device
@@ -23,4 +23,4 @@ int pmw3610_set_resolution(const struct device *dev, uint16_t res_cpi);
  */
 int pmw3610_force_awake(const struct device *dev, bool enable);
 
-#endif /* ZEPHYR_INCLUDE_INPUT_PMW3610_H_ */
+#endif /* ZEPHYR_INCLUDE_INPUT_INPUT_PMW3610_H_ */

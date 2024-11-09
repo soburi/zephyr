@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_SENSOR_DATA_TYPES_H
-#define ZEPHYR_INCLUDE_DRIVERS_SENSOR_DATA_TYPES_H
+#ifndef ZEPHYR_INCLUDE_DRIVERS_SENSOR_DATA_TYPES_H_
+#define ZEPHYR_INCLUDE_DRIVERS_SENSOR_DATA_TYPES_H_
 
 #include <zephyr/dsp/types.h>
 #include <zephyr/dsp/print_format.h>
@@ -167,4 +167,4 @@ struct sensor_uint64_data {
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_DATA_TYPES_H */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_DATA_TYPES_H_ */

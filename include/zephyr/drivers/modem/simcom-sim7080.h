@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_MODEM_SIMCOM_SIM7080_H
-#define ZEPHYR_INCLUDE_DRIVERS_MODEM_SIMCOM_SIM7080_H
+#ifndef ZEPHYR_INCLUDE_DRIVERS_MODEM_SIMCOM_SIM7080_H_
+#define ZEPHYR_INCLUDE_DRIVERS_MODEM_SIMCOM_SIM7080_H_
 
 #include <zephyr/types.h>
 
@@ -223,4 +223,4 @@ int mdm_sim7080_ftp_get_read(char *dst, size_t *size);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_MODEM_SIMCOM_SIM7080_H */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_MODEM_SIMCOM_SIM7080_H_ */

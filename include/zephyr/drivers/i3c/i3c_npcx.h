@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DRIVERS_I3C_I3C_NPCX_H_
-#define ZEPHYR_DRIVERS_I3C_I3C_NPCX_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_I3C_I3C_NPCX_H_
+#define ZEPHYR_INCLUDE_DRIVERS_I3C_I3C_NPCX_H_
 
 #include <zephyr/device.h>
 
@@ -52,4 +52,4 @@ uint16_t npcx_i3c_target_get_mdmatb_count(const struct device *dev);
 }
 #endif
 
-#endif /* ZEPHYR_DRIVERS_I3C_I3C_NPCX_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_I3C_I3C_NPCX_H_ */

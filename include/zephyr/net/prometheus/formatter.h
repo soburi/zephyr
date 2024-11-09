@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_PROMETHEUS_FORMATTER_H_
-#define ZEPHYR_INCLUDE_PROMETHEUS_FORMATTER_H_
+#ifndef ZEPHYR_INCLUDE_NET_PROMETHEUS_FORMATTER_H_
+#define ZEPHYR_INCLUDE_NET_PROMETHEUS_FORMATTER_H_
 
 /**
  * @file
@@ -37,4 +37,4 @@ int prometheus_format_exposition(const struct prometheus_collector *collector, c
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_PROMETHEUS_FORMATTER_H_ */
+#endif /* ZEPHYR_INCLUDE_NET_PROMETHEUS_FORMATTER_H_ */

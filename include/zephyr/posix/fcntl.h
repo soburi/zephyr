@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_POSIX_FCNTL_H_
-#define ZEPHYR_POSIX_FCNTL_H_
+#ifndef ZEPHYR_INCLUDE_POSIX_FCNTL_H_
+#define ZEPHYR_INCLUDE_POSIX_FCNTL_H_
 
 #ifdef CONFIG_PICOLIBC
 #define O_CREAT	 0x0040
@@ -41,4 +41,4 @@ int fcntl(int fildes, int cmd, ...);
 }
 #endif
 
-#endif /* ZEPHYR_POSIX_FCNTL_H_ */
+#endif /* ZEPHYR_INCLUDE_POSIX_FCNTL_H_ */

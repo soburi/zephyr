@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_LOG_BACKEND_BLE_H_
-#define ZEPHYR_LOG_BACKEND_BLE_H_
+#ifndef ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_BLE_H_
+#define ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_BLE_H_
 
 #include <stdbool.h>
 /**
@@ -39,4 +39,4 @@ typedef void (*logger_backend_ble_hook)(bool backend_status, void *ctx);
  */
 void logger_backend_ble_set_hook(logger_backend_ble_hook hook, void *ctx);
 
-#endif /* ZEPHYR_LOG_BACKEND_BLE_H_ */
+#endif /* ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_BLE_H_ */

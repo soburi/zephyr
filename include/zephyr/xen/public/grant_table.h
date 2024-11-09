@@ -27,8 +27,8 @@
  * Copyright (c) 2004, K A Fraser
  */
 
-#ifndef __XEN_PUBLIC_GRANT_TABLE_H__
-#define __XEN_PUBLIC_GRANT_TABLE_H__
+#ifndef ZEPHYR_INCLUDE_XEN_PUBLIC_GRANT_TABLE_H_
+#define ZEPHYR_INCLUDE_XEN_PUBLIC_GRANT_TABLE_H_
 
 #include "xen.h"
 
@@ -396,4 +396,4 @@ DEFINE_XEN_GUEST_HANDLE(gnttab_setup_table_t);
 	"operation not done; try again"			\
 }
 
-#endif /* __XEN_PUBLIC_GRANT_TABLE_H__ */
+#endif /* ZEPHYR_INCLUDE_XEN_PUBLIC_GRANT_TABLE_H_ */

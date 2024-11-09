@@ -149,4 +149,4 @@ static ALWAYS_INLINE uint64_t arm_arch_timer_count(void)
 
 #endif /* CONFIG_ARM_ARCH_TIMER */
 
-#endif  /* ZEPHYR_INCLUDE_ARCH_ARM_CORTEX_A_R_TIMER_H_ */
+#endif /* ZEPHYR_INCLUDE_ARCH_ARM_CORTEX_A_R_TIMER_H_ */

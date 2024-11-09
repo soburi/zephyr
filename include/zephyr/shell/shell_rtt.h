@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_SHELL_RTT_H_
-#define ZEPHYR_INCLUDE_SHELL_RTT_H_
+#ifndef ZEPHYR_INCLUDE_SHELL_SHELL_RTT_H_
+#define ZEPHYR_INCLUDE_SHELL_SHELL_RTT_H_
 
 #include <zephyr/shell/shell.h>
 
@@ -41,4 +41,4 @@ const struct shell *shell_backend_rtt_get_ptr(void);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SHELL_RTT_H_ */
+#endif /* ZEPHYR_INCLUDE_SHELL_SHELL_RTT_H_ */

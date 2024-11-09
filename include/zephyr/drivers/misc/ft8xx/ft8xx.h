@@ -9,8 +9,8 @@
  * @brief FT8XX public API
  */
 
-#ifndef ZEPHYR_DRIVERS_MISC_FT8XX_FT8XX_H_
-#define ZEPHYR_DRIVERS_MISC_FT8XX_FT8XX_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_MISC_FT8XX_FT8XX_H_
+#define ZEPHYR_INCLUDE_DRIVERS_MISC_FT8XX_FT8XX_H_
 
 #include <stdint.h>
 
@@ -103,4 +103,4 @@ void ft8xx_register_int(ft8xx_int_callback callback);
 }
 #endif
 
-#endif /* ZEPHYR_DRIVERS_MISC_FT8XX_FT8XX_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_MISC_FT8XX_FT8XX_H_ */

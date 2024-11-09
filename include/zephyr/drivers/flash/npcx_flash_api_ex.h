@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef __ZEPHYR_INCLUDE_DRIVERS_NPCX_FLASH_API_EX_H__
-#define __ZEPHYR_INCLUDE_DRIVERS_NPCX_FLASH_API_EX_H__
+#ifndef ZEPHYR_INCLUDE_DRIVERS_FLASH_NPCX_FLASH_API_EX_H_
+#define ZEPHYR_INCLUDE_DRIVERS_FLASH_NPCX_FLASH_API_EX_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,4 +72,4 @@ struct npcx_ex_ops_qspi_oper_out {
 }
 #endif
 
-#endif /* __ZEPHYR_INCLUDE_DRIVERS_NPCX_FLASH_API_EX_H__ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_FLASH_NPCX_FLASH_API_EX_H_ */

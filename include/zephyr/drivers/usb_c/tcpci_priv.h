@@ -12,8 +12,8 @@
  * TCPCI generic functionality and register operations.
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_USBC_TCPCI_PRIV_H_
-#define ZEPHYR_INCLUDE_DRIVERS_USBC_TCPCI_PRIV_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_USB_C_TCPCI_PRIV_H_
+#define ZEPHYR_INCLUDE_DRIVERS_USB_C_TCPCI_PRIV_H_
 
 #include <stdint.h>
 #include <zephyr/drivers/i2c.h>
@@ -116,4 +116,4 @@ enum tcpc_alert tcpci_alert_reg_to_enum(uint16_t reg);
 int tcpci_tcpm_get_cc(const struct i2c_dt_spec *bus, enum tc_cc_voltage_state *cc1,
 		      enum tc_cc_voltage_state *cc2);
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_USBC_TCPCI_PRIV_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_USB_C_TCPCI_PRIV_H_ */

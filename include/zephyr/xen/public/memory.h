@@ -26,8 +26,8 @@
  * Copyright (c) 2005, Keir Fraser <keir@xensource.com>
  */
 
-#ifndef __XEN_PUBLIC_MEMORY_H__
-#define __XEN_PUBLIC_MEMORY_H__
+#ifndef ZEPHYR_INCLUDE_XEN_PUBLIC_MEMORY_H_
+#define ZEPHYR_INCLUDE_XEN_PUBLIC_MEMORY_H_
 
 #include "xen.h"
 
@@ -161,4 +161,4 @@ struct xen_remove_from_physmap {
 typedef struct xen_remove_from_physmap xen_remove_from_physmap_t;
 DEFINE_XEN_GUEST_HANDLE(xen_remove_from_physmap_t);
 
-#endif /* __XEN_PUBLIC_MEMORY_H__ */
+#endif /* ZEPHYR_INCLUDE_XEN_PUBLIC_MEMORY_H_ */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_PROMETHEUS_COLLECTOR_H_
-#define ZEPHYR_INCLUDE_PROMETHEUS_COLLECTOR_H_
+#ifndef ZEPHYR_INCLUDE_NET_PROMETHEUS_COLLECTOR_H_
+#define ZEPHYR_INCLUDE_NET_PROMETHEUS_COLLECTOR_H_
 
 /**
  * @file
@@ -80,4 +80,4 @@ const void *prometheus_collector_get_metric(const struct prometheus_collector *c
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_PROMETHEUS_COLLECTOR_H_ */
+#endif /* ZEPHYR_INCLUDE_NET_PROMETHEUS_COLLECTOR_H_ */

@@ -127,4 +127,4 @@ do {									\
 
 #endif  /*_ASMLANGUAGE */
 
-#endif  /* ZEPHYR_INCLUDE_ARCH_SPARC_ARCH_H_ */
+#endif /* ZEPHYR_INCLUDE_ARCH_SPARC_ARCH_H_ */

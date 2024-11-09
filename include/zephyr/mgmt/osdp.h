@@ -480,4 +480,4 @@ uint32_t osdp_get_sc_status_mask(void);
 }
 #endif
 
-#endif	/* ZEPHYR_INCLUDE_MGMT_OSDP_H_ */
+#endif /* ZEPHYR_INCLUDE_MGMT_OSDP_H_ */

@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_SYS_KOBJECT_H
-#define ZEPHYR_INCLUDE_SYS_KOBJECT_H
+#ifndef ZEPHYR_INCLUDE_SYS_KOBJECT_H_
+#define ZEPHYR_INCLUDE_SYS_KOBJECT_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -288,4 +288,4 @@ static inline void k_object_free(void *obj)
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SYS_KOBJECT_H */
+#endif /* ZEPHYR_INCLUDE_SYS_KOBJECT_H_ */

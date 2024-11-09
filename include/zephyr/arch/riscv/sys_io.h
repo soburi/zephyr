@@ -15,7 +15,7 @@
 #include <zephyr/types.h>
 #include <zephyr/sys/sys_io.h>
 
-#ifndef CONFIG_RISCV_SOC_HAS_CUSTOM_SYS_IO
+#ifndef ZEPHYR_INCLUDE_ARCH_RISCV_SYS_IO_H_
 #include <zephyr/arch/common/sys_io.h>
 #endif
 

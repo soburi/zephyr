@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DRIVERS_GNSS_GNSS_H_
-#define ZEPHYR_DRIVERS_GNSS_GNSS_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_GNSS_GNSS_PUBLISH_H_
+#define ZEPHYR_INCLUDE_DRIVERS_GNSS_GNSS_PUBLISH_H_
 
 #include <zephyr/drivers/gnss.h>
 
@@ -16,4 +16,4 @@ void gnss_publish_data(const struct device *dev, const struct gnss_data *data);
 void gnss_publish_satellites(const struct device *dev, const struct gnss_satellite *satellites,
 			     uint16_t size);
 
-#endif /* ZEPHYR_DRIVERS_GNSS_GNSS_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_GNSS_GNSS_PUBLISH_H_ */

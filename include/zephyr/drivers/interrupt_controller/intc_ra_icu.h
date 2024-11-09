@@ -6,8 +6,8 @@
 
 #include <zephyr/dt-bindings/interrupt-controller/renesas-ra-icu.h>
 
-#ifndef ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_RA_ICU_H_
-#define ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_RA_ICU_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_INTERRUPT_CONTROLLER_INTC_RA_ICU_H_
+#define ZEPHYR_INCLUDE_DRIVERS_INTERRUPT_CONTROLLER_INTC_RA_ICU_H_
 
 #define RA_ICU_FLAG_EVENT_OFFSET  8
 #define RA_ICU_FLAG_EVENT_MASK    (BIT_MASK(8) << RA_ICU_FLAG_EVENT_OFFSET)
@@ -39,4 +39,4 @@ extern int ra_icu_irq_disconnect_dynamic(unsigned int irq, unsigned int priority
 					 void (*routine)(const void *parameter),
 					 const void *parameter, uint32_t flags);
 
-#endif /* ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_RA_ICU_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_INTERRUPT_CONTROLLER_INTC_RA_ICU_H_ */

@@ -12,8 +12,8 @@
  * @brief Common types and functions for the Bluetooth Mesh DFU metadata.
  */
 
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_METADATA_H__
-#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_METADATA_H__
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_METADATA_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_METADATA_H_
 
 #include <stdint.h>
 
@@ -110,6 +110,6 @@ int bt_mesh_dfu_metadata_comp_hash_local_get(uint8_t *key, uint32_t *hash);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_METADATA_H__ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_METADATA_H_ */
 
 /** @} */

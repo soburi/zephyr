@@ -9,8 +9,8 @@
  * @brief SCMI SHMEM API
  */
 
-#ifndef _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_SHMEM_H_
-#define _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_SHMEM_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_SHMEM_H_
+#define ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_SHMEM_H_
 
 #include <zephyr/device.h>
 #include <zephyr/arch/cpu.h>
@@ -64,4 +64,4 @@ void scmi_shmem_update_flags(const struct device *shmem,
  */
 uint32_t scmi_shmem_channel_status(const struct device *shmem);
 
-#endif /* _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_SHMEM_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_SHMEM_H_ */

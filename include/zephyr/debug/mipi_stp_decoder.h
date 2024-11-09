@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_DEBUG_MIPI_STP_DECODER_H__
-#define ZEPHYR_INCLUDE_DEBUG_MIPI_STP_DECODER_H__
+#ifndef ZEPHYR_INCLUDE_DEBUG_MIPI_STP_DECODER_H_
+#define ZEPHYR_INCLUDE_DEBUG_MIPI_STP_DECODER_H_
 
 #include <zephyr/kernel.h>
 
@@ -142,4 +142,4 @@ void mipi_stp_decoder_sync_loss(void);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DEBUG_MIPI_STP_DECODER_H__ */
+#endif /* ZEPHYR_INCLUDE_DEBUG_MIPI_STP_DECODER_H_ */

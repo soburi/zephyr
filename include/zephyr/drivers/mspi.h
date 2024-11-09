@@ -11,8 +11,8 @@
  * @version 0.1.0
  */
 
-#ifndef ZEPHYR_INCLUDE_MSPI_H_
-#define ZEPHYR_INCLUDE_MSPI_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_MSPI_H_
+#define ZEPHYR_INCLUDE_DRIVERS_MSPI_H_
 
 #include <errno.h>
 
@@ -810,4 +810,4 @@ static inline int mspi_register_callback(const struct device *controller,
  * @}
  */
 #include <zephyr/syscalls/mspi.h>
-#endif /* ZEPHYR_INCLUDE_MSPI_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_MSPI_H_ */

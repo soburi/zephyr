@@ -480,4 +480,4 @@ extern "C" {
 }
 #endif
 
-#endif  /* ZEPHYR_INCLUDE_DEVICETREE_PWMS_H_ */
+#endif /* ZEPHYR_INCLUDE_DEVICETREE_PWMS_H_ */

@@ -329,4 +329,4 @@ static inline int lora_test_cw(const struct device *dev, uint32_t frequency,
  * @}
  */
 
-#endif	/* ZEPHYR_INCLUDE_DRIVERS_LORA_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_LORA_H_ */

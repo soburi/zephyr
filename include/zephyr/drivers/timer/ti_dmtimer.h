@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DRIVERS_TIMERS_TI_DMTIMER_H_
-#define ZEPHYR_DRIVERS_TIMERS_TI_DMTIMER_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_TIMER_TI_DMTIMER_H_
+#define ZEPHYR_INCLUDE_DRIVERS_TIMER_TI_DMTIMER_H_
 
 #include <zephyr/devicetree.h>
 
@@ -101,4 +101,4 @@
 #define TI_DM_TIMER_TMAR_COMPARE_VALUE_SHIFT                     (0)
 #define TI_DM_TIMER_TMAR_COMPARE_VALUE_MASK                      (0xffffffff)
 
-#endif /* ZEPHYR_DRIVERS_TIMERS_TI_DMTIMER_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_TIMER_TI_DMTIMER_H_ */

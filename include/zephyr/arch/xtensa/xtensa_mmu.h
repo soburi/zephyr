@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 
-#ifndef ZEPHYR_INCLUDE_ARCH_XTENSA_XTENSA_MMU_H
-#define ZEPHYR_INCLUDE_ARCH_XTENSA_XTENSA_MMU_H
+#ifndef ZEPHYR_INCLUDE_ARCH_XTENSA_XTENSA_MMU_H_
+#define ZEPHYR_INCLUDE_ARCH_XTENSA_XTENSA_MMU_H_
 
 /**
  * @defgroup xtensa_mmu_apis Xtensa Memory Management Unit (MMU) APIs
@@ -157,4 +157,4 @@ void xtensa_mmu_tlb_shootdown(void);
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_ARCH_XTENSA_XTENSA_MMU_H */
+#endif /* ZEPHYR_INCLUDE_ARCH_XTENSA_XTENSA_MMU_H_ */

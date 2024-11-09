@@ -25,7 +25,7 @@ extern "C" {
 
 /** @cond ignore */
 
-#ifndef NET_PKT_HAS_CONTROL_BLOCK
+#ifndef ZEPHYR_INCLUDE_NET_IEEE802154_PKT_H_
 #define NET_PKT_HAS_CONTROL_BLOCK
 #endif
 

@@ -355,4 +355,4 @@ extern "C" {
 }
 #endif
 
-#endif  /* ZEPHYR_INCLUDE_DEVICETREE_CLOCKS_H_ */
+#endif /* ZEPHYR_INCLUDE_DEVICETREE_CLOCKS_H_ */

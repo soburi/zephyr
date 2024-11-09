@@ -8,8 +8,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_H_
-#define ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_H_
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_CLASSIC_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_CLASSIC_H_
 
 /**
  * @brief Bluetooth APIs
@@ -207,4 +207,4 @@ int bt_br_set_connectable(bool enable);
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_H_ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_CLASSIC_H_ */

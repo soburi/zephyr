@@ -9,8 +9,8 @@
  * @brief SCMI protocol generic functions and structures
  */
 
-#ifndef _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_PROTOCOL_H_
-#define _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_PROTOCOL_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_PROTOCOL_H_
+#define ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_PROTOCOL_H_
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/firmware/scmi/util.h>
@@ -119,4 +119,4 @@ int scmi_status_to_errno(int scmi_status);
 int scmi_send_message(struct scmi_protocol *proto,
 		      struct scmi_message *msg, struct scmi_message *reply);
 
-#endif /* _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_PROTOCOL_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_PROTOCOL_H_ */

@@ -7,8 +7,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_HEALTH_FAULTS_H__
-#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_HEALTH_FAULTS_H__
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_HEALTH_FAULTS_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_HEALTH_FAULTS_H_
 
 /**
  * @brief List of specification defined Health fault values.
@@ -82,4 +82,4 @@
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_HEALTH_FAULTS_H__ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_HEALTH_FAULTS_H_ */

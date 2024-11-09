@@ -9,8 +9,8 @@
  * @brief Serial Wire Debug Port interface driver API
  */
 
-#ifndef ZEPHYR_INCLUDE_SWDP_H_
-#define ZEPHYR_INCLUDE_SWDP_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_SWDP_H_
+#define ZEPHYR_INCLUDE_DRIVERS_SWDP_H_
 
 #include <zephyr/device.h>
 
@@ -148,4 +148,4 @@ struct swdp_api {
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SWDP_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_SWDP_H_ */

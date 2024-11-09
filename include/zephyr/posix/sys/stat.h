@@ -27,8 +27,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#ifndef ZEPHYR_POSIX_SYS_STAT_H_
-#define ZEPHYR_POSIX_SYS_STAT_H_
+#ifndef ZEPHYR_INCLUDE_POSIX_SYS_STAT_H_
+#define ZEPHYR_INCLUDE_POSIX_SYS_STAT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,7 +40,7 @@ extern "C" {
 #include <zephyr/posix/posix_types.h>
 
 /* dj's stat defines _STAT_H_ */
-#ifndef _STAT_H_
+#ifndef ZEPHYR_INCLUDE_POSIX_SYS_STAT_H_
 
 /*
  * It is intended that the layout of this structure not change when the
@@ -238,4 +238,4 @@ int _fstat64(int __fd, struct stat64 *__sbuf);
 #ifdef __cplusplus
 }
 #endif
-#endif /* ZEPHYR_POSIX_SYS_STAT_H_ */
+#endif /* ZEPHYR_INCLUDE_POSIX_SYS_STAT_H_ */

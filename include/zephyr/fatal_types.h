@@ -8,8 +8,8 @@
  *  @brief Fatal base type definitions
  */
 
-#ifndef ZEPHYR_INCLUDE_FATAL_TYPES_H
-#define ZEPHYR_INCLUDE_FATAL_TYPES_H
+#ifndef ZEPHYR_INCLUDE_FATAL_TYPES_H_
+#define ZEPHYR_INCLUDE_FATAL_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,4 +47,4 @@ enum k_fatal_error_reason {
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_FATAL_TYPES_H */
+#endif /* ZEPHYR_INCLUDE_FATAL_TYPES_H_ */

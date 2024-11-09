@@ -11,8 +11,8 @@
  * This file contains the USB device stack APIs and structures.
  */
 
-#ifndef ZEPHYR_INCLUDE_USBD_H_
-#define ZEPHYR_INCLUDE_USBD_H_
+#ifndef ZEPHYR_INCLUDE_USB_USBD_H_
+#define ZEPHYR_INCLUDE_USB_USBD_H_
 
 #include <zephyr/device.h>
 #include <zephyr/usb/bos.h>
@@ -1096,4 +1096,4 @@ bool usbd_can_detect_vbus(struct usbd_context *const uds_ctx);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_USBD_H_ */
+#endif /* ZEPHYR_INCLUDE_USB_USBD_H_ */

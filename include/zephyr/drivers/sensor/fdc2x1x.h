@@ -42,4 +42,4 @@ enum sensor_channel_fdc2x1x {
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_FDC2X1X_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_FDC2X1X_H_ */

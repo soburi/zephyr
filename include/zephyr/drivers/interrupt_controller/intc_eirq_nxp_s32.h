@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_EIRQ_NXP_S32_H_
-#define ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_EIRQ_NXP_S32_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_INTERRUPT_CONTROLLER_INTC_EIRQ_NXP_S32_H_
+#define ZEPHYR_INCLUDE_DRIVERS_INTERRUPT_CONTROLLER_INTC_EIRQ_NXP_S32_H_
 
 /** NXP SIUL2 EIRQ callback */
 typedef void (*eirq_nxp_s32_callback_t)(uint8_t pin, void *arg);
@@ -76,4 +76,4 @@ void eirq_nxp_s32_disable_interrupt(const struct device *dev, uint8_t irq);
  */
 uint32_t eirq_nxp_s32_get_pending(const struct device *dev);
 
-#endif /* ZEPHYR_DRIVERS_INTERRUPT_CONTROLLER_INTC_EIRQ_NXP_S32_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_INTERRUPT_CONTROLLER_INTC_EIRQ_NXP_S32_H_ */

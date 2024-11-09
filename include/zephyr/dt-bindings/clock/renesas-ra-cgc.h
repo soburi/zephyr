@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DT_BINDINGS_CLOCK_RENESAS_RA_CGC_H_
-#define ZEPHYR_DT_BINDINGS_CLOCK_RENESAS_RA_CGC_H_
+#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_CLOCK_RENESAS_RA_CGC_H_
+#define ZEPHYR_INCLUDE_DT_BINDINGS_CLOCK_RENESAS_RA_CGC_H_
 
 #define RA_CLOCK(grp, func, ch) ((grp << 28) | (func << 20) | ch)
 
@@ -61,4 +61,4 @@
 #define RA_CLOCK_ULPT(channel)    RA_CLOCK(4, 9U, channel)
 #define RA_CLOCK_GPT(channel)     RA_CLOCK(5, 31U, channel)
 
-#endif /* ZEPHYR_DT_BINDINGS_CLOCK_RENESAS_RA_CGC_H_ */
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_CLOCK_RENESAS_RA_CGC_H_ */

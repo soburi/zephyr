@@ -8,8 +8,8 @@
  * @brief Shell transport for the mcumgr SMP protocol.
  */
 
-#ifndef ZEPHYR_INCLUDE_MGMT_SMP_SHELL_H_
-#define ZEPHYR_INCLUDE_MGMT_SMP_SHELL_H_
+#ifndef ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_SHELL_H_
+#define ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_SHELL_H_
 
 #include <zephyr/types.h>
 
@@ -65,4 +65,4 @@ int smp_shell_init(void);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_MGMT_SMP_SHELL_H_ */
+#endif /* ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_SHELL_H_ */

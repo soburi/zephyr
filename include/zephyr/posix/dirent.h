@@ -37,4 +37,4 @@ int readdir_r(DIR *ZRESTRICT dirp, struct dirent *ZRESTRICT entry,
 
 #endif /* CONFIG_POSIX_FILE_SYSTEM */
 
-#endif	/* ZEPHYR_INCLUDE_POSIX_DIRENT_H_ */
+#endif /* ZEPHYR_INCLUDE_POSIX_DIRENT_H_ */

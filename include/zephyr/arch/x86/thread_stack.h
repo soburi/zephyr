@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_ARCH_X86_THREAD_STACK_H
-#define ZEPHYR_INCLUDE_ARCH_X86_THREAD_STACK_H
+#ifndef ZEPHYR_INCLUDE_ARCH_X86_THREAD_STACK_H_
+#define ZEPHYR_INCLUDE_ARCH_X86_THREAD_STACK_H_
 
 #include <zephyr/arch/x86/mmustructs.h>
 
@@ -112,4 +112,4 @@ struct z_x86_thread_stack_header {
 #endif
 
 #endif /* !_ASMLANGUAGE */
-#endif /* ZEPHYR_INCLUDE_ARCH_X86_THREAD_STACK_H */
+#endif /* ZEPHYR_INCLUDE_ARCH_X86_THREAD_STACK_H_ */

@@ -8,8 +8,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_A2DP_H_
-#define ZEPHYR_INCLUDE_BLUETOOTH_A2DP_H_
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_H_
 
 #include <stdint.h>
 
@@ -793,4 +793,4 @@ int bt_a2dp_stream_send(struct bt_a2dp_stream *stream,  struct net_buf *buf,
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_A2DP_H_ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_H_ */

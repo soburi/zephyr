@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __XEN_GENERIC_H__
-#define __XEN_GENERIC_H__
+#ifndef ZEPHYR_INCLUDE_XEN_GENERIC_H_
+#define ZEPHYR_INCLUDE_XEN_GENERIC_H_
 
 #include <zephyr/xen/public/xen.h>
 
@@ -32,4 +32,4 @@
 				__ATOMIC_SEQ_CST) ? new : old; \
 })
 
-#endif /* __XEN_GENERIC_H__ */
+#endif /* ZEPHYR_INCLUDE_XEN_GENERIC_H_ */

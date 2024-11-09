@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_ST_LIS2DU12_H_
-#define ZEPHYR_INCLUDE_DT_BINDINGS_ST_LIS2DU12_H_
+#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_LIS2DU12_H_
+#define ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_LIS2DU12_H_
 
 /* Accel range */
 #define	LIS2DU12_DT_FS_2G			0
@@ -28,4 +28,4 @@
 #define LIS2DU12_DT_ODR_TRIG_PIN		0x0e /* Single-shot high latency by INT2 */
 #define LIS2DU12_DT_ODR_TRIG_SW			0x0f /* Single-shot high latency by IF */
 
-#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_ST_LIS2DU12_H_ */
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_LIS2DU12_H_ */

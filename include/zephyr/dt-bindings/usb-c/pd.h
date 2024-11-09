@@ -5,8 +5,8 @@
  * This is based on Linux, documentation:
  *   https://github.com/torvalds/linux/blob/v5.19/include/dt-bindings/usb/pd.h
  */
-#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_USBC_PD_H_
-#define ZEPHYR_INCLUDE_DT_BINDINGS_USBC_PD_H_
+#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_USB_C_PD_H_
+#define ZEPHYR_INCLUDE_DT_BINDINGS_USB_C_PD_H_
 
 /* Power delivery Power Data Object definitions */
 #define PDO_TYPE_FIXED		0
@@ -91,4 +91,4 @@
 	 PDO_PPS_APDO_MIN_VOLT(min_mv) | PDO_PPS_APDO_MAX_VOLT(max_mv) |	\
 	 PDO_PPS_APDO_MAX_CURR(max_ma))
 
-#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_USBC_PD_H_ */
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_USB_C_PD_H_ */

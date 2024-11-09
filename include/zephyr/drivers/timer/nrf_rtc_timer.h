@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_TIMER_NRF_RTC_TIMER_H
-#define ZEPHYR_INCLUDE_DRIVERS_TIMER_NRF_RTC_TIMER_H
+#ifndef ZEPHYR_INCLUDE_DRIVERS_TIMER_NRF_RTC_TIMER_H_
+#define ZEPHYR_INCLUDE_DRIVERS_TIMER_NRF_RTC_TIMER_H_
 
 #include <zephyr/sys_clock.h>
 
@@ -217,4 +217,4 @@ int z_nrf_rtc_timer_trigger_overflow(void);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_TIMER_NRF_RTC_TIMER_H */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_TIMER_NRF_RTC_TIMER_H_ */

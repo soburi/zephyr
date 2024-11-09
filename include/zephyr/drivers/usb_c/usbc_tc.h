@@ -11,8 +11,8 @@
  * Cable and Connector Specification Release 2.1
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_USBC_USBC_TC_H_
-#define ZEPHYR_INCLUDE_DRIVERS_USBC_USBC_TC_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_USB_C_USBC_TC_H_
+#define ZEPHYR_INCLUDE_DRIVERS_USB_C_USBC_TC_H_
 
 /**
  * @brief USB Type-C
@@ -439,4 +439,4 @@ enum tc_cc_states {
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_USBC_USBC_TC_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_USB_C_USBC_TC_H_ */

@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __XEN_GNTTAB_H__
-#define __XEN_GNTTAB_H__
+#ifndef ZEPHYR_INCLUDE_XEN_GNTTAB_H_
+#define ZEPHYR_INCLUDE_XEN_GNTTAB_H_
 
 #include <zephyr/xen/public/grant_table.h>
 
@@ -91,4 +91,4 @@ int gnttab_unmap_refs(struct gnttab_map_grant_ref *unmap_ops, unsigned int count
  */
 const char *gnttabop_error(int16_t status);
 
-#endif /* __XEN_GNTTAB_H__ */
+#endif /* ZEPHYR_INCLUDE_XEN_GNTTAB_H_ */

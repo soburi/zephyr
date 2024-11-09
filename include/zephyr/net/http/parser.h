@@ -60,7 +60,7 @@ extern "C" {
  * the effective limit on the size of the header, define the macro
  * to a very large number (e.g. -DHTTP_MAX_HEADER_SIZE=0x7fffffff)
  */
-#ifndef HTTP_MAX_HEADER_SIZE
+#ifndef ZEPHYR_INCLUDE_NET_HTTP_PARSER_H_
 # define HTTP_MAX_HEADER_SIZE (80 * 1024)
 #endif
 

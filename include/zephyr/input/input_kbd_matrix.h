@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_INPUT_KBD_MATRIX_H_
-#define ZEPHYR_INCLUDE_INPUT_KBD_MATRIX_H_
+#ifndef ZEPHYR_INCLUDE_INPUT_INPUT_KBD_MATRIX_H_
+#define ZEPHYR_INCLUDE_INPUT_INPUT_KBD_MATRIX_H_
 
 /**
  * @brief Keyboard Matrix API
@@ -326,4 +326,4 @@ int input_kbd_matrix_pm_action(const struct device *dev,
 
 /** @} */
 
-#endif /* ZEPHYR_INCLUDE_INPUT_KBD_MATRIX_H_ */
+#endif /* ZEPHYR_INCLUDE_INPUT_INPUT_KBD_MATRIX_H_ */

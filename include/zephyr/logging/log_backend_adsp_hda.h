@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_LOG_BACKEND_ADSP_HDA_H_
-#define ZEPHYR_LOG_BACKEND_ADSP_HDA_H_
+#ifndef ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_ADSP_HDA_H_
+#define ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_ADSP_HDA_H_
 
 #include <stdint.h>
 
@@ -29,4 +29,4 @@ typedef void(*adsp_hda_log_hook_t)(uint32_t written);
  */
 void adsp_hda_log_init(adsp_hda_log_hook_t hook, uint32_t channel);
 
-#endif /* ZEPHYR_LOG_BACKEND_ADSP_HDA_H_ */
+#endif /* ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_ADSP_HDA_H_ */

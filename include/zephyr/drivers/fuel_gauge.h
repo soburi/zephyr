@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_BATTERY_H_
-#define ZEPHYR_INCLUDE_DRIVERS_BATTERY_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_FUEL_GAUGE_H_
+#define ZEPHYR_INCLUDE_DRIVERS_FUEL_GAUGE_H_
 
 /**
  * @brief Fuel Gauge Interface
@@ -418,4 +418,4 @@ static inline int z_impl_fuel_gauge_battery_cutoff(const struct device *dev)
 
 #include <zephyr/syscalls/fuel_gauge.h>
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_BATTERY_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_FUEL_GAUGE_H_ */

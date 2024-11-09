@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_SYS_DEVICE_MMIO_H
-#define ZEPHYR_INCLUDE_SYS_DEVICE_MMIO_H
+#ifndef ZEPHYR_INCLUDE_SYS_DEVICE_MMIO_H_
+#define ZEPHYR_INCLUDE_SYS_DEVICE_MMIO_H_
 
 #include <zephyr/toolchain.h>
 #include <zephyr/linker/sections.h>
@@ -739,4 +739,4 @@ struct z_device_mmio_rom {
 #endif
 /** @} */
 
-#endif /* ZEPHYR_INCLUDE_SYS_DEVICE_MMIO_H */
+#endif /* ZEPHYR_INCLUDE_SYS_DEVICE_MMIO_H_ */

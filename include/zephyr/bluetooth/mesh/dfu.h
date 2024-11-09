@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_H__
-#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_H__
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_H_
 
 #include <sys/types.h>
 
@@ -168,4 +168,4 @@ struct bt_mesh_dfu_slot {
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_H__ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_H_ */

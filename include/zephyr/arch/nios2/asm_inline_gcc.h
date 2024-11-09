@@ -53,4 +53,4 @@ static ALWAYS_INLINE uint16_t sys_read16(mm_reg_t addr)
 
 #endif /* _ASMLANGUAGE */
 
-#endif /* _ASM_INLINE_GCC_PUBLIC_GCC_H */
+#endif /* ZEPHYR_INCLUDE_ARCH_NIOS2_ASM_INLINE_GCC_H_ */

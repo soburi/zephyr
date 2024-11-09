@@ -8,8 +8,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_HFP_AG_H_
-#define ZEPHYR_INCLUDE_BLUETOOTH_HFP_AG_H_
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_HFP_AG_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_HFP_AG_H_
 
 /**
  * @brief Hands Free Profile - Audio Gateway (HFP-AG)
@@ -295,4 +295,4 @@ int bt_hfp_ag_remote_terminate(struct bt_hfp_ag *ag);
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_HFP_HF_H_ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_HFP_AG_H_ */

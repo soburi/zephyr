@@ -10,8 +10,8 @@
  * @brief UDP transport for the MCUmgr SMP protocol.
  */
 
-#ifndef ZEPHYR_INCLUDE_MGMT_SMP_UDP_H_
-#define ZEPHYR_INCLUDE_MGMT_SMP_UDP_H_
+#ifndef ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_UDP_H_
+#define ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_UDP_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,4 +42,4 @@ int smp_udp_close(void);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_MGMT_SMP_UDP_H_ */
+#endif /* ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_UDP_H_ */

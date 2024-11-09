@@ -69,4 +69,4 @@ struct usb_bos_capability_msos {
  * @}
  */
 
-#endif	/* ZEPHYR_INCLUDE_USB_BOS_H_ */
+#endif /* ZEPHYR_INCLUDE_USB_BOS_H_ */

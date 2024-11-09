@@ -139,4 +139,4 @@ int fps_download_char_buf(const struct device *dev, uint8_t char_buf_id,
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_ZEPHYR_DRIVERS_SENSOR_GROW_R502A_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_GROW_R502A_H_ */

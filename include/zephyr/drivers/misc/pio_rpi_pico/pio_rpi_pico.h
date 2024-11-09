@@ -6,8 +6,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DRIVERS_MISC_PIO_PICO_RPI_PIO_PICO_RPI_H_
-#define ZEPHYR_DRIVERS_MISC_PIO_PICO_RPI_PIO_PICO_RPI_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_MISC_PIO_RPI_PICO_PIO_RPI_PICO_H_
+#define ZEPHYR_INCLUDE_DRIVERS_MISC_PIO_RPI_PICO_PIO_RPI_PICO_H_
 
 #include <zephyr/devicetree/gpio.h>
 
@@ -146,4 +146,4 @@ PIO pio_rpi_pico_get_pio(const struct device *dev);
  */
 int pio_rpi_pico_allocate_sm(const struct device *dev, size_t *sm);
 
-#endif /* ZEPHYR_DRIVERS_MISC_PIO_PICO_RPI_PIO_PICO_RPI_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_MISC_PIO_RPI_PICO_PIO_RPI_PICO_H_ */

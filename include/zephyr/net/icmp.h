@@ -257,6 +257,6 @@ int net_icmp_get_offload_rsp_handler(struct net_icmp_offload *ctx,
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_NET_ICMP_H */
+#endif /* ZEPHYR_INCLUDE_NET_ICMP_H_ */
 
 /**@}  */

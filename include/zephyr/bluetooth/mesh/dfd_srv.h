@@ -12,8 +12,8 @@
  * @brief API for the Firmware Distribution Server model
  */
 
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_SRV_H__
-#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_SRV_H__
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_SRV_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_SRV_H_
 
 #include <zephyr/bluetooth/mesh/access.h>
 #include <zephyr/bluetooth/mesh/dfd.h>
@@ -308,6 +308,6 @@ extern const struct bt_mesh_blob_srv_cb _bt_mesh_dfd_srv_blob_cb;
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_SRV_H__ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_SRV_H_ */
 
 /** @} */

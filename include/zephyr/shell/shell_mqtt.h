@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_SHELL_MQTT_H_
-#define ZEPHYR_INCLUDE_SHELL_MQTT_H_
+#ifndef ZEPHYR_INCLUDE_SHELL_SHELL_MQTT_H_
+#define ZEPHYR_INCLUDE_SHELL_SHELL_MQTT_H_
 
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell.h>
@@ -137,4 +137,4 @@ bool shell_mqtt_get_devid(char *id, int id_max_len);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SHELL_MQTT_H_ */
+#endif /* ZEPHYR_INCLUDE_SHELL_SHELL_MQTT_H_ */

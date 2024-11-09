@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DRIVERS_MISC_NXP_FLEXIO_NXP_FLEXIO_H_
-#define ZEPHYR_DRIVERS_MISC_NXP_FLEXIO_NXP_FLEXIO_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_MISC_NXP_FLEXIO_NXP_FLEXIO_H_
+#define ZEPHYR_INCLUDE_DRIVERS_MISC_NXP_FLEXIO_NXP_FLEXIO_H_
 
 #include <zephyr/device.h>
 
@@ -85,4 +85,4 @@ int nxp_flexio_get_rate(const struct device *dev, uint32_t *rate);
 int nxp_flexio_child_attach(const struct device *dev,
 	const struct nxp_flexio_child *child);
 
-#endif /* ZEPHYR_DRIVERS_MISC_NXP_FLEXIO_NXP_FLEXIO_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_MISC_NXP_FLEXIO_NXP_FLEXIO_H_ */

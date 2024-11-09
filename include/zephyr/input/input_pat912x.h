@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_INPUT_PAT912X_H_
-#define ZEPHYR_INCLUDE_INPUT_PAT912X_H_
+#ifndef ZEPHYR_INCLUDE_INPUT_INPUT_PAT912X_H_
+#define ZEPHYR_INCLUDE_INPUT_INPUT_PAT912X_H_
 
 /**
  * @brief Set resolution on a pat912x device
@@ -19,4 +19,4 @@
 int pat912x_set_resolution(const struct device *dev,
 			   int16_t res_x_cpi, int16_t res_y_cpi);
 
-#endif /* ZEPHYR_INCLUDE_INPUT_PAT912X_H_ */
+#endif /* ZEPHYR_INCLUDE_INPUT_INPUT_PAT912X_H_ */

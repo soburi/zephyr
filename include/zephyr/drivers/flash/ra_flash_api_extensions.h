@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef __ZEPHYR_INCLUDE_DRIVERS_FLASH_RA_EXTENSIONS_H__
-#define __ZEPHYR_INCLUDE_DRIVERS_FLASH_RA_EXTENSIONS_H__
+#ifndef ZEPHYR_INCLUDE_DRIVERS_FLASH_RA_FLASH_API_EXTENSIONS_H_
+#define ZEPHYR_INCLUDE_DRIVERS_FLASH_RA_FLASH_API_EXTENSIONS_H_
 
 #include <zephyr/drivers/flash.h>
 
@@ -143,4 +143,4 @@ typedef struct flash_ra_ex_write_protect_out {
 } flash_ra_ex_write_protect_out_t;
 #endif /* CONFIG_FLASH_RA_WRITE_PROTECT */
 
-#endif /* __ZEPHYR_INCLUDE_DRIVERS_FLASH_RA_EXTENSIONS_H__ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_FLASH_RA_FLASH_API_EXTENSIONS_H_ */

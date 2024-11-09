@@ -9,8 +9,8 @@
  * @brief SCMI clock protocol helpers
  */
 
-#ifndef _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_CLK_H_
-#define _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_CLK_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_CLK_H_
+#define ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_CLK_H_
 
 #include <zephyr/drivers/firmware/scmi/protocol.h>
 
@@ -93,4 +93,4 @@ int scmi_clock_config_set(struct scmi_protocol *proto,
 int scmi_clock_rate_get(struct scmi_protocol *proto,
 			uint32_t clk_id, uint32_t *rate);
 
-#endif /* _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_CLK_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_CLK_H_ */

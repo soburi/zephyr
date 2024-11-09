@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_PROMETHEUS_SUMMARY_H_
-#define ZEPHYR_INCLUDE_PROMETHEUS_SUMMARY_H_
+#ifndef ZEPHYR_INCLUDE_NET_PROMETHEUS_SUMMARY_H_
+#define ZEPHYR_INCLUDE_NET_PROMETHEUS_SUMMARY_H_
 
 /**
  * @file
@@ -100,4 +100,4 @@ int prometheus_summary_observe(struct prometheus_summary *summary, double value)
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_PROMETHEUS_SUMMARY_H_ */
+#endif /* ZEPHYR_INCLUDE_NET_PROMETHEUS_SUMMARY_H_ */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_THREAD_MONITOR_H_
-#define ZEPHYR_INCLUDE_THREAD_MONITOR_H_
+#ifndef ZEPHYR_INCLUDE_DEBUG_OBJECT_TRACING_H_
+#define ZEPHYR_INCLUDE_DEBUG_OBJECT_TRACING_H_
 
 #include <zephyr/kernel.h>
 #include <zephyr/kernel_structs.h>
@@ -28,4 +28,4 @@
  */
 #define SYS_THREAD_MONITOR_NEXT(obj) (((struct k_thread *)obj)->next_thread)
 
-#endif /* ZEPHYR_INCLUDE_THREAD_MONITOR_H_ */
+#endif /* ZEPHYR_INCLUDE_DEBUG_OBJECT_TRACING_H_ */

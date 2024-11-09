@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_ZEPHYR_BINDESC_H_
-#define ZEPHYR_INCLUDE_ZEPHYR_BINDESC_H_
+#ifndef ZEPHYR_INCLUDE_BINDESC_H_
+#define ZEPHYR_INCLUDE_BINDESC_H_
 
 #include <zephyr/sys/util_macro.h>
 
@@ -599,4 +599,4 @@ extern const struct bindesc_entry BINDESC_NAME(cxx_compiler_version);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_ZEPHYR_BINDESC_H_ */
+#endif /* ZEPHYR_INCLUDE_BINDESC_H_ */

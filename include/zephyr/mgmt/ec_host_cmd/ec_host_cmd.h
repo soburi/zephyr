@@ -323,7 +323,7 @@ void ec_host_cmd_set_user_cb(ec_host_cmd_user_cb_t cb, void *user_data);
  */
 const struct ec_host_cmd *ec_host_cmd_get_hc(void);
 
-#ifndef CONFIG_EC_HOST_CMD_DEDICATED_THREAD
+#ifndef ZEPHYR_INCLUDE_MGMT_EC_HOST_CMD_EC_HOST_CMD_H_
 /**
  * @brief The thread function for Host Command subsystem
  *

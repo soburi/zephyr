@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_DEBUG_CORESIGHT_CS_TRACE_DEFMT_H__
-#define ZEPHYR_INCLUDE_DEBUG_CORESIGHT_CS_TRACE_DEFMT_H__
+#ifndef ZEPHYR_INCLUDE_DEBUG_CORESIGHT_CS_TRACE_DEFMT_H_
+#define ZEPHYR_INCLUDE_DEBUG_CORESIGHT_CS_TRACE_DEFMT_H_
 
 #include <zephyr/kernel.h>
 #ifdef __cplusplus
@@ -61,4 +61,4 @@ int cs_trace_defmt_process(const uint8_t *data, size_t len);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DEBUG_CORESIGHT_CS_TRACE_DEFMT_H__ */
+#endif /* ZEPHYR_INCLUDE_DEBUG_CORESIGHT_CS_TRACE_DEFMT_H_ */

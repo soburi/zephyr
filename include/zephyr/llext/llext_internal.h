@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_LLEXT_INTERNAL_H
-#define ZEPHYR_LLEXT_INTERNAL_H
+#ifndef ZEPHYR_INCLUDE_LLEXT_LLEXT_INTERNAL_H_
+#define ZEPHYR_INCLUDE_LLEXT_LLEXT_INTERNAL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,4 +29,4 @@ const void *llext_loaded_sect_ptr(struct llext_loader *ldr, struct llext *ext, u
 }
 #endif
 
-#endif /* ZEPHYR_LLEXT_INTERNAL_H */
+#endif /* ZEPHYR_INCLUDE_LLEXT_LLEXT_INTERNAL_H_ */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_SYS_HEAP_LISTENER_H
-#define ZEPHYR_INCLUDE_SYS_HEAP_LISTENER_H
+#ifndef ZEPHYR_INCLUDE_SYS_HEAP_LISTENER_H_
+#define ZEPHYR_INCLUDE_SYS_HEAP_LISTENER_H_
 
 #include <stdint.h>
 #include <zephyr/toolchain.h>
@@ -300,4 +300,4 @@ static inline void heap_listener_notify_resize(uintptr_t heap_id, void *old_heap
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SYS_HEAP_LISTENER_H */
+#endif /* ZEPHYR_INCLUDE_SYS_HEAP_LISTENER_H_ */

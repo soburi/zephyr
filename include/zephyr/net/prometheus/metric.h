@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_PROMETHEUS_METRIC_H_
-#define ZEPHYR_INCLUDE_PROMETHEUS_METRIC_H_
+#ifndef ZEPHYR_INCLUDE_NET_PROMETHEUS_METRIC_H_
+#define ZEPHYR_INCLUDE_NET_PROMETHEUS_METRIC_H_
 
 /**
  * @file
@@ -63,4 +63,4 @@ struct prometheus_metric {
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_PROMETHEUS_METRIC_H_ */
+#endif /* ZEPHYR_INCLUDE_NET_PROMETHEUS_METRIC_H_ */

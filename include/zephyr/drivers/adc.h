@@ -987,4 +987,4 @@ static inline bool adc_is_ready_dt(const struct adc_dt_spec *spec)
 
 #include <zephyr/syscalls/adc.h>
 
-#endif  /* ZEPHYR_INCLUDE_DRIVERS_ADC_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_ADC_H_ */

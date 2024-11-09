@@ -176,4 +176,4 @@ static inline size_t led_strip_length(const struct device *dev)
  * @}
  */
 
-#endif	/* ZEPHYR_INCLUDE_DRIVERS_LED_STRIP_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_LED_STRIP_H_ */

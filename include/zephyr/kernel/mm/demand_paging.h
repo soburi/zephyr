@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_KERNEL_MM_DEMAND_PAGING_H
-#define ZEPHYR_INCLUDE_KERNEL_MM_DEMAND_PAGING_H
+#ifndef ZEPHYR_INCLUDE_KERNEL_MM_DEMAND_PAGING_H_
+#define ZEPHYR_INCLUDE_KERNEL_MM_DEMAND_PAGING_H_
 
 #include <zephyr/kernel/mm.h>
 
@@ -436,4 +436,4 @@ void k_mem_paging_backing_store_init(void);
 #endif
 
 #endif /* !_ASMLANGUAGE */
-#endif /* ZEPHYR_INCLUDE_KERNEL_MM_DEMAND_PAGING_H */
+#endif /* ZEPHYR_INCLUDE_KERNEL_MM_DEMAND_PAGING_H_ */

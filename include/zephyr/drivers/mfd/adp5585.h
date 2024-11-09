@@ -123,4 +123,4 @@ void gpio_adp5585_irq_handler(const struct device *dev);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_MFD_AD5952_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_MFD_ADP5585_H_ */

@@ -119,4 +119,4 @@ int flash_img_check(struct flash_img_context *ctx,
  * @}
  */
 
-#endif	/* ZEPHYR_INCLUDE_DFU_FLASH_IMG_H_ */
+#endif /* ZEPHYR_INCLUDE_DFU_FLASH_IMG_H_ */

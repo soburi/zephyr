@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_H__
-#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_H__
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_H_
 
 #include <zephyr/bluetooth/mesh.h>
 
@@ -120,4 +120,4 @@ enum bt_mesh_dfd_upload_phase {
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_H__ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFD_H_ */

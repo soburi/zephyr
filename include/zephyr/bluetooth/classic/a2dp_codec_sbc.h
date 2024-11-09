@@ -18,8 +18,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_A2DP_CODEC_H_
-#define ZEPHYR_INCLUDE_BLUETOOTH_A2DP_CODEC_H_
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_CODEC_SBC_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_CODEC_SBC_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -121,4 +121,4 @@ uint32_t bt_a2dp_sbc_get_sampling_frequency(struct bt_a2dp_codec_sbc_params *sbc
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_A2DP_CODEC_H_ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_CODEC_SBC_H_ */

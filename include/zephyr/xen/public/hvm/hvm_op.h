@@ -22,8 +22,8 @@
  * Copyright (c) 2007, Keir Fraser
  */
 
-#ifndef __XEN_PUBLIC_HVM_HVM_OP_H__
-#define __XEN_PUBLIC_HVM_HVM_OP_H__
+#ifndef ZEPHYR_INCLUDE_XEN_PUBLIC_HVM_HVM_OP_H_
+#define ZEPHYR_INCLUDE_XEN_PUBLIC_HVM_HVM_OP_H_
 
 #include "../xen.h"
 
@@ -39,4 +39,4 @@ struct xen_hvm_param {
 typedef struct xen_hvm_param xen_hvm_param_t;
 DEFINE_XEN_GUEST_HANDLE(xen_hvm_param_t);
 
-#endif /* __XEN_PUBLIC_HVM_HVM_OP_H__ */
+#endif /* ZEPHYR_INCLUDE_XEN_PUBLIC_HVM_HVM_OP_H_ */

@@ -88,4 +88,4 @@ static ALWAYS_INLINE void barrier_isync_fence_full(void)
 } /* extern "C" */
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SYS_ATOMIC_H_ */
+#endif /* ZEPHYR_INCLUDE_SYS_BARRIER_H_ */

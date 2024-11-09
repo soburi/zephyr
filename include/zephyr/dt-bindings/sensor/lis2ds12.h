@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_ST_LIS2DS12_H_
-#define ZEPHYR_INCLUDE_DT_BINDINGS_ST_LIS2DS12_H_
+#ifndef ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_LIS2DS12_H_
+#define ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_LIS2DS12_H_
 
 /* power-modes */
 #define LIS2DS12_DT_POWER_DOWN			0
@@ -26,4 +26,4 @@
 #define LIS2DS12_DT_ODR_3200Hz_HF		10 /* available in HF mode only */
 #define LIS2DS12_DT_ODR_6400Hz_HF		11 /* available in HF mode only */
 
-#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_ST_LIS2DS12_H_ */
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_SENSOR_LIS2DS12_H_ */

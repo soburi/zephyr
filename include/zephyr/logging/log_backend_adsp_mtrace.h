@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_LOG_BACKEND_ADSP_MTRACE_H_
-#define ZEPHYR_LOG_BACKEND_ADSP_MTRACE_H_
+#ifndef ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_ADSP_MTRACE_H_
+#define ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_ADSP_MTRACE_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -29,4 +29,4 @@ void adsp_mtrace_log_init(adsp_mtrace_log_hook_t hook);
 
 const struct log_backend *log_backend_adsp_mtrace_get(void);
 
-#endif /* ZEPHYR_LOG_BACKEND_ADSP_MTRACE_H_ */
+#endif /* ZEPHYR_INCLUDE_LOGGING_LOG_BACKEND_ADSP_MTRACE_H_ */

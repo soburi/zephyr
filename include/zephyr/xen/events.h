@@ -4,8 +4,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __XEN_EVENTS_H__
-#define __XEN_EVENTS_H__
+#ifndef ZEPHYR_INCLUDE_XEN_EVENTS_H_
+#define ZEPHYR_INCLUDE_XEN_EVENTS_H_
 
 #include <zephyr/xen/public/event_channel.h>
 
@@ -81,4 +81,4 @@ int get_missed_events(evtchn_port_t port);
 
 int xen_events_init(void);
 
-#endif /* __XEN_EVENTS_H__ */
+#endif /* ZEPHYR_INCLUDE_XEN_EVENTS_H_ */

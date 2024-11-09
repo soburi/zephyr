@@ -9,8 +9,8 @@
  * @brief FT8XX coprocessor functions
  */
 
-#ifndef ZEPHYR_DRIVERS_MISC_FT8XX_FT8XX_COPRO_H_
-#define ZEPHYR_DRIVERS_MISC_FT8XX_FT8XX_COPRO_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_MISC_FT8XX_FT8XX_COPRO_H_
+#define ZEPHYR_INCLUDE_DRIVERS_MISC_FT8XX_FT8XX_COPRO_H_
 
 #include <stdint.h>
 
@@ -146,4 +146,4 @@ void ft8xx_copro_cmd_calibrate(uint32_t *result);
 }
 #endif
 
-#endif /* ZEPHYR_DRIVERS_MISC_FT8XX_FT8XX_COPRO_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_MISC_FT8XX_FT8XX_COPRO_H_ */

@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_PLATFORM_PLATFORM_H_
-#define ZEPHYR_INCLUDE_PLATFORM_PLATFORM_H_
+#ifndef ZEPHYR_INCLUDE_PLATFORM_HOOKS_H_
+#define ZEPHYR_INCLUDE_PLATFORM_HOOKS_H_
 
 /**
  * @file
@@ -71,4 +71,4 @@ void board_early_init_hook(void);
  */
 void board_late_init_hook(void);
 
-#endif /* ZEPHYR_INCLUDE_PLATFORM_PLATFORM_H_ */
+#endif /* ZEPHYR_INCLUDE_PLATFORM_HOOKS_H_ */

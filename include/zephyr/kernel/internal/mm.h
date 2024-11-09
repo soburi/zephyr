@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_KERNEL_INTERNAL_MM_H
-#define ZEPHYR_INCLUDE_KERNEL_INTERNAL_MM_H
+#ifndef ZEPHYR_INCLUDE_KERNEL_INTERNAL_MM_H_
+#define ZEPHYR_INCLUDE_KERNEL_INTERNAL_MM_H_
 
 #include <zephyr/sys/util.h>
 #include <zephyr/toolchain.h>
@@ -330,4 +330,4 @@ void k_mem_unmap_phys_guard(void *addr, size_t size, bool is_anon);
 /** @} */
 
 #endif /* !_ASMLANGUAGE */
-#endif /* ZEPHYR_INCLUDE_KERNEL_INTERNAL_MM_H */
+#endif /* ZEPHYR_INCLUDE_KERNEL_INTERNAL_MM_H_ */

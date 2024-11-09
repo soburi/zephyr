@@ -364,4 +364,4 @@ extern "C" {
 }
 #endif
 
-#endif  /* ZEPHYR_INCLUDE_DEVICETREE_GPIO_H_ */
+#endif /* ZEPHYR_INCLUDE_DEVICETREE_GPIO_H_ */

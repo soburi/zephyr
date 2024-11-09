@@ -7,8 +7,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_SDP_H_
-#define ZEPHYR_INCLUDE_BLUETOOTH_SDP_H_
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_SDP_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_SDP_H_
 
 /**
  * @file
@@ -643,4 +643,4 @@ int bt_sdp_get_features(const struct net_buf *buf, uint16_t *features);
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_SDP_H_ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_SDP_H_ */

@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_ZEPHYR_MCUMGR_GRP_ZBASIC_H_
-#define ZEPHYR_INCLUDE_ZEPHYR_MCUMGR_GRP_ZBASIC_H_
+#ifndef ZEPHYR_INCLUDE_MGMT_MCUMGR_GRP_ZEPHYR_ZEPHYR_BASIC_H_
+#define ZEPHYR_INCLUDE_MGMT_MCUMGR_GRP_ZEPHYR_ZEPHYR_BASIC_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,4 +39,4 @@ enum zephyr_basic_group_err_code_t {
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_ZEPHYR_MCUMGR_GRP_ZBASIC_H_ */
+#endif /* ZEPHYR_INCLUDE_MGMT_MCUMGR_GRP_ZEPHYR_ZEPHYR_BASIC_H_ */

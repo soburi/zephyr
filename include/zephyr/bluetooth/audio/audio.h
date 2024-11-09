@@ -2380,4 +2380,4 @@ static inline char *bt_audio_location_bit_to_str(enum bt_audio_location location
 
 /** @} */ /* end of bt_audio */
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_AUDIO_H_ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_AUDIO_AUDIO_H_ */

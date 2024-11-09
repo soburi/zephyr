@@ -13,4 +13,4 @@
  *    Reserved                 [ 0 : 31]
  */
 
-#endif	/* ZEPHYR_INCLUDE_DT_BINDINGS_PINCTRL_NPCX_PINCTRL_H_ */
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_PINCTRL_NPCX_PINCTRL_H_ */

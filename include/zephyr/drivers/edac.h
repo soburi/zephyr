@@ -417,4 +417,4 @@ static inline int edac_notify_callback_set(const struct device *dev,
 
 /** @} */ /* End of EDAC API */
 
-#endif  /* ZEPHYR_INCLUDE_DRIVERS_EDAC_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_EDAC_H_ */

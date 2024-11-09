@@ -12,8 +12,8 @@
  * @brief API for the Bluetooth Mesh Firmware Update Server model
  */
 
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_SRV_H__
-#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_SRV_H__
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_SRV_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_SRV_H_
 
 #include <zephyr/bluetooth/mesh/dfu.h>
 #include <zephyr/bluetooth/mesh/blob_srv.h>
@@ -261,6 +261,6 @@ extern const struct bt_mesh_blob_srv_cb _bt_mesh_dfu_srv_blob_cb;
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_SRV_H__ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_DFU_SRV_H_ */
 
 /** @} */

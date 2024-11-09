@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_LLEXT_H
-#define ZEPHYR_LLEXT_H
+#ifndef ZEPHYR_INCLUDE_LLEXT_LLEXT_H_
+#define ZEPHYR_INCLUDE_LLEXT_LLEXT_H_
 
 #include <zephyr/sys/slist.h>
 #include <zephyr/llext/elf.h>
@@ -357,4 +357,4 @@ void arch_elf_relocate_local(struct llext_loader *loader, struct llext *ext,
 
 #include <zephyr/syscalls/llext.h>
 
-#endif /* ZEPHYR_LLEXT_H */
+#endif /* ZEPHYR_INCLUDE_LLEXT_LLEXT_H_ */

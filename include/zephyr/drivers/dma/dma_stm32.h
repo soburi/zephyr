@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_DMA_STM32_H_
-#define ZEPHYR_INCLUDE_DRIVERS_DMA_STM32_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_DMA_DMA_STM32_H_
+#define ZEPHYR_INCLUDE_DRIVERS_DMA_DMA_STM32_H_
 
 /* @brief linked_channel value to inform zephyr dma driver that
  * DMA channel will be handled by HAL
@@ -83,4 +83,4 @@
 #define STM32_DMA_FEATURES_FIFO_THRESHOLD(features)	0
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_DMA_STM32_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_DMA_DMA_STM32_H_ */

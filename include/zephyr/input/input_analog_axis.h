@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_INPUT_ANALOG_AXIS_H_
-#define ZEPHYR_INCLUDE_INPUT_ANALOG_AXIS_H_
+#ifndef ZEPHYR_INCLUDE_INPUT_INPUT_ANALOG_AXIS_H_
+#define ZEPHYR_INCLUDE_INPUT_INPUT_ANALOG_AXIS_H_
 
 #include <stdint.h>
 #include <zephyr/device.h>
@@ -94,4 +94,4 @@ int analog_axis_calibration_set(const struct device *dev,
 
 /** @} */
 
-#endif /* ZEPHYR_INCLUDE_INPUT_ANALOG_AXIS_H_ */
+#endif /* ZEPHYR_INCLUDE_INPUT_INPUT_ANALOG_AXIS_H_ */

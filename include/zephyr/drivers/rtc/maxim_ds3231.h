@@ -29,8 +29,8 @@
  * features.  The majority of these functions must be invoked from
  * supervisor mode.
  */
-#ifndef ZEPHYR_INCLUDE_DRIVERS_RTC_DS3231_H_
-#define ZEPHYR_INCLUDE_DRIVERS_RTC_DS3231_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_RTC_MAXIM_DS3231_H_
+#define ZEPHYR_INCLUDE_DRIVERS_RTC_MAXIM_DS3231_H_
 
 #include <time.h>
 
@@ -598,4 +598,4 @@ int maxim_ds3231_check_alarms(const struct device *dev);
 /* @todo this should be syscalls/drivers/rtc/maxim_ds3231.h */
 #include <zephyr/syscalls/maxim_ds3231.h>
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_RTC_DS3231_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_RTC_MAXIM_DS3231_H_ */

@@ -99,4 +99,4 @@ static inline int z_impl_emul_fuel_gauge_is_battery_cutoff(const struct emul *ta
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_EMUL_FUEL_GAUGE_H_*/
+#endif /* ZEPHYR_INCLUDE_DRIVERS_EMUL_FUEL_GAUGE_H_ */

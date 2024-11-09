@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_TRACING_TRACING_FORMAT_H
-#define ZEPHYR_INCLUDE_TRACING_TRACING_FORMAT_H
+#ifndef ZEPHYR_INCLUDE_TRACING_TRACING_FORMAT_H_
+#define ZEPHYR_INCLUDE_TRACING_TRACING_FORMAT_H_
 
 #include <zephyr/toolchain/common.h>
 
@@ -88,4 +88,4 @@ void tracing_format_data(tracing_data_t *tracing_data_array, uint32_t count);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_TRACING_TRACING_FORMAT_H */
+#endif /* ZEPHYR_INCLUDE_TRACING_TRACING_FORMAT_H_ */

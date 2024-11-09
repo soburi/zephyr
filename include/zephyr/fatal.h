@@ -8,8 +8,8 @@
  *  @brief Fatal error functions
  */
 
-#ifndef ZEPHYR_INCLUDE_FATAL_H
-#define ZEPHYR_INCLUDE_FATAL_H
+#ifndef ZEPHYR_INCLUDE_FATAL_H_
+#define ZEPHYR_INCLUDE_FATAL_H_
 
 #include <zephyr/arch/cpu.h>
 #include <zephyr/arch/exception.h>
@@ -89,4 +89,4 @@ void z_fatal_error(unsigned int reason, const struct arch_esf *esf);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_FATAL_H */
+#endif /* ZEPHYR_INCLUDE_FATAL_H_ */

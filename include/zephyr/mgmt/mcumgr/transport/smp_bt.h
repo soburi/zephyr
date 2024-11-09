@@ -8,8 +8,8 @@
  * @brief Bluetooth transport for the mcumgr SMP protocol.
  */
 
-#ifndef ZEPHYR_INCLUDE_MGMT_SMP_BT_H_
-#define ZEPHYR_INCLUDE_MGMT_SMP_BT_H_
+#ifndef ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_BT_H_
+#define ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_BT_H_
 
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/types.h>
@@ -68,4 +68,4 @@ int smp_bt_notify(struct bt_conn *conn, const void *data, uint16_t len);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_MGMT_SMP_BT_H_ */
+#endif /* ZEPHYR_INCLUDE_MGMT_MCUMGR_TRANSPORT_SMP_BT_H_ */

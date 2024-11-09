@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_SYS_INTERNAL_KOBJECT_INTERNAL_H
-#define ZEPHYR_INCLUDE_SYS_INTERNAL_KOBJECT_INTERNAL_H
+#ifndef ZEPHYR_INCLUDE_SYS_INTERNAL_KOBJECT_INTERNAL_H_
+#define ZEPHYR_INCLUDE_SYS_INTERNAL_KOBJECT_INTERNAL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -177,4 +177,4 @@ static inline struct k_object *k_object_create_dynamic(size_t size)
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SYS_INTERNAL_KOBJECT_INTERNAL_H */
+#endif /* ZEPHYR_INCLUDE_SYS_INTERNAL_KOBJECT_INTERNAL_H_ */

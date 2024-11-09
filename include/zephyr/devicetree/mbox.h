@@ -97,4 +97,4 @@ extern "C" {
 }
 #endif
 
-#endif  /* ZEPHYR_INCLUDE_DEVICETREE_MBOX_H_ */
+#endif /* ZEPHYR_INCLUDE_DEVICETREE_MBOX_H_ */

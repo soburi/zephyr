@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_PRIV_BEACON_CLI_H__
-#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_PRIV_BEACON_CLI_H__
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_MESH_PRIV_BEACON_CLI_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_MESH_PRIV_BEACON_CLI_H_
 
 #include <zephyr/bluetooth/mesh.h>
 
@@ -195,4 +195,4 @@ extern const struct bt_mesh_model_cb bt_mesh_priv_beacon_cli_cb;
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_PRIV_BEACON_CLI_H__ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_MESH_PRIV_BEACON_CLI_H_ */

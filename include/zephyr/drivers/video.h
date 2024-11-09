@@ -9,8 +9,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_VIDEO_H_
-#define ZEPHYR_INCLUDE_VIDEO_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_VIDEO_H_
+#define ZEPHYR_INCLUDE_DRIVERS_VIDEO_H_
 
 /**
  * @brief Video Interface
@@ -859,4 +859,4 @@ static inline unsigned int video_pix_fmt_bpp(uint32_t pixfmt)
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_VIDEO_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_VIDEO_H_ */

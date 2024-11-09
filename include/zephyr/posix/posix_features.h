@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef INCLUDE_ZEPHYR_POSIX_POSIX_FEATURES_H_
-#define INCLUDE_ZEPHYR_POSIX_POSIX_FEATURES_H_
+#ifndef ZEPHYR_INCLUDE_POSIX_POSIX_FEATURES_H_
+#define ZEPHYR_INCLUDE_POSIX_POSIX_FEATURES_H_
 
 #include <zephyr/autoconf.h>       /* CONFIG_* */
 #include <zephyr/sys/util_macro.h> /* COND_CODE_1() */
@@ -344,4 +344,4 @@
 #define POSIX_REC_XFER_ALIGN     (4)
 #define SYMLINK_MAX              _POSIX_SYMLINK_MAX
 
-#endif /* INCLUDE_ZEPHYR_POSIX_POSIX_FEATURES_H_ */
+#endif /* ZEPHYR_INCLUDE_POSIX_POSIX_FEATURES_H_ */

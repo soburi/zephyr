@@ -9,8 +9,8 @@
  * @brief New USB device controller (UDC) driver API
  */
 
-#ifndef ZEPHYR_INCLUDE_UDC_H
-#define ZEPHYR_INCLUDE_UDC_H
+#ifndef ZEPHYR_INCLUDE_DRIVERS_USB_UDC_H_
+#define ZEPHYR_INCLUDE_DRIVERS_USB_UDC_H_
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
@@ -745,4 +745,4 @@ static inline uint16_t udc_mps_ep_size(const struct udc_ep_config *const cfg)
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_UDC_H */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_USB_UDC_H_ */

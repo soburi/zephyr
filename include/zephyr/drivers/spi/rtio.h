@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_DRIVERS_SPI_RTIO_H_
-#define ZEPHYR_DRIVERS_SPI_RTIO_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_SPI_RTIO_H_
+#define ZEPHYR_INCLUDE_DRIVERS_SPI_RTIO_H_
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/spi.h>
@@ -111,4 +111,4 @@ void spi_rtio_iodev_default_submit(const struct device *dev,
 }
 #endif
 
-#endif /* ZEPHYR_DRIVERS_SPI_RTIO_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_SPI_RTIO_H_ */

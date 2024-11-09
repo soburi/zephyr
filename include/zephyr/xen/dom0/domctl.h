@@ -3,8 +3,8 @@
  * Copyright (c) 2023 EPAM Systems
  *
  */
-#ifndef __XEN_DOM0_DOMCTL_H__
-#define __XEN_DOM0_DOMCTL_H__
+#ifndef ZEPHYR_INCLUDE_XEN_DOM0_DOMCTL_H_
+#define ZEPHYR_INCLUDE_XEN_DOM0_DOMCTL_H_
 
 #include <zephyr/xen/generic.h>
 #include <zephyr/xen/public/domctl.h>
@@ -34,4 +34,4 @@ int xen_domctl_createdomain(int domid, struct xen_domctl_createdomain *config);
 int xen_domctl_cacheflush(int domid,  struct xen_domctl_cacheflush *cacheflush);
 int xen_domctl_destroydomain(int domid);
 
-#endif /* __XEN_DOM0_DOMCTL_H__ */
+#endif /* ZEPHYR_INCLUDE_XEN_DOM0_DOMCTL_H_ */

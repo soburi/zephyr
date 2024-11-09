@@ -9,8 +9,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_VIDEO_CONTROLS_H_
-#define ZEPHYR_INCLUDE_VIDEO_CONTROLS_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_VIDEO_CONTROLS_H_
+#define ZEPHYR_INCLUDE_DRIVERS_VIDEO_CONTROLS_H_
 
 /**
  * @brief Video controls
@@ -94,4 +94,4 @@ enum video_power_line_frequency {
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_VIDEO_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_VIDEO_CONTROLS_H_ */

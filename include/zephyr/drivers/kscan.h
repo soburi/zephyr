@@ -13,8 +13,8 @@
  * implemented using a timer if desired.
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_KB_SCAN_H_
-#define ZEPHYR_INCLUDE_DRIVERS_KB_SCAN_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_KSCAN_H_
+#define ZEPHYR_INCLUDE_DRIVERS_KSCAN_H_
 
 #include <errno.h>
 #include <zephyr/types.h>
@@ -147,4 +147,4 @@ static inline int z_impl_kscan_disable_callback(const struct device *dev)
 
 #include <zephyr/syscalls/kscan.h>
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_KB_SCAN_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_KSCAN_H_ */

@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef ZEPHYR_INCLUDE_USB_MSOS_DESC_H
-#define ZEPHYR_INCLUDE_USB_MSOS_DESC_H
+#ifndef ZEPHYR_INCLUDE_USB_MSOS_DESC_H_
+#define ZEPHYR_INCLUDE_USB_MSOS_DESC_H_
 
 #include <stdint.h>
 
@@ -128,4 +128,4 @@ struct msosv2_vendor_revision {
 } __packed;
 
 
-#endif /* ZEPHYR_INCLUDE_USB_MSOS_DESC_H */
+#endif /* ZEPHYR_INCLUDE_USB_MSOS_DESC_H_ */

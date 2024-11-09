@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_KERNEL_MM_H
-#define ZEPHYR_INCLUDE_KERNEL_MM_H
+#ifndef ZEPHYR_INCLUDE_KERNEL_MM_H_
+#define ZEPHYR_INCLUDE_KERNEL_MM_H_
 
 #include <zephyr/sys/util.h>
 #include <zephyr/toolchain.h>
@@ -298,4 +298,4 @@ size_t k_mem_region_align(uintptr_t *aligned_addr, size_t *aligned_size,
 /** @} */
 
 #endif /* !_ASMLANGUAGE */
-#endif /* ZEPHYR_INCLUDE_KERNEL_MM_H */
+#endif /* ZEPHYR_INCLUDE_KERNEL_MM_H_ */

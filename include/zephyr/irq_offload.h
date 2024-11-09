@@ -42,4 +42,4 @@ void irq_offload(irq_offload_routine_t routine, const void *parameter);
 }
 #endif
 
-#endif /* _SW_IRQ_H_ */
+#endif /* ZEPHYR_INCLUDE_IRQ_OFFLOAD_H_ */

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef SHELL_H__
-#define SHELL_H__
+#ifndef ZEPHYR_INCLUDE_SHELL_SHELL_H_
+#define ZEPHYR_INCLUDE_SHELL_SHELL_H_
 
 #include <zephyr/kernel.h>
 #include <zephyr/shell/shell_types.h>
@@ -1325,4 +1325,4 @@ int shell_get_return_value(const struct shell *sh);
 #include <zephyr_custom_shell.h>
 #endif
 
-#endif /* SHELL_H__ */
+#endif /* ZEPHYR_INCLUDE_SHELL_SHELL_H_ */

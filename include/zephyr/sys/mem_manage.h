@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_SYS_MEM_MANAGE_H
-#define ZEPHYR_INCLUDE_SYS_MEM_MANAGE_H
+#ifndef ZEPHYR_INCLUDE_SYS_MEM_MANAGE_H_
+#define ZEPHYR_INCLUDE_SYS_MEM_MANAGE_H_
 
 /**
  * @brief Memory Management
@@ -59,4 +59,4 @@ bool sys_mm_is_virt_addr_in_range(void *virt);
 /** @} */
 
 #endif /* !_ASMLANGUAGE */
-#endif /* ZEPHYR_INCLUDE_SYS_MEM_MANAGE_H */
+#endif /* ZEPHYR_INCLUDE_SYS_MEM_MANAGE_H_ */

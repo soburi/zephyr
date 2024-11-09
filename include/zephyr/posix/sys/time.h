@@ -36,4 +36,4 @@ int gettimeofday(struct timeval *tv, void *tz);
 }
 #endif
 
-#endif	/* ZEPHYR_INCLUDE_POSIX_SYS_TIME_H_ */
+#endif /* ZEPHYR_INCLUDE_POSIX_SYS_TIME_H_ */

@@ -248,4 +248,4 @@ extern "C" {
 }
 #endif
 
-#endif  /* ZEPHYR_INCLUDE_DEVICETREE_IO_CHANNELS_H_ */
+#endif /* ZEPHYR_INCLUDE_DEVICETREE_IO_CHANNELS_H_ */

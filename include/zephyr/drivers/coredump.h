@@ -9,8 +9,8 @@
  * @brief Public APIs for coredump pseudo-device driver
  */
 
-#ifndef INCLUDE_ZEPHYR_DRIVERS_COREDUMP_H_
-#define INCLUDE_ZEPHYR_DRIVERS_COREDUMP_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_COREDUMP_H_
+#define ZEPHYR_INCLUDE_DRIVERS_COREDUMP_H_
 
 #include <zephyr/device.h>
 #include <zephyr/sys/slist.h>
@@ -165,4 +165,4 @@ static inline bool coredump_device_register_callback(const struct device *dev,
 }
 #endif
 
-#endif /* INCLUDE_ZEPHYR_DRIVERS_COREDUMP_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_COREDUMP_H_ */

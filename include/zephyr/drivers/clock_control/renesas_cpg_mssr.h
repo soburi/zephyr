@@ -6,8 +6,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_RCAR_CLOCK_CONTROL_H_
-#define ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_RCAR_CLOCK_CONTROL_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_RENESAS_CPG_MSSR_H_
+#define ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_RENESAS_CPG_MSSR_H_
 
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/dt-bindings/clock/renesas_cpg_mssr.h>
@@ -18,4 +18,4 @@ struct rcar_cpg_clk {
 	uint32_t rate;
 };
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_RCAR_CLOCK_CONTROL_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_CLOCK_CONTROL_RENESAS_CPG_MSSR_H_ */

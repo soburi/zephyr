@@ -306,4 +306,4 @@ extern "C" {
 }
 #endif
 
-#endif  /* ZEPHYR_INCLUDE_DEVICETREE_RESET_H_ */
+#endif /* ZEPHYR_INCLUDE_DEVICETREE_RESET_H_ */

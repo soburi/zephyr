@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef INCLUDE_ZEPHYR_SYS_ITERABLE_SECTIONS_H_
-#define INCLUDE_ZEPHYR_SYS_ITERABLE_SECTIONS_H_
+#ifndef ZEPHYR_INCLUDE_SYS_ITERABLE_SECTIONS_H_
+#define ZEPHYR_INCLUDE_SYS_ITERABLE_SECTIONS_H_
 
 #include <zephyr/sys/__assert.h>
 #include <zephyr/toolchain.h>
@@ -299,4 +299,4 @@ extern "C" {
 }
 #endif
 
-#endif /* INCLUDE_ZEPHYR_SYS_ITERABLE_SECTIONS_H_ */
+#endif /* ZEPHYR_INCLUDE_SYS_ITERABLE_SECTIONS_H_ */
