@@ -1,0 +1,17 @@
+/ {
+	aliases {
+		i2s-codec-tx = &i2s1;
+	};
+};
+
+&i2s1 {
+	status = "okay";
+};
+
+audio_codec: &aw88298 {
+	status = "okay";
+};
+
+&dma {
+	status = "okay";
+};
