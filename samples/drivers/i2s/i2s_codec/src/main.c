@@ -68,7 +68,7 @@ int main(void)
 	const struct device *const codec_dev = DEVICE_DT_GET(DT_NODELABEL(audio_codec));
 	struct i2s_config config;
 	struct audio_codec_cfg audio_cfg;
-	int ret;
+	int ret = 0;
 
 #if CONFIG_USE_DMIC
 	struct pcm_stream_cfg stream = {
