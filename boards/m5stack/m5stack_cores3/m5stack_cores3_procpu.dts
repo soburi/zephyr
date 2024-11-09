@@ -89,6 +89,14 @@
 		};
 	};
 
+	aw88298: aw88298@36 {
+		compatible = "awinic,aw88298";
+		reg = <0x36>;
+		status = "okay";
+		int-gpios = <&aw9523b_gpio 11 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&aw9523b_gpio 2 GPIO_ACTIVE_LOW>;
+	};
+
 	ft6336: ft5336@38 {
 		compatible = "focaltech,ft5336";
 		reg = <0x38>;
