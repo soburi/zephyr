@@ -2,6 +2,7 @@
 
 zephyr_library()
 
+zephyr_library_sources_ifdef(CONFIG_AUDIO_CODEC_AW88298	codec_aw88298.c)
 zephyr_library_sources_ifdef(CONFIG_AUDIO_TLV320DAC	tlv320dac310x.c)
 zephyr_library_sources_ifdef(CONFIG_AUDIO_MPXXDTYY	mpxxdtyy.c)
 zephyr_library_sources_ifdef(CONFIG_AUDIO_MPXXDTYY	mpxxdtyy-i2s.c)

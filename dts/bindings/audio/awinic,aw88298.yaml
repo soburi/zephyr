@@ -1,0 +1,24 @@
+# Copyright 2024 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: AW88298 audio codec
+
+include: [i2c-device.yaml]
+
+compatible: "awinic,aw88298"
+
+properties:
+  int-gpios:
+    type: phandle-array
+    description: |
+      Set GPIO connected to the controller INTN pin.
+      This is used for notifying interruption.
+
+  reset-gpios:
+    type: phandle-array
+    description: |
+      Set GPIO connected to the controller RSTN pin.
+      This is used to controlling resets via GPIO.
+
+  reg:
+    required: true
