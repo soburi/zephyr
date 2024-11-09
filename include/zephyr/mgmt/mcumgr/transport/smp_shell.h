@@ -65,4 +65,4 @@ int smp_shell_init(void);
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_MGMT_SMP_SHELL_H_ */

@@ -68,4 +68,4 @@ void z_gdb_entry(struct arch_esf *esf, unsigned int exc_cause);
 
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_ARCH_ARM_AARCH32_GDBSTUB_H_ */

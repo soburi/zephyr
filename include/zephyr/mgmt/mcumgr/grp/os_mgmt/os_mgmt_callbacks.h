@@ -60,4 +60,4 @@ struct os_mgmt_bootloader_info_data {
 }
 #endif
 
-#endif
+#endif /* H_MCUMGR_OS_MGMT_CALLBACKS_ */

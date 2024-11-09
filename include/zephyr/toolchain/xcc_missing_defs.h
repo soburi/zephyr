@@ -167,4 +167,4 @@
 #define __UINT_LEAST64_MAX__ 0xffffffffffffffffULL
 #define __UINT_LEAST64_TYPE__ long long unsigned int
 
-#endif
+#endif /* ZEPHYR_INCLUDE_TOOLCHAIN_XCC_MISSING_DEFS_H_ */

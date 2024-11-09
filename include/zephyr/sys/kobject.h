@@ -288,4 +288,4 @@ static inline void k_object_free(void *obj)
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_SYS_KOBJECT_H */

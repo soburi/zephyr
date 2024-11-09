@@ -68,4 +68,4 @@ int smp_bt_notify(struct bt_conn *conn, const void *data, uint16_t len);
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_MGMT_SMP_BT_H_ */

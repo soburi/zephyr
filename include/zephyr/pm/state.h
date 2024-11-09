@@ -390,4 +390,4 @@ static inline uint8_t pm_state_cpu_get_all(uint8_t cpu, const struct pm_state_in
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_PM_STATE_H_ */

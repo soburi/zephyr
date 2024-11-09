@@ -299,4 +299,4 @@ ACPI_MADT_LOCAL_APIC *acpi_local_apic_get(int cpu_num);
  */
 int acpi_invoke_method(char *path, ACPI_OBJECT_LIST *arg_list, ACPI_OBJECT *ret_obj);
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DRIVERS_ACPI_H_ */

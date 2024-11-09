@@ -152,4 +152,4 @@
 
 /* End of M2L31 BSP sys.h reset module copy */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_RESET_NUMAKER_M2L31X_RESET_H */

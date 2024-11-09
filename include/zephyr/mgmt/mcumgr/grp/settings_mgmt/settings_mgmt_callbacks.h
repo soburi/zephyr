@@ -67,4 +67,4 @@ struct settings_mgmt_access {
 }
 #endif
 
-#endif
+#endif /* H_MCUMGR_SETTINGS_MGMT_CALLBACKS_ */

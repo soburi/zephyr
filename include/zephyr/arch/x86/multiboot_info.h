@@ -37,4 +37,4 @@ struct multiboot_info {
 
 typedef struct multiboot_info multiboot_info_t;
 
-#endif
+#endif /* ZEPHYR_INCLUDE_ARCH_X86_MULTIBOOT_INFO_H_ */

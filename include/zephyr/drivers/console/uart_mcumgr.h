@@ -72,4 +72,4 @@ void uart_mcumgr_register(uart_mcumgr_recv_fn *cb);
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DRIVERS_CONSOLE_UART_MCUMGR_H_ */

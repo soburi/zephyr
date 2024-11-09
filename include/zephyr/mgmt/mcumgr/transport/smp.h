@@ -217,4 +217,4 @@ struct smp_transport *smp_client_transport_get(int smpt_type);
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_MGMT_SMP_H_ */

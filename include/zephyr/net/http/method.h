@@ -73,4 +73,4 @@ enum http_method {
  * @}
  */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_NET_HTTP_METHOD_H_ */

@@ -43,4 +43,4 @@
 #define RA_PINCFG_100(port, pin, psel, opt) RA_PINCFG(port, pin, psel, opt)
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_PINCTRL_RENESAS_PINCTRL_RA_COMMON_H_ */

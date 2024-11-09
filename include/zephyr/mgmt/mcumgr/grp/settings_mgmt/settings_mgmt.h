@@ -52,4 +52,4 @@ enum settings_mgmt_ret_code_t {
 }
 #endif
 
-#endif
+#endif /* H_SETTINGS_MGMT_ */

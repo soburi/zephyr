@@ -177,4 +177,4 @@ static inline struct k_object *k_object_create_dynamic(size_t size)
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_SYS_INTERNAL_KOBJECT_INTERNAL_H */

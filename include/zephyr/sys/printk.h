@@ -80,4 +80,4 @@ __printf_like(3, 0) int vsnprintk(char *str, size_t size,
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_SYS_PRINTK_H_ */

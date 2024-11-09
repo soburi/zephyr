@@ -268,4 +268,4 @@
 
 /* End of M460 BSP sys.h reset module copy */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_RESET_NUMAKER_M46X_RESET_H */

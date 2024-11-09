@@ -17,4 +17,4 @@
 #define ZERO_FRAME	0x60
 #define ONE_FRAME	0x7C
 
-#endif
+#endif /* ZEPHYR_SAMPLES_DRIVERS_LED_B1414_H_ */

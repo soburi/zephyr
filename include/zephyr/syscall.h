@@ -127,4 +127,4 @@ static inline bool k_is_user_context(void)
 
 #endif /* _ASMLANGUAGE */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_SYSCALL_H_ */

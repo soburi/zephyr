@@ -14,4 +14,4 @@ enum sensor_channel_f75303 {
 	SENSOR_CHAN_F75303_REMOTE2,
 };
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_F75303_H_ */

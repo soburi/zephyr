@@ -73,4 +73,4 @@ struct xtensa_thread_stack_header {
 
 #endif /* _ASMLANGUAGE */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_ARCH_XTENSA_THREAD_STACK_H_ */

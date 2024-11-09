@@ -26,4 +26,4 @@
 
 #define IRQ_DEFAULT_PRIORITY	0xa0
 
-#endif
+#endif /* __DT_BINDING_ARM_GIC_H */

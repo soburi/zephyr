@@ -26,4 +26,4 @@ enum sensor_attribute_ens160 {
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_ENS160_H_ */

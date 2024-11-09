@@ -42,4 +42,4 @@ struct enum_mgmt_detail_output {
 }
 #endif
 
-#endif
+#endif /* H_MCUMGR_ENUM_MGMT_CALLBACKS_ */

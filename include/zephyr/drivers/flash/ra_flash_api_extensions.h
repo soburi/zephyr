@@ -143,4 +143,4 @@ typedef struct flash_ra_ex_write_protect_out {
 } flash_ra_ex_write_protect_out_t;
 #endif /* CONFIG_FLASH_RA_WRITE_PROTECT */
 
-#endif
+#endif /* __ZEPHYR_INCLUDE_DRIVERS_FLASH_RA_EXTENSIONS_H__ */

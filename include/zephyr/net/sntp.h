@@ -130,4 +130,4 @@ int sntp_simple_addr(struct sockaddr *addr, socklen_t addr_len, uint32_t timeout
  * @}
  */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_NET_SNTP_H_ */

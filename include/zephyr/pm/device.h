@@ -739,4 +739,4 @@ static inline int pm_device_driver_init(const struct device *dev, pm_device_acti
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_PM_DEVICE_H_ */

@@ -304,4 +304,4 @@ static inline uint64_t arch_k_cycle_get_64(void)
 #endif
 
 
-#endif
+#endif /* ZEPHYR_INCLUDE_ARCH_RISCV_ARCH_H_ */

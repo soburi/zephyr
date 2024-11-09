@@ -2151,4 +2151,4 @@
 
 /* End of M460 BSP sys.h pin-mux module copy */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DT_BINDINGS_PINCTRL_NUMAKER_M46X_PINCTRL_H */

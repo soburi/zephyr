@@ -17,4 +17,4 @@
 #define WS2812C_ZERO_FRAME (0xC0U)
 #define WS2812C_ONE_FRAME  (0xFCU)
 
-#endif
+#endif /* ZEPHYR_DT_LED_WS2812C_H_ */

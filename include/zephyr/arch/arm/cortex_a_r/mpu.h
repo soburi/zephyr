@@ -64,4 +64,4 @@
 #define ARM_MPU_REGION_SIZE_2GB         ((uint8_t)0x1eU)
 #define ARM_MPU_REGION_SIZE_4GB         ((uint8_t)0x1fU)
 
-#endif
+#endif /* ARCH_ARM_CORTEX_R_MPU_H */

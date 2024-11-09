@@ -123,4 +123,4 @@ uint32_t get_wdt_clk(void);
 uint32_t get_uart_clk(void);
 uint32_t get_mmc_clk(void);
 
-#endif
+#endif /* CLOCKMANAGER_H */

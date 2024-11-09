@@ -36,4 +36,4 @@ int posix_trace_over_tty(int output);
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_ARCH_POSIX_POSIX_TRACE_H_ */

@@ -107,4 +107,4 @@ enum http_status {
  * @}
  */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_NET_HTTP_STATUS_H_ */

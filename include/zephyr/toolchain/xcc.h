@@ -164,4 +164,4 @@
 #define __deprecated
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_TOOLCHAIN_XCC_H_ */

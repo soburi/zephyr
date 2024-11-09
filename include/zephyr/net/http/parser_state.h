@@ -98,4 +98,4 @@ enum state {
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif /* ZEPHYR_INCLUDE_NET_HTTP_PARSER_STATE_H_ */

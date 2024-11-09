@@ -223,4 +223,4 @@ static ALWAYS_INLINE void z_sys_sem_lock_onexit(__maybe_unused int *rc)
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_SYS_SEM_H_ */

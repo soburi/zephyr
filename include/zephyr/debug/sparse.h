@@ -15,4 +15,4 @@
 #define __sparse_force
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DEBUG_SPARSE_H */

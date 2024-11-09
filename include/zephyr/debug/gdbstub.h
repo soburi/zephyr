@@ -110,4 +110,4 @@ bool gdb_mem_can_read(const uintptr_t addr, const size_t len, uint8_t *align);
  */
 bool gdb_mem_can_write(const uintptr_t addr, const size_t len, uint8_t *align);
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DEBUG_GDBSTUB_H_ */

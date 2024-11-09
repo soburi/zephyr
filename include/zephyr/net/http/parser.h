@@ -258,4 +258,4 @@ int http_body_is_final(const struct http_parser *parser);
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif /* ZEPHYR_INCLUDE_NET_HTTP_PARSER_H_ */

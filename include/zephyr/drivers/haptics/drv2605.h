@@ -83,4 +83,4 @@ union drv2605_config_data {
 int drv2605_haptic_config(const struct device *dev, enum drv2605_haptics_source source,
 			  const union drv2605_config_data *config_data);
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DRIVERS_HAPTICS_DRV2605_H_ */

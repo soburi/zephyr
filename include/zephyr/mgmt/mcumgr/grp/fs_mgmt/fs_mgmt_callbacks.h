@@ -60,4 +60,4 @@ struct fs_mgmt_file_access {
 }
 #endif
 
-#endif
+#endif /* H_MCUMGR_FS_MGMT_CALLBACKS_ */

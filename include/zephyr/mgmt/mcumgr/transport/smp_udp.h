@@ -42,4 +42,4 @@ int smp_udp_close(void);
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_MGMT_SMP_UDP_H_ */

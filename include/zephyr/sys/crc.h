@@ -441,4 +441,4 @@ static inline uint32_t crc_by_type(enum crc_type type, const uint8_t *src, size_
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_SYS_CRC_H_ */

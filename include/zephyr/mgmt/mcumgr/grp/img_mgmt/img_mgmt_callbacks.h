@@ -101,4 +101,4 @@ struct img_mgmt_slot_info_slot {
 }
 #endif
 
-#endif
+#endif /* H_MCUMGR_IMG_MGMT_CALLBACKS_ */

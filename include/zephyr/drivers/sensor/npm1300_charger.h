@@ -14,4 +14,4 @@ enum sensor_channel_npm1300_charger {
 	SENSOR_CHAN_NPM1300_CHARGER_ERROR,
 };
 
-#endif
+#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_NPM1300_CHARGER_H_ */

@@ -89,4 +89,4 @@ enum http2_settings {
 }
 #endif
 
-#endif
+#endif /* ZEPHYR_INCLUDE_NET_HTTP_SERVER_FRAME_H_ */

@@ -514,4 +514,4 @@ int http_server_stop(void);
  * @}
  */
 
-#endif
+#endif /* ZEPHYR_INCLUDE_NET_HTTP_SERVER_H_ */

@@ -71,4 +71,4 @@ void board_early_init_hook(void);
  */
 void board_late_init_hook(void);
 
-#endif
+#endif /* ZEPHYR_INCLUDE_PLATFORM_PLATFORM_H_ */

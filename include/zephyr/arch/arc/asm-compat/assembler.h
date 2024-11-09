@@ -66,4 +66,4 @@
 
 #endif	/* _ASMLANGUAGE */
 
-#endif
+#endif /* __ASM_ARC_ASM_H */

@@ -74,4 +74,4 @@ int http_parser_parse_url(const char *buf, size_t buflen,
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif /* ZEPHYR_INCLUDE_NET_HTTP_PARSER_URL_H_ */
