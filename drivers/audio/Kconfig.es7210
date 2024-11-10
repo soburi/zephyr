@@ -1,0 +1,10 @@
+# Copyright (c) 2024 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+config AUDIO_DMIC_ES7210
+	bool "Everest ES7210 PDM microphone attached to I2S support"
+	default y
+	depends on DT_HAS_EVEREST_ES7210_ENABLED
+	select I2S
+	help
+	  Enable MPXXDTYY microphone support on the selected board

@@ -1,0 +1,18 @@
+# Copyright 2023 NXP
+# SPDX-License-Identifier: Apache-2.0
+
+description: NXP DMIC
+
+compatible: "everest,es7210"
+
+include: [base.yaml, i2c-device.yaml]
+
+properties:
+  reg:
+    required: true
+
+  int-gpios:
+    type: phandle-array
+    description: |
+      Set GPIO connected to the controller INTN pin.
+      This is used for notifying interruption.

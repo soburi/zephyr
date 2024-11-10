@@ -89,6 +89,13 @@
 		};
 	};
 
+	es7210: es7210@40 {
+		compatible = "everest,es7210";
+		reg = <0x40>;
+		status = "okay";
+		int-gpios = <&aw9523b_gpio 3 GPIO_ACTIVE_LOW>;
+	};
+
 	ft6336_touch: ft5336@38 {
 		compatible = "focaltech,ft5336";
 		reg = <0x38>;
