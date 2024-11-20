@@ -66,7 +66,7 @@ For M5Stack CoreS3 SE,
 
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world
-   :board: m5stack_cores3/esp32s3/procpu/se
+   :board: m5stack_cores3@se/esp32s3/procpu
    :goals: build
 
 The usual ``flash`` target will work with the ``m5stack_cores3/esp32s3/procpu`` board
@@ -84,7 +84,7 @@ For M5Stack CoreS3 SE,
 
 .. zephyr-app-commands::
    :zephyr-app: samples/hello_world
-   :board: m5stack_cores3/esp32s3/procpu/se
+   :board: m5stack_cores3@se/esp32s3/procpu
    :goals: flash
 
 The baud rate of 921600bps is set by default. If experiencing issues when flashing,
