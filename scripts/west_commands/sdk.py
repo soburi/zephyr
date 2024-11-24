@@ -155,6 +155,13 @@ class Sdk(WestCommand):
             "If this option is not given, toolchains for all architectures will be installed.",
         )
         install_args_parser.add_argument(
+            "-c",
+            "--cmake-package-register",
+            default=True,
+            action="store_true",
+            help="register cmake package",
+        )
+        install_args_parser.add_argument(
             "-T",
             "--no-toolchains",
             action="store_true",
@@ -166,6 +173,12 @@ class Sdk(WestCommand):
             "--no-hosttools",
             action="store_true",
             help="do not install host-tools.",
+        )
+        install_args_parser.add_argument(
+            "-C",
+            "--no-cmake-package-register",
+            action="store_true",
+            help="do not register cmake package",
         )
         install_args_parser.add_argument(
             "--personal-access-token", help="GitHub personal access token."
@@ -360,13 +373,14 @@ class Sdk(WestCommand):
             optsep = "-"
 
         # Associate installed SDK so that it can be found.
-        cmds_cmake_pkg = [str(setup), f"{optsep}c"]
-        self.dbg("Run: ", cmds_cmake_pkg)
-        result = subprocess.run(cmds_cmake_pkg)
-        if result.returncode != 0:
-            self.die(f"command \"{' '.join(cmds_cmake_pkg)}\" failed")
+        if not args.no_cmake_package_register:
+            cmds_cmake_pkg = [str(setup), f"{optsep}c"]
+            self.dbg("Run: ", cmds_cmake_pkg)
+            result = subprocess.run(cmds_cmake_pkg)
+            if result.returncode != 0:
+                self.die(f"command \"{' '.join(cmds_cmake_pkg)}\" failed")
 
-        cmds = [str(setup)]
+            cmds = [str(setup)]
 
         if not args.interactive and not args.no_toolchains:
             if not args.toolchains:
