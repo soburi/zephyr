@@ -78,3 +78,30 @@ test_sqn_gm02s: sqn_gm02s {
 
 	mdm-reset-gpios = <&test_gpio 0 0>;
 };
+
+test_sara_r5: sara_r5 {
+	compatible = "u-blox,sara-r5";
+
+	mdm-power-gpios = <&test_gpio 0 0>;
+	mdm-reset-gpios = <&test_gpio 0 0>;
+};
+
+test_lara_r6: lara_r6 {
+	compatible = "u-blox,lara-r6";
+
+	mdm-power-gpios = <&test_gpio 0 0>;
+	mdm-reset-gpios = <&test_gpio 0 0>;
+};
+
+test_quectel_bg95: quectel_bg95 {
+	compatible = "quectel,bg95";
+
+	mdm-power-gpios = <&test_gpio 0 0>;
+};
+
+test_telit_me310g: telit_me310g {
+	compatible = "telit,me310g1";
+
+	mdm-power-gpios = <&test_gpio 0 0>;
+	mdm-dtr-gpios = <&test_gpio 0 0>;
+};
