@@ -11,6 +11,14 @@ tests:
     platform_allow:
       - native_sim
       - native_sim/native/64
+  sample.driver.lora.build.sx1261:
+    build_only: true
+    extra_args: DTC_OVERLAY_FILE="sx1261.overlay"
+    extra_configs:
+      - CONFIG_SPI=y
+    platform_allow:
+      - native_sim
+      - native_sim/native/64
   sample.driver.lora.build.sx1262:
     build_only: true
     extra_args: DTC_OVERLAY_FILE="sx1262.overlay"
@@ -22,6 +30,14 @@ tests:
   sample.driver.lora.build.sx1272:
     build_only: true
     extra_args: DTC_OVERLAY_FILE="sx1272.overlay"
+    extra_configs:
+      - CONFIG_SPI=y
+    platform_allow:
+      - native_sim
+      - native_sim/native/64
+  sample.driver.lora.build.sx1276:
+    build_only: true
+    extra_args: DTC_OVERLAY_FILE="sx1276.overlay"
     extra_configs:
       - CONFIG_SPI=y
     platform_allow:
