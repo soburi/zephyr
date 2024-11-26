@@ -68,6 +68,12 @@
 					read-only;
 				};
 			};
+
+			test_i2c_target_eeprom: i2c_target_eeprom@3 {
+				compatible = "zephyr,i2c-target-eeprom";
+				reg = <0x3>;
+				size = <256>;
+			};
 		};
 
 		test_spi: spi@33334444 {
