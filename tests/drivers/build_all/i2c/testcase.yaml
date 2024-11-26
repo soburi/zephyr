@@ -6,5 +6,10 @@ common:
 tests:
   drivers.i2c.build:
     # will cover drivers without in-tree boards
-    platform_allow: qemu_cortex_m3
-    extra_args: "CONFIG_I2C=y"
+    platform_allow:
+      - qemu_cortex_m3
+      - native_sim
+      - native_sim/native/64
+    extra_configs:
+      - CONFIG_I2C_TCA954X_ROOT_INIT_PRIO=61
+      - CONFIG_I2C_TCA954X_CHANNEL_INIT_PRIO=62
