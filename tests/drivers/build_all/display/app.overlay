@@ -159,6 +159,225 @@
 				height = <64>;
 				column-offset =	<28>;
 			};
+
+			test_mipi_dbi_ssd1673: ssd1673@a {
+				compatible = "solomon,ssd1673";
+				mipi-max-frequency = <4000000>;
+				reg = <0xa>;
+				width = <250>;
+				height = <122>;
+				busy-gpios = <&test_gpio 0 0>;
+
+				full {
+					gdv = [10 0a];
+					sdv = [19];
+					vcom = <0xa8>;
+					border-waveform = <0x71>;
+					dummy-line = <0x1a>;
+					gate-line-width = <0x08>;
+					lut = [
+						22 55 AA 55 AA 55 AA 11
+						00 00 00 00 00 00 00 00
+						1E 1E 1E 1E 1E 1E 1E 1E
+						01 00 00 00 00
+					];
+				};
+
+				partial {
+					gdv = [10 0a];
+					sdv = [19];
+					vcom = <0xa8>;
+					border-waveform = <0x71>;
+					dummy-line = <0x1a>;
+					gate-line-width = <0x08>;
+					lut = [
+						18 00 00 00 00 00 00 00
+						00 00 00 00 00 00 00 00
+						0F 01 00 00 00 00 00 00
+						00 00 00 00 00
+					];
+				};
+			};
+
+			test_mipi_dbi_ssd1675a: ssd1675a@b {
+				compatible = "solomon,ssd1675a";
+				mipi-max-frequency = <4000000>;
+				reg = <0xb>;
+				width = <250>;
+				height = <120>;
+				busy-gpios = <&test_gpio 0 0>;
+
+				full {
+					gdv = [15];
+					sdv = [41 a8 32];
+					vcom = <0x55>;
+					border-waveform = <0x03>;
+					dummy-line = <0x30>;
+					gate-line-width = <0x0a>;
+					lut = [
+						80 60 40 00 00 00 00
+						10 60 20 00 00 00 00
+						80 60 40 00 00 00 00
+						10 60 20 00 00 00 00
+						00 00 00 00 00 00 00
+						03 03 00 00 02
+						09 09 00 00 02
+						03 03 00 00 02
+						00 00 00 00 00
+						00 00 00 00 00
+						00 00 00 00 00
+						00 00 00 00 00
+					];
+				};
+
+				partial {
+					gdv = [15];
+					sdv = [41 a8 32];
+					vcom = <0x26>;
+					border-waveform = <0x01>;
+					dummy-line = <0x30>;
+					gate-line-width = <0x0a>;
+					lut = [
+						00 00 00 00 00 00 00
+						80 00 00 00 00 00 00
+						40 00 00 00 00 00 00
+						80 00 00 00 00 00 00
+						00 00 00 00 00 00 00
+						0A 00 00 00 04
+						00 00 00 00 00
+						00 00 00 00 00
+						00 00 00 00 00
+						00 00 00 00 00
+						00 00 00 00 00
+						00 00 00 00 00
+					];
+				};
+			};
+
+			test_mipi_dbi_ssd1681: ssd1681@c {
+				compatible = "solomon,ssd1681";
+				mipi-max-frequency = <4000000>;
+				reg = <0xc>;
+				width = <200>;
+				height = <200>;
+				busy-gpios = <&test_gpio 0 0>;
+
+				tssv = <0x80>;
+
+				full {
+					border-waveform = <0x05>;
+				};
+
+				partial {
+					border-waveform = <0x3c>;
+				};
+			};
+
+			test_mipi_dbi_ssd1608: ssd1608@d {
+				compatible = "solomon,ssd1608";
+				mipi-max-frequency = <4000000>;
+				reg = <0xd>;
+				width = <296>;
+				height = <128>;
+				busy-gpios = <&test_gpio 0 0>;
+
+				softstart = [d7 d6 9d];
+
+				full {
+					vcom = <0x9a>;
+					border-waveform = <0x33>;
+					dummy-line = <0x1a>;
+					gate-line-width = <0x08>;
+					lut = [
+						50 AA 55 AA 11 00 00 00
+						00 00 00 00 00 00 00 00
+						00 00 00 00 FF FF 1F 00
+						00 00 00 00 00 00
+					];
+				};
+
+				partial {
+					vcom = <0xa8>;
+					border-waveform = <0x01>;
+					dummy-line = <0x1a>;
+					gate-line-width = <0x08>;
+					lut = [
+						10 18 18 08 18 18 08 00
+						00 00 00 00 00 00 00 00
+						00 00 00 00 13 14 44 12
+						00 00 00 00 00 00
+					];
+				};
+			};
+
+			test_mipi_dbi_ili9340: ili9340@e {
+				compatible = "ilitek,ili9340";
+				mipi-max-frequency = <25000000>;
+				reg = <0xe>;
+				pixel-format = <0>;
+				rotation = <0>;
+				width = <240>;
+				height = <320>;
+			};
+
+			test_mipi_dbi_ili9341: ili9341@f {
+				compatible = "ilitek,ili9341";
+				mipi-max-frequency = <25000000>;
+				reg = <0xf>;
+				pixel-format = <0>;
+				rotation = <0>;
+				width = <240>;
+				height = <320>;
+			};
+
+			test_mipi_dbi_ili9488: ili9488@10 {
+				compatible = "ilitek,ili9488";
+				mipi-max-frequency = <25000000>;
+				reg = <0x10>;
+				pixel-format = <0>;
+				width = <320>;
+				height = <480>;
+				rotation = <0>;
+				frmctr1 = [a0 11];
+				pwctrl1 = [17 15];
+				pwctrl2 = [41];
+				pgamctrl = [00 03 09 08 16 0a 3f 78 4c 09 0a 08 16 1a 0f];
+				ngamctrl = [00 16 19 03 0f 05 32 45 46 04 0e 0d 35 37 0f];
+			};
+
+			test_mipi_dbi_uc8175: uc8175@11 {
+				compatible = "ultrachip,uc8175";
+				mipi-max-frequency = <4000000>;
+				reg = <0x11>;
+				width = <400>;
+				height = <300>;
+				busy-gpios = <&test_gpio 0 0>;
+
+				softstart = [17 17 17];
+
+				full {
+					pwr = [03 00 26 26 09];
+					cdi = <0xd7>;
+					tcon = <0x22>;
+				};
+			};
+
+			test_mipi_dbi_uc8179: uc8179@12 {
+				compatible = "ultrachip,uc8179";
+				mipi-max-frequency = <4000000>;
+				reg = <0x12>;
+				width = <400>;
+				height = <300>;
+				busy-gpios = <&test_gpio 0 0>;
+
+				softstart = [17 17 17];
+
+				full {
+					pwr = [03 00 26 26 09];
+					cdi = <0xd7>;
+					tcon = <0x22>;
+				};
+			};
 		};
 
 		test_mipi_dsi {
@@ -240,10 +459,15 @@
 			/* one entry for every device. Note that this must
 			 * include MIPI DBI devices as well.
 			 */
-			cs-gpios = <&test_gpio 0 0 &test_gpio 0 1 &test_gpio 0 2
-				&test_gpio 0 3 &test_gpio 0 4 &test_gpio 0 5
-				&test_gpio 0 6 &test_gpio 0 7 &test_gpio 0 8
-				&test_gpio 0 9>;
+			cs-gpios = <&test_gpio 0  0 &test_gpio 0  1 &test_gpio 0  2
+				    &test_gpio 0  3 &test_gpio 0  4 &test_gpio 0  5
+				    &test_gpio 0  6 &test_gpio 0  7 &test_gpio 0  8
+				    &test_gpio 0  9 &test_gpio 0 10 &test_gpio 0 11
+				    &test_gpio 0 12 &test_gpio 0 13 &test_gpio 0 14
+				    &test_gpio 0 15 &test_gpio 0 16 &test_gpio 0 17
+				    &test_gpio 0 18 &test_gpio 0 19 &test_gpio 0 20
+				    &test_gpio 0 21 &test_gpio 0 22 &test_gpio 0 23
+				    &test_gpio 0 24 &test_gpio 0 25 &test_gpio 0 26>;
 
 			test_led_strip_0: lpd8806@0 {
 				compatible = "greeled,lpd8806";
@@ -329,6 +553,20 @@
 			test_ssd1306: ssd1306@1 {
 				compatible = "solomon,ssd1306fb";
 				reg = <0x1>;
+				width = <128>;
+				height = <64>;
+				segment-offset = <0>;
+				page-offset = <0>;
+				display-offset = <0>;
+				multiplex-ratio = <63>;
+				segment-remap;
+				com-invdir;
+				prechargep = <0x22>;
+			};
+
+			test_sh1106: sh1106@2 {
+				compatible = "sinowealth,sh1106";
+				reg = <0x2>;
 				width = <128>;
 				height = <64>;
 				segment-offset = <0>;
