@@ -1,0 +1,37 @@
+#  Copyright 2024 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  AXP2101 PMIC
+
+
+compatible: "x-powers,axp2101-regulator"
+
+on-bus: axp2101
+
+include: base.yaml
+
+child-binding:
+  include:
+    - name: regulator.yaml
+      property-allowlist:
+        - regulator-init-microvolt
+        - regulator-min-microvolt
+        - regulator-max-microvolt
+        - regulator-always-on
+        - regulator-boot-on
+        - regulator-boot-off
+        - regulator-initial-mode
+        - regulator-allowed-modes
+
+  properties:
+    regulator-initial-mode:
+      type: int
+      default: 0
+      enum:
+        - 0
+        - 1
+      description: |
+        Initial operating mode. AXP2101 supports 2 different power modes:
+        AXP2101_DCDC_MODE_AUTO: Auto (0, default)
+        AXP2101_DCDC_MODE_PWM:  PWM
