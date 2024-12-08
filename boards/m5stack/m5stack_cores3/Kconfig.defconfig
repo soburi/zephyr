@@ -20,4 +20,13 @@ config REGULATOR_FIXED_INIT_PRIORITY
 config INPUT
 	default y
 
+# Increase initialization priority of MIPI DBI device, so that it initializes
+# after the GPIO controller
+if MIPI_DBI
+
+config MIPI_DBI_INIT_PRIORITY
+	default 82
+
+endif # MIPI_DBI
+
 endif # BOARD_M5STACK_CORES3_ESP32S3_PROCPU || BOARD_M5STACK_CORES3_ESP32S3_PROCPU_SE
