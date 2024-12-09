@@ -31,6 +31,7 @@
 include_guard(GLOBAL)
 
 include(extensions)
+
 set(SHIELD_OPTIONS_GENERATED_H      ${BINARY_DIR_INCLUDE_GENERATED}/shield_options_generated.h)
 
 # Check that SHIELD has not changed.
@@ -76,7 +77,7 @@ endforeach()
 # Process shields in-order
 if(DEFINED SHIELD)
   set(shield_opts_tmp ${SHIELD_OPTIONS_GENERATED_H}.new)
-  file(REMOVE ${shield_opts_tmp})
+  file(WRITE ${shield_opts_tmp} "/*********************/\n")
 
   foreach(shld ${SHIELD_AS_LIST})
 
@@ -125,10 +126,8 @@ if(DEFINED SHIELD)
       list(LENGTH opts_list opts_list_len)
       math(EXPR opts_list_last "${opts_list_len} - 1")
       foreach (idx RANGE 0 ${opts_list_last})
-       message(WARNING "${s_upper} --- ${opt}")
-
-       list(GET opts_list ${idx} opt)
-       file(APPEND ${shield_opts_tmp} "#define ${s_upper}_OPTION${idx} ${opt}\n")
+        list(GET opts_list ${idx} opt)
+        file(APPEND ${shield_opts_tmp} "#define ${s_upper}_OPTION${idx} ${opt}\n")
       endforeach()
     endif()
 
@@ -138,15 +137,13 @@ if(DEFINED SHIELD)
     file(SHA256 "${SHIELD_OPTIONS_GENERATED_H}" old_file_hash)
     file(SHA256 "${shield_opts_tmp}" new_file_hash)
     if ("${old_file_hash}" STREQUAL "${new_file_hash}")
-      message(WARNING "${shield_opts_tmp} is same")
       file(REMOVE "${shield_opts_tmp}")
     else()
-      message(WARNING "${shield_opts_tmp} is new")
       file(REMOVE "${SHIELD_OPTIONS_GENERATED_H}")
       file(RENAME "${shield_opts_tmp}" "${SHIELD_OPTIONS_GENERATED_H}")
     endif()
   else()
-    file(RENAME "${shield_opts_tmp}" "${SHIELD_OPTIONS_GENERATED_H}")
+    file(RENAME ${shield_opts_tmp} ${SHIELD_OPTIONS_GENERATED_H})
   endif()
 
 endif()
