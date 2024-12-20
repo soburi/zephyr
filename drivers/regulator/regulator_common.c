@@ -32,6 +32,9 @@ int regulator_common_init(const struct device *dev, bool is_enabled)
 	int32_t current_uv;
 	int ret;
 
+
+	printk("regulator_common_init %s\n", dev->name);
+
 	if (config->initial_mode != REGULATOR_INITIAL_MODE_UNKNOWN) {
 		ret = regulator_set_mode(dev, config->initial_mode);
 		if (ret < 0) {
@@ -49,6 +52,7 @@ int regulator_common_init(const struct device *dev, bool is_enabled)
 	}
 
 	if (config->init_uv > INT32_MIN) {
+		printk("set_voltage %s\n", dev->name);
 		ret = regulator_set_voltage(dev, config->init_uv, config->init_uv);
 		if (ret < 0) {
 			return ret;
@@ -72,11 +76,13 @@ int regulator_common_init(const struct device *dev, bool is_enabled)
 
 		/* Snap to closest interval value if out of range */
 		if (current_uv < config->min_uv) {
+			printk("set_voltage min %s\n", dev->name);
 			ret = regulator_set_voltage(dev, config->min_uv, config->min_uv);
 			if (ret < 0) {
 				return ret;
 			}
 		} else if (current_uv > config->max_uv) {
+			printk("set_voltage max %s\n", dev->name);
 			ret = regulator_set_voltage(dev, config->max_uv, config->max_uv);
 			if (ret < 0) {
 				return ret;

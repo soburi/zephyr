@@ -111,6 +111,7 @@ static inline uint32_t linear_range_group_values_count(
 	uint32_t values = 0U;
 
 	for (size_t i = 0U; i < r_cnt; i++) {
+		//printk("group %d\n", i);
 		values += linear_range_values_count(&r[i]);
 	}
 
@@ -169,6 +170,7 @@ static inline int linear_range_group_get_value(const struct linear_range *r,
 	int ret = -EINVAL;
 
 	for (size_t i = 0U; (ret != 0) && (i < r_cnt); i++) {
+		//printk("group %d\n", i);
 		ret = linear_range_get_value(&r[i], idx, val);
 	}
 
@@ -233,6 +235,7 @@ static inline int linear_range_group_get_index(const struct linear_range *r,
 					       uint16_t *idx)
 {
 	for (size_t i = 0U; i < r_cnt; i++) {
+		//printk("group %d\n", i);
 		if ((val > linear_range_get_max_value(&r[i])) &&
 		    (i < (r_cnt - 1U))) {
 			continue;
@@ -289,6 +292,7 @@ static inline int linear_range_get_win_index(const struct linear_range *r,
 
 	*idx = r->min_idx + DIV_ROUND_UP((uint32_t)(val_min - r->min), r->step);
 	if ((r->min + r->step * (*idx - r->min_idx)) > val_max) {
+		//printk("err %d + %d + (%d - %d) > %d\n", r->min, r->step, *idx, r->min_idx, val_max);
 		return -EINVAL;
 	}
 
@@ -326,6 +330,7 @@ static inline int linear_range_group_get_win_index(const struct linear_range *r,
 			continue;
 		}
 
+		//printk("group %d\n", i);
 		return linear_range_get_win_index(&r[i], val_min, val_max, idx);
 	}
 
