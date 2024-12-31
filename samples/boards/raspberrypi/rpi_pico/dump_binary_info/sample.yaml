@@ -1,0 +1,15 @@
+sample:
+  description: Dump binary info
+  name: dump_binary_info
+common:
+  tags: rpi_pico
+  integration_platforms:
+    - rpi_pico
+    - rpi_pico2
+tests:
+  sample.boards.raspberrypi.rpi_pico.dump_binary_info:
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "Hello World! (.*)"
