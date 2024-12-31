@@ -1,23 +1,23 @@
 &pinctrl {
 	pio1_uart0_default: pio1_uart0_default {
 		rx_pins {
-			pinmux = <PIO1_P1>;
+			pinmux = <PIO1_P9>;
 			input-enable;
 			bias-pull-up;
 		};
 		tx_pins {
-			pinmux = <PIO1_P0>;
+			pinmux = <PIO1_P10>;
 		};
 	};
 
 	pio1_uart1_default: pio1_uart1_default {
 		rx_pins {
-			pinmux = <PIO1_P2>;
+			pinmux = <PIO1_P11>;
 			input-enable;
 			bias-pull-up;
 		};
 		tx_pins {
-			pinmux = <PIO1_P3>;
+			pinmux = <PIO1_P12>;
 		};
 	};
 };
