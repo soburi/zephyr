@@ -329,7 +329,7 @@
 #define EACH_PIN_FUNC_IS(n, p, i, func) (PIN_FUNC(n, i) == func)
 #define ALL_PIN_FUNC_IS(n, pinfunc)     (EACH_PINCTRL_GROUP(n, (&&), EACH_PIN_FUNC_IS, pinfunc))
 
-#define BI_PINS_FROM_PINCTRL_GROUP_(n)                                                             \
+#define BI_PINS_FROM_PINCTRL(n)                                                             \
 	COND_CODE_1(EXPR_EQ(0, COUNT_ALL_PINS(n)), (),                                             \
 		    (BUILD_ASSERT(COUNT_ALL_PINS(n) <= MAX_PIN_ENTRY,                              \
 				  "Too many pin in group");                                        \
@@ -338,11 +338,11 @@
 		     bi_decl_sym(BI_ENCODE_PINS_WITH_FUNC_SYM(BI_PINS_ENCODING_MULTI |             \
 			    (GROUP_PIN_FUNC(n) << 3) |  ENCODE_GROUP_PINS(n), n), n)));
 
-#define BI_PINS_FROM_PINCTRL_GROUP(n)                                                              \
+#define BI_PINS_FROM_PINCTRL_DEVICE(n)                                                              \
 	COND_CODE_1(DT_NODE_HAS_PROP(n, pinctrl_0),                                                \
-		  (BI_PINS_FROM_PINCTRL_GROUP_(DT_PROP_BY_IDX(n, pinctrl_0, 0))), ())
+		  (BI_PINS_FROM_PINCTRL(DT_PROP_BY_IDX(n, pinctrl_0, 0))), ())
 
-#define FOREACH_BI_PINS_FROM_PINCTRL_GROUP(n) DT_FOREACH_CHILD(n, BI_PINS_FROM_PINCTRL_GROUP)
+#define FOREACH_BI_PINS_FROM_PINCTRL_DEVICE(n) DT_FOREACH_CHILD(n, BI_PINS_FROM_PINCTRL_DEVICE)
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
 #define BI_PROGRAM_NAME CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
@@ -409,13 +409,13 @@ bi_decl(bi_program_build_attribute((uint32_t) "Release"));
 #endif
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PINS_WITH_FUNC_ENABLE
-DT_FOREACH_STATUS_OKAY(arm_pl011, BI_PINS_FROM_PINCTRL_GROUP);
-DT_FOREACH_STATUS_OKAY(arm_pl022, BI_PINS_FROM_PINCTRL_GROUP);
-DT_FOREACH_STATUS_OKAY(snps_designware_i2c, BI_PINS_FROM_PINCTRL_GROUP);
-DT_FOREACH_STATUS_OKAY(raspberrypi_pico_adc, BI_PINS_FROM_PINCTRL_GROUP);
-DT_FOREACH_STATUS_OKAY(raspberrypi_pico_clock_controller, BI_PINS_FROM_PINCTRL_GROUP);
-DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pwm, BI_PINS_FROM_PINCTRL_GROUP);
-DT_FOREACH_STATUS_OKAY(raspberrypi_pico_usbd, BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(arm_pl011, BI_PINS_FROM_PINCTRL_DEVICE);
+DT_FOREACH_STATUS_OKAY(arm_pl022, BI_PINS_FROM_PINCTRL_DEVICE);
+DT_FOREACH_STATUS_OKAY(snps_designware_i2c, BI_PINS_FROM_PINCTRL_DEVICE);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_adc, BI_PINS_FROM_PINCTRL_DEVICE);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_clock_controller, BI_PINS_FROM_PINCTRL_DEVICE);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pwm, BI_PINS_FROM_PINCTRL_DEVICE);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_usbd, BI_PINS_FROM_PINCTRL_DEVICE);
 
-DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pio, FOREACH_BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pio, FOREACH_BI_PINS_FROM_PINCTRL_DEVICE);
 #endif
