@@ -19,6 +19,44 @@
 #include <app_version.h>
 #endif
 
+/*
+ * The binary_info macros ensure uniqueness by line numbers,
+ * which is improper to use in the DT macro so that
+ * we will redefine it here.
+ */
+#define __bi_lineno_var_name_sym(sym)     __CONCAT(__bi_, sym)
+#define __bi_ptr_lineno_var_name_sym(sym) __CONCAT(__bi_ptr, sym)
+#define __bi_enclosure_check_lineno_var_name_sym(sym)                                              \
+	__CONCAT(_error_bi_is_missing_enclosing_decl_, sym)
+#define __bi_enclosure_check_sym(x, sym) (x + __bi_enclosure_check_lineno_var_name_sym(sym))
+#define __bi_mark_enclosure_sym(sym)                                                               \
+	static const __unused int __bi_enclosure_check_lineno_var_name_sym(sym) = 0;
+
+#define bi_decl_sym(_decl, sym)                                                                    \
+	__bi_mark_enclosure_sym(sym) _decl;                                                        \
+	__bi_decl(__bi_ptr_lineno_var_name_sym(sym), &__bi_lineno_var_name_sym(sym).core,          \
+		  ".binary_info.keep.", __used);
+
+#define __bi_encoded_pins_with_func_sym(_encoding, _sym)                                           \
+	static const struct _binary_info_pins_with_func __bi_lineno_var_name_sym(_sym) = {         \
+		.core =                                                                            \
+			{                                                                          \
+				.type = __bi_enclosure_check_sym(BINARY_INFO_TYPE_PINS_WITH_FUNC,  \
+								 _sym),                            \
+				.tag = BINARY_INFO_TAG_RASPBERRY_PI,                               \
+			},                                                                         \
+		.pin_encoding = _encoding}
+
+#define __bi_encoded_pins_64_with_func_sym(_encoding, _sym)                                        \
+	static const struct _binary_info_pins64_with_func __bi_lineno_var_name_sym(_sym) = {       \
+		.core =                                                                            \
+			{                                                                          \
+				.type = __bi_enclosure_check_sym(                                  \
+					BINARY_INFO_TYPE_PINS64_WITH_FUNC, _sym),                  \
+				.tag = BINARY_INFO_TAG_RASPBERRY_PI,                               \
+			},                                                                         \
+		.pin_encoding = _encoding}
+
 /* Definition for simple calculations using macros */
 
 #define EXPR_ADD_0_0 0
@@ -231,13 +269,13 @@
 /* utils for pin encoding calcluation */
 
 #ifdef CONFIG_SOC_RP2040
-#define PIN_ENCODE(n, idx, offset) ((uint32_t)PIN_NUM(n, idx) << (2 + (idx + offset + 1) * 5))
-#define MAX_PIN_ENTRY              4
-#define BI_ENCODE_PINS_WITH_FUNC   __bi_encoded_pins_with_func
+#define PIN_ENCODE(n, idx, offset)   ((uint32_t)PIN_NUM(n, idx) << (2 + (idx + offset + 1) * 5))
+#define MAX_PIN_ENTRY                4
+#define BI_ENCODE_PINS_WITH_FUNC_SYM __bi_encoded_pins_with_func_sym
 #else
-#define PIN_ENCODE(n, idx, offset) ((uint64_t)PIN_NUM(n, idx) << ((idx + offset + 1) * 8))
-#define MAX_PIN_ENTRY              6
-#define BI_ENCODE_PINS_WITH_FUNC   __bi_encoded_pins_64_with_func
+#define PIN_ENCODE(n, idx, offset)   ((uint64_t)PIN_NUM(n, idx) << ((idx + offset + 1) * 8))
+#define MAX_PIN_ENTRY                6
+#define BI_ENCODE_PINS_WITH_FUNC_SYM __bi_encoded_pins_64_with_func_sym
 #endif
 
 #define PIN_NUM(n, idx)  ((DT_PROP_BY_IDX(n, pinmux, idx) >> RP2_PIN_NUM_POS) & RP2_PIN_NUM_MASK)
@@ -297,10 +335,12 @@
 				  "Too many pin in group");                                        \
 		     BUILD_ASSERT(ALL_PIN_FUNC_IS(n, GROUP_PIN_FUNC(n)),                           \
 				  "Group must contain only single function type");                 \
-		     bi_decl(BI_ENCODE_PINS_WITH_FUNC(BI_PINS_ENCODING_MULTI |                     \
-			    (GROUP_PIN_FUNC(n) << 3) |  ENCODE_GROUP_PINS(n)))))
+		     bi_decl_sym(BI_ENCODE_PINS_WITH_FUNC_SYM(BI_PINS_ENCODING_MULTI |             \
+			    (GROUP_PIN_FUNC(n) << 3) |  ENCODE_GROUP_PINS(n), n), n)));
 
-#define BI_PINS_FROM_PINCTRL_GROUP(n, idx) BI_PINS_FROM_PINCTRL_GROUP_(DT_CHILD_BY_IDX(n, idx))
+#define BI_PINS_FROM_PINCTRL_GROUP(n)                                                              \
+	COND_CODE_1(DT_NODE_HAS_STATUS_OKAY(n), \
+		  (BI_PINS_FROM_PINCTRL_GROUP_(DT_PROP_BY_IDX(n, pinctrl_0, 0))), ())
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
 #define BI_PROGRAM_NAME CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
@@ -334,7 +374,7 @@ bi_decl(bi_string(BINARY_INFO_TAG_RASPBERRY_PI, BINARY_INFO_ID_RP_PICO_BOARD,
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_SDK_VERSION_STRING_ENABLE
 bi_decl(bi_string(BINARY_INFO_TAG_RASPBERRY_PI, BINARY_INFO_ID_RP_SDK_VERSION,
-		  (uint32_t)"zephyr-" STRINGIFY(BUILD_VERSION)));
+		  (uint32_t) "zephyr-" STRINGIFY(BUILD_VERSION)));
 #endif
 
 #if defined(CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_VERSION_STRING_ENABLE) && defined(HAS_APP_VERSION)
@@ -360,43 +400,19 @@ bi_decl(bi_string(BINARY_INFO_TAG_RASPBERRY_PI, BINARY_INFO_ID_RP_BOOT2_NAME,
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_ATTRIBUTE_BUILD_TYPE_ENABLE
 #ifdef CONFIG_DEBUG
-bi_decl(bi_program_build_attribute((uint32_t)"Debug"));
+bi_decl(bi_program_build_attribute((uint32_t) "Debug"));
 #else
-bi_decl(bi_program_build_attribute((uint32_t)"Release"));
+bi_decl(bi_program_build_attribute((uint32_t) "Release"));
 #endif
 #endif
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PINS_WITH_FUNC_ENABLE
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 0);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 1);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 2);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 3);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 4);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 5);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 6);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 7);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 8);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 9);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 10);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 11);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 12);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 13);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 14);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 15);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 16);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 17);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 18);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 19);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 20);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 21);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 22);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 23);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 24);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 25);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 26);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 27);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 28);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 29);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 30);
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 31);
+DT_FOREACH_STATUS_OKAY(arm_pl011, BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(arm_pl022, BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(snps_designware_i2c, BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_adc, BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_clock_controller, BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pwm, BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_usbd, BI_PINS_FROM_PINCTRL_GROUP);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pio_device, BI_PINS_FROM_PINCTRL_GROUP);
 #endif
