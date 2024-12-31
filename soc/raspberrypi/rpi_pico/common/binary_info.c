@@ -313,11 +313,11 @@
 #define PIN_TERMINATE(n, p, i, offset, end)                                                        \
 	COND_CODE_1(IS_LAST_PIN(end, i, offset), (PIN_ENCODE(n, i, EXPR_INCR(offset))), (0))
 #define PIN_ENTRY(n, p, i, off) COND_CODE_1(DT_PROP_HAS_IDX(n, p, i), (PIN_ENCODE(n, i, off)), (0))
-#define ENCODE_EACH_PIN(n, p, i, end)                                                              \
+#define ENCODE_PIN(n, p, i, end)                                                              \
 	PIN_ENTRY(n, p, i, OFFSET_TO_GROUP_IDX(DT_PARENT(n), DT_NODE_CHILD_IDX(n))) |              \
 		PIN_TERMINATE(n, p, i, OFFSET_TO_GROUP_IDX(DT_PARENT(n), DT_NODE_CHILD_IDX(n)),    \
 			      end)
-#define ENCODE_GROUP_PINS(n) (EACH_PINCTRL_GROUP(n, (|), ENCODE_EACH_PIN, COUNT_ALL_PINS(n)))
+#define ENCODE_GROUP_PINS(n) (EACH_PINCTRL_GROUP(n, (|), ENCODE_PIN, COUNT_ALL_PINS(n)))
 
 /* Get group-wide pin functions */
 
@@ -326,8 +326,8 @@
 
 /* Check if pin functions are all equal within a group */
 
-#define EACH_PIN_FUNC_IS(n, p, i, func) (PIN_FUNC(n, i) == func)
-#define ALL_PIN_FUNC_IS(n, pinfunc)     (EACH_PINCTRL_GROUP(n, (&&), EACH_PIN_FUNC_IS, pinfunc))
+#define PIN_FUNC_EQUALS(n, p, i, func) (PIN_FUNC(n, i) == func)
+#define ALL_PIN_FUNC_IS(n, pinfunc)     (EACH_PINCTRL_GROUP(n, (&&), PIN_FUNC_EQUALS, pinfunc))
 
 #define BI_PINS_FROM_PINCTRL(n)                                                             \
 	COND_CODE_1(EXPR_EQ(0, COUNT_ALL_PINS(n)), (),                                             \
