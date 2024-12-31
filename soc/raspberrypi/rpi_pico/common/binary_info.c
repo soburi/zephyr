@@ -339,8 +339,10 @@
 			    (GROUP_PIN_FUNC(n) << 3) |  ENCODE_GROUP_PINS(n), n), n)));
 
 #define BI_PINS_FROM_PINCTRL_GROUP(n)                                                              \
-	COND_CODE_1(DT_NODE_HAS_STATUS_OKAY(n), \
+	COND_CODE_1(DT_NODE_HAS_PROP(n, pinctrl_0),                                                \
 		  (BI_PINS_FROM_PINCTRL_GROUP_(DT_PROP_BY_IDX(n, pinctrl_0, 0))), ())
+
+#define FOREACH_BI_PINS_FROM_PINCTRL_GROUP(n) DT_FOREACH_CHILD(n, BI_PINS_FROM_PINCTRL_GROUP)
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
 #define BI_PROGRAM_NAME CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
@@ -414,5 +416,6 @@ DT_FOREACH_STATUS_OKAY(raspberrypi_pico_adc, BI_PINS_FROM_PINCTRL_GROUP);
 DT_FOREACH_STATUS_OKAY(raspberrypi_pico_clock_controller, BI_PINS_FROM_PINCTRL_GROUP);
 DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pwm, BI_PINS_FROM_PINCTRL_GROUP);
 DT_FOREACH_STATUS_OKAY(raspberrypi_pico_usbd, BI_PINS_FROM_PINCTRL_GROUP);
-DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pio_device, BI_PINS_FROM_PINCTRL_GROUP);
+
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pio, FOREACH_BI_PINS_FROM_PINCTRL_GROUP);
 #endif
