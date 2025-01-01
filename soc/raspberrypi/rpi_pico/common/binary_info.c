@@ -269,12 +269,12 @@
 /* utils for pin encoding calcluation */
 
 #ifdef CONFIG_SOC_RP2040
-#define PIN_ENCODE(n, idx, offset)   ((uint32_t)PIN_NUM(n, idx) << (2 + (idx + offset + 1) * 5))
 #define MAX_PIN_ENTRY                4
+#define PIN_ENCODE(n, idx, offset)   ((uint32_t)PIN_NUM(n, idx) << (2 + (idx + offset + 1) * 5))
 #define BI_ENCODE_PINS_WITH_FUNC_SYM __bi_encoded_pins_with_func_sym
 #else
-#define PIN_ENCODE(n, idx, offset)   ((uint64_t)PIN_NUM(n, idx) << ((idx + offset + 1) * 8))
 #define MAX_PIN_ENTRY                6
+#define PIN_ENCODE(n, idx, offset)   ((uint64_t)PIN_NUM(n, idx) << ((idx + offset + 1) * 8))
 #define BI_ENCODE_PINS_WITH_FUNC_SYM __bi_encoded_pins_64_with_func_sym
 #endif
 
@@ -300,12 +300,12 @@
 #define OFFSET_TO_GROUP_IDX(n, i) UTIL_CAT(OFFSET_TO_GROUP_IDX_, i)(n)
 #define COUNT_ALL_PINS(n)         OFFSET_TO_GROUP_IDX_8(n)
 
-/* Iterate groups and subgroups */
+/* Iterate all pins in group */
 
-#define EACH_PINCTRL_SUBGROUP(n, fn, sep, ...)                                                     \
+#define EACH_PINCTRL_GROUP_PINMUX(n, fn, sep, ...)                                                 \
 	DT_FOREACH_PROP_ELEM_SEP_VARGS(n, pinmux, fn, sep, __VA_ARGS__)
-#define EACH_PINCTRL_GROUP(n, sep, fn, ...)                                                        \
-	DT_FOREACH_CHILD_SEP_VARGS(n, EACH_PINCTRL_SUBGROUP, sep, fn, sep, __VA_ARGS__)
+#define EACH_PIN_IN_GROUP(n, sep, fn, ...)                                                         \
+	DT_FOREACH_CHILD_SEP_VARGS(n, EACH_PINCTRL_GROUP_PINMUX, sep, fn, sep, __VA_ARGS__)
 
 /* Encode the pins in a group */
 
@@ -313,23 +313,23 @@
 #define PIN_TERMINATE(n, p, i, offset, end)                                                        \
 	COND_CODE_1(IS_LAST_PIN(end, i, offset), (PIN_ENCODE(n, i, EXPR_INCR(offset))), (0))
 #define PIN_ENTRY(n, p, i, off) COND_CODE_1(DT_PROP_HAS_IDX(n, p, i), (PIN_ENCODE(n, i, off)), (0))
-#define ENCODE_PIN(n, p, i, end)                                                              \
+#define ENCODE_PIN(n, p, i, end)                                                                   \
 	PIN_ENTRY(n, p, i, OFFSET_TO_GROUP_IDX(DT_PARENT(n), DT_NODE_CHILD_IDX(n))) |              \
 		PIN_TERMINATE(n, p, i, OFFSET_TO_GROUP_IDX(DT_PARENT(n), DT_NODE_CHILD_IDX(n)),    \
 			      end)
-#define ENCODE_GROUP_PINS(n) (EACH_PINCTRL_GROUP(n, (|), ENCODE_PIN, COUNT_ALL_PINS(n)))
+#define ENCODE_GROUP_PINS(n) (EACH_PIN_IN_GROUP(n, (|), ENCODE_PIN, COUNT_ALL_PINS(n)))
 
 /* Get group-wide pin functions */
 
-#define EACH_PIN_FUNC(n, p, i, _) PIN_FUNC(n, i)
-#define GROUP_PIN_FUNC(n)         (EACH_PINCTRL_GROUP(n, (|), EACH_PIN_FUNC))
+#define PIN_FUNC_(n, p, i, _) PIN_FUNC(n, i)
+#define GROUP_PIN_FUNC(n)     (EACH_PIN_IN_GROUP(n, (|), PIN_FUNC_))
 
 /* Check if pin functions are all equal within a group */
 
 #define PIN_FUNC_EQUALS(n, p, i, func) (PIN_FUNC(n, i) == func)
-#define ALL_PIN_FUNC_IS(n, pinfunc)     (EACH_PINCTRL_GROUP(n, (&&), PIN_FUNC_EQUALS, pinfunc))
+#define ALL_PIN_FUNC_IS(n, pinfunc)    (EACH_PIN_IN_GROUP(n, (&&), PIN_FUNC_EQUALS, pinfunc))
 
-#define BI_PINS_FROM_PINCTRL(n)                                                             \
+#define BI_PINS_FROM_PINCTRL(n)                                                                    \
 	COND_CODE_1(EXPR_EQ(0, COUNT_ALL_PINS(n)), (),                                             \
 		    (BUILD_ASSERT(COUNT_ALL_PINS(n) <= MAX_PIN_ENTRY,                              \
 				  "Too many pin in group");                                        \
@@ -338,11 +338,11 @@
 		     bi_decl_sym(BI_ENCODE_PINS_WITH_FUNC_SYM(BI_PINS_ENCODING_MULTI |             \
 			    (GROUP_PIN_FUNC(n) << 3) |  ENCODE_GROUP_PINS(n), n), n)));
 
-#define BI_PINS_FROM_PINCTRL_DEVICE(n)                                                              \
+#define BI_PINS_FROM_PINCTRL_DEVICE(n)                                                             \
 	COND_CODE_1(DT_NODE_HAS_PROP(n, pinctrl_0),                                                \
 		  (BI_PINS_FROM_PINCTRL(DT_PROP_BY_IDX(n, pinctrl_0, 0))), ())
 
-#define FOREACH_BI_PINS_FROM_PINCTRL_DEVICE(n) DT_FOREACH_CHILD(n, BI_PINS_FROM_PINCTRL_DEVICE)
+#define BI_PINS_FROM_PINCTRL_DEVICE_CHILDREN(n) DT_FOREACH_CHILD(n, BI_PINS_FROM_PINCTRL_DEVICE)
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
 #define BI_PROGRAM_NAME CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
@@ -417,5 +417,5 @@ DT_FOREACH_STATUS_OKAY(raspberrypi_pico_clock_controller, BI_PINS_FROM_PINCTRL_D
 DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pwm, BI_PINS_FROM_PINCTRL_DEVICE);
 DT_FOREACH_STATUS_OKAY(raspberrypi_pico_usbd, BI_PINS_FROM_PINCTRL_DEVICE);
 
-DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pio, FOREACH_BI_PINS_FROM_PINCTRL_DEVICE);
+DT_FOREACH_STATUS_OKAY(raspberrypi_pico_pio, BI_PINS_FROM_PINCTRL_DEVICE_CHILDREN);
 #endif
