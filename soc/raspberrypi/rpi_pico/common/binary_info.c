@@ -4,22 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/kernel.h>
-#include <zephyr/devicetree.h>
-
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-pinctrl-common.h>
-
-#include <soc.h>
-
 #include <boot_stage2/config.h>
-#include <pico/binary_info.h>
 
 #include <version.h>
 #ifdef HAS_APP_VERSION
 #include <app_version.h>
 #endif
 
-#include "./binary_info.h"
+#include <pico/binary_info.h>
+#include "binary_info.h"
 
 /*
  * The binary_info macros ensure uniqueness by line numbers,
