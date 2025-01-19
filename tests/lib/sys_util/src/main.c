@@ -87,10 +87,74 @@ ZTEST(sys_util, test_WRITE_BIT)
 		zassert_false(IS_BIT_SET(bit_field, i), "Bit %zu set, but it shall not.", i);
 	}
 }
+
+/**
+ * @brief Test the UTIL_INC boundary value
+ *
+ * @see UTIL_INC()
+ */
+ZTEST(sys_util, test_UTIL_INC)
+{
+	zassert_equal(1, UTIL_INC(0));
+	zassert_equal(2, UTIL_INC(1));
+	zassert_equal(4096, UTIL_INC(4095));
+	zassert_equal(4097, UTIL_INC(4096));
+}
+
+/**
+ * @brief Test the UTIL_DEC boundary value
+ *
+ * @see UTIL_DEC()
+ */
+ZTEST(sys_util, test_UTIL_DEC)
+{
+	zassert_equal(0, UTIL_DEC(0));
+	zassert_equal(0, UTIL_DEC(1));
+	zassert_equal(1, UTIL_DEC(2));
+	zassert_equal(2, UTIL_DEC(3));
+	zassert_equal(4094, UTIL_DEC(4095));
+	zassert_equal(4095, UTIL_DEC(4096));
+}
+
+/**
+ * @brief Test the UTIL_ADD boundary value
+ *
+ * @see UTIL_ADD()
+ */
+ZTEST(sys_util, test_UTIL_ADD)
+{
+	zassert_equal(0, UTIL_ADD(0, 0));
+	zassert_equal(1, UTIL_ADD(1, 0));
+	zassert_equal(1, UTIL_ADD(0, 1));
+	zassert_equal(2, UTIL_ADD(1, 1));
+	zassert_equal(3, UTIL_ADD(2, 1));
+	zassert_equal(3, UTIL_ADD(1, 2));
+	zassert_equal(4096, UTIL_ADD(4095, 1));
+	zassert_equal(4097, UTIL_ADD(4095, 2));
+	zassert_equal(4096, UTIL_ADD(1, 4095));
+	zassert_equal(4097, UTIL_ADD(1, 4096));
+}
+
+/**
+ * @brief Test the UTIL_SUB boundary value
+ *
+ * @see UTIL_SUB()
+ */
+ZTEST(sys_util, test_UTIL_SUB)
+{
+	zassert_equal(0, UTIL_SUB(0, 0));
+	zassert_equal(1, UTIL_SUB(1, 0));
+	zassert_equal(0, UTIL_SUB(0, 1));
+	zassert_equal(0, UTIL_SUB(1, 1));
+	zassert_equal(1, UTIL_SUB(2, 1));
+	zassert_equal(0, UTIL_SUB(1, 2));
+	zassert_equal(4095, UTIL_SUB(4096, 1));
+	zassert_equal(4094, UTIL_SUB(4096, 2));
+}
+
 /**
  * @}
  */
-
 
 /**
  * @defgroup sys_util_tests Sys Util Tests
