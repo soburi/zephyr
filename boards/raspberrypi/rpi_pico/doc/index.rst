@@ -195,19 +195,18 @@ provided by Infineon. Run the command below to retrieve those files:
 
    It is recommended running the command above after :file:`west update`.
 
-Debug probe and host-tools
+Debug Probe and Host Tools
 --------------------------
 
-Several debugging tools support Raspberry Pi Pico.
-The :ref:`Raspberry Pi Debug Probe` is an easy-to-get CMSIS-DAP adapter
-that is officially provided by the Raspberry Pi Foundation.
-So, it is a convenient choice for debugging ``rpi_pico``.
-This is able to use with :ref:`openocd-debug-host-tools` and 
-:ref:`pyocd-debug-host-tools`.
-The ``rpi_pico`` use OpenOCD as default.
+Several debugging tools support the Raspberry Pi Pico.
+The :ref:`Raspberry Pi Debug Probe` is an easy-to-obtain CMSIS-DAP adapter
+officially provided by the Raspberry Pi Foundation, 
+making it a convenient choice for debugging ``rpi_pico``.
+It can be used use with both :ref:`openocd-debug-host-tools`, with
+:ref:`pyocd-debug-host-tools` being the default for ``rpi_pico``.
 
-You can also use :ref:`SEGGER J-Link` and :ref:`Black Magic Debug` Probe.
-
+Additionally, You can use other debugging tools such as :ref:`SEGGER J-Link`
+and :ref:`Black Magic Debug` Probe.
 
 Flashing
 ========
@@ -233,7 +232,7 @@ Using OpenOCD
 -------------
 
 To use debugging adapter such as RaspberryPi Debug Probe,
-You must configure **udev**. Please see :ref:`setting-udev-rules`.
+You must configure **udev**. Please refer to :ref:`setting-udev-rules` for details.
 
 The Raspberry Pi Pico has an SWD interface that can be used to program
 and debug the onboard SoC. This interface can be utilized with OpenOCD.
@@ -250,7 +249,7 @@ Here is an example of building and flashing the :zephyr:code-sample:`blinky` app
    :goals: build flash
    :gen-args: -DOPENOCD=/usr/local/bin/openocd -DRPI_PICO_DEBUG_ADAPTER=cmsis-dap
 
-Set the cmake-option **OPENOCD** to :file:`/usr/local/bin/openocd`.
+Set the CMake option **OPENOCD** to :file:`/usr/local/bin/openocd`.
 This should work with the OpenOCD that was installed with the default configuration.
 This configuration also works with an environment that is set up by the `pico_setup.sh`_ script.
 
