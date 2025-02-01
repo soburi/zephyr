@@ -109,6 +109,9 @@ int udc_register_ep(const struct device *dev, struct udc_ep_config *const cfg)
 	idx = USB_EP_LUT_IDX(cfg->addr);
 	__ASSERT_NO_MSG(idx < ARRAY_SIZE(data->ep_lut));
 
+
+	LOG_INF("register ep %d", idx);
+
 	data->ep_lut[idx] = cfg;
 	k_fifo_init(&cfg->fifo);
 
@@ -364,6 +367,8 @@ int udc_ep_enable_internal(const struct device *dev,
 	const struct udc_api *api = dev->api;
 	struct udc_ep_config *cfg;
 	int ret;
+
+	LOG_INF("ep_enable_internal %p %d", dev, ep);
 
 	cfg = udc_get_ep_cfg(dev, ep);
 	if (cfg == NULL) {

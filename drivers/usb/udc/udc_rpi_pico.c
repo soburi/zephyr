@@ -758,6 +758,8 @@ static int udc_rpi_pico_ep_enable(const struct device *dev,
 	usb_device_dpram_t *dpram = config->dpram;
 	int err;
 
+	LOG_INF("ep_addr %d", cfg->addr);
+
 	write_buf_ctrl_reg(dev, cfg->addr, USB_BUF_CTRL_DATA0_PID);
 	ep_data->next_pid = 0;
 
