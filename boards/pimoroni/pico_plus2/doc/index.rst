@@ -32,7 +32,7 @@ Hardware
      :align: center
      :alt: Pimoroni Pico Plus2
 
-     (Credit: Pimoroni)
+     Pimoroni Pico Plus2 (Image courtesy of Pimoroni)
 
 Supported Features
 ==================
@@ -78,10 +78,12 @@ The Pimoroni Pico Plus 2 supports the following hardware features:
    * - UART
      - :kconfig:option:`CONFIG_SERIAL`
      - :dtcompatible:`raspberrypi,pico-uart`
-   * - UART (PIO)
-     - :kconfig:option:`CONFIG_SERIAL`
-     - :dtcompatible:`raspberrypi,pico-uart-pio`
-
+   * - USB Device
+     - :kconfig:option:`CONFIG_USB_DEVICE_STACK`
+     - :dtcompatible:`raspberrypi,pico-usbd`
+   * - Watchdog Timer (WDT)
+     - :kconfig:option:`CONFIG_WATCHDOG`
+     - :dtcompatible:`raspberrypi,pico-watchdog`
 
 Programming and Debugging
 *************************
@@ -89,8 +91,55 @@ Programming and Debugging
 Flashing
 ========
 
-As with the RaspberryPi Pico, the SWD interface can be used to program and debug the
-device, e.g. using OpenOCD with the `Raspberry Pi Debug Probe <https://www.raspberrypi.com/documentation/microcontrollers/debug-probe.html>`_ .
+Using OpenOCD
+-------------
+
+The overall explanation regarding flashing and debugging is the same as or
+:zephyr:board:`rpi_pico`.
+See :ref:`rpi_pico_flashing_using_openocd`. in ``rpi_pico`` documentation.
+
+A typical build command for pico_plus2 is as follows.
+This assumes a CMSIS-DAP adapter such as the RaspberryPi Debug Probe,
+but if you are using something else, specify ``RPI_PICO_DEBUG_ADAPTER``.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/basic/blinky
+   :board: pico_plus2
+   :goals: build flash
+   :gen-args: -DOPENOCD=/usr/local/bin/openocd
+
+Using UF2
+---------
+
+If you don't have an SWD adapter, you can flash the Raspberry Pi Pico with
+a UF2 file. By default, building an app for this board will generate a
+:file:`build/zephyr/zephyr.uf2` file. If the Pico is powered on with the ``BOOTSEL``
+button pressed, it will appear on the host as a mass storage device. The
+UF2 file should be drag-and-dropped to the device, which will flash the Pico.
+
+Debugging
+=========
+
+Like flashing, debugging can also be performed using Zephyr's usual way.
+The following sample shows how to debug using OpenOCD and
+the ``RaspberryPi Debug Probe``. The default is ``openocd``.
+
+If you use another tool, please specify your debugging tool,
+such as ``jlink`` with the ``--runner`` option.
+
+Using OpenOCD
+-------------
+
+Install OpenOCD as described for flashing the board.
+
+Here is an example for debugging the :zephyr:code-sample:`blinky` application.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/basic/blinky
+   :board: pico_plus2
+   :maybe-skip-config:
+   :goals: debug
+   :gen-args: -DOPENOCD=/usr/local/bin/openocd
 
 .. target-notes::
 

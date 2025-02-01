@@ -7,9 +7,7 @@ The Raspberry Pi Pico and Pico W are small, low-cost, versatile boards from
 Raspberry Pi. They are equipped with an RP2040 SoC, an on-board LED,
 a USB connector, and an SWD interface.
 
-
 The Pico W additionally contains an Infineon CYW43439 2.4 GHz Wi-Fi/Bluetooth module.
-
 
 The USB bootloader allows the ability to flash without any adapter,
 in a drag-and-drop manner.
@@ -50,7 +48,7 @@ Hardware
 Supported Features
 ==================
 
-The rpi_pico board configuration supports the following
+The ``rpi_pico`` board configuration supports the following
 hardware features:
 
 .. list-table::
@@ -96,26 +94,6 @@ hardware features:
      - :kconfig:option:`CONFIG_CLOCK_CONTROL`
      - :dtcompatible:`raspberrypi,pico-clock-controller`
 
-.. _rpi_pico_pio_based_features:
-
-PIO Based Features
-==================
-
-RaspberryPi Pico's PIO is a programmable chip that can implement a variety of peripherals.
-
-.. list-table::
-   :header-rows: 1
-
-   * - UART (PIO)
-     - :kconfig:option:`CONFIG_SERIAL`
-     - :dtcompatible:`raspberrypi,pico-uart-pio`
-   * - SPI (PIO)
-     - :kconfig:option:`CONFIG_SPI`
-     - :dtcompatible:`raspberrypi,pico-spi-pio`
-   * - WS2812 (PIO)
-     - :kconfig:option:`CONFIG_LED_STRIP`
-     - :dtcompatible:`worldsemi,ws2812-rpi_pico-pio`
-
 .. _rpi_pico_pin_mapping:
 
 Pin Mapping
@@ -153,6 +131,7 @@ Default Zephyr Peripheral Mapping:
 
 Programmable I/O (PIO)
 **********************
+
 The RP2040 SoC comes with two PIO periherals. These are two simple
 co-processors that are designed for I/O operations. The PIOs run
 a custom instruction set, generated from a custom assembly language.
@@ -171,6 +150,26 @@ environmental sensor.  The PIO SPI driver supports using any
 combination of GPIO pins for an SPI bus, as well as allowing up to
 four independent SPI buses on a single board (using the two SPI
 devices as well as both PIO devices).
+
+.. _rpi_pico_pio_based_features:
+
+PIO Based Features
+==================
+
+RaspberryPi Pico's PIO is a programmable chip that can implement a variety of peripherals.
+
+.. list-table::
+   :header-rows: 1
+
+   * - UART (PIO)
+     - :kconfig:option:`CONFIG_SERIAL`
+     - :dtcompatible:`raspberrypi,pico-uart-pio`
+   * - SPI (PIO)
+     - :kconfig:option:`CONFIG_SPI`
+     - :dtcompatible:`raspberrypi,pico-spi-pio`
+   * - WS2812 (PIO)
+     - :kconfig:option:`CONFIG_LED_STRIP`
+     - :dtcompatible:`worldsemi,ws2812-rpi_pico-pio`
 
 Programming and Debugging
 *************************
@@ -211,6 +210,7 @@ Here is an example of building and flashing the :zephyr:code-sample:`blinky` app
 .. code-block:: bash
 
   west flash --runner jlink
+
 
 .. _rpi_pico_flashing_using_openocd:
 
@@ -253,6 +253,8 @@ The value of **RPI_PICO_DEBUG_ADAPTER** is cached, so it can be omitted from
 **RPI_PICO_DEBUG_ADAPTER** is used in an argument to OpenOCD as ``"source [find interface/${RPI_PICO_DEBUG_ADAPTER}.cfg]"``.
 Thus, **RPI_PICO_DEBUG_ADAPTER** needs to be assigned the file name of the debug adapter.
 
+.. _rpi_pico_flashing_using_uf2:
+
 Using UF2
 ---------
 
@@ -262,25 +264,14 @@ a UF2 file. By default, building an app for this board will generate a
 button pressed, it will appear on the host as a mass storage device. The
 UF2 file should be drag-and-dropped to the device, which will flash the Pico.
 
+
 Debugging
 =========
 
-The SWD interface can also be used to debug the board. To achieve this, you can
-either use SEGGER JLink or OpenOCD.
-
-Using SEGGER JLink
-------------------
-
-Use a SEGGER JLink debug probe and follow the instruction in
-:ref:`Building, Flashing and Debugging<west-debugging>`.
-
-
-Using OpenOCD
--------------
-
-Install OpenOCD as described for flashing the board.
-
-Here is an example for debugging the :zephyr:code-sample:`blinky` application.
+Like flashing, debugging can also be performed using Zephyr's usual way
+(see :ref:`build_an_application` and :ref:`application_run`).
+The following sample shows how to debug using OpenOCD and
+the ``RaspberryPi Debug Probe``.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/basic/blinky
@@ -289,8 +280,15 @@ Here is an example for debugging the :zephyr:code-sample:`blinky` application.
    :goals: debug
    :gen-args: -DOPENOCD=/usr/local/bin/openocd -DRPI_PICO_DEBUG_ADAPTER=cmsis-dap
 
-As with flashing, you can specify the debug adapter by specifying **RPI_PICO_DEBUG_ADAPTER**
-at ``west build`` time. No needs to specify it at ``west debug`` time.
+The default is ``openocd``.
+If you use OpenOCD, see also the description about flashing :ref:`rpi_pico_flashing_using_uf2`
+for more information.
+
+If you use another tool, please specify your debugging tool,
+such as ``jlink`` with the ``--runner`` option.
+Use a SEGGER JLink debug probe and follow the instruction in
+:ref:`Building, Flashing and Debugging<west-debugging>`.
+
 
 .. target-notes::
 
