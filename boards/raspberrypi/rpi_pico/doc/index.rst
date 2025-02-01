@@ -3,11 +3,11 @@
 Overview
 ********
 
-The Raspberry Pi Pico and Pico W are small, low-cost, versatile boards from
-Raspberry Pi. They are equipped with an RP2040 SoC, an on-board LED,
+The :ref:`Raspberry Pi Pico` and Pico W are small, low-cost, versatile boards from
+Raspberry Pi. They are equipped with an :ref:`RP2040` SoC, an on-board LED,
 a USB connector, and an SWD interface.
 
-The Pico W additionally contains an Infineon CYW43439 2.4 GHz Wi-Fi/Bluetooth module.
+The Pico W additionally contains an :ref:`Infineon CYW43439` 2.4 GHz Wi-Fi/Bluetooth module.
 
 The USB bootloader allows the ability to flash without any adapter,
 in a drag-and-drop manner.
@@ -174,6 +174,10 @@ RaspberryPi Pico's PIO is a programmable chip that can implement a variety of pe
 Programming and Debugging
 *************************
 
+Applications for the ``rpi_pico`` board configuration can be built and
+flashed in the usual way (see :ref:`build_an_application` and
+:ref:`application_run` for more details).
+
 System requirements
 ===================
 
@@ -191,14 +195,25 @@ provided by Infineon. Run the command below to retrieve those files:
 
    It is recommended running the command above after :file:`west update`.
 
+Debug probe and host-tools
+--------------------------
+
+Several debugging tools support Raspberry Pi Pico.
+The :ref:`Raspberry Pi Debug Probe` is an easy-to-get CMSIS-DAP adapter
+that is officially provided by the Raspberry Pi Foundation.
+So, it is a convenient choice for debugging ``rpi_pico``.
+This is able to use with :ref:`openocd-debug-host-tools` and 
+:ref:`pyocd-debug-host-tools`.
+The ``rpi_pico`` use OpenOCD as default.
+
+You can also use :ref:`SEGGER J-Link` and :ref:`Black Magic Debug` Probe.
+
+
 Flashing
 ========
 
-Using SEGGER JLink
-------------------
-
-You can Flash the rpi_pico with a SEGGER JLink debug probe as described in
-:ref:`Building, Flashing and Debugging <west-flashing>`.
+The ``rpi_pico`` can flash with Zephyr's usual way.
+Please see also :ref:`Building, Flashing and Debugging<west-flashing>`.
 
 Here is an example of building and flashing the :zephyr:code-sample:`blinky` application.
 
@@ -269,9 +284,9 @@ Debugging
 =========
 
 Like flashing, debugging can also be performed using Zephyr's usual way
-(see :ref:`build_an_application` and :ref:`application_run`).
+(see :ref:`application_run`).
 The following sample shows how to debug using OpenOCD and
-the ``RaspberryPi Debug Probe``.
+the :ref:`Raspberry Pi Debug Probe`.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/basic/blinky
@@ -280,20 +295,37 @@ the ``RaspberryPi Debug Probe``.
    :goals: debug
    :gen-args: -DOPENOCD=/usr/local/bin/openocd -DRPI_PICO_DEBUG_ADAPTER=cmsis-dap
 
+
 The default is ``openocd``.
+If you use another tool, please specify your debugging tool,
+such as ``jlink`` with the ``--runner`` option.
+
 If you use OpenOCD, see also the description about flashing :ref:`rpi_pico_flashing_using_uf2`
 for more information.
 
-If you use another tool, please specify your debugging tool,
-such as ``jlink`` with the ``--runner`` option.
-Use a SEGGER JLink debug probe and follow the instruction in
-:ref:`Building, Flashing and Debugging<west-debugging>`.
-
 
 .. target-notes::
+
+.. _Raspberry Pi Pico:
+   https://www.raspberrypi.com/products/raspberry-pi-pico/
+
+.. _RP2040:
+   https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf
+
+.. _Infineon CYW43439:
+   https://www.infineon.com/cms/en/product/wireless-connectivity/airoc-wi-fi-plus-bluetooth-combos/wi-fi-4-802.11n/cyw43439/
 
 .. _pico_setup.sh:
    https://raw.githubusercontent.com/raspberrypi/pico-setup/master/pico_setup.sh
 
 .. _Getting Started with Raspberry Pi Pico:
-  https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf
+   https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf
+
+.. _Raspberry Pi Debug Probe:
+   https://www.raspberrypi.com/documentation/microcontrollers/debug-probe.html
+ 
+.. _SEGGER J-Link:
+   https://www.segger.com/products/debug-probes/j-link/
+
+.. _Black Magic Debug:
+   https://black-magic.org/
