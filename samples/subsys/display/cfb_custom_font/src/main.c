@@ -11,21 +11,25 @@
 
 #include "cfb_font_dice.h"
 
+#if CONFIG_CHARACTER_FRAMEBUFFER_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
+static uint8_t transfer_buffer[CONFIG_CHARACTER_FRAMEBUFFER_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE];
+#endif
+
 int main(void)
 {
 	const struct device *const dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	struct cfb_framebuffer *fb;
 	int err;
+#if CONFIG_CHARACTER_FRAMEBUFFER_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
+	struct cfb_framebuffer framebuffer;
+	struct cfb_init_param param = {
+		.transfer_buf = transfer_buffer,
+		.transfer_buf_size = sizeof(transfer_buffer),
+	};
+#endif
 
 	if (!device_is_ready(dev)) {
 		printk("Display device not ready\n");
-	}
-
-	if (display_set_pixel_format(dev, PIXEL_FORMAT_MONO10) != 0) {
-		if (display_set_pixel_format(dev, PIXEL_FORMAT_MONO01) != 0) {
-			printk("Failed to set required pixel format");
-			return 0;
-		}
 	}
 
 	if (display_blanking_off(dev) != 0) {
@@ -33,11 +37,20 @@ int main(void)
 		return 0;
 	}
 
+#if CONFIG_CHARACTER_FRAMEBUFFER_CUSTOM_FONT_SAMPLE_TRANSFER_BUFFER_SIZE != 0
+	fb = &framebuffer;
+	err = cfb_init(&framebuffer, &param);
+	if (err) {
+		printk("Could not initialize framebuffer (err %d)\n", err);
+		return 0;
+	}
+#else
 	fb = cfb_alloc(dev);
 	if (!fb) {
 		printk("Could not allocate framebuffer\n");
 		return 0;
 	}
+#endif
 
 	err = cfb_clear(fb, true);
 	if (err) {
