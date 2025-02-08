@@ -27,11 +27,13 @@ if ((DEFINED WEST) AND (NOT DEFINED BSIM_COMPONENTS_PATH) AND (NOT DEFINED BSIM_
     status babblesim_base
     OUTPUT_QUIET
     ERROR_QUIET
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     RESULT_VARIABLE ret_val1)
   execute_process(COMMAND ${WEST}
     list babblesim_base -f {posixpath}
     OUTPUT_VARIABLE BSIM_BASE_PATH
     ERROR_QUIET
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     RESULT_VARIABLE ret_val2)
   if (NOT (${ret_val1} OR ${ret_val2}))
     string(STRIP ${BSIM_BASE_PATH} BSIM_COMPONENTS_PATH)

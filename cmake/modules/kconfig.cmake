@@ -391,6 +391,7 @@ execute_process(
   # The working directory is set to the app dir such that the user
   # can use relative paths in CONF_FILE, e.g. CONF_FILE=nrf5.conf
   RESULT_VARIABLE ret
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 if(NOT "${ret}" STREQUAL "0")
   message(FATAL_ERROR "command failed with return code: ${ret}")

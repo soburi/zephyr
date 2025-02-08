@@ -29,6 +29,7 @@ if(DTC)
     OUTPUT_VARIABLE dtc_version_output
     ERROR_VARIABLE  dtc_error_output
     RESULT_VARIABLE dtc_status
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
 
   set(DTC_VERSION_STRING)

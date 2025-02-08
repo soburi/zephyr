@@ -65,6 +65,8 @@ if(${CMAKE_VERSION} VERSION_EQUAL 3.22.1 OR ${CMAKE_VERSION} VERSION_EQUAL 3.22.
   endif()
 endif()
 
+list(APPEND zephyr_cmake_modules variables)
+
 # Prepare user cache
 list(APPEND zephyr_cmake_modules python)
 list(APPEND zephyr_cmake_modules user_cache)

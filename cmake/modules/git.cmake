@@ -4,6 +4,8 @@ include_guard(GLOBAL)
 
 find_package(Git QUIET)
 
+include(variables)
+
 # Usage:
 #   git_describe(<dir> <output>)
 #
@@ -21,6 +23,7 @@ function(git_describe DIR OUTPUT)
       ERROR_STRIP_TRAILING_WHITESPACE
       ERROR_VARIABLE                   stderr
       RESULT_VARIABLE                  return_code
+      COMMAND_ECHO                     ${COMMAND_ECHO_OUTPUT}
     )
     if(return_code)
       message(STATUS "git describe failed: ${stderr}")

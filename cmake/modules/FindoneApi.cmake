@@ -16,7 +16,9 @@ include(FindPackageHandleStandardArgs)
 
 if(CMAKE_C_COMPILER)
   # Parse the 'clang --version' output to find the installed version.
-  execute_process(COMMAND ${CMAKE_C_COMPILER} --version OUTPUT_VARIABLE ONEAPI_VERSION)
+  execute_process(COMMAND ${CMAKE_C_COMPILER} --version
+                  OUTPUT_VARIABLE ONEAPI_VERSION
+                  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT})
   string(REGEX REPLACE "[^0-9]*([0-9.]+) .*" "\\1" ONEAPI_VERSION ${ONEAPI_VERSION})
 endif()
 

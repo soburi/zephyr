@@ -39,6 +39,7 @@ execute_process(
   OUTPUT_VARIABLE west_version
   ERROR_VARIABLE west_version_err
   RESULT_VARIABLE west_version_output_result
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 
 if(west_version_output_result)
@@ -87,6 +88,7 @@ else()
     RESULT_VARIABLE west_topdir_result
     OUTPUT_STRIP_TRAILING_WHITESPACE
     WORKING_DIRECTORY ${ZEPHYR_BASE}
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
 
   if(west_topdir_result)

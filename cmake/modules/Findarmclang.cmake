@@ -16,7 +16,10 @@ include(FindPackageHandleStandardArgs)
 
 if(CMAKE_C_COMPILER)
   # Parse the 'clang --version' output to find the installed version.
-  execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${triple} --version OUTPUT_VARIABLE ARMCLANG_VERSION ERROR_QUIET)
+  execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${triple} --version
+	          OUTPUT_VARIABLE ARMCLANG_VERSION
+		  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
+		  ERROR_QUIET)
   string(REPLACE "\n" ";" armclang_version_list "${ARMCLANG_VERSION}")
   set(ARMCLANG_VERSION ARMCLANG_VERSION-NOTFOUND)
   foreach(line ${armclang_version_list})

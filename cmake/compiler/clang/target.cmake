@@ -45,6 +45,7 @@ if(NOT "${ARCH}" STREQUAL "posix")
     execute_process(
       COMMAND ${CMAKE_C_COMPILER} --print-file-name=${file_name}
       OUTPUT_VARIABLE _OUTPUT
+      COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
       )
     get_filename_component(_OUTPUT "${_OUTPUT}" DIRECTORY)
     string(REGEX REPLACE "\n" "" _OUTPUT ${_OUTPUT})
@@ -106,6 +107,7 @@ if(NOT "${ARCH}" STREQUAL "posix")
             --print-libgcc-file-name
     OUTPUT_VARIABLE RTLIB_FILE_NAME
     OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
 
   get_filename_component(RTLIB_DIR ${RTLIB_FILE_NAME} DIRECTORY)

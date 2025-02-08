@@ -13,7 +13,8 @@ if (STRIP_DEBUG OR STRIP_ALL)
 
   execute_process(
       COMMAND ${STRIP} ${obj_copy_strip}
-      ${INFILE} ${FILEOUT})
+      ${INFILE} ${FILEOUT}
+      COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
 endif()
 
 # no support of --srec-len in mwdt
@@ -36,6 +37,7 @@ if(DEFINED OUTTARGET)
   execute_process(
       COMMAND ${ELF2HEX} ${obj_copy_gap_fill} ${obj_copy_target_output}
       -o ${OUTFILE} ${INFILE}
+      COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 endif()
 
@@ -55,6 +57,7 @@ if(DEFINED ONLY_SECTION)
   execute_process(
       COMMAND ${ELF2BIN} -q ${obj_copy_sections_only}
       ${INFILE} ${OUTFILE}
+      COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 endif()
 
@@ -72,6 +75,7 @@ if(DEFINED RENAME_SECTION)
   execute_process(
       COMMAND ${OBJCOPY} ${obj_copy_sections_rename}
       ${INFILE} ${OUTFILE}
+      COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 endif()
 

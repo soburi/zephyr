@@ -44,11 +44,13 @@ execute_process(
     ${obj_copy_strip}
     ${obj_copy_gap_fill} ${obj_copy_target_output}
     --output ${OUTFILE}${outfile_dir} ${INFILE}
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
 )
 
 if(DEFINED ONLY_SECTION AND "${OUTTARGET}" STREQUAL "binary")
   execute_process(
     COMMAND ${CMAKE_COMMAND} -E copy
       ${OUTFILE}${outfile_dir}/${only_section_clean} ${OUTFILE}
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 endif()

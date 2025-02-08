@@ -25,6 +25,7 @@ foreach(file_name include/stddef.h)
     COMMAND ${CMAKE_C_COMPILER} --print-file-name=${file_name}
     OUTPUT_VARIABLE _OUTPUT
     RESULT_VARIABLE result
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
   if(result)
     message(FATAL_ERROR "Failed to find required headers.")
@@ -51,6 +52,7 @@ execute_process(
   COMMAND ${CMAKE_C_COMPILER} ${TOOLCHAIN_C_FLAGS} --print-libgcc-file-name
   OUTPUT_VARIABLE LIBGCC_FILE_NAME
   OUTPUT_STRIP_TRAILING_WHITESPACE
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 
 get_filename_component(LIBGCC_DIR ${LIBGCC_FILE_NAME} DIRECTORY)

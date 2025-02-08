@@ -170,6 +170,7 @@ if(NOT BOARD_DIR)
                     OUTPUT_VARIABLE ret_board
                     ERROR_VARIABLE err_board
                     RESULT_VARIABLE ret_val
+                    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
     string(STRIP "${ret_board}" ret_board)
     cmake_parse_arguments(BOARD_HIDDEN "" "DIR" "" ${ret_board})
@@ -191,6 +192,7 @@ execute_process(${list_boards_commands} --board=${BOARD} ${board_dir_arg}
                 OUTPUT_VARIABLE ret_board
                 ERROR_VARIABLE err_board
                 RESULT_VARIABLE ret_val
+                COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
 )
 if(ret_val)
   message(FATAL_ERROR "Error finding board: ${BOARD}\nError message: ${err_board}")
@@ -223,7 +225,8 @@ else()
   message("No board named '${BOARD}' found.\n\n"
           "Please choose one of the following boards:\n"
   )
-  execute_process(${list_boards_commands})
+  execute_process(${list_boards_commands}
+                  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT})
   unset(CACHED_BOARD CACHE)
   message(FATAL_ERROR "Invalid BOARD; see above.")
 endif()

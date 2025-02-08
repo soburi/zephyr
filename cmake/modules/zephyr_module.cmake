@@ -67,6 +67,7 @@ if(WEST OR ZEPHYR_MODULES)
     zephyr_module_error_text
     RESULT_VARIABLE
     zephyr_module_return
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 
   if(${zephyr_module_return})

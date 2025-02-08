@@ -22,7 +22,8 @@ include(FindPackageHandleStandardArgs)
 # See if the compiler has a preferred linker
 execute_process(COMMAND ${CMAKE_C_COMPILER} --print-prog-name=ld.lld
                 OUTPUT_VARIABLE LLVMLLD_LINKER
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                COMMAND_ECHO ${COMMAND_ECHO_OUTPUT})
 
 if(NOT EXISTS "${LLVMLLD_LINKER}")
   # Need to clear it or else find_program() won't replace the value.
@@ -49,6 +50,7 @@ if(LLVMLLD_LINKER)
     OUTPUT_VARIABLE llvmlld_version_output
     ERROR_VARIABLE  llvmlld_error_output
     RESULT_VARIABLE llvmlld_status
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
 
   set(LLVMLLD_VERSION_STRING)

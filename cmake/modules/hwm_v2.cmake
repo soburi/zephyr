@@ -51,6 +51,7 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${ZEPHYR_BASE}/scripts/list_hardwar
                 OUTPUT_VARIABLE ret_hw
                 ERROR_VARIABLE err_hw
                 RESULT_VARIABLE ret_val
+                COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
 )
 if(ret_val)
   message(FATAL_ERROR "Error listing hardware.\nError message: ${err_hw}")

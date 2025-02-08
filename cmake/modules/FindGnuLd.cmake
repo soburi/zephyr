@@ -45,7 +45,8 @@ endif()
 # See if the compiler has a preferred linker
 execute_process(COMMAND ${CMAKE_C_COMPILER} --print-prog-name=ld.bfd
                 OUTPUT_VARIABLE GNULD_LINKER
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+		COMMAND_ECHO ${COMMAND_ECHO_OUTPUT})
 
 if(EXISTS "${GNULD_LINKER}")
   cmake_path(NORMAL_PATH GNULD_LINKER)
@@ -78,6 +79,7 @@ if(GNULD_LINKER)
     OUTPUT_VARIABLE gnuld_version_output
     ERROR_VARIABLE  gnuld_error_output
     RESULT_VARIABLE gnuld_status
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
 
   if(${gnuld_status} EQUAL 0)

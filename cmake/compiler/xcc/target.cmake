@@ -33,6 +33,7 @@ foreach(file_name include/stddef.h include-fixed/limits.h)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} --print-file-name=${file_name}
     OUTPUT_VARIABLE _OUTPUT
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
   get_filename_component(_OUTPUT "${_OUTPUT}" DIRECTORY)
   string(REGEX REPLACE "\n" "" _OUTPUT "${_OUTPUT}")
@@ -45,6 +46,7 @@ execute_process(
   COMMAND ${CMAKE_C_COMPILER} ${TOOLCHAIN_C_FLAGS} --print-libgcc-file-name
   OUTPUT_VARIABLE LIBGCC_FILE_NAME
   OUTPUT_STRIP_TRAILING_WHITESPACE
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 
 get_filename_component(LIBGCC_DIR ${LIBGCC_FILE_NAME} DIRECTORY)

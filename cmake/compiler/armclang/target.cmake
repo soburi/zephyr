@@ -52,6 +52,7 @@ foreach(file_name include/stddef.h)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} --print-file-name=${file_name}
     OUTPUT_VARIABLE _OUTPUT
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
   get_filename_component(_OUTPUT "${_OUTPUT}" DIRECTORY)
   string(REGEX REPLACE "\n" "" _OUTPUT ${_OUTPUT})

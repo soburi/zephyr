@@ -20,6 +20,7 @@ execute_process(
   COMMAND ${CMAKE_C_COMPILER} --version ${XTENSA_CORE_LOCAL_C_FLAG}
   RESULT_VARIABLE ret
   OUTPUT_VARIABLE stdoutput
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 if(ret)
   message(FATAL_ERROR "Executing the below command failed. Are permissions set correctly?

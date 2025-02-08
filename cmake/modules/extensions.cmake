@@ -1546,6 +1546,7 @@ function(check_dtc_flag flag ok)
     ERROR_QUIET
     OUTPUT_QUIET
     RESULT_VARIABLE dtc_check_ret
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
   if (dtc_check_ret EQUAL 0)
     set(${ok} 1 PARENT_SCOPE)
@@ -1811,6 +1812,7 @@ function(zephyr_blobs_verify)
     OUTPUT_VARIABLE BLOBS_LIST_OUTPUT
     OUTPUT_STRIP_TRAILING_WHITESPACE
     COMMAND_ERROR_IS_FATAL ANY
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 
   if(${BLOBS_VERIFY_REQUIRED})
@@ -2975,6 +2977,7 @@ function(zephyr_file_copy oldname newname)
     endif()
     execute_process(
       COMMAND ${CMAKE_COMMAND} -E ${copy_file_command} ${oldname} ${newname}
+      COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
   endif()
 endfunction()
@@ -4586,7 +4589,9 @@ function(zephyr_dt_preprocess)
     ${ZEPHYR_BASE}/misc/empty_file.c
     ${workdir_opts})
 
-  execute_process(COMMAND ${preprocess_cmd} RESULT_VARIABLE ret)
+  execute_process(COMMAND ${preprocess_cmd}
+                  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
+                  RESULT_VARIABLE ret)
   if(NOT "${ret}" STREQUAL "0")
     message(FATAL_ERROR "failed to preprocess devicetree files (error code ${ret}): ${DT_PREPROCESS_SOURCE_FILES}")
   endif()

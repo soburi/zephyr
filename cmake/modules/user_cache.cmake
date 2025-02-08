@@ -64,6 +64,7 @@ function(find_appropriate_cache_directory dir)
       execute_process(COMMAND ${PYTHON_EXECUTABLE}
         ${ZEPHYR_BASE}/scripts/build/dir_is_writeable.py ${test_user_dir}
         RESULT_VARIABLE writable_result
+        COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
       )
       if("${writable_result}" STREQUAL "0")
         # The directory is write-able

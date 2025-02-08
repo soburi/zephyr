@@ -8,6 +8,7 @@ if(NOT SYSROOT_DIR)
                   RESULT_VARIABLE return_val
                   OUTPUT_VARIABLE reported_sysroot
                   OUTPUT_STRIP_TRAILING_WHITESPACE
+		  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
   if(NOT return_val AND NOT "${reported_sysroot}" STREQUAL "")
     set(SYSROOT_DIR "${reported_sysroot}" CACHE INTERNAL "Sysroot reported by ${CMAKE_C_COMPILER}")

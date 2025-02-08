@@ -29,6 +29,7 @@ execute_process(
   COMMAND ${CMAKE_C_COMPILER} --version
   RESULT_VARIABLE ret
   OUTPUT_VARIABLE stdoutput
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 
 if(ret)

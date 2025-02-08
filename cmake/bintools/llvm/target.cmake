@@ -10,6 +10,7 @@ endif()
 # Extract the clang version.  Debian (maybe other distros?) will
 # append a version to llvm-objdump/objcopy
 execute_process(COMMAND ${CMAKE_C_COMPILER} --version
+	        COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
                 OUTPUT_VARIABLE CLANGVER)
 string(REGEX REPLACE "[^0-9]*([0-9]+).*" "\\1" CLANGVER ${CLANGVER})
 

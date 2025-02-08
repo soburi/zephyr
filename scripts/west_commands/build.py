@@ -646,6 +646,7 @@ class Build(Forceable):
         #
         # west build -- -DOVERLAY_CONFIG=relative-path.conf
         final_cmake_args = ['-DWEST_PYTHON={}'.format(pathlib.Path(sys.executable).as_posix()),
+                            '-DWEST_VERBOSE={}'.format(self.args.verbose),
                             '-B{}'.format(self.build_dir),
                             '-G{}'.format(config_get('generator',
                                                      DEFAULT_CMAKE_GENERATOR))]

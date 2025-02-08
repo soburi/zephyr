@@ -92,6 +92,7 @@ function(zephyr_process_snippets)
     ${SNIPPET_PYTHON_EXTRA_ARGS}
     OUTPUT_VARIABLE output
     ERROR_VARIABLE output
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     RESULT_VARIABLE ret)
   if(${ret})
     message(FATAL_ERROR "${output}")

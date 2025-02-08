@@ -36,6 +36,7 @@ execute_process(
   ${EF}
   ${WD}
   RESULT_VARIABLE ret
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
 )
 
 if(NOT "${ret}" STREQUAL "0")

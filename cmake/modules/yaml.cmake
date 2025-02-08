@@ -202,6 +202,7 @@ function(yaml_load)
     OUTPUT_VARIABLE json_load_out
     ERROR_VARIABLE json_load_error
     RESULT_VARIABLE json_load_result
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 
   if(json_load_result)

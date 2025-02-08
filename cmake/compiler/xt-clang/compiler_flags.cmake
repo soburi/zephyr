@@ -16,6 +16,7 @@ if(CONFIG_CPP)
     COMMAND ${CMAKE_C_COMPILER} --print-file-name=include/stddef.h
     OUTPUT_VARIABLE _OUTPUT
     COMMAND_ERROR_IS_FATAL ANY
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
     )
   get_filename_component(_OUTPUT "${_OUTPUT}" DIRECTORY)
   string(REGEX REPLACE "\n" "" _OUTPUT "${_OUTPUT}")

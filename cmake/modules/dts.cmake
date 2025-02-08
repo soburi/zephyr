@@ -304,6 +304,7 @@ execute_process(
   COMMAND ${CMD_GEN_EDT}
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
   COMMAND_ERROR_IS_FATAL ANY
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 zephyr_file_copy(${ZEPHYR_DTS}.new ${ZEPHYR_DTS} ONLY_IF_DIFFERENT)
 zephyr_file_copy(${EDT_PICKLE}.new ${EDT_PICKLE} ONLY_IF_DIFFERENT)
@@ -325,6 +326,7 @@ execute_process(
   COMMAND ${CMD_GEN_DEFINES}
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
   COMMAND_ERROR_IS_FATAL ANY
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 zephyr_file_copy(${DEVICETREE_GENERATED_H}.new ${DEVICETREE_GENERATED_H} ONLY_IF_DIFFERENT)
 file(REMOVE ${DEVICETREE_GENERATED_H}.new)
@@ -340,6 +342,7 @@ execute_process(
   --bindings-dirs ${DTS_ROOT_BINDINGS}
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
   RESULT_VARIABLE ret
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 if(NOT "${ret}" STREQUAL "0")
   message(FATAL_ERROR "gen_driver_kconfig_dts.py failed with return code: ${ret}")
@@ -361,6 +364,7 @@ execute_process(
   --cmake-out ${dts_cmake_tmp}
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
   RESULT_VARIABLE ret
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 if(NOT "${ret}" STREQUAL "0")
   message(FATAL_ERROR "gen_dts_cmake.py failed with return code: ${ret}")
@@ -415,6 +419,7 @@ execute_process(
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
   RESULT_VARIABLE ret
   ERROR_VARIABLE stderr
+  COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
 
 if(NOT "${ret}" STREQUAL "0")

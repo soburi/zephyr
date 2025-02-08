@@ -13,6 +13,7 @@ if(ARMFVP AND (DEFINED ARMFVP_MIN_VERSION))
     COMMAND ${ARMFVP} --version
     OUTPUT_VARIABLE out
     OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ECHO ${COMMAND_ECHO_OUTPUT}
   )
   string(REPLACE "\n" "" out ${out})
   string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+" armfvp_version ${out})
