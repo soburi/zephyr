@@ -11,6 +11,7 @@
 #include <zephyr/ztest.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/display/cfb.h>
+#include <zephyr/sys/byteorder.h>
 
 LOG_MODULE_REGISTER(cfb_test_draw_text_and_print_utils, CONFIG_CFB_LOG_LEVEL);
 
@@ -19,8 +20,30 @@ const uint32_t display_width = DT_PROP(DT_CHOSEN(zephyr_display), width);
 const uint32_t display_height = DT_PROP(DT_CHOSEN(zephyr_display), height);
 uint8_t read_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) *
 		    DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
+#if CONFIG_TEST_TRANSFER_BUF_SIZE != 0
 uint8_t transfer_buffer[DT_PROP(DT_CHOSEN(zephyr_display), width) *
 			DT_PROP(DT_CHOSEN(zephyr_display), height) * 4];
+static struct cfb_framebuffer fb;
+#endif
+
+uint8_t bytes_per_pixel(enum display_pixel_format pixel_format)
+{
+	switch (pixel_format) {
+	case PIXEL_FORMAT_ARGB_8888:
+		return 4;
+	case PIXEL_FORMAT_RGB_888:
+		return 3;
+	case PIXEL_FORMAT_RGB_565:
+	case PIXEL_FORMAT_BGR_565:
+		return 2;
+	case PIXEL_FORMAT_MONO01:
+	case PIXEL_FORMAT_MONO10:
+	default:
+		return 1;
+	}
+
+	return 0;
+}
 
 inline uint32_t mono_pixel_order(uint32_t order)
 {
@@ -33,7 +56,14 @@ inline uint32_t mono_pixel_order(uint32_t order)
 
 struct cfb_framebuffer *fb_init(void)
 {
-	struct cfb_framebuffer *fb;
+#if CONFIG_TEST_TRANSFER_BUF_SIZE != 0
+	struct cfb_framebuffer_init_param param = {
+		.transfer_buf = transfer_buffer,
+		.transfer_buf_size = sizeof(transfer_buffer),
+	};
+#else
+	struct cfb_framebuffer *pfb;
+#endif
 
 	struct display_buffer_descriptor desc = {
 		.height = display_height,
@@ -47,14 +77,32 @@ struct cfb_framebuffer *fb_init(void)
 
 	zassert_ok(display_blanking_off(dev));
 
-	fb = cfb_alloc(dev);
-	zassert_not_null(fb);
-	return fb;
+#if CONFIG_TEST_TRANSFER_BUF_SIZE != 0
+	zassert_ok(cfb_init(&fb, dev, &param));
+	return &fb;
+#else
+	pfb = cfb_alloc(dev);
+	zassert_not_null(pfb);
+	return pfb;
+#endif
 }
 
 void fb_deinit(struct cfb_framebuffer *fb)
 {
+#if CONFIG_TEST_TRANSFER_BUF_SIZE != 0
+	cfb_deinit(fb);
+#else
 	cfb_free(fb);
+#endif
+}
+
+static inline uint32_t pixel_per_tile(enum display_pixel_format pixel_format)
+{
+	if (((pixel_format == PIXEL_FORMAT_MONO01) || (pixel_format == PIXEL_FORMAT_MONO10))) {
+		return 8;
+	}
+
+	return 1;
 }
 
 uint32_t display_buf_size(const struct device *dev)
@@ -63,28 +111,55 @@ uint32_t display_buf_size(const struct device *dev)
 
 	display_get_capabilities(dev, &caps);
 
-	return display_width * display_height / 8;
+	return display_width * display_height * bytes_per_pixel(caps.current_pixel_format) /
+	       pixel_per_tile(caps.current_pixel_format);
 }
 
 uint32_t display_pixel(int x, int y)
 {
-	const uint8_t *ptr = read_buffer + (display_width * (y / 8) + x);
-	struct display_capabilities display_caps;
+	uint8_t *ptr;
+	struct display_capabilities caps;
 
-	display_get_capabilities(dev, &display_caps);
+	display_get_capabilities(dev, &caps);
+	ptr = read_buffer +
+	      (((display_width * (y / pixel_per_tile(caps.current_pixel_format))) + x) *
+	       bytes_per_pixel(caps.current_pixel_format));
 
-	if (display_caps.current_pixel_format == PIXEL_FORMAT_MONO10) {
-		return !(*ptr & mono_pixel_order(y % 8));
+	if (caps.current_pixel_format == PIXEL_FORMAT_MONO01) {
+		return (*ptr & mono_pixel_order(y % 8)) ? COLOR_WHITE : 0;
+	} else if (caps.current_pixel_format == PIXEL_FORMAT_MONO10) {
+		return (*ptr & mono_pixel_order(y % 8)) ? 0 : COLOR_WHITE;
+	} else if (caps.current_pixel_format == PIXEL_FORMAT_ARGB_8888) {
+		return (*(uint32_t *)ptr) & 0x00FFFFFF;
+	} else if (caps.current_pixel_format == PIXEL_FORMAT_RGB_888) {
+		return (*ptr << 16) | (*(ptr + 1) << 8) | *(ptr + 2);
+	} else if (caps.current_pixel_format == PIXEL_FORMAT_RGB_565) {
+		uint16_t c = sys_be16_to_cpu(*(uint16_t *)ptr);
+
+		return ((c & 0xF800) << 8) | ((c & 0x7E0) << 5) | ((c & 0x1F) << 3);
+	} else if (caps.current_pixel_format == PIXEL_FORMAT_BGR_565) {
+		uint16_t c = *(uint16_t *)ptr;
+
+		return ((c & 0xF800) << 8) | ((c & 0x7E0) << 5) | ((c & 0x1F) << 3);
+	} else {
+		return 0xFFFFFFFF;
 	}
-
-	return !!(*ptr & mono_pixel_order(y % 8));
 }
 
 uint32_t image_pixel(const uint32_t *img, size_t width, int x, int y)
 {
 	const uint32_t *ptr = img + (width * y + x);
 
-	return !!(*ptr & 0xFFFFFF);
+	return *ptr;
+}
+
+bool compare_pixel(enum display_pixel_format pixel_format, uint32_t disp_pix, uint32_t img_pix)
+{
+	if ((pixel_format == PIXEL_FORMAT_RGB_565) || (pixel_format == PIXEL_FORMAT_BGR_565)) {
+		return ((disp_pix & 0xF8FCF8) == (img_pix & 0xF8FCF8));
+	}
+
+	return ((disp_pix & 0x00FFFFFF) == (img_pix & 0x00FFFFFF));
 }
 
 bool verify_pixel(int x, int y, uint32_t color)
@@ -93,12 +168,15 @@ bool verify_pixel(int x, int y, uint32_t color)
 		.height = display_height,
 		.pitch = display_width,
 		.width = display_width,
-		.buf_size = display_height * display_width / 8,
+		.buf_size = display_buf_size(dev),
 	};
+	struct display_capabilities caps;
+
+	display_get_capabilities(dev, &caps);
 
 	zassert_ok(display_read(dev, 0, 0, &desc, read_buffer), "display_read failed");
 
-	return ((!!display_pixel(x, y)) == (!!color));
+	return compare_pixel(caps.current_pixel_format, display_pixel(x, y), color);
 }
 
 bool verify_image(int cmp_x, int cmp_y, const uint32_t *img, size_t width, size_t height)
@@ -107,8 +185,11 @@ bool verify_image(int cmp_x, int cmp_y, const uint32_t *img, size_t width, size_
 		.height = display_height,
 		.pitch = display_width,
 		.width = display_width,
-		.buf_size = display_height * display_width / 8,
+		.buf_size = display_buf_size(dev),
 	};
+	struct display_capabilities caps;
+
+	display_get_capabilities(dev, &caps);
 
 	zassert_ok(display_read(dev, 0, 0, &desc, read_buffer), "display_read failed");
 
@@ -117,7 +198,7 @@ bool verify_image(int cmp_x, int cmp_y, const uint32_t *img, size_t width, size_
 			uint32_t disp_pix = display_pixel(cmp_x + x, cmp_y + y);
 			uint32_t img_pix = image_pixel(img, width, x, y);
 
-			if (disp_pix != img_pix) {
+			if (!compare_pixel(caps.current_pixel_format, disp_pix, img_pix)) {
 				LOG_INF("get_pixel(%d, %d) = %lu", x, y, disp_pix);
 				LOG_INF("pixel_color(%d, %d) = %lu", x, y, img_pix);
 				LOG_INF("disp@(0, %d) %p", y, read_buffer + (y * width / 8));
@@ -138,8 +219,11 @@ bool verify_color_inside_rect(int x, int y, size_t width, size_t height, uint32_
 		.height = display_height,
 		.pitch = display_width,
 		.width = display_width,
-		.buf_size = display_height * display_width / 8,
+		.buf_size = display_buf_size(dev),
 	};
+	struct display_capabilities caps;
+
+	display_get_capabilities(dev, &caps);
 
 	zassert_ok(display_read(dev, 0, 0, &desc, read_buffer), "display_read failed");
 
@@ -147,7 +231,7 @@ bool verify_color_inside_rect(int x, int y, size_t width, size_t height, uint32_
 		for (size_t x_ = 0; x_ < width; x_++) {
 			uint32_t disp_pix = display_pixel(x + x_, y + y_);
 
-			if (!!disp_pix != !!color) {
+			if (!compare_pixel(caps.current_pixel_format, disp_pix, color)) {
 				return false;
 			}
 		}
