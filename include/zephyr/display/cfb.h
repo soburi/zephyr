@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 PHYTEC Messtechnik GmbH
+ * Copyright (c) 2024 TOKITA Hiroshi
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,6 +34,7 @@ enum cfb_display_param {
 	CFB_DISPLAY_PPT,
 	CFB_DISPLAY_ROWS,
 	CFB_DISPLAY_COLS,
+	CFB_DISPLAY_PIXEL_FORMAT,
 };
 
 /**
@@ -116,12 +118,6 @@ struct cfb_framebuffer {
 
 	/**
 	 * @private
-	 * Number of pixels per tile, typically 8
-	 */
-	uint8_t ppt;
-
-	/**
-	 * @private
 	 * Current font index
 	 */
 	uint8_t font_idx;
@@ -134,10 +130,17 @@ struct cfb_framebuffer {
 
 	/**
 	 * @private
-	 * Inverted
+	 * Foreground color
 	 */
-	bool inverted;
+	uint32_t fg_color;
+
+	/**
+	 * @private
+	 * Background color
+	 */
+	uint32_t bg_color;
 };
+
 
 /**
  * A parameter structure for ::cfb_display_init.
@@ -242,11 +245,12 @@ int cfb_draw_rect(struct cfb_framebuffer *fb, const struct cfb_position *start,
 int cfb_clear(struct cfb_framebuffer *fb, bool clear_display);
 
 /**
- * @brief Invert Pixels.
+ * Inverts foreground and background colors.
  *
- * @param fb Pointer to framebuffer to rendering
+ * @param fb A framebuffer to rendering.
  *
- * @return 0 on success, negative value otherwise
+ * @retval 0 on succeeded
+ * @retval -errno Negative errno for other failures
  */
 int cfb_invert(struct cfb_framebuffer *fb);
 
@@ -303,6 +307,48 @@ int cfb_set_font(struct cfb_framebuffer *fb, uint8_t idx);
  * @return 0 on success, negative value otherwise
  */
 int cfb_set_kerning(struct cfb_framebuffer *fb, int8_t kerning);
+
+/**
+ * Set foreground color.
+ *
+ * Set foreground color with RGBA values in 32-bit color representation.
+ *
+ * This function immediately draws to the buffer if the buffer is large enough
+ * to store the entire screen. Otherwise, store the command in the command buffer.
+ *
+ * @param fb A framebuffer to set.
+ * @param r The red component of the foreground color in 32-bit color representation.
+ * @param g The green component of the foreground color in 32-bit color representation.
+ * @param b The blue component of the foreground color in 32-bit color representation.
+ * @param a The alpha channel of the foreground color in 32-bit color representation.
+ *
+ * @retval 0 on succeeded
+ * @retval -ENOBUFS The command buffer does not have enough space
+ * @retval -errno  Negative errno for other failures.
+ */
+int cfb_set_fg_color(struct cfb_framebuffer *fb, uint8_t r, uint8_t g,
+				   uint8_t b, uint8_t a);
+
+/**
+ * Set background color.
+ *
+ * Set background color with RGBA values in 32-bit color representation.
+ *
+ * This function immediately draws to the buffer if the buffer is large enough
+ * to store the entire screen. Otherwise, store the command in the command buffer.
+ *
+ * @param fb A framebuffer to set.
+ * @param r The red component of the foreground color in 32-bit color representation.
+ * @param g The green component of the foreground color in 32-bit color representation.
+ * @param b The blue component of the foreground color in 32-bit color representation.
+ * @param a The alpha channel of the foreground color in 32-bit color representation.
+ *
+ * @retval 0 on succeeded
+ * @retval -ENOBUFS The command buffer does not have enough space
+ * @retval -errno  Negative errno for other failures.
+ */
+int cfb_set_bg_color(struct cfb_framebuffer *fb, uint8_t r, uint8_t g,
+				   uint8_t b, uint8_t a);
 
 /**
  * @brief Get font size.
