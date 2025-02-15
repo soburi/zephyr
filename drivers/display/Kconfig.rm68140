@@ -1,0 +1,10 @@
+# Copyright 2025, TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+config RM68140
+        bool "RM68140 display driver"
+        default y
+	depends on MIPI_DBI
+        depends on DT_HAS_RAYDIUM_RM68140_ENABLED
+        help
+          Enable driver for RM68140 display driver.
