@@ -1,0 +1,79 @@
+
+description: Raydium RM68140 Panel
+
+compatible: "raydium,rm68140"
+
+include: [mipi-dbi-spi-device.yaml, display-controller.yaml]
+
+properties:
+  pixel-format:
+    type: int
+    default: 0
+    enum:
+      - 0 # RGB565
+      - 1 # RGB888
+    description:
+      Display pixel format. Note that when RGB888 pixel format is selected
+      only 6 color bits are actually used being in practice equivalent to
+      RGB666.
+
+  rotation:
+    type: int
+    default: 0
+    enum:
+      - 0
+      - 90
+      - 180
+      - 270
+    description:
+      Display rotation (CW) in degrees.
+      If not defined, rotation is off by default.
+
+  display-inversion:
+    type: boolean
+    description:
+      Display inversion mode. Every bit is inverted from the frame memory to
+      the display.
+
+# 電源、タイミング、ガンマ補正などの各レジスタ値を定義
+  d0:
+    type: uint8-array
+    default: [0x07, 0x42, 0x18]
+    description: "D0 command parameters for power/VCOM setting."
+  d1:
+    type: uint8-array
+    default: [0x00, 0x07, 0x10]
+    description: "D1 command parameters for additional power setting."
+  d2:
+    type: uint8-array
+    default: [0x01, 0x02]
+    description: "D2 command parameters for further power control."
+  c0:
+    type: uint8-array
+    default: [0x10, 0x3B, 0x00, 0x02, 0x11]
+    description: "C0 command parameters for panel drive timing."
+  c5:
+    type: uint8-array
+    default: [0x03]
+    description: "C5 command parameter for VCOM adjustment."
+  c8:
+    type: uint8-array
+    default: [0x00, 0x32, 0x36, 0x45, 0x06, 0x16, 0x37, 0x75, 0x77, 0x54, 0x0C, 0x00]
+    description: "C8 command parameters for gamma correction."
+  madctl:
+    type: uint8-array
+    default: [0x0A]
+    description: "Memory Access Control (MADCTL) register value."
+  colmod:
+    type: uint8-array
+    default: [0x55]
+    description: "Interface Pixel Format (COLMOD) register value."
+  caset:
+    type: uint8-array
+    default: [0x00, 0x00, 0x01, 0x3F]
+    description: "Column Address Set (CASET) register value."
+  paset:
+    type: uint8-array
+    default: [0x00, 0x00, 0x01, 0xDF]
+    description: "Page Address Set (PASET) register value."
+
