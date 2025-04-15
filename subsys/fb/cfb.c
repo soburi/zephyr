@@ -69,14 +69,44 @@ static struct char_framebuffer char_fb;
 
 static inline uint8_t *get_glyph_ptr(const struct cfb_font *fptr, char c)
 {
+	if (c < fptr->first_char || c > fptr->last_char) {
+		return NULL;
+	}
+
 	return (uint8_t *)fptr->data +
 	       (c - fptr->first_char) *
 	       (fptr->width * fptr->height / 8U);
 }
 
-static inline uint8_t get_glyph_byte(uint8_t *glyph_ptr, const struct cfb_font *fptr,
-				     uint8_t x, uint8_t y)
+static inline uint8_t get_glyph_byte(const uint8_t *glyph_ptr, const struct cfb_font *fptr,
+                                     uint8_t x, uint8_t y)
 {
+	if (!glyph_ptr) {
+		/* tofu renderer */
+		const uint8_t remains = fptr->height - (y * 8);
+		const uint8_t margin = MAX(fptr->width / 10, 1); /* 10% of width or 1 */
+
+		if ((x == margin) || (x == ((fptr->width - 1) - margin))) {
+			if (y == 0) {
+				return (BIT_MASK(8) << margin) & 0xFF;
+			} else if (remains > 8) {
+				return BIT_MASK(8);
+			} else {
+				return BIT_MASK(remains) >> margin;
+			}
+		} else if (x > margin && x < ((fptr->width - 1) - margin)) {
+			if (y == 0) {
+				return BIT(0) << margin;
+			} else if (remains > 8) {
+				return 0;
+			} else {
+				return BIT(remains) >> (1 + margin);
+			}
+		}
+
+		return 0;
+	}
+
 	if (fptr->caps & CFB_FONT_MONO_VPACKED) {
 		return glyph_ptr[x * (fptr->height / 8U) + y];
 	} else if (fptr->caps & CFB_FONT_MONO_HPACKED) {
@@ -96,19 +126,10 @@ static uint8_t draw_char_vtmono(const struct char_framebuffer *fb,
 				bool draw_bg)
 {
 	const struct cfb_font *fptr = &(fb->fonts[fb->font_idx]);
+	const uint8_t *glyph_ptr = get_glyph_ptr(fptr, c);
 	const bool font_is_msbfirst = ((fptr->caps & CFB_FONT_MSB_FIRST) != 0);
 	const bool need_reverse =
 		(((fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0) != font_is_msbfirst);
-	uint8_t *glyph_ptr;
-
-	if (c < fptr->first_char || c > fptr->last_char) {
-		c = ' ';
-	}
-
-	glyph_ptr = get_glyph_ptr(fptr, c);
-	if (!glyph_ptr) {
-		return 0;
-	}
 
 	for (size_t g_x = 0; g_x < fptr->width; g_x++) {
 		const int16_t fb_x = x + g_x;
