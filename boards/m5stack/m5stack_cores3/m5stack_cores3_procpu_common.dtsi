@@ -79,7 +79,7 @@
 	pinctrl-0 = <&i2c0_default>;
 	pinctrl-names = "default";
 
-	axp2101@34 {
+	axp2101: axp2101@34 {
 		compatible = "x-powers,axp2101";
 		reg = <0x34>;
 		status = "okay";
