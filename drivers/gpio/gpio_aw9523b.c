@@ -24,7 +24,6 @@ LOG_MODULE_REGISTER(gpio_aw9523b, CONFIG_GPIO_LOG_LEVEL);
 #define AW9523B_REG_OUTPUT(n)     (AW9523B_REG_OUTPUT0 + n)
 
 enum read_write_toggle_t {
-	READ,
 	WRITE,
 	TOGGLE,
 };
@@ -84,7 +83,7 @@ static int gpio_aw9523b_pin_configure(const struct device *dev, gpio_pin_t pin, 
 			return -ENOTSUP;
 		}
 	} else {
-		if (flags & GPIO_SINGLE_ENDED) {
+		if (flags & GPIO_PUSH_PULL) {
 			return -ENOTSUP;
 		}
 	}
@@ -146,7 +145,7 @@ on_error:
  *                      When mode is TOGGLE, this param will ignored.
  * @param[in]      mode Choose mode from READ, WRITE or TOGGLE.
  */
-static int gpio_aw9523b_port_read_write_toggle(const struct device *dev, gpio_port_pins_t mask,
+static int gpio_aw9523b_port_write_toggle(const struct device *dev, gpio_port_pins_t mask,
 					       gpio_port_value_t *value,
 					       enum read_write_toggle_t mode)
 {
@@ -163,22 +162,9 @@ static int gpio_aw9523b_port_read_write_toggle(const struct device *dev, gpio_po
 
 	k_sem_take(aw9523b_get_lock(config->mfd_dev), K_FOREVER);
 
-	/*
-	 * As with interrupts, the INPUT values are read for each address
-	 * to keep the internal state correct.
-	 */
-	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_INPUT0, &buf[0], 1);
+	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_OUTPUT0, buf, sizeof(buf));
 	if (err) {
-		LOG_ERR("%s: Failed to read port0 status (%d)", dev->name, err);
-		goto end;
-	}
-	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_INPUT1, &buf[1], 1);
-	if (err) {
-		LOG_ERR("%s: Failed to read port1 status (%d)", dev->name, err);
-		goto end;
-	}
-
-	if (mode == READ) {
+		LOG_ERR("%s: Failed to read port0 output status (%d)", dev->name, err);
 		goto end;
 	}
 
@@ -203,27 +189,56 @@ static int gpio_aw9523b_port_read_write_toggle(const struct device *dev, gpio_po
 end:
 	k_sem_give(aw9523b_get_lock(config->mfd_dev));
 
-	if (err == 0 && mode == READ) {
-		*value = sys_get_le16(buf);
-	}
-
 	return err;
 }
 
 static int gpio_aw9523b_port_get_raw(const struct device *dev, gpio_port_value_t *value)
 {
-	return gpio_aw9523b_port_read_write_toggle(dev, UINT16_MAX, value, READ);
+	const struct gpio_aw9523b_config *const config = dev->config;
+	uint8_t buf[2];
+	int err;
+
+	/* Can't do I2C bus operations from an ISR */
+	if (k_is_in_isr()) {
+		return -EWOULDBLOCK;
+	}
+
+	k_sem_take(aw9523b_get_lock(config->mfd_dev), K_FOREVER);
+
+	/*
+	 * As with interrupts, the INPUT values are read for each address
+	 * to keep the internal state correct.
+	 */
+	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_INPUT0, &buf[0], 1);
+	if (err) {
+		LOG_ERR("%s: Failed to read port0 status (%d)", dev->name, err);
+		goto end;
+	}
+	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_INPUT1, &buf[1], 1);
+	if (err) {
+		LOG_ERR("%s: Failed to read port1 status (%d)", dev->name, err);
+	}
+
+end:
+	k_sem_give(aw9523b_get_lock(config->mfd_dev));
+
+	if (err == 0) {
+		*value = sys_get_le16(buf);
+	}
+
+	return err;
+
 }
 
 static int gpio_aw9523b_port_set_masked_raw(const struct device *dev, gpio_port_pins_t mask,
 					    gpio_port_value_t value)
 {
-	return gpio_aw9523b_port_read_write_toggle(dev, mask, &value, WRITE);
+	return gpio_aw9523b_port_write_toggle(dev, mask, &value, WRITE);
 }
 
 static int gpio_aw9523b_port_set_bits_raw(const struct device *dev, gpio_port_pins_t pins)
 {
-	return gpio_aw9523b_port_read_write_toggle(dev, pins, &pins, WRITE);
+	return gpio_aw9523b_port_write_toggle(dev, pins, &pins, WRITE);
 }
 
 static int gpio_aw9523b_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t pins)
@@ -231,12 +246,12 @@ static int gpio_aw9523b_port_clear_bits_raw(const struct device *dev, gpio_port_
 	const gpio_port_value_t zero = 0;
 
 	/* If WRITE is specified, this pointer is used for reading only. It can cast. */
-	return gpio_aw9523b_port_read_write_toggle(dev, pins, (gpio_port_value_t *)&zero, WRITE);
+	return gpio_aw9523b_port_write_toggle(dev, pins, (gpio_port_value_t *)&zero, WRITE);
 }
 
 static int gpio_aw9523b_port_toggle_bits(const struct device *dev, gpio_port_pins_t pins)
 {
-	return gpio_aw9523b_port_read_write_toggle(dev, pins, NULL, TOGGLE);
+	return gpio_aw9523b_port_write_toggle(dev, pins, NULL, TOGGLE);
 }
 
 static __maybe_unused void gpio_aw9523b_interrupt_worker(struct k_work *work)
@@ -467,7 +482,7 @@ end_hw_reset:
 		return err;
 	}
 
-	if (!config->port0_push_pull) {
+	if (config->port0_push_pull) {
 		/* Configure port0 to push-pull mode */
 		err = i2c_reg_update_byte_dt(&config->i2c, AW9523B_REG_CTL, AW9523B_GPOMD, 0xFF);
 		if (err) {

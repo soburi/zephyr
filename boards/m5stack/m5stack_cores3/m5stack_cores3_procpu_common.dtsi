@@ -182,7 +182,6 @@
 			compatible = "awinic,aw9523b-gpio";
 			gpio-controller;
 			#gpio-cells = <2>;
-			port0-push-pull;
 			int-gpios = <&gpio0 21 GPIO_ACTIVE_LOW>;
 		};
 	};
@@ -191,8 +190,8 @@
 		status = "okay";
 		compatible = "focaltech,ft5336";
 		reg = <0x38>;
-		int-gpios = <&aw9523b_gpio 10 GPIO_ACTIVE_LOW>;
-		reset-gpios = <&aw9523b_gpio 0 GPIO_ACTIVE_LOW>;
+		int-gpios = <&aw9523b_gpio 10 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+		reset-gpios = <&aw9523b_gpio 0 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
 	};
 };
 
