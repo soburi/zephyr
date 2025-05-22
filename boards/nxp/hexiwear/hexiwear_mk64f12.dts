@@ -119,6 +119,11 @@
 		status = "disabled";
 		compatible = "maxim,max30101";
 		reg = <0x57>;
+		mode = "MULTI_LED";
+		adc-full-scale = <8192>;
+		adc-resolution = <18>;
+		led-pulse-amplitude = <51000>, <10200>, <51000>;
+		multi-led-slot = "LED3", "NONE", "NONE", "NONE";
 	};
 };
 

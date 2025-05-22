@@ -139,7 +139,7 @@ static int max30101_init(const struct device *dev)
 
 	/* Reset the sensor */
 	if (i2c_reg_write_byte_dt(&config->i2c, MAX30101_REG_MODE_CFG,
-				  MAX30101_MODE_CFG_RESET_MASK)) {
+				  BIT(MAX301XX_MODE_CFG_RESET_SHIFT))) {
 		return -EIO;
 	}
 
@@ -150,7 +150,7 @@ static int max30101_init(const struct device *dev)
 			LOG_ERR("Could read mode cfg after reset");
 			return -EIO;
 		}
-	} while (mode_cfg & MAX30101_MODE_CFG_RESET_MASK);
+	} while (mode_cfg & BIT(MAX301XX_MODE_CFG_RESET_SHIFT));
 
 	/* Write the FIFO configuration register */
 	if (i2c_reg_write_byte_dt(&config->i2c, MAX30101_REG_FIFO_CFG,
@@ -184,22 +184,22 @@ static int max30101_init(const struct device *dev)
 		return -EIO;
 	}
 
-#ifdef CONFIG_MAX30101_MULTI_LED_MODE
-	uint8_t multi_led[2];
+	if (config->mode == MAX30101_MODE_MULTI_LED) {
+		uint8_t multi_led[2];
 
-	/* Write the multi-LED mode control registers */
-	multi_led[0] = (config->slot[1] << 4) | (config->slot[0]);
-	multi_led[1] = (config->slot[3] << 4) | (config->slot[2]);
+		/* Write the multi-LED mode control registers */
+		multi_led[0] = (config->slot[1] << 4) | (config->slot[0]);
+		multi_led[1] = (config->slot[3] << 4) | (config->slot[2]);
 
-	if (i2c_reg_write_byte_dt(&config->i2c, MAX30101_REG_MULTI_LED,
-				  multi_led[0])) {
-		return -EIO;
+		if (i2c_reg_write_byte_dt(&config->i2c, MAX30101_REG_MULTI_LED,
+					  multi_led[0])) {
+			return -EIO;
+		}
+		if (i2c_reg_write_byte_dt(&config->i2c, MAX30101_REG_MULTI_LED + 1,
+					  multi_led[1])) {
+			return -EIO;
+		}
 	}
-	if (i2c_reg_write_byte_dt(&config->i2c, MAX30101_REG_MULTI_LED + 1,
-				  multi_led[1])) {
-		return -EIO;
-	}
-#endif
 
 	/* Initialize the channel map and active channel count */
 	data->num_channels = 0U;
@@ -222,47 +222,59 @@ static int max30101_init(const struct device *dev)
 	return 0;
 }
 
-static struct max30101_config max30101_config = {
-	.i2c = I2C_DT_SPEC_INST_GET(0),
-	.fifo = (CONFIG_MAX30101_SMP_AVE << MAX30101_FIFO_CFG_SMP_AVE_SHIFT) |
-#ifdef CONFIG_MAX30101_FIFO_ROLLOVER_EN
-		MAX30101_FIFO_CFG_ROLLOVER_EN_MASK |
-#endif
-		(CONFIG_MAX30101_FIFO_A_FULL <<
-		 MAX30101_FIFO_CFG_FIFO_FULL_SHIFT),
+#define MAX301XX_SLOT_MULTI_LED(nd, i)                                                             \
+	UTIL_CAT(MAX301XX_SLOT_,                                                                   \
+		 COND_CODE_1(DT_PROP_HAS_IDX(nd, multi_led_slot, i),                                \
+			(DT_STRING_UPPER_TOKEN_BY_IDX(nd, multi_led_slot, i)), (DISABLED)))
 
-#if defined(CONFIG_MAX30101_HEART_RATE_MODE)
-	.mode = MAX30101_MODE_HEART_RATE,
-	.slot[0] = MAX30101_SLOT_RED_LED1_PA,
-	.slot[1] = MAX30101_SLOT_DISABLED,
-	.slot[2] = MAX30101_SLOT_DISABLED,
-	.slot[3] = MAX30101_SLOT_DISABLED,
-#elif defined(CONFIG_MAX30101_SPO2_MODE)
-	.mode = MAX30101_MODE_SPO2,
-	.slot[0] = MAX30101_SLOT_RED_LED1_PA,
-	.slot[1] = MAX30101_SLOT_IR_LED2_PA,
-	.slot[2] = MAX30101_SLOT_DISABLED,
-	.slot[3] = MAX30101_SLOT_DISABLED,
-#else
-	.mode = MAX30101_MODE_MULTI_LED,
-	.slot[0] = CONFIG_MAX30101_SLOT1,
-	.slot[1] = CONFIG_MAX30101_SLOT2,
-	.slot[2] = CONFIG_MAX30101_SLOT3,
-	.slot[3] = CONFIG_MAX30101_SLOT4,
-#endif
+#define MAX301XX_SLOT0_MULTI_LED(nd)  MAX301XX_SLOT_MULTI_LED(nd, 0)
+#define MAX301XX_SLOT1_MULTI_LED(nd)  MAX301XX_SLOT_MULTI_LED(nd, 1)
+#define MAX301XX_SLOT2_MULTI_LED(nd)  MAX301XX_SLOT_MULTI_LED(nd, 2)
+#define MAX301XX_SLOT3_MULTI_LED(nd)  MAX301XX_SLOT_MULTI_LED(nd, 3)
+#define MAX301XX_SLOT0_HEART_RATE(nd) MAX30101_SLOT_IR_LED1_PA
+#define MAX301XX_SLOT1_HEART_RATE(nd) MAX30101_SLOT_DISABLED
+#define MAX301XX_SLOT2_HEART_RATE(nd) MAX30101_SLOT_DISABLED
+#define MAX301XX_SLOT3_HEART_RATE(nd) MAX30101_SLOT_DISABLED
+#define MAX301XX_SLOT0_SPO2(nd)       MAX30101_SLOT_IR_LED1_PA
+#define MAX301XX_SLOT1_SPO2(nd)       MAX30101_SLOT_IR_LED2_PA
+#define MAX301XX_SLOT2_SPO2(nd)       MAX30101_SLOT_DISABLED
+#define MAX301XX_SLOT3_SPO2(nd)       MAX30101_SLOT_DISABLED
 
-	.spo2 = (CONFIG_MAX30101_ADC_RGE << MAX301XX_SPO2_ADC_RGE_SHIFT) |
-		(CONFIG_MAX30101_SR << MAX301XX_SPO2_SR_SHIFT) |
-		(MAX30101_PW_18BITS << MAX301XX_SPO2_PW_SHIFT),
+#define MAX301XX_FIFO_A_FULL(nd)      DT_PROP_OR(nd, fifo_almost_full, 0)
+#define MAX301XX_FIFO_ROLLOVER_EN(nd) DT_PROP_OR(nd, fifo_rollover, 0)
 
-	.led_pa[0] = CONFIG_MAX30101_LED1_PA,
-	.led_pa[1] = CONFIG_MAX30101_LED2_PA,
-	.led_pa[2] = CONFIG_MAX30101_LED3_PA,
-};
+#define MAX301XX_ADC_RGE(nd) UTIL_CAT(MAX301XX_ADC_RGE_, DT_PROP_OR(nd, adc_full_scale, 0))
+#define MAX301XX_SMP_AVE(nd) UTIL_CAT(MAX301XX_SMP_AVE, DT_PROP_OR(nd, sample_averaging, 0))
+#define MAX301XX_SR(nd)      UTIL_CAT(MAX301XX_SR_, DT_PROP_OR(nd, sample_rate, 0))
+#define MAX301XX_MODE(nd)    UTIL_CAT(MAX30101_MODE_, DT_STRING_UPPER_TOKEN(nd, mode))
 
-static struct max30101_data max30101_data;
+#define MAX301XX_PW(nd)                                                                            \
+	UTIL_CAT(UTIL_CAT(UTIL_CAT(UTIL_CAT(MAX30101, _), PW_), DT_PROP(nd, adc_resolution)), BITS)
 
-SENSOR_DEVICE_DT_INST_DEFINE(0, max30101_init, NULL,
-		    &max30101_data, &max30101_config,
-		    POST_KERNEL, CONFIG_SENSOR_INIT_PRIORITY,
-		    &max30101_driver_api);
+#define MAX301XX_LED_PA(nd, pr, i) (DT_PROP_BY_IDX(nd, pr, i) / 200)
+#define MAX301XX_SLOT(nd, pr, i)                                                                   \
+	UTIL_CAT(UTIL_CAT(UTIL_CAT(MAX301XX_SLOT, i), _), DT_STRING_UPPER_TOKEN(nd, mode))(nd)
+
+#define MAX301XX_DEFINE(node, mdl)                                                                 \
+	static struct max30101_config max301xx_cfg_##mdl##_##node = {                              \
+		.i2c = I2C_DT_SPEC_GET(node),                                                      \
+		.fifo = (MAX301XX_SMP_AVE(node) << MAX301XX_FIFO_CFG_SMP_AVE_SHIFT) |              \
+			(MAX301XX_FIFO_A_FULL(node) << MAX301XX_FIFO_CFG_FIFO_FULL_SHIFT) |        \
+			(MAX301XX_FIFO_ROLLOVER_EN(node) << MAX301XX_FIFO_CFG_ROLLOVER_EN_SHIFT),  \
+		.spo2 = (MAX301XX_ADC_RGE(node) << MAX301XX_SPO2_ADC_RGE_SHIFT) |                  \
+			(MAX301XX_SR(node) << MAX301XX_SPO2_SR_SHIFT) |                            \
+			(MAX301XX_PW(node) << MAX301XX_SPO2_PW_SHIFT),                             \
+		.led_pa = {                                                                        \
+			DT_FOREACH_PROP_ELEM_SEP(node, led_pulse_amplitude, MAX301XX_LED_PA, (,))  \
+		},                                                                                 \
+		.mode = MAX301XX_MODE(node),                                                       \
+		.slot = {                                                                          \
+			DT_FOREACH_PROP_ELEM_SEP(node, multi_led_slot, MAX301XX_SLOT, (,))         \
+		},                                                                                 \
+	};                                                                                         \
+	static struct max30101_data max301xx_data_##mdl##_##node;                                  \
+	SENSOR_DEVICE_DT_DEFINE(node, max30101_init, NULL, &max301xx_data_##mdl##_##node,          \
+				&max301xx_cfg_##mdl##_##node, POST_KERNEL,                         \
+				CONFIG_SENSOR_INIT_PRIORITY, &max30101_driver_api);
+
+DT_FOREACH_STATUS_OKAY_VARGS(maxim_max30101, MAX301XX_DEFINE, 1)

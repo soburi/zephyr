@@ -1,0 +1,81 @@
+# Copyright (c) 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: MAX301xx heart rate sensor common definition
+
+include: [sensor-device.yaml, i2c-device.yaml]
+
+properties:
+  sample-averaging:
+    type: int
+    default: 1
+    enum: [1, 2, 4, 8, 16, 32]
+    description: |
+      To reduce the amount of data throughput, adjacent samples (in each
+      individual channel) can be averaged and decimated on the chip by
+      setting this register. Set to 1 for no averaging.
+
+  fifo-rollover:
+    type: boolean
+    description: |
+      Controls the behavior of the FIFO when the FIFO becomes completely
+      filled with data. If set, the FIFO address rolls over to zero and the
+      FIFO continues to fill with new data. If not set, then the FIFO is
+      not updated until FIFO_DATA is read or the WRITE/READ pointer
+      positions are changed.
+
+  fifo-almost-full:
+    type: int
+    default: 0
+    enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    description: |
+      Set the trigger for the FIFO_A_FULL interrupt
+
+  mode:
+    type: string
+    enum:
+      - "HEART_RATE"
+      - "SPO2"
+      - "MULTI_LED"
+
+  adc-full-scale:
+    type: int
+    default: 2048
+    enum: [2048, 4096, 8192, 16384]
+    description: |
+      Set the ADC's full-scale.
+      2048  = 7.81 pA/LSB
+      4096  = 15.63 pA/LSB
+      8192  = 31.25 pA/LSB
+      16384 = 62.5 pA/LSB
+
+  sample-rate:
+    type: int
+    default: 50
+    enum: [50, 100, 200, 400, 800, 1000, 1600, 3200]
+    description:
+      Set the effective sampling rate with one sample consisting of one
+      pulse/conversion per active LED channel. In SpO2 mode, these means
+      one IR pulse/conversion and one red pulse/conversion per sample period.
+
+  adc-resolution:
+    type: int
+    default: 15
+    enum: [15, 16, 17, 18]
+
+  led-pulse-amplitude:
+    type: array
+    description: |
+      Set the pulse amplitude to control the LED1 (red) current in micro-ampere.
+      The actual measured LED current for each part can vary significantly due to
+      the trimming methodology.
+
+  multi-led-slot:
+    type: string-array
+    enum:
+      - "NONE"
+      - "LED1"
+      - "LED2"
+      - "LED3"
+    description: |
+      Set which LED and pulse amplitude are active in time slot 1.
