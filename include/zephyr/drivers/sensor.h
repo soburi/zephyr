@@ -202,6 +202,15 @@ enum sensor_channel {
 	/** Gyroscope bias (X/Y/Z components in radians/s) */
 	SENSOR_CHAN_GBIAS_XYZ,
 
+	/** Photodiode current in red spectrum, in microampere. */
+	SENSOR_CHAN_PHOTOCURRENT_RED,
+	/** Photodiode current in infra-red spectrum, in microampere. */
+	SENSOR_CHAN_PHOTOCURRENT_IR,
+	/** Photodiode current in green spectrum, in microampere. */
+	SENSOR_CHAN_PHOTOCURRENT_GREEN,
+	/** Photodiode current in blue spectrum, in microampere. */
+	SENSOR_CHAN_PHOTOCURRENT_BLUE,
+
 	/** All channels. */
 	SENSOR_CHAN_ALL,
 
