@@ -12,6 +12,23 @@
 
 LOG_MODULE_REGISTER(MAX30101, CONFIG_SENSOR_LOG_LEVEL);
 
+static inline uint16_t max301xx_adc_full_scale(const struct device *dev)
+{
+	const struct max30101_config *config = dev->config;
+	const uint16_t full_scale[] = {2048, 4096, 8192, 16384};
+	const uint8_t adc_sel = (config->spo2 >> MAX301XX_SPO2_ADC_RGE_SHIFT) & 0x03;
+
+	return full_scale[adc_sel];
+}
+
+static inline uint8_t max301xx_fifo_data_bits(const struct device *dev)
+{
+	const struct max30101_config *config = dev->config;
+	const uint8_t pw_sel = (config->spo2 >> MAX301XX_SPO2_PW_SHIFT) & 0x03;
+
+	return 15 + pw_sel;
+}
+
 static int max30101_sample_fetch(const struct device *dev,
 				 enum sensor_channel chan)
 {
@@ -32,11 +49,10 @@ static int max30101_sample_fetch(const struct device *dev,
 	}
 
 	fifo_chan = 0;
-	for (i = 0; i < num_bytes; i += 3) {
+	for (i = 0; i < num_bytes; i += MAX30101_BYTES_PER_CHANNEL) {
 		/* Each channel is 18-bits */
-		fifo_data = (buffer[i] << 16) | (buffer[i + 1] << 8) |
-			    (buffer[i + 2]);
-		fifo_data &= MAX30101_FIFO_DATA_MASK;
+		fifo_data = (buffer[i] << 16) | (buffer[i + 1] << 8) | (buffer[i + 2]);
+		fifo_data >>= (MAX30101_BYTES_PER_CHANNEL * 8 - max301xx_fifo_data_bits(dev));
 
 		/* Save the raw data */
 		data->raw[fifo_chan++] = fifo_data;
@@ -54,15 +70,15 @@ static int max30101_channel_get(const struct device *dev,
 	int fifo_chan;
 
 	switch (chan) {
-	case SENSOR_CHAN_RED:
+	case SENSOR_CHAN_PHOTOCURRENT_RED:
 		led_chan = MAX30101_LED_CHANNEL_RED;
 		break;
 
-	case SENSOR_CHAN_IR:
+	case SENSOR_CHAN_PHOTOCURRENT_IR:
 		led_chan = MAX30101_LED_CHANNEL_IR;
 		break;
 
-	case SENSOR_CHAN_GREEN:
+	case SENSOR_CHAN_PHOTOCURRENT_GREEN:
 		led_chan = MAX30101_LED_CHANNEL_GREEN;
 		break;
 
@@ -81,9 +97,11 @@ static int max30101_channel_get(const struct device *dev,
 		return -ENOTSUP;
 	}
 
-	/* TODO: Scale the raw data to standard units */
-	val->val1 = data->raw[fifo_chan];
-	val->val2 = 0;
+	const uint64_t raw = data->raw[fifo_chan];
+	const uint32_t na = raw * max301xx_adc_full_scale(dev) / max301xx_fifo_data_bits(dev);
+
+	val->val1 = na / 1000U;
+	val->val2 = (na % 1000U) * 1000000;
 
 	return 0;
 }
@@ -233,9 +251,9 @@ static struct max30101_config max30101_config = {
 	.slot[3] = CONFIG_MAX30101_SLOT4,
 #endif
 
-	.spo2 = (CONFIG_MAX30101_ADC_RGE << MAX30101_SPO2_ADC_RGE_SHIFT) |
-		(CONFIG_MAX30101_SR << MAX30101_SPO2_SR_SHIFT) |
-		(MAX30101_PW_18BITS << MAX30101_SPO2_PW_SHIFT),
+	.spo2 = (CONFIG_MAX30101_ADC_RGE << MAX301XX_SPO2_ADC_RGE_SHIFT) |
+		(CONFIG_MAX30101_SR << MAX301XX_SPO2_SR_SHIFT) |
+		(MAX30101_PW_18BITS << MAX301XX_SPO2_PW_SHIFT),
 
 	.led_pa[0] = CONFIG_MAX30101_LED1_PA,
 	.led_pa[1] = CONFIG_MAX30101_LED2_PA,
