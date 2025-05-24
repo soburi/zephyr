@@ -10,13 +10,25 @@
 
 int main(void)
 {
-	struct sensor_value green;
-	const struct device *const dev = DEVICE_DT_GET_ANY(maxim_max30101);
+	const struct device *dev;
+	int channels[] = { SENSOR_CHAN_PHOTOCURRENT_GREEN,
+	       		   SENSOR_CHAN_PHOTOCURRENT_RED,
+			   SENSOR_CHAN_PHOTOCURRENT_IR };
+	const char* ch_name[] = { "GREEN", "RED", "IR" };
+	struct sensor_value values[] = { {0, 0}, {0, 0}, {0, 0} };
+	bool ch_available[] = { true, true, true };
+	int err;
 
+       	dev = DEVICE_DT_GET_ANY(maxim_max30101);
 	if (dev == NULL) {
 		printf("Could not get max30101 device\n");
+		dev = DEVICE_DT_GET_ANY(maxim_max30102);
+	}
+	if (dev == NULL) {
+		printf("Could not get max30102 device\n");
 		return 0;
 	}
+
 	if (!device_is_ready(dev)) {
 		printf("max30101 device %s is not ready\n", dev->name);
 		return 0;
@@ -24,12 +36,26 @@ int main(void)
 
 	while (1) {
 		sensor_sample_fetch(dev);
-		sensor_channel_get(dev, SENSOR_CHAN_GREEN, &green);
+
+		for (int i=0; i<ARRAY_SIZE(values); i++) {
+			if (!ch_available[i]) {
+				continue;
+			}
+
+			err = sensor_channel_get(dev, channels[i], &values[i]);
+			if (err) {
+				ch_available[i] = false;
+				printf("%s channel not available %s\n", ch_name[i], dev->name);
+				continue;
+			}
+			printf("%s=%d.%06d ", ch_name[i], values[i].val1, values[i].val2);
+		}
 
 		/* Print green LED data*/
-		printf("GREEN=%d\n", green.val1);
+		printf("\n");
 
 		k_sleep(K_MSEC(20));
 	}
+
 	return 0;
 }
