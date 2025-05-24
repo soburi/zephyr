@@ -41,9 +41,12 @@ int main(void)
 	}
 
 	while (1) {
+		k_sleep(K_MSEC(100));
+
 		err = sensor_sample_fetch(dev);
 		if (err) {
 			printf("sensor_sample_fetch failed %d\n", err);
+			continue;
 		}
 
 		for (int i=0; i<ARRAY_SIZE(ch); i++) {
@@ -64,8 +67,6 @@ int main(void)
 
 		/* Print green LED data*/
 		printf("\n");
-
-		k_sleep(K_MSEC(20));
 	}
 
 	return 0;

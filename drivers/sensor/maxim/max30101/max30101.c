@@ -49,8 +49,33 @@ static int max301xx_sample_fetch(const struct device *dev,
 	int num_bytes;
 	int i;
 
+	uint8_t wr_ptr;
+	uint8_t rd_ptr;
+
+	size_t available;
+
+	if (i2c_reg_read_byte_dt(&config->i2c, MAX301XX_REG_FIFO_WR,
+				 &wr_ptr)) {
+		LOG_ERR("Could not fetch sample");
+		return -EIO;
+	}
+
+	if (i2c_reg_read_byte_dt(&config->i2c, MAX301XX_REG_FIFO_RD,
+				 &rd_ptr)) {
+		LOG_ERR("Could not fetch sample");
+		return -EIO;
+	}
+
+	available = (wr_ptr - rd_ptr + 16) % 16;
+
 	/* Read all the active channels for one sample */
 	num_bytes = data->num_channels * MAX30101_BYTES_PER_CHANNEL;
+
+	if (available == 0) {
+		LOG_ERR("not enough data");
+		return -EAGAIN;
+	}
+
 	if (i2c_burst_read_dt(&config->i2c, MAX301XX_REG_FIFO_DATA, buffer,
 			      num_bytes)) {
 		LOG_ERR("Could not fetch sample");
