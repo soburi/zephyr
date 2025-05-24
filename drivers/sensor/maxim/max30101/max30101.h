@@ -44,9 +44,18 @@
 #define MAX301XX_SPO2_PW_SHIFT		        0
 
 #define MAX30101_PART_ID		0x15
+#define MAX30102_PART_ID		0x15
 
 #define MAX30101_BYTES_PER_CHANNEL	3
+#define MAX30102_BYTES_PER_CHANNEL	3
 #define MAX30101_MAX_NUM_CHANNELS	3
+#define MAX30102_MAX_NUM_CHANNELS	2
+
+#define MAX301XX_MODEL_30101            1
+#define MAX301XX_MODEL_30102            2
+
+#define MAX301XX_MAX_NUM_CHANNELS(n)         UTIL_CAT(UTIL_CAT(MAX3010, n), _MAX_NUM_CHANNELS)
+
 #define MAX30101_MAX_BYTES_PER_SAMPLE	(MAX30101_MAX_NUM_CHANNELS * \
 					 MAX30101_BYTES_PER_CHANNEL)
 
@@ -120,6 +129,7 @@ struct max30101_config {
 	uint8_t led_pa[MAX30101_MAX_NUM_CHANNELS];
 	enum max30101_mode mode;
 	enum max30101_slot slot[4];
+	uint8_t model;
 };
 
 struct max30101_data {

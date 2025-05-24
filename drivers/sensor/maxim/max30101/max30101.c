@@ -4,13 +4,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT maxim_max30101
-
 #include <zephyr/logging/log.h>
 
 #include "max30101.h"
 
 LOG_MODULE_REGISTER(MAX30101, CONFIG_SENSOR_LOG_LEVEL);
+
+static inline uint8_t max301xx_max_num_channels(const struct device *dev)
+{
+	const struct max30101_config *config = dev->config;
+
+	if (config->model == MAX301XX_MODEL_30101) {
+		return 3;
+	}
+
+	return 2;
+}
 
 static inline uint16_t max301xx_adc_full_scale(const struct device *dev)
 {
@@ -65,6 +74,8 @@ static int max30101_channel_get(const struct device *dev,
 				enum sensor_channel chan,
 				struct sensor_value *val)
 {
+	const struct max30101_config *config = dev->config;
+	const uint8_t max_num_channels = max301xx_max_num_channels(dev);
 	struct max30101_data *data = dev->data;
 	enum max30101_led_channel led_chan;
 	int fifo_chan;
@@ -79,9 +90,11 @@ static int max30101_channel_get(const struct device *dev,
 		break;
 
 	case SENSOR_CHAN_PHOTOCURRENT_GREEN:
-		led_chan = MAX30101_LED_CHANNEL_GREEN;
-		break;
-
+		if (config->model == MAX301XX_MODEL_30101) {
+			led_chan = MAX30101_LED_CHANNEL_GREEN;
+			break;
+		}
+		/* fall through */
 	default:
 		LOG_ERR("Unsupported sensor channel");
 		return -ENOTSUP;
@@ -92,7 +105,7 @@ static int max30101_channel_get(const struct device *dev,
 	 * isn't active.
 	 */
 	fifo_chan = data->map[led_chan];
-	if (fifo_chan >= MAX30101_MAX_NUM_CHANNELS) {
+	if (fifo_chan >= max_num_channels) {
 		LOG_ERR("Inactive sensor channel");
 		return -ENOTSUP;
 	}
@@ -114,6 +127,7 @@ static DEVICE_API(sensor, max30101_driver_api) = {
 static int max30101_init(const struct device *dev)
 {
 	const struct max30101_config *config = dev->config;
+	const uint8_t max_num_channels = max301xx_max_num_channels(dev);
 	struct max30101_data *data = dev->data;
 	uint8_t part_id;
 	uint8_t mode_cfg;
@@ -203,17 +217,17 @@ static int max30101_init(const struct device *dev)
 
 	/* Initialize the channel map and active channel count */
 	data->num_channels = 0U;
-	for (led_chan = 0U; led_chan < MAX30101_MAX_NUM_CHANNELS; led_chan++) {
-		data->map[led_chan] = MAX30101_MAX_NUM_CHANNELS;
+	for (led_chan = 0U; led_chan < max_num_channels; led_chan++) {
+		data->map[led_chan] = max_num_channels;
 	}
 
 	/* Count the number of active channels and build a map that translates
 	 * the LED channel number (red/ir/green) to the fifo channel number.
 	 */
-	for (fifo_chan = 0; fifo_chan < MAX30101_MAX_NUM_CHANNELS;
+	for (fifo_chan = 0; fifo_chan < max_num_channels;
 	     fifo_chan++) {
 		led_chan = (config->slot[fifo_chan] & MAX30101_SLOT_LED_MASK)-1;
-		if (led_chan < MAX30101_MAX_NUM_CHANNELS) {
+		if (led_chan < max_num_channels) {
 			data->map[led_chan] = fifo_chan;
 			data->num_channels++;
 		}
@@ -224,7 +238,7 @@ static int max30101_init(const struct device *dev)
 
 #define MAX301XX_SLOT_MULTI_LED(nd, i)                                                             \
 	UTIL_CAT(MAX301XX_SLOT_,                                                                   \
-		 COND_CODE_1(DT_PROP_HAS_IDX(nd, multi_led_slot, i),                                \
+		 COND_CODE_1(DT_PROP_HAS_IDX(nd, multi_led_slot, i),                               \
 			(DT_STRING_UPPER_TOKEN_BY_IDX(nd, multi_led_slot, i)), (DISABLED)))
 
 #define MAX301XX_SLOT0_MULTI_LED(nd)  MAX301XX_SLOT_MULTI_LED(nd, 0)
@@ -244,12 +258,10 @@ static int max30101_init(const struct device *dev)
 #define MAX301XX_FIFO_ROLLOVER_EN(nd) DT_PROP_OR(nd, fifo_rollover, 0)
 
 #define MAX301XX_ADC_RGE(nd) UTIL_CAT(MAX301XX_ADC_RGE_, DT_PROP_OR(nd, adc_full_scale, 0))
-#define MAX301XX_SMP_AVE(nd) UTIL_CAT(MAX301XX_SMP_AVE, DT_PROP_OR(nd, sample_averaging, 0))
+#define MAX301XX_SMP_AVE(nd) UTIL_CAT(MAX301XX_SMP_AVE_, DT_PROP_OR(nd, sample_averaging, 0))
 #define MAX301XX_SR(nd)      UTIL_CAT(MAX301XX_SR_, DT_PROP_OR(nd, sample_rate, 0))
 #define MAX301XX_MODE(nd)    UTIL_CAT(MAX30101_MODE_, DT_STRING_UPPER_TOKEN(nd, mode))
-
-#define MAX301XX_PW(nd)                                                                            \
-	UTIL_CAT(UTIL_CAT(UTIL_CAT(UTIL_CAT(MAX30101, _), PW_), DT_PROP(nd, adc_resolution)), BITS)
+#define MAX301XX_PW(nd)      UTIL_CAT(UTIL_CAT(MAX30101_PW_, DT_PROP(nd, adc_resolution)), BITS)
 
 #define MAX301XX_LED_PA(nd, pr, i) (DT_PROP_BY_IDX(nd, pr, i) / 200)
 #define MAX301XX_SLOT(nd, pr, i)                                                                   \
@@ -271,6 +283,7 @@ static int max30101_init(const struct device *dev)
 		.slot = {                                                                          \
 			DT_FOREACH_PROP_ELEM_SEP(node, multi_led_slot, MAX301XX_SLOT, (,))         \
 		},                                                                                 \
+		.model = mdl,                                                                      \
 	};                                                                                         \
 	static struct max30101_data max301xx_data_##mdl##_##node;                                  \
 	SENSOR_DEVICE_DT_DEFINE(node, max30101_init, NULL, &max301xx_data_##mdl##_##node,          \
@@ -278,3 +291,4 @@ static int max30101_init(const struct device *dev)
 				CONFIG_SENSOR_INIT_PRIORITY, &max30101_driver_api);
 
 DT_FOREACH_STATUS_OKAY_VARGS(maxim_max30101, MAX301XX_DEFINE, 1)
+DT_FOREACH_STATUS_OKAY_VARGS(maxim_max30102, MAX301XX_DEFINE, 2)
