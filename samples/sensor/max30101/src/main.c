@@ -8,15 +8,22 @@
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
 
+struct channel_data {
+	int ch;
+	const char* name;
+	struct sensor_value value;
+	bool unusable;
+};
+
 int main(void)
 {
 	const struct device *dev;
-	int channels[] = { SENSOR_CHAN_PHOTOCURRENT_GREEN,
-	       		   SENSOR_CHAN_PHOTOCURRENT_RED,
-			   SENSOR_CHAN_PHOTOCURRENT_IR };
-	const char* ch_name[] = { "GREEN", "RED", "IR" };
-	struct sensor_value values[] = { {0, 0}, {0, 0}, {0, 0} };
-	bool ch_available[] = { true, true, true };
+	struct channel_data ch[] = {
+		{ SENSOR_CHAN_PHOTOCURRENT_GREEN, "GREEN" },
+		{ SENSOR_CHAN_PHOTOCURRENT_RED, "RED" },
+		{ SENSOR_CHAN_PHOTOCURRENT_IR, "IR" },
+	};
+
 	int err;
 
        	dev = DEVICE_DT_GET_ANY(maxim_max30101);
@@ -39,20 +46,20 @@ int main(void)
 			printf("sensor_sample_fetch failed %d\n", err);
 		}
 
-		for (int i=0; i<ARRAY_SIZE(values); i++) {
-			if (!ch_available[i]) {
+		for (int i=0; i<ARRAY_SIZE(ch); i++) {
+			if (ch[i].unusable) {
 				continue;
 			}
 
-			err = sensor_channel_get(dev, channels[i], &values[i]);
+			err = sensor_channel_get(dev, ch[i].ch, &ch[i].value);
 			if (err == -ENOTSUP) {
-				ch_available[i] = false;
-				printf("%s channel not available %s\n", ch_name[i], dev->name);
+				ch[i].unusable = true;
+				printf("%s channel not available %s\n", ch[i].name, dev->name);
 				continue;
 			} else if (err) {
 				printf("sensor_channel_get failed %d\n", err);
 			}
-			printf("%s=%d.%06d ", ch_name[i], values[i].val1, values[i].val2);
+			printf("%s=%d.%06d ", ch[i].name, ch[i].value.val1, ch[i].value.val2);
 		}
 
 		/* Print green LED data*/
