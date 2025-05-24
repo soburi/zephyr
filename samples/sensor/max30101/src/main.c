@@ -21,21 +21,23 @@ int main(void)
 
        	dev = DEVICE_DT_GET_ANY(maxim_max30101);
 	if (dev == NULL) {
-		printf("Could not get max30101 device\n");
 		dev = DEVICE_DT_GET_ANY(maxim_max30102);
 	}
 	if (dev == NULL) {
-		printf("Could not get max30102 device\n");
+		printf("Could not get max30101/max30102 device\n");
 		return 0;
 	}
 
 	if (!device_is_ready(dev)) {
-		printf("max30101 device %s is not ready\n", dev->name);
+		printf("%s is not ready\n", dev->name);
 		return 0;
 	}
 
 	while (1) {
-		sensor_sample_fetch(dev);
+		err = sensor_sample_fetch(dev);
+		if (err) {
+			printf("sensor_sample_fetch failed %d\n", err);
+		}
 
 		for (int i=0; i<ARRAY_SIZE(values); i++) {
 			if (!ch_available[i]) {
@@ -43,10 +45,12 @@ int main(void)
 			}
 
 			err = sensor_channel_get(dev, channels[i], &values[i]);
-			if (err) {
+			if (err == -ENOTSUP) {
 				ch_available[i] = false;
 				printf("%s channel not available %s\n", ch_name[i], dev->name);
 				continue;
+			} else if (err) {
+				printf("sensor_channel_get failed %d\n", err);
 			}
 			printf("%s=%d.%06d ", ch_name[i], values[i].val1, values[i].val2);
 		}
