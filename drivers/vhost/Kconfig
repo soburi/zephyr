@@ -20,6 +20,54 @@ config VHOST_CHAIN_BUFS_MAX
 	  to use statically allocated mapping structures instead of
 	  allocating from the heap in the datapath.
 
+config VHOST_XEN_MMIO
+	bool "MMIO-based VIRTIO backend on Xen hypervisor"
+	default y
+	depends on DT_HAS_XEN_VHOST_MMIO_ENABLED
+	select XEN_STORE_CLI
+	select XEN_DMOP
+	select XEN_TOOLS
+	help
+	  Enable the VIRTIO-MMIO backend on the Xen hypervisor. The backend
+	  serves VIRTIO-MMIO register accesses of a guest domain through an
+	  IOREQ server and accesses guest buffers via the grant table.
+
+	  Consider enabling XEN_REGIONS so that grant mappings are placed in
+	  Xen extended regions instead of consuming heap pages.
+
+if VHOST_XEN_MMIO
+
+config VHOST_XEN_MMIO_BUF_PAGES_MAX
+	int "Maximum number of pages in a single buffer"
+	default 4
+	range 1 64
+	help
+	  Upper bound for the number of grant pages a single VIRTIO buffer
+	  (one descriptor) may span. Buffers exceeding the bound are rejected
+	  with -E2BIG. Note that the virtqueue rings themselves are also
+	  mapped through this path, so this value must cover
+	  DIV_ROUND_UP(8 * queue-size-max + 6, 4096) pages for the used ring.
+
+config VHOST_XEN_MMIO_INFLIGHT_CHAINS_MAX
+	int "Maximum number of in-flight descriptor chains per queue"
+	default 16
+	range 1 1024
+	help
+	  Number of descriptor chains per queue that can be mapped
+	  concurrently (between vhost_prepare_iovec() and
+	  vhost_release_iovec()). The mapping bookkeeping is allocated
+	  statically from a memory slab sized by this value.
+
+config VHOST_XEN_MMIO_VCPUS_MAX
+	int "Maximum number of frontend vCPUs"
+	default 4
+	range 1 128
+	help
+	  Maximum number of vCPUs of the frontend domain. One IOREQ event
+	  channel is bound per frontend vCPU.
+
+endif # VHOST_XEN_MMIO
+
 endif # VHOST
 
 module = VHOST
