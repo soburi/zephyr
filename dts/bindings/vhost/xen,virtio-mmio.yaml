@@ -1,0 +1,24 @@
+# Copyright (c) 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: Xen Platform Control Registers
+
+compatible: "xen,vhost-mmio"
+
+include: base.yaml
+
+properties:
+  num-queues:
+    type: int
+
+  queue-size-max:
+    type: int
+
+  device-id:
+    type: int
+
+  vendor-id:
+    type: int
+
+  base:
+    type: int
