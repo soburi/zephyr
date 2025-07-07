@@ -316,10 +316,25 @@ DEFINE_XEN_GUEST_HANDLE(vcpu_guest_context_t);
 struct xen_arch_domainconfig {
 	/* IN/OUT */
 	uint8_t gic_version;
+#if CONFIG_XEN_DOMCTL_INTERFACE_VERSION >= 0x00000017
+	/* IN - Contains SVE vector length divided by 128 */
+	uint8_t sve_vl;
+#endif /* CONFIG_XEN_DOMCTL_INTERFACE_VERSION */
 	/* IN */
 	uint16_t tee_type;
+#ifdef CONFIG_XEN_DOMCTL_XENTROOPS_ARCH_SCI_TYPE
+	/* IN */
+	uint16_t arm_sci_type;
+#endif /* CONFIG_XEN_DOMCTL_XENTROOPS_ARCH_SCI_TYPE */
 	/* IN */
 	uint32_t nr_spis;
+#ifdef CONFIG_XEN_DOMCTL_XENTROOPS_ARCH_VGSX_OSID
+	/*
+	 * IN
+	 * OSID used by virtual GSX device.
+	 */
+	uint8_t vgsx_osid;
+#endif /* CONFIG_XEN_DOMCTL_XENTROOPS_ARCH_VGSX_OSID */
 	/*
 	 * OUT
 	 * Based on the property clock-frequency in the DT timer node.

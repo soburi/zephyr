@@ -55,3 +55,22 @@ config XEN_SYSCTL_INTERFACE_VERSION
 	  domctl interface that Zephyr will use to communicate with
 	  the hypervisor. The default value is the latest version supported
 	  by the kernel.
+
+config XEN_DOMCTL_XENTROOPS_ARCH_VGSX_OSID
+	bool "OSID used by virtual GSX device"
+	default n
+	depends on XEN
+	help
+	  Pass vGSX OSID when creating domain in struct xen_arch_domainconfig.
+	  Having matching OSID <-> DomID in place, Xen can properly recognize
+	  to what domain to inject GSX irq.
+	  Note. It is custom Xen property which is not maintained by Xen community.
+
+config XEN_DOMCTL_XENTROOPS_ARCH_SCI_TYPE
+	bool "SCI mediator framework type"
+	default n
+	depends on XEN
+	help
+	  SCI mediator framework type for creating domain in struct
+	  xen_arch_domainconfig.
+	  Note. It is custom Xen property which is not maintained by Xen community.
