@@ -65,6 +65,8 @@
 #define VIRTIO_F_VERSION_1          32
 /** Indicates device needs platform-specific handling. */
 #define VIRTIO_F_ACCESS_PLATFORM    33
+/** Indicates support for the packed virtqueue layout. */
+#define VIRTIO_F_RING_PACKED        34
 
 /** @} */
 
