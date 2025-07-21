@@ -1,0 +1,27 @@
+# Copyright (c) 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+config VHOST
+	bool "VHost (VIRTIO backend) drivers"
+	help
+	  Enable VHost drivers, which implement the host (device) side of
+	  VIRTIO transports so that Zephyr can act as a VIRTIO device backend.
+
+if VHOST
+
+config VHOST_CHAIN_BUFS_MAX
+	int "Maximum number of buffers in a descriptor chain"
+	default 8
+	range 1 1024
+	help
+	  Upper bound for the number of buffers (descriptors) in a single
+	  VIRTIO descriptor chain that VHost backends are able to process.
+	  Longer chains are rejected with -E2BIG. This bound allows backends
+	  to use statically allocated mapping structures instead of
+	  allocating from the heap in the datapath.
+
+endif # VHOST
+
+module = VHOST
+module-str = VHOST
+source "subsys/logging/Kconfig.template.log_config"
