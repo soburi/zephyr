@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig VHOST
+	bool "Support for VHOST"
+	help
+	  Enable options for VHOST
+
+if VHOST
+
+module = VHOST
+module-str = VHOST
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # VHOST
