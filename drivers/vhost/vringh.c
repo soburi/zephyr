@@ -102,8 +102,10 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 	const uint16_t avail_idx = sys_le16_to_cpu(vrh->vring.avail->idx);
 	const uint16_t slot = vrh->last_avail_idx % vr->num;
 	const uint16_t head = sys_le16_to_cpu(vr->avail->ring[slot]);
+	struct vhost_gpa_range desc_ranges[vr->num];
 	uint16_t idx = head;
 	size_t count = 0;
+	uint16_t total_pages = 0;
 	uint16_t flags;
 	int ret;
 
@@ -158,29 +160,27 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 			continue;
 		}
 
-		struct vringh_iov *iov = (flags & VIRTQ_DESC_F_WRITE) ? wiov : riov;
-
-		if (!iov->iov || iov->used >= iov->max_num) {
-			LOG_ERR("IOV buffer full or invalid: used=%u max_num=%u iov=%p", iov->used,
-				iov->max_num, iov->iov);
-
-			ret = -E2BIG;
-			goto failed;
-		}
-
-		size_t filled;
-		ret = vhost_prepare_iovec(vrh->dev, vrh->queue_id, gpa, len, head,
-					      &iov->iov[iov->used], iov->max_num - iov->used,
-					      &filled);
-		if (ret < 0) {
-			LOG_ERR("vhost_prepare_iovec failed: %d", ret);
-			goto failed;
-		}
+		/* Store descriptor information for Phase 2 */
+		desc_ranges[count].gpa = gpa;
+		desc_ranges[count].len = len;
+		desc_ranges[count].is_write = !!(flags & VIRTQ_DESC_F_WRITE);
 
 		count++;
-		iov->used += filled;
 		idx = next;
 	} while (flags & VIRTQ_DESC_F_NEXT);
+
+	size_t filled_read = 0;
+	size_t filled_write = 0;
+	ret = vhost_prepare_iovec(vrh->dev, vrh->queue_id, head, desc_ranges, count, riov->iov,
+				  riov->max_num, wiov->iov, wiov->max_num, &filled_read,
+				  &filled_write);
+	if (ret < 0) {
+		LOG_ERR("vhost_prepare_iovec failed: %d", ret);
+		goto failed;
+	}
+
+	riov->used = filled_read;
+	wiov->used = filled_write;
 
 	/* Success - update state and return */
 	*head_out = head;
@@ -192,7 +192,7 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 	return 1;
 
 failed:
-	if (count) {
+	if (count > 0) {
 		int rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
 		if (rc < 0) {
 			LOG_ERR("vhost_release_iovec failed: %d", rc);

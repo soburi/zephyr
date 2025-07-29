@@ -31,12 +31,23 @@ struct vhost_iovec {
 };
 
 /**
+ * Represents a guest physical address and length pair for VHost operations.
+ */
+struct vhost_gpa_range {
+	uint64_t gpa;
+	size_t len;
+	bool is_write;
+};
+
+/**
  * VHost controller API structure
  */
 __subsystem struct vhost_controller_api {
-	int (*prepare_iovec)(const struct device *dev, uint16_t queue_id, uint64_t gpa, size_t len,
-			     uint16_t head, struct vhost_iovec *iovec, size_t max_iovecs,
-			     size_t *out_count);
+	int (*prepare_iovec)(const struct device *dev, uint16_t queue_id, uint16_t head,
+			     const struct vhost_gpa_range *ranges, size_t range_count,
+			     struct vhost_iovec *read_iovec, size_t max_read_iovecs,
+			     struct vhost_iovec *write_iovec, size_t max_write_iovecs,
+			     size_t *read_count, size_t *write_count);
 	int (*release_iovec)(const struct device *dev, uint16_t queue_id, uint16_t head);
 	int (*get_virtq)(const struct device *dev, uint16_t queue_id, void **parts,
 			 size_t *queue_size);
@@ -55,15 +66,22 @@ __subsystem struct vhost_controller_api {
 };
 
 /**
- * @brief Prepare iovec for executing data transfer
+ * @brief Prepare iovecs for a descriptor chain
  *
- * @param dev              VHost controller device
- * @param queue_id         Queue ID
- * @param gpa              Guest physical address
- * @param len              Buffer length
- * @param iovec            Output iovec array
- * @param max_iovecs       Maximum iovecs available
- * @param out_count        Number of iovecs prepared
+ * Maps guest physical addresses to host virtual addresses for the given
+ * descriptor chain and fills the provided read and write iovec arrays.
+ *
+ * @param dev              VHost device
+ * @param queue_id         Queue identifier
+ * @param head             Descriptor chain head
+ * @param ranges           Array of GPA/length pairs from descriptor chain
+ * @param range_count      Number of ranges in the array
+ * @param read_iovec       Array to fill with read iovecs
+ * @param max_read_iovecs  Maximum number of read iovecs that can be stored
+ * @param write_iovec      Array to fill with write iovecs
+ * @param max_write_iovecs Maximum number of write iovecs that can be stored
+ * @param read_count       Number of read iovecs prepared
+ * @param write_count      Number of write iovecs prepared
  *
  * @retval 0             Success
  * @retval -EINVAL       Invalid parameters
@@ -71,13 +89,17 @@ __subsystem struct vhost_controller_api {
  * @retval -EFAULT       Invalid guest address
  * @retval -E2BIG        Buffer too large
  */
-static inline int vhost_prepare_iovec(const struct device *dev, uint16_t queue_id, uint64_t gpa,
-				      size_t len, uint16_t head, struct vhost_iovec *iovec,
-				      size_t max_iovecs, size_t *out_count)
+static inline int vhost_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
+				      const struct vhost_gpa_range *ranges, size_t range_count,
+				      struct vhost_iovec *read_iovec, size_t max_read_iovecs,
+				      struct vhost_iovec *write_iovec, size_t max_write_iovecs,
+				      size_t *read_count, size_t *write_count)
 {
 	const struct vhost_controller_api *api = dev->api;
 
-	return api->prepare_iovec(dev, queue_id, gpa, len, head, iovec, max_iovecs, out_count);
+	return api->prepare_iovec(dev, queue_id, head, ranges, range_count, read_iovec,
+				  max_read_iovecs, write_iovec, max_write_iovecs, read_count,
+				  write_count);
 }
 
 /**
