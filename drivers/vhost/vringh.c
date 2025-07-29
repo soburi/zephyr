@@ -103,9 +103,10 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 	const uint16_t slot = vrh->last_avail_idx % vr->num;
 	const uint16_t head = sys_le16_to_cpu(vr->avail->ring[slot]);
 	struct vhost_gpa_range desc_ranges[vr->num];
+	size_t filled_read = 0;
+	size_t filled_write = 0;
 	uint16_t idx = head;
 	size_t count = 0;
-	uint16_t total_pages = 0;
 	uint16_t flags;
 	int ret;
 
@@ -169,8 +170,6 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 		idx = next;
 	} while (flags & VIRTQ_DESC_F_NEXT);
 
-	size_t filled_read = 0;
-	size_t filled_write = 0;
 	ret = vhost_prepare_iovec(vrh->dev, vrh->queue_id, head, desc_ranges, count, riov->iov,
 				  riov->max_num, wiov->iov, wiov->max_num, &filled_read,
 				  &filled_write);
