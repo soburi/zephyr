@@ -105,6 +105,7 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 	uint16_t idx = head;
 	size_t count = 0;
 	uint16_t flags;
+	int ret;
 
 	if (vrh->last_avail_idx == avail_idx) {
 		k_spin_unlock(&vrh->lock, key);
@@ -140,22 +141,15 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 
 		if (count >= vr->num) {
 			LOG_ERR("Descriptor chain too long: %zu", count);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto failed;
 		}
-		count++;
 
 		/* Validate next descriptor index */
 		if ((flags & VIRTQ_DESC_F_NEXT) && next >= vr->num) {
 			LOG_ERR("Invalid next descriptor: %u >= %u", next, vr->num);
-			int rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
-
-			if (rc < 0) {
-				LOG_ERR("vhost_release_iovec failed: %d", rc);
-				vhost_set_device_status(vrh->dev, DEVICE_STATUS_FAILED);
-			}
-			vringh_iov_reset(riov);
-			vringh_iov_reset(wiov);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto failed;
 		}
 
 		if (len == 0) {
@@ -169,36 +163,21 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 		if (!iov->iov || iov->used >= iov->max_num) {
 			LOG_ERR("IOV buffer full or invalid: used=%u max_num=%u iov=%p", iov->used,
 				iov->max_num, iov->iov);
-			int rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
 
-			if (rc < 0) {
-				LOG_ERR("vhost_release_iovec failed: %d", rc);
-				vhost_set_device_status(vrh->dev, DEVICE_STATUS_FAILED);
-			}
-			vringh_iov_reset(riov);
-			vringh_iov_reset(wiov);
-			return -E2BIG;
+			ret = -E2BIG;
+			goto failed;
 		}
 
 		size_t filled;
-		int ret = vhost_prepare_iovec(vrh->dev, vrh->queue_id, gpa, len, head,
+		ret = vhost_prepare_iovec(vrh->dev, vrh->queue_id, gpa, len, head,
 					      &iov->iov[iov->used], iov->max_num - iov->used,
 					      &filled);
-
 		if (ret < 0) {
 			LOG_ERR("vhost_prepare_iovec failed: %d", ret);
-			int rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
-
-			if (rc < 0) {
-				LOG_ERR("vhost_release_iovec failed: %d", rc);
-				vhost_set_device_status(vrh->dev, DEVICE_STATUS_FAILED);
-			}
-			vringh_iov_reset(riov);
-			vringh_iov_reset(wiov);
-
-			return ret;
+			goto failed;
 		}
 
+		count++;
 		iov->used += filled;
 		idx = next;
 	} while (flags & VIRTQ_DESC_F_NEXT);
@@ -211,6 +190,20 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 	k_spin_unlock(&vrh->lock, key);
 
 	return 1;
+
+failed:
+	if (count) {
+		int rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
+		if (rc < 0) {
+			LOG_ERR("vhost_release_iovec failed: %d", rc);
+			vhost_set_device_status(vrh->dev, DEVICE_STATUS_FAILED);
+		}
+	}
+
+	vringh_iov_reset(riov);
+	vringh_iov_reset(wiov);
+
+	return ret;
 }
 
 int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t total_len)
