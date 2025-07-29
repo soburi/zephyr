@@ -321,18 +321,56 @@ static uintptr_t query_irq(struct xenstore *xs, domid_t domid, int deviceid)
 	return irq_val;
 }
 
-static void unmap_pages(struct mapped_pages *pool)
+static int unmap_pages(struct mapped_pages *pool)
 {
+	int ret = 0;
+
 	if (!pool->unmap) {
-		return;
+		return 0;
 	}
 
 	for (int i = 0; i < pool->count; i++) {
 		if (pool->unmap[i].status == GNTST_okay) {
-			gnttab_unmap_refs(&pool->unmap[i], 1);
+			int rc = gnttab_unmap_refs(&pool->unmap[i], 1);
+			if (rc < 0) {
+				LOG_ERR("gnttab_unmap_refs failed: %d", rc);
+				ret = rc;
+			}
 			pool->unmap[i].status = GNTST_general_error;
 		}
 	}
+
+	return ret;
+}
+
+static int free_pages(struct mapped_pages *pool, size_t len)
+{
+	int ret = 0;
+
+	for (int i = 0; i < len; i++) {
+		int rc = unmap_pages(pool);
+		if (rc < 0) {
+			LOG_ERR("unmap_pages failed: %d", rc);
+			ret = rc;
+		}
+
+		if (pool->unmap) {
+			k_free(pool->unmap);
+			pool->unmap = NULL;
+		}
+
+		if (pool->buf) {
+			rc = gnttab_put_pages(pool->buf, pool->size);
+			if (rc < 0) {
+				LOG_ERR("gnttab_put_pages failed: %d", rc);
+				ret = rc;
+			}
+
+			pool->buf = NULL;
+		}
+	}
+
+	return ret;
 }
 
 static void reset_queue(const struct device *dev, uint16_t queue_id)
@@ -341,40 +379,15 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
-	for (int i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
-		unmap_pages(&vq_ctx->meta[i]);
-
-		if (vq_ctx->meta[i].unmap) {
-			k_free(vq_ctx->meta[i].unmap);
-			vq_ctx->meta[i].unmap = NULL;
-		}
-
-		if (vq_ctx->meta[i].buf) {
-			gnttab_put_pages(vq_ctx->meta[i].buf, vq_ctx->meta[i].size);
-			vq_ctx->meta[i].buf = NULL;
-		}
-	}
-
-	for (int i = 0; i < config->queue_size_max; i++) {
-		unmap_pages(&vq_ctx->pool[i]);
-
-		if (vq_ctx->pool[i].unmap) {
-			k_free(vq_ctx->pool[i].unmap);
-			vq_ctx->pool[i].unmap = NULL;
-		}
-
-		if (vq_ctx->pool[i].buf) {
-			gnttab_put_pages(vq_ctx->pool[i].buf, vq_ctx->pool[i].size);
-			vq_ctx->pool[i].buf = NULL;
-		}
-	}
+	free_pages(vq_ctx->meta, NUM_OF_VIRTQ_PARTS);
+	free_pages(vq_ctx->pool, config->queue_size_max);
 
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
 	vq_ctx->queue_size = 0;
-	atomic_set(&vq_ctx->notified, 0);
 	vq_ctx->notify_callback.cb = 0;
 	vq_ctx->notify_callback.data = 0;
+	atomic_set(&vq_ctx->notified, 0);
 
 	memset(vq_ctx->meta, 0, sizeof(struct mapped_pages) * NUM_OF_VIRTQ_PARTS);
 	memset(vq_ctx->pool, 0, sizeof(struct mapped_pages) * config->queue_size_max);
@@ -858,7 +871,7 @@ static void init_workhandler(struct k_work *work)
 
 retry:
 	if (ret < 0) {
-		uint32_t retry_count = atomic_inc(&data->retry);
+		const uint32_t retry_count = atomic_inc(&data->retry);
 
 		reset_device(dev);
 		k_work_schedule_for_queue(&data->workq, &data->init_work,
@@ -982,7 +995,7 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	int rc;
+	int ret;
 
 	int idx = -1;
 
@@ -1018,9 +1031,9 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 		return 0;
 	}
 
-	rc = gnttab_unmap_refs(vq_ctx->pool[idx].unmap, count);
-	if (rc < 0) {
-		LOG_ERR("%s: q=%u: gnttab_unmap_refs failed: %d", __func__, queue_id, rc);
+	ret = unmap_pages(&vq_ctx->pool[idx]);
+	if (ret < 0) {
+		LOG_ERR("%s: q=%u: gnttab_unmap_refs failed: %d", __func__, queue_id, ret);
 	}
 
 	key = k_spin_lock(&data->lock);
@@ -1028,7 +1041,7 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 	vq_ctx->pool[idx].count = 0;
 	k_spin_unlock(&data->lock, key);
 
-	return rc;
+	return ret;
 }
 
 static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue_id, uint64_t gpa,
@@ -1071,7 +1084,11 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		max_iovecs);
 
 	for (int i = 0; i < vq_ctx->queue_size; i++) {
-		if (vq_ctx->pool[i].head < 0) {
+		if (vq_ctx->pool[i].head < 0 && idx < 0) {
+			idx = i;
+		}
+
+		if (vq_ctx->pool[i].head == head) {
 			idx = i;
 			break;
 		}
@@ -1079,8 +1096,17 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	if (idx < 0) {
 		LOG_ERR("%s: no more buffers: q=%u:", __func__, queue_id);
-		ret = -ENOBUFS;
-		goto end;
+		return -ENOBUFS;
+	}
+
+	if (vq_ctx->pool[idx].head == head) {
+		LOG_WRN("Found unreleased head: %d", head);
+
+		ret = vhost_xen_mmio_release_iovec(dev, queue_id, head);
+		if (ret < 0) {
+			LOG_ERR("%s: vhost_xen_mmio_release_iovec: q=%u: failed %d", __func__, queue_id, ret);
+			return ret;
+		}
 	}
 
 	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
@@ -1330,7 +1356,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	};                                                                                         \
 	struct mapped_pages vhost_xen_mmio_vq_ctx_pool_##idx[Q_NUM(idx)][Q_SZ_MAX(idx)];           \
 	static struct virtq_context vhost_xen_mmio_vq_ctx_##idx[Q_NUM(idx)] = {                    \
-		LISTIFY(Q_NUM(idx), VQCTX_INIT, (,), idx),                                         \
+		LISTIFY(Q_NUM(idx), VQCTX_INIT, (,), idx),                                            \
 	};                                                                                         \
 	static struct vhost_xen_mmio_data vhost_xen_mmio_data_##idx = {                            \
 		.vq_ctx = vhost_xen_mmio_vq_ctx_##idx,                                             \
