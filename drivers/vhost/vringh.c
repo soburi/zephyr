@@ -254,22 +254,6 @@ int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t total_len)
 	return rc;
 }
 
-static uint16_t abandon_head(struct vringh *vrh, uint16_t before)
-{
-	const struct vring *vr = &vrh->vring;
-	const uint16_t avail_idx = sys_le16_to_cpu(vr->avail->idx);
-
-	/* Prevent unsigned underflow */
-	if (before > avail_idx) {
-		LOG_ERR("Invalid before value: %u > %u", before, avail_idx);
-		return 0;
-	}
-
-	const uint16_t ring_idx = (avail_idx - before) % vr->num;
-
-	return sys_le16_to_cpu(vr->avail->ring[ring_idx]);
-}
-
 int vringh_abandon(struct vringh *vrh, uint32_t num)
 {
 	struct vring *vr = &vrh->vring;
@@ -281,16 +265,6 @@ int vringh_abandon(struct vringh *vrh, uint32_t num)
 
 	if (!vrh) {
 		return -EINVAL;
-	}
-
-	for (int i = 0; i < num; i++) {
-		const uint16_t head = abandon_head(vrh, i);
-
-		rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
-		if (rc < 0) {
-			LOG_ERR("vhost_release_iovec failed: %d", rc);
-			vhost_set_device_status(vrh->dev, DEVICE_STATUS_FAILED);
-		}
 	}
 
 	k_spinlock_key_t key = k_spin_lock(&vrh->lock);
