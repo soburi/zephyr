@@ -208,7 +208,7 @@ static void store_cb(void *ptr)
 	}
 }
 
-static int xs_cmd_req(struct xenstore *xs, int type, const char * const *params, size_t param_num,
+static int xs_cmd_req(struct xenstore *xs, int type, const char *const *params, size_t param_num,
 		      char *buf, size_t len, uint32_t *preq_id)
 {
 	size_t plen = 0;
@@ -258,7 +258,7 @@ static int xs_cmd_req(struct xenstore *xs, int type, const char * const *params,
 	return 0;
 }
 
-static ssize_t xs_cmd(struct xenstore *xs, int type, const char * const *params, size_t params_num,
+static ssize_t xs_cmd(struct xenstore *xs, int type, const char *const *params, size_t params_num,
 		      char *buf, size_t len, k_timeout_t timeout)
 {
 	int err;
@@ -347,7 +347,7 @@ void xs_set_notify_callback(xs_notify_cb cb, void *param)
 
 ssize_t xs_read(struct xenstore *xs, const char *path, char *buf, size_t len)
 {
-	const char * const params[] = {path};
+	const char *const params[] = {path};
 
 	if (!xs || !path || !buf || len == 0) {
 		return -EINVAL;
@@ -358,7 +358,7 @@ ssize_t xs_read(struct xenstore *xs, const char *path, char *buf, size_t len)
 
 ssize_t xs_directory(struct xenstore *xs, const char *path, char *buf, size_t len)
 {
-	const char * const params[] = {path};
+	const char *const params[] = {path};
 
 	if (!xs || !path || !buf || len == 0) {
 		return -EINVAL;
@@ -369,7 +369,7 @@ ssize_t xs_directory(struct xenstore *xs, const char *path, char *buf, size_t le
 
 ssize_t xs_watch(struct xenstore *xs, const char *path, const char *token, char *buf, size_t len)
 {
-	const char * const params[] = {path, token};
+	const char *const params[] = {path, token};
 
 	if (!xs || !path || !token || !buf || len == 0) {
 		return -EINVAL;
