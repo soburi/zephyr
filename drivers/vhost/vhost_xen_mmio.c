@@ -1099,6 +1099,13 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		total_pages += (uint16_t)(end_page - start_page + 1);
 	}
 
+	if (total_pages == 0) {
+		*read_count = 0;
+		*write_count = 0;
+
+		return 0;
+	}
+
 	LOG_DBG("%s: q=%u: range_count=%zu total_pages=%u max_read=%zu max_write=%zu", __func__,
 		queue_id, range_count, total_pages, max_read_iovecs, max_write_iovecs);
 
@@ -1137,7 +1144,8 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	}
 
 	/* Pre-allocate buffer based on total_pages */
-	if (total_pages > 0) {
+	// if (total_pages > 0) {
+	if (vq_ctx->chains[head].pages->size < total_pages) {
 		/* Clean up old buffer */
 		if (vq_ctx->chains[head].pages->buf) {
 			gnttab_put_pages(vq_ctx->chains[head].pages->buf,
