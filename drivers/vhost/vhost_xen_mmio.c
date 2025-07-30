@@ -84,7 +84,6 @@ struct mapped_pages {
 struct descriptor_chain {
 	struct mapped_pages *pages;
 	size_t max_descriptors;
-	size_t used_descriptors;
 	int32_t chain_head;
 };
 
@@ -97,7 +96,6 @@ struct virtq_context {
 	size_t queue_size; /* Number of descriptors in this queue */
 	struct mapped_pages meta[3];
 	struct descriptor_chain *chains;
-	struct mapped_pages *pool;
 	struct queue_callback notify_callback;
 	atomic_t notified;
 };
@@ -389,7 +387,6 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
 	free_pages(vq_ctx->meta, NUM_OF_VIRTQ_PARTS);
-	free_pages(vq_ctx->pool, config->queue_size_max);
 
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
@@ -399,12 +396,11 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 	atomic_set(&vq_ctx->notified, 0);
 
 	memset(vq_ctx->meta, 0, sizeof(struct mapped_pages) * NUM_OF_VIRTQ_PARTS);
-	memset(vq_ctx->pool, 0, sizeof(struct mapped_pages) * config->queue_size_max);
 	memset(vq_ctx->chains, 0, sizeof(struct descriptor_chain) * config->queue_size_max);
 
-	/* Initialize descriptor chains with their mapped_pages pools */
+	/* Initialize descriptor chains */
 	for (int i = 0; i < config->queue_size_max; i++) {
-		vq_ctx->chains[i].pages = &vq_ctx->pool[i];
+		vq_ctx->chains[i].pages = NULL; /* Will be allocated dynamically */
 		vq_ctx->chains[i].max_descriptors = 1;     /* Initially one descriptor per chain */
 		vq_ctx->chains[i].chain_head = -1; /* Invalid head value */
 	}
@@ -491,10 +487,6 @@ end:
 	vq_ctx->meta[0].count = num_pages[0];
 	vq_ctx->meta[1].count = num_pages[1];
 	vq_ctx->meta[2].count = num_pages[2];
-
-	for (int i = 0; i < vq_ctx->queue_size; i++) {
-		vq_ctx->pool[i].head = -1;
-	}
 
 	k_spin_unlock(&data->lock, key);
 
@@ -1055,7 +1047,6 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 
 	key = k_spin_lock(&data->lock);
 	vq_ctx->chains[idx].chain_head = -1;
-	vq_ctx->chains[idx].used_descriptors = 0;
 	vq_ctx->chains[idx].pages->head = -1;
 	vq_ctx->chains[idx].pages->count = 0;
 	k_spin_unlock(&data->lock, key);
@@ -1106,6 +1097,17 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		queue_id, range_count, total_pages, max_read_iovecs, max_write_iovecs);
 
 	for (int i = 0; i < vq_ctx->queue_size; i++) {
+		/* Allocate pages structure if not already allocated */
+		if (vq_ctx->chains[i].pages == NULL) {
+			vq_ctx->chains[i].pages = k_malloc(sizeof(struct mapped_pages));
+			if (vq_ctx->chains[i].pages == NULL) {
+				LOG_ERR("%s: q=%u: failed to allocate pages structure", __func__, queue_id);
+				return -ENOMEM;
+			}
+			memset(vq_ctx->chains[i].pages, 0, sizeof(struct mapped_pages));
+			vq_ctx->chains[i].pages->head = -1;
+		}
+
 		if (vq_ctx->chains[i].pages->head < 0 &&
 		    vq_ctx->chains[i].chain_head < 0 && idx < 0) {
 			idx = i;
@@ -1299,7 +1301,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	/* Set chain head for tracking */
 	vq_ctx->chains[idx].chain_head = head;
-	vq_ctx->chains[idx].used_descriptors = range_count;
 	vq_ctx->chains[idx].pages->head = head;
 
 end:
@@ -1418,7 +1419,6 @@ static int vhost_xen_mmio_init(const struct device *dev)
 
 #define VQCTX_INIT(n, idx)                                                                         \
 	{                                                                                          \
-		.pool = vhost_xen_mmio_vq_ctx_pool_##idx[n],                                       \
 		.chains = vhost_xen_mmio_vq_ctx_chains_##idx[n],                                   \
 	}
 
@@ -1438,7 +1438,6 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.workq_priority = DT_INST_PROP_OR(idx, priority, 0),                               \
 		.device_features = BIT(VIRTIO_F_VERSION_1) | BIT(VIRTIO_F_ACCESS_PLATFORM),        \
 	};                                                                                         \
-	struct mapped_pages vhost_xen_mmio_vq_ctx_pool_##idx[Q_NUM(idx)][Q_SZ_MAX(idx)];           \
 	struct descriptor_chain vhost_xen_mmio_vq_ctx_chains_##idx[Q_NUM(idx)][Q_SZ_MAX(idx)];     \
 	static struct virtq_context vhost_xen_mmio_vq_ctx_##idx[Q_NUM(idx)] = {                    \
 		LISTIFY(Q_NUM(idx), VQCTX_INIT, (,), idx),                                            \
