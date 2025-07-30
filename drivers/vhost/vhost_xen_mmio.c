@@ -388,6 +388,14 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
+	/* Free dynamically allocated pages in descriptor chains */
+	for (int i = 0; i < config->queue_size_max; i++) {
+		if (vq_ctx->chains[i].pages) {
+			k_free(vq_ctx->chains[i].pages);
+			vq_ctx->chains[i].pages = NULL;
+		}
+	}
+
 	vq_ctx->queue_size = 0;
 	vq_ctx->notify_callback.cb = 0;
 	vq_ctx->notify_callback.data = 0;
@@ -398,9 +406,9 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 
 	/* Initialize descriptor chains */
 	for (int i = 0; i < config->queue_size_max; i++) {
-		vq_ctx->chains[i].pages = NULL; /* Will be allocated dynamically */
-		vq_ctx->chains[i].max_descriptors = 1;     /* Initially one descriptor per chain */
-		vq_ctx->chains[i].chain_head = -1; /* Invalid head value */
+		vq_ctx->chains[i].pages = NULL;        /* Will be allocated dynamically */
+		vq_ctx->chains[i].max_descriptors = 1; /* Initially one descriptor per chain */
+		vq_ctx->chains[i].chain_head = -1;     /* Invalid head value */
 	}
 
 	k_spin_unlock(&data->lock, key);
@@ -449,7 +457,7 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 			struct gnttab_map_grant_ref op = {
 				.host_addr = (uintptr_t)vq_ctx->meta[i].buf + (j * XEN_PAGE_SIZE),
 				.flags = GNTMAP_host_map,
-				.ref = (page_gpa & ~XEN_GRANT_ADDR_OFF) >> PAGE_SHIFT,
+				.ref = (page_gpa & ~XEN_GRANT_ADDR_OFF) >> 12,
 				.dom = data->fe.domid,
 			};
 
@@ -1046,6 +1054,11 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 	key = k_spin_lock(&data->lock);
 	vq_ctx->chains[idx].chain_head = -1;
 	vq_ctx->chains[idx].pages->count = 0;
+
+	/* Free the dynamically allocated pages structure */
+	k_free(vq_ctx->chains[idx].pages);
+	vq_ctx->chains[idx].pages = NULL;
+
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -1098,7 +1111,8 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		if (vq_ctx->chains[i].pages == NULL) {
 			vq_ctx->chains[i].pages = k_malloc(sizeof(struct mapped_pages));
 			if (vq_ctx->chains[i].pages == NULL) {
-				LOG_ERR("%s: q=%u: failed to allocate pages structure", __func__, queue_id);
+				LOG_ERR("%s: q=%u: failed to allocate pages structure", __func__,
+					queue_id);
 				return -ENOMEM;
 			}
 			memset(vq_ctx->chains[i].pages, 0, sizeof(struct mapped_pages));
@@ -1163,7 +1177,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 			if (new_unmap) {
 				k_free(new_unmap);
 			}
-			k_spin_unlock(&data->lock, key);
+			k_free(map_grant);
 			LOG_ERR("%s: q=%u: failed to allocate pages/unmap array", __func__,
 				queue_id);
 			return -ENOMEM;
@@ -1191,62 +1205,61 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		size_t remains = ranges[range_idx].len;
 		bool is_write = ranges[range_idx].is_write;
 
-		while (remains <= 0) {
-			continue;
+		while (remains > 0) {
+			size_t page_count = vq_ctx->chains[idx].pages->count + iovec_count;
+
+			if (page_count >= vq_ctx->chains[idx].pages->size) {
+				LOG_ERR("%s: q=%u: no more reserved pages: %zu >= %lu", __func__,
+					queue_id, page_count, vq_ctx->chains[idx].pages->size);
+				k_spin_unlock(&data->lock, key);
+				ret = -ENOMEM;
+				goto cleanup;
+			}
+
+			/* Check if we have space in the appropriate iovec array */
+			if (is_write && write_iovec_count >= max_write_iovecs) {
+				LOG_ERR("%s: q=%u: no more write iovecs: %zu >= %zu", __func__,
+					queue_id, write_iovec_count, max_write_iovecs);
+				k_spin_unlock(&data->lock, key);
+				ret = -E2BIG;
+				goto cleanup;
+			} else if (!is_write && read_iovec_count >= max_read_iovecs) {
+				LOG_ERR("%s: q=%u: no more read iovecs: %zu >= %zu", __func__,
+					queue_id, read_iovec_count, max_read_iovecs);
+				k_spin_unlock(&data->lock, key);
+				ret = -E2BIG;
+				goto cleanup;
+			}
+
+			/* Get the page and calculate offset and chunk size */
+			const void *host_page =
+				vq_ctx->chains[idx].pages->buf + (XEN_PAGE_SIZE * page_count);
+			const size_t page_offset = gpa & (XEN_PAGE_SIZE - 1);
+			const void *va = (void *)(((uintptr_t)host_page) + page_offset);
+			const size_t chunk = MIN(remains, XEN_PAGE_SIZE - page_offset);
+			struct gnttab_map_grant_ref *map = &map_grant[iovec_count];
+
+			/* Set up grant mapping with correct grant reference extraction */
+			map->host_addr = (uintptr_t)host_page;
+			map->flags = GNTMAP_host_map;
+			map->ref = (gpa & ~XEN_GRANT_ADDR_OFF) >> 12;
+			map->dom = data->fe.domid;
+
+			/* Fill the appropriate iovec array */
+			if (is_write) {
+				write_iovec[write_iovec_count].iov_base = (void *)va;
+				write_iovec[write_iovec_count].iov_len = chunk;
+				write_iovec_count++;
+			} else {
+				read_iovec[read_iovec_count].iov_base = (void *)va;
+				read_iovec[read_iovec_count].iov_len = chunk;
+				read_iovec_count++;
+			}
+
+			iovec_count++;
+			gpa += chunk;
+			remains -= chunk;
 		}
-		size_t page_count = vq_ctx->chains[idx].pages->count + iovec_count;
-
-		if (page_count >= vq_ctx->chains[idx].pages->size) {
-			LOG_ERR("%s: q=%u: no more reserved pages: %zu >= %lu", __func__, queue_id,
-				page_count, vq_ctx->chains[idx].pages->size);
-			k_spin_unlock(&data->lock, key);
-			ret = -ENOMEM;
-			goto cleanup;
-		}
-
-		/* Check if we have space in the appropriate iovec array */
-		if (is_write && write_iovec_count >= max_write_iovecs) {
-			LOG_ERR("%s: q=%u: no more write iovecs: %zu >= %zu", __func__, queue_id,
-				write_iovec_count, max_write_iovecs);
-			k_spin_unlock(&data->lock, key);
-			ret = -E2BIG;
-			goto cleanup;
-		} else if (!is_write && read_iovec_count >= max_read_iovecs) {
-			LOG_ERR("%s: q=%u: no more read iovecs: %zu >= %zu", __func__, queue_id,
-				read_iovec_count, max_read_iovecs);
-			k_spin_unlock(&data->lock, key);
-			ret = -E2BIG;
-			goto cleanup;
-		}
-
-		/* Get the page and calculate offset and chunk size */
-		const void *host_page =
-			vq_ctx->chains[idx].pages->buf + (XEN_PAGE_SIZE * page_count);
-		const size_t page_offset = gpa & (XEN_PAGE_SIZE - 1);
-		const void *va = (void *)(((uintptr_t)host_page) + page_offset);
-		const size_t chunk = MIN(remains, XEN_PAGE_SIZE - page_offset);
-		struct gnttab_map_grant_ref *map = &map_grant[iovec_count];
-
-		/* Set up grant mapping with correct grant reference extraction */
-		map->host_addr = (uintptr_t)host_page;
-		map->flags = GNTMAP_host_map;
-		map->ref = (gpa & ~XEN_GRANT_ADDR_OFF) >> XEN_PAGE_SHIFT;
-		map->dom = data->fe.domid;
-
-		/* Fill the appropriate iovec array */
-		if (is_write) {
-			write_iovec[write_iovec_count].iov_base = (void *)va;
-			write_iovec[write_iovec_count].iov_len = chunk;
-			write_iovec_count++;
-		} else {
-			read_iovec[read_iovec_count].iov_base = (void *)va;
-			read_iovec[read_iovec_count].iov_len = chunk;
-			read_iovec_count++;
-		}
-
-		iovec_count++;
-		gpa += chunk;
-		remains -= chunk;
 	}
 
 	k_spin_unlock(&data->lock, key);
