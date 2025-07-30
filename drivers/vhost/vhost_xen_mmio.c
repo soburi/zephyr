@@ -77,8 +77,6 @@ struct mapped_pages {
 	struct gnttab_unmap_grant_ref *unmap;
 	size_t count; /* current number of mapped buffers */
 	size_t size;
-
-	int32_t head;
 };
 
 struct descriptor_chain {
@@ -1047,7 +1045,6 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 
 	key = k_spin_lock(&data->lock);
 	vq_ctx->chains[idx].chain_head = -1;
-	vq_ctx->chains[idx].pages->head = -1;
 	vq_ctx->chains[idx].pages->count = 0;
 	k_spin_unlock(&data->lock, key);
 
@@ -1105,11 +1102,9 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 				return -ENOMEM;
 			}
 			memset(vq_ctx->chains[i].pages, 0, sizeof(struct mapped_pages));
-			vq_ctx->chains[i].pages->head = -1;
 		}
 
-		if (vq_ctx->chains[i].pages->head < 0 &&
-		    vq_ctx->chains[i].chain_head < 0 && idx < 0) {
+		if (vq_ctx->chains[i].chain_head < 0 && idx < 0) {
 			idx = i;
 		}
 
@@ -1138,7 +1133,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
 
 	if (!map_grant) {
-		vq_ctx->chains[idx].pages->head = -1;
 		LOG_ERR("%s: k_malloc failed: q=%u:", __func__, queue_id);
 		return -ENOMEM;
 	}
@@ -1169,7 +1163,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 			if (new_unmap) {
 				k_free(new_unmap);
 			}
-			vq_ctx->chains[idx].pages->head = -1;
 			k_spin_unlock(&data->lock, key);
 			LOG_ERR("%s: q=%u: failed to allocate pages/unmap array", __func__,
 				queue_id);
@@ -1291,7 +1284,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		gnttab_unmap_refs(
 			&vq_ctx->chains[idx].pages->unmap[vq_ctx->chains[idx].pages->count],
 			iovec_count);
-		vq_ctx->chains[idx].pages->head = -1;
 		ret = -EIO;
 		goto cleanup;
 	}
@@ -1301,7 +1293,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	/* Set chain head for tracking */
 	vq_ctx->chains[idx].chain_head = head;
-	vq_ctx->chains[idx].pages->head = head;
 
 end:
 	/* Set output counts */
@@ -1314,9 +1305,6 @@ end:
 cleanup:
 	if (map_grant) {
 		k_free(map_grant);
-	}
-	if (idx >= 0) {
-		vq_ctx->chains[idx].pages->head = -1;
 	}
 	return ret;
 }
