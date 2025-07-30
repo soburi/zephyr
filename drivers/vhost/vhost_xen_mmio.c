@@ -1054,6 +1054,72 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 	return ret;
 }
 
+int xxx(const struct device *dev, uint16_t queue_id, uint16_t head,
+	const struct vhost_gpa_range *ranges, size_t range_count,
+       	struct vhost_iovec *read_iovec, size_t read_max_iovecs,
+       	struct vhost_iovec *write_iovec, size_t write_max_iovecs,
+       	struct gnttab_map_grant_ref *map_grant)
+{
+	struct vhost_xen_mmio_data *data = dev->data;
+	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	struct descriptor_chain *dchain = &vq_ctx->chains[head];
+	k_spinlock_key_t key = k_spin_lock(&data->lock);
+	//size_t page_count = dchain->pages[0].unmap_count + iovec_count;
+	//int ret = 0;
+
+	size_t read_iovec_count = 0;
+	size_t write_iovec_count = 0;
+
+	for (size_t idx = 0; idx < range_count; idx++) {
+		bool is_write = ranges[idx].is_write;
+		size_t max_iovecs = is_write ? write_max_iovecs : read_max_iovecs;
+		size_t iovec_count = is_write ? write_iovec_count : read_iovec_count;
+		struct vhost_iovec *iovec = is_write ? &write_iovec[write_iovec_count] : &read_iovec[read_iovec_count];
+			
+		uint64_t gpa = ranges->gpa;
+		size_t len = ranges->len;
+
+		/*
+		if (page_count >= dchain->pages[0].unmap_pages) {
+			LOG_ERR("%s: q=%u: no more reserved pages: %zu >= %lu", __func__,
+				queue_id, page_count, dchain->pages[0].unmap_pages);
+			k_spin_unlock(&data->lock, key);
+			return -ENOMEM;
+			//goto cleanup;
+		}
+		*/
+
+		/* Check if we have space in the appropriate iovec array */
+		if (iovec_count >= max_iovecs) {
+			LOG_ERR("%s: q=%u: no more write iovecs: %zu >= %zu", __func__,
+				queue_id, iovec_count, max_iovecs);
+			k_spin_unlock(&data->lock, key);
+			return -E2BIG;
+			//goto cleanup;
+		} 
+
+		/* Get the page and calculate offset and chunk size */
+		const void *host_page = dchain->pages->buf + (XEN_PAGE_SIZE * (write_iovec_count + read_iovec_count));
+		const size_t page_offset = gpa & (XEN_PAGE_SIZE - 1);
+		const void *va = (void *)(((uintptr_t)host_page) + page_offset);
+		struct gnttab_map_grant_ref *map = map_grant;
+
+		/* Set up grant mapping with correct grant reference extraction */
+		map->host_addr = (uintptr_t)host_page;
+		map->flags = GNTMAP_host_map;
+		map->ref = (gpa & ~XEN_GRANT_ADDR_OFF) >> 12;
+		map->dom = data->fe.domid;
+
+		iovec->iov_base = (void *)va;
+		iovec->iov_len = len;
+		iovec_count++;
+	}
+       
+	k_spin_unlock(&data->lock, key);
+
+	return (write_iovec_count + read_iovec_count);
+}
+
 static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
 					const struct vhost_gpa_range *ranges, size_t range_count,
 					struct vhost_iovec *read_iovec, size_t max_read_iovecs,
@@ -1063,8 +1129,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	size_t read_iovec_count = 0, write_iovec_count = 0;
-	size_t iovec_count = 0;
 	int ret = 0;
 	k_spinlock_key_t key;
 	bool any_map_failed = false;
@@ -1172,9 +1236,30 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		return -ENOMEM;
 	}
 
-	key = k_spin_lock(&data->lock);
+	//key = k_spin_lock(&data->lock);
 
+	size_t read_iovec_count = 0, write_iovec_count = 0;
+	size_t iovec_count = 0;
+
+	ret = xxx(dev, queue_id, head,
+			ranges, range_count,
+			//iovec_count,
+			write_iovec, max_write_iovecs,
+		       	read_iovec, max_read_iovecs,
+		       	map_grant);
+	iovec_count = ret;
+#if 0
 	for (size_t idx = 0; idx < range_count; idx++) {
+		bool is_write = ranges[idx].is_write;
+
+
+
+		if (is_write) {
+			write_iovec_count++;
+		} else {
+			read_iovec_count++;
+		}
+		iovec_count++;
 		uint64_t gpa = ranges[idx].gpa;
 		size_t remains = ranges[idx].len;
 		bool is_write = ranges[idx].is_write;
@@ -1235,8 +1320,9 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 			remains -= chunk;
 		}
 	}
+#endif
 
-	k_spin_unlock(&data->lock, key);
+	//k_spin_unlock(&data->lock, key);
 
 	if (iovec_count <= 0) {
 		goto end;
