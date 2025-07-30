@@ -78,7 +78,7 @@ struct mapped_pages {
 	size_t len;
 	struct gnttab_unmap_grant_ref *unmap;
 	size_t unmap_count; /* current number of mapped buffers */
-	size_t size;
+	size_t unmap_pages;
 };
 
 struct descriptor_chain {
@@ -367,7 +367,7 @@ static int free_pages(struct mapped_pages *pool, size_t len)
 		}
 
 		if (pool->buf) {
-			rc = gnttab_put_pages(pool->buf, pool->size);
+			rc = gnttab_put_pages(pool->buf, pool->unmap_pages);
 			if (rc < 0) {
 				LOG_ERR("gnttab_put_pages failed: %d", rc);
 				ret = rc;
@@ -433,7 +433,7 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 	for (int i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
 		const size_t pages = num_pages[i];
 
-		vq_ctx->meta[i].size = pages;
+		vq_ctx->meta[i].unmap_pages = pages;
 		vq_ctx->meta[i].len = pages * XEN_PAGE_SIZE;
 		vq_ctx->meta[i].buf = gnttab_get_pages(pages);
 		vq_ctx->meta[i].unmap = k_malloc(sizeof(struct gnttab_unmap_grant_ref) * pages);
@@ -1119,7 +1119,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	/* Allocate or reallocate buffer based on total_pages (handles both initial allocation and
 	 * expansion) */
-	if (vq_ctx->chains[head].pages == NULL || vq_ctx->chains[head].pages[0].size < total_pages) {
+	if (vq_ctx->chains[head].pages == NULL || vq_ctx->chains[head].pages[0].unmap_pages < total_pages) {
 		/* Allocate pages structure if not already allocated */
 		if (vq_ctx->chains[head].pages == NULL) {
 			vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
@@ -1158,7 +1158,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		/* Set new pre-allocated buffer */
 		vq_ctx->chains[head].pages[0].buf = new_buf;
 		vq_ctx->chains[head].pages[0].unmap = new_unmap;
-		vq_ctx->chains[head].pages[0].size = total_pages;
+		vq_ctx->chains[head].pages[0].unmap_pages = total_pages;
 		vq_ctx->chains[head].pages[0].len = total_pages * XEN_PAGE_SIZE;
 
 		LOG_DBG("%s: q=%u: Pre-allocated buffer with %u pages", __func__, queue_id,
@@ -1182,9 +1182,9 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		while (remains > 0) {
 			size_t page_count = vq_ctx->chains[head].pages[0].unmap_count + iovec_count;
 
-			if (page_count >= vq_ctx->chains[head].pages[0].size) {
+			if (page_count >= vq_ctx->chains[head].pages[0].unmap_pages) {
 				LOG_ERR("%s: q=%u: no more reserved pages: %zu >= %lu", __func__,
-					queue_id, page_count, vq_ctx->chains[head].pages[0].size);
+					queue_id, page_count, vq_ctx->chains[head].pages[0].unmap_pages);
 				k_spin_unlock(&data->lock, key);
 				ret = -ENOMEM;
 				goto cleanup;
