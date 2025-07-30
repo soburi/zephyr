@@ -77,7 +77,7 @@ struct mapped_pages {
 	uint8_t *buf;
 	size_t len;
 	struct gnttab_unmap_grant_ref *unmap;
-	size_t count; /* current number of mapped buffers */
+	size_t unmap_count; /* current number of mapped buffers */
 	size_t size;
 };
 
@@ -336,7 +336,7 @@ static int unmap_pages(struct mapped_pages *pool)
 		return 0;
 	}
 
-	for (int i = 0; i < pool->count; i++) {
+	for (int i = 0; i < pool->unmap_count; i++) {
 		if (pool->unmap[i].status == GNTST_okay) {
 			int rc = gnttab_unmap_refs(&pool->unmap[i], 1);
 			if (rc < 0) {
@@ -480,9 +480,9 @@ end:
 
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
-	vq_ctx->meta[0].count = num_pages[0];
-	vq_ctx->meta[1].count = num_pages[1];
-	vq_ctx->meta[2].count = num_pages[2];
+	vq_ctx->meta[0].unmap_count = num_pages[0];
+	vq_ctx->meta[1].unmap_count = num_pages[1];
+	vq_ctx->meta[2].unmap_count = num_pages[2];
 
 	for (int i = 0; i < config->queue_size_max; i++) {
 		vq_ctx->chains[i].pages = NULL;
@@ -912,7 +912,7 @@ static bool vhost_xen_mmio_queue_is_ready(const struct device *dev, uint16_t que
 			return false;
 		}
 
-		for (size_t j = 0; j < vq_ctx->meta[i].count; j++) {
+		for (size_t j = 0; j < vq_ctx->meta[i].unmap_count; j++) {
 			if (vq_ctx->meta[i].unmap[j].status != GNTST_okay) {
 				return false;
 			}
@@ -1029,7 +1029,7 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 		return -EINVAL;
 	}
 
-	const size_t count = vq_ctx->chains[head].pages->count;
+	const size_t count = vq_ctx->chains[head].pages->unmap_count;
 
 	k_spin_unlock(&data->lock, key);
 
@@ -1045,7 +1045,7 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 
 	key = k_spin_lock(&data->lock);
 	vq_ctx->chains[head].chain_head = -1;
-	vq_ctx->chains[head].pages->count = 0;
+	vq_ctx->chains[head].pages->unmap_count = 0;
 	k_free(vq_ctx->chains[head].pages);
 	vq_ctx->chains[head].pages = NULL;
 
@@ -1174,13 +1174,13 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	key = k_spin_lock(&data->lock);
 
-	for (size_t range_idx = 0; range_idx < range_count; range_idx++) {
-		uint64_t gpa = ranges[range_idx].gpa;
-		size_t remains = ranges[range_idx].len;
-		bool is_write = ranges[range_idx].is_write;
+	for (size_t idx = 0; idx < range_count; idx++) {
+		uint64_t gpa = ranges[idx].gpa;
+		size_t remains = ranges[idx].len;
+		bool is_write = ranges[idx].is_write;
 
 		while (remains > 0) {
-			size_t page_count = vq_ctx->chains[head].pages[0].count + iovec_count;
+			size_t page_count = vq_ctx->chains[head].pages[0].unmap_count + iovec_count;
 
 			if (page_count >= vq_ctx->chains[head].pages[0].size) {
 				LOG_ERR("%s: q=%u: no more reserved pages: %zu >= %lu", __func__,
@@ -1250,7 +1250,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	}
 
 	for (size_t i = 0; i < iovec_count; i++) {
-		const size_t page_idx = i + vq_ctx->chains[head].pages[0].count;
+		const size_t page_idx = i + vq_ctx->chains[head].pages[0].unmap_count;
 		const struct gnttab_map_grant_ref *map = &map_grant[i];
 		struct gnttab_unmap_grant_ref *unmap = &vq_ctx->chains[head].pages[0].unmap[page_idx];
 
@@ -1268,13 +1268,13 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	if (any_map_failed) {
 		gnttab_unmap_refs(
-			&vq_ctx->chains[head].pages[0].unmap[vq_ctx->chains[head].pages[0].count],
+			&vq_ctx->chains[head].pages[0].unmap[vq_ctx->chains[head].pages[0].unmap_count],
 			iovec_count);
 		ret = -EIO;
 		goto cleanup;
 	}
 
-	vq_ctx->chains[head].pages[0].count += iovec_count;
+	vq_ctx->chains[head].pages[0].unmap_count += iovec_count;
 	vq_ctx->chains[head].chain_head = head;
 
 end:
