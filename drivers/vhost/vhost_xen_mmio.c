@@ -492,34 +492,25 @@ static int setup_unmap_info(struct descriptor_chain *dchain, const struct vhost_
 	return 0;
 }
 
-static int allocate_chain_buffer(const struct device *dev, uint16_t queue_id, uint16_t head,
-				 uint16_t total_pages)
+static int allocate_chain_buffer(struct descriptor_chain *dchain, uint16_t total_pages)
 {
-	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-
-	/* Allocate pages structure if not already allocated */
-	if (vq_ctx->chains[head].pages == NULL) {
-		vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
-		if (vq_ctx->chains[head].pages == NULL) {
+	if (dchain->pages == NULL) {
+		dchain->pages = k_malloc(sizeof(struct mapped_pages));
+		if (dchain->pages == NULL) {
 			LOG_ERR("Failed to allocate pages structure%s", "");
 			return -ENOMEM;
 		}
-		memset(vq_ctx->chains[head].pages, 0, sizeof(struct mapped_pages));
-	} else if (vq_ctx->chains[head].pages->unmap_pages != total_pages) {
-		/* Only reallocate if size differs - this will also update statistics */
-		free_pages(vq_ctx->chains[head].pages, 1);
+		memset(dchain->pages, 0, sizeof(struct mapped_pages));
+	} else if (dchain->pages->unmap_pages != total_pages) {
+		free_pages(dchain->pages, 1);
 	} else {
-		/* Buffer is already the right size, just reset the count */
-		vq_ctx->chains[head].pages->unmap_count = 0;
-		LOG_DBG("%s: q=%u: Reusing existing buffer with %u pages", __func__, queue_id,
-			total_pages);
+		dchain->pages->unmap_count = 0;
+		LOG_DBG("%s: Reusing existing buffer with %u pages", __func__, total_pages);
 		return 0;
 	}
 
-	/* Allocate new buffer with the required size */
 	atomic_t current_total = atomic_add(&total_allocated_pages, total_pages);
-	LOG_DBG("%s: q=%u: Allocating %d pages for chain buffer (total: %ld)", __func__, queue_id,
+	LOG_DBG("%s: Allocating %d pages for chain buffer (total: %ld)", __func__,
 		total_pages, current_total + total_pages);
 
 	uint8_t *new_buf = gnttab_get_pages(total_pages);
@@ -527,7 +518,6 @@ static int allocate_chain_buffer(const struct device *dev, uint16_t queue_id, ui
 		k_malloc(sizeof(struct gnttab_unmap_grant_ref) * total_pages);
 
 	if (new_buf == NULL || new_unmap == NULL) {
-		/* Adjust allocation count back if failed */
 		atomic_sub(&total_allocated_pages, total_pages);
 		atomic_inc(&allocation_failures);
 
@@ -537,25 +527,22 @@ static int allocate_chain_buffer(const struct device *dev, uint16_t queue_id, ui
 		if (new_unmap) {
 			k_free(new_unmap);
 		}
-		LOG_ERR("%s: q=%u: failed to allocate pages/unmap array for %u pages (failures: "
-			"%ld)",
-			__func__, queue_id, total_pages, atomic_get(&allocation_failures));
+		LOG_ERR("%s: failed to allocate pages/unmap array for %u pages (failures: %ld)",
+			__func__, total_pages, atomic_get(&allocation_failures));
 		return -ENOMEM;
 	}
 
-	/* Initialize all new unmap entries */
 	for (size_t j = 0; j < total_pages; j++) {
 		new_unmap[j].status = GNTST_general_error;
 	}
 
-	/* Set new pre-allocated buffer */
-	vq_ctx->chains[head].pages->buf = new_buf;
-	vq_ctx->chains[head].pages->unmap = new_unmap;
-	vq_ctx->chains[head].pages->unmap_pages = total_pages;
-	vq_ctx->chains[head].pages->len = total_pages * XEN_PAGE_SIZE;
-	vq_ctx->chains[head].pages->unmap_count = 0; /* Reset count for new buffer */
+	dchain->pages->buf = new_buf;
+	dchain->pages->unmap = new_unmap;
+	dchain->pages->unmap_pages = total_pages;
+	dchain->pages->len = total_pages * XEN_PAGE_SIZE;
+	dchain->pages->unmap_count = 0;
 
-	LOG_DBG("%s: q=%u: Pre-allocated buffer with %u pages", __func__, queue_id, total_pages);
+	LOG_DBG("%s: Pre-allocated buffer with %u pages", __func__, total_pages);
 
 	return 0;
 }
@@ -570,12 +557,9 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
-	/* Free dynamically allocated pages in descriptor chains */
 	for (int i = 0; i < config->queue_size_max; i++) {
 		if (vq_ctx->chains[i].pages) {
-			/* First free the buffers inside pages */
 			free_pages(vq_ctx->chains[i].pages, 1);
-			/* Then free the pages structure itself */
 			k_free(vq_ctx->chains[i].pages);
 			vq_ctx->chains[i].pages = NULL;
 		}
@@ -1316,7 +1300,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	if (vq_ctx->chains[head].pages == NULL ||
 	    vq_ctx->chains[head].pages->unmap_pages < total_pages) {
 
-		ret = allocate_chain_buffer(dev, queue_id, head, total_pages);
+		ret = allocate_chain_buffer(dchain, total_pages);
 		if (ret < 0) {
 			LOG_ERR_Q("allocate_chain_buffer failed: %d", ret);
 			return ret;
