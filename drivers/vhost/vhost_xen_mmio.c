@@ -1151,6 +1151,54 @@ static int setup_unmap_info(const struct device *dev, uint16_t queue_id, uint16_
 	return 0;
 }
 
+int zzz(const struct device *dev, uint16_t queue_id, uint16_t head, uint16_t total_pages)
+{
+	struct vhost_xen_mmio_data *data = dev->data;
+	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+
+	/* Allocate pages structure if not already allocated */
+	if (vq_ctx->chains[head].pages == NULL) {
+		vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
+		if (vq_ctx->chains[head].pages == NULL) {
+			LOG_ERR("Failed to allocate pages structure%s", "");
+			return -ENOMEM;
+		}
+		memset(vq_ctx->chains[head].pages, 0, sizeof(struct mapped_pages));
+	} else {
+		/* Clean up old buffer using free_pages */
+		free_pages(vq_ctx->chains[head].pages, 1);
+	}
+
+	/* Allocate new buffer with the required size */
+	uint8_t *new_buf = gnttab_get_pages(total_pages);
+	struct gnttab_unmap_grant_ref *new_unmap =
+		k_malloc(sizeof(struct gnttab_unmap_grant_ref) * total_pages);
+
+	if (new_buf == NULL || new_unmap == NULL) {
+		if (new_buf) {
+			gnttab_put_pages(new_buf, total_pages);
+		}
+		if (new_unmap) {
+			k_free(new_unmap);
+		}
+		LOG_ERR("%s: q=%u: failed to allocate pages/unmap array", __func__, queue_id);
+		return -ENOMEM;
+	}
+
+	/* Initialize all new unmap entries */
+	for (size_t j = 0; j < total_pages; j++) {
+		new_unmap[j].status = GNTST_general_error;
+	}
+
+	/* Set new pre-allocated buffer */
+	vq_ctx->chains[head].pages->buf = new_buf;
+	vq_ctx->chains[head].pages->unmap = new_unmap;
+	vq_ctx->chains[head].pages->unmap_pages = total_pages;
+	vq_ctx->chains[head].pages->len = total_pages * XEN_PAGE_SIZE;
+
+	LOG_DBG("%s: q=%u: Pre-allocated buffer with %u pages", __func__, queue_id, total_pages);
+}
+
 static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
 					const struct vhost_gpa_range *ranges, size_t range_count,
 					struct vhost_iovec *read_iovec, size_t max_read_iovecs,
@@ -1215,6 +1263,14 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	 * expansion) */
 	if (vq_ctx->chains[head].pages == NULL ||
 	    vq_ctx->chains[head].pages->unmap_pages < total_pages) {
+
+		ret = zzz(dev, queue_id, head, total_pages);
+		if (ret < 0) {
+			LOG_ERR_Q("zzz failed%s", "");
+			return ret;
+		}
+
+#if 0
 		/* Allocate pages structure if not already allocated */
 		if (vq_ctx->chains[head].pages == NULL) {
 			vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
@@ -1258,6 +1314,8 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 		LOG_DBG("%s: q=%u: Pre-allocated buffer with %u pages", __func__, queue_id,
 			total_pages);
+
+#endif
 	}
 
 	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
