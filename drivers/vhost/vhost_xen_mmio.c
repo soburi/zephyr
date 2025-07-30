@@ -85,7 +85,7 @@ struct descriptor_chain {
 	struct mapped_pages *pages;
 	size_t max_descriptors;
 	size_t used_descriptors;
-	uint16_t chain_head;
+	int32_t chain_head;
 };
 
 struct queue_callback {
@@ -406,7 +406,7 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 	for (int i = 0; i < config->queue_size_max; i++) {
 		vq_ctx->chains[i].pages = &vq_ctx->pool[i];
 		vq_ctx->chains[i].max_descriptors = 1;     /* Initially one descriptor per chain */
-		vq_ctx->chains[i].chain_head = UINT16_MAX; /* Invalid head value */
+		vq_ctx->chains[i].chain_head = -1; /* Invalid head value */
 	}
 
 	k_spin_unlock(&data->lock, key);
@@ -1054,7 +1054,7 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 	}
 
 	key = k_spin_lock(&data->lock);
-	vq_ctx->chains[idx].chain_head = UINT16_MAX;
+	vq_ctx->chains[idx].chain_head = -1;
 	vq_ctx->chains[idx].used_descriptors = 0;
 	vq_ctx->chains[idx].pages->head = -1;
 	vq_ctx->chains[idx].pages->count = 0;
@@ -1107,7 +1107,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	for (int i = 0; i < vq_ctx->queue_size; i++) {
 		if (vq_ctx->chains[i].pages->head < 0 &&
-		    vq_ctx->chains[i].chain_head == UINT16_MAX && idx < 0) {
+		    vq_ctx->chains[i].chain_head < 0 && idx < 0) {
 			idx = i;
 		}
 
