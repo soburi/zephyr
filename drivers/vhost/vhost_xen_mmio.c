@@ -1144,19 +1144,9 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	}
 
 	/* Pre-allocate buffer based on total_pages */
-	// if (total_pages > 0) {
 	if (vq_ctx->chains[head].pages->size < total_pages) {
-		/* Clean up old buffer */
-		if (vq_ctx->chains[head].pages->buf) {
-			gnttab_put_pages(vq_ctx->chains[head].pages->buf,
-					 vq_ctx->chains[head].pages->size);
-			vq_ctx->chains[head].pages->buf = NULL;
-		}
-
-		if (vq_ctx->chains[head].pages->unmap) {
-			k_free(vq_ctx->chains[head].pages->unmap);
-			vq_ctx->chains[head].pages->unmap = NULL;
-		}
+		/* Clean up old buffer using free_pages */
+		free_pages(vq_ctx->chains[head].pages, 1);
 
 		/* Allocate new buffer with the required size */
 		uint8_t *new_buf = gnttab_get_pages(total_pages);
