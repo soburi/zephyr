@@ -355,25 +355,25 @@ static int free_pages(struct mapped_pages *pool, size_t len)
 	int ret = 0;
 
 	for (int i = 0; i < len; i++) {
-		int rc = unmap_pages(pool);
+		int rc = unmap_pages(&pool[i]);
 		if (rc < 0) {
 			LOG_ERR("unmap_pages failed: %d", rc);
 			ret = rc;
 		}
 
-		if (pool->unmap) {
-			k_free(pool->unmap);
-			pool->unmap = NULL;
+		if (pool[i].unmap) {
+			k_free(pool[i].unmap);
+			pool[i].unmap = NULL;
 		}
 
-		if (pool->buf) {
-			rc = gnttab_put_pages(pool->buf, pool->unmap_pages);
+		if (pool[i].buf) {
+			rc = gnttab_put_pages(pool[i].buf, pool[i].unmap_pages);
 			if (rc < 0) {
 				LOG_ERR("gnttab_put_pages failed: %d", rc);
 				ret = rc;
 			}
 
-			pool->buf = NULL;
+			pool[i].buf = NULL;
 		}
 	}
 
@@ -499,6 +499,7 @@ static int allocate_chain_buffer(const struct device *dev, uint16_t queue_id, ui
 	}
 
 	/* Allocate new buffer with the required size */
+	LOG_DBG("%s: q=%u: Allocating %u pages for chain buffer", __func__, queue_id, total_pages);
 	uint8_t *new_buf = gnttab_get_pages(total_pages);
 	struct gnttab_unmap_grant_ref *new_unmap =
 		k_malloc(sizeof(struct gnttab_unmap_grant_ref) * total_pages);
@@ -510,7 +511,7 @@ static int allocate_chain_buffer(const struct device *dev, uint16_t queue_id, ui
 		if (new_unmap) {
 			k_free(new_unmap);
 		}
-		LOG_ERR("%s: q=%u: failed to allocate pages/unmap array", __func__, queue_id);
+		LOG_ERR("%s: q=%u: failed to allocate pages/unmap array for %u pages", __func__, queue_id, total_pages);
 		return -ENOMEM;
 	}
 
@@ -531,7 +532,6 @@ static int allocate_chain_buffer(const struct device *dev, uint16_t queue_id, ui
 	return 0;
 }
 
-
 static void reset_queue(const struct device *dev, uint16_t queue_id)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
@@ -545,6 +545,9 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 	/* Free dynamically allocated pages in descriptor chains */
 	for (int i = 0; i < config->queue_size_max; i++) {
 		if (vq_ctx->chains[i].pages) {
+			/* First free the buffers inside pages */
+			free_pages(vq_ctx->chains[i].pages, 1);
+			/* Then free the pages structure itself */
 			k_free(vq_ctx->chains[i].pages);
 			vq_ctx->chains[i].pages = NULL;
 		}
@@ -1198,6 +1201,18 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 	key = k_spin_lock(&data->lock);
 	vq_ctx->chains[head].chain_head = -1;
 	vq_ctx->chains[head].pages->unmap_count = 0;
+
+	/* Free the buffers inside pages before freeing pages structure */
+	if (vq_ctx->chains[head].pages->buf) {
+		gnttab_put_pages(vq_ctx->chains[head].pages->buf,
+				 vq_ctx->chains[head].pages->unmap_pages);
+		vq_ctx->chains[head].pages->buf = NULL;
+	}
+	if (vq_ctx->chains[head].pages->unmap) {
+		k_free(vq_ctx->chains[head].pages->unmap);
+		vq_ctx->chains[head].pages->unmap = NULL;
+	}
+
 	k_free(vq_ctx->chains[head].pages);
 	vq_ctx->chains[head].pages = NULL;
 
