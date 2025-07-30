@@ -49,6 +49,8 @@ LOG_MODULE_REGISTER(xen_vhost_mmio);
 #define RETRY_DELAY_BASE_MS 50
 #define HEX_64BIT_DIGITS    16
 
+#define LOG_ERR_Q(str, ...) LOG_ERR("%s[%u]: " str, __func__, queue_id, __VA_ARGS__)
+
 enum {
 	DESC = 0,
 	AVAIL,
@@ -440,12 +442,6 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 			goto end;
 		}
 
-		for (int j = 0; j < vq_ctx->meta[i].size; j++) {
-			vq_ctx->meta[i].unmap[j].status = GNTST_general_error;
-		}
-	}
-
-	for (int i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
 		for (int j = 0; j < num_pages[i]; j++) {
 			const uint64_t page_gpa = vq_ctx->meta[i].gpa + (j * XEN_PAGE_SIZE);
 			struct gnttab_map_grant_ref op = {
@@ -488,11 +484,10 @@ end:
 	vq_ctx->meta[1].count = num_pages[1];
 	vq_ctx->meta[2].count = num_pages[2];
 
-	/* Initialize descriptor chains */
 	for (int i = 0; i < config->queue_size_max; i++) {
-		vq_ctx->chains[i].pages = NULL;        /* Will be allocated dynamically */
-		vq_ctx->chains[i].max_descriptors = 1; /* Initially one descriptor per chain */
-		vq_ctx->chains[i].chain_head = -1;     /* Invalid head value */
+		vq_ctx->chains[i].pages = NULL;
+		vq_ctx->chains[i].max_descriptors = 1;
+		vq_ctx->chains[i].chain_head = -1;
 	}
 
 	k_spin_unlock(&data->lock, key);
@@ -904,7 +899,7 @@ static bool vhost_xen_mmio_queue_is_ready(const struct device *dev, uint16_t que
 	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
 	if (queue_id >= config->num_queues) {
-		LOG_ERR("%s: Invalid queue ID: %d", __func__, queue_id);
+		LOG_ERR_Q("Invalid queue ID%s", "");
 		return false;
 	}
 
@@ -936,12 +931,12 @@ static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
 	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
 	if (queue_id >= config->num_queues) {
-		LOG_ERR("%s: Invalid queue ID: q=%u:", __func__, queue_id);
+		LOG_ERR_Q("Invalid queue ID%s", "");
 		return -EINVAL;
 	}
 
 	if (!vhost_xen_mmio_queue_is_ready(dev, queue_id)) {
-		LOG_ERR("%s: q=%u: is not ready", __func__, queue_id);
+		LOG_ERR_Q("is not ready%s", "");
 		return -ENODEV;
 	}
 
@@ -977,7 +972,7 @@ static int vhost_xen_mmio_queue_notify(const struct device *dev, uint16_t queue_
 	struct vhost_xen_mmio_data *data = dev->data;
 
 	if (queue_id >= config->num_queues) {
-		LOG_ERR("%s: Invalid queue ID: %d", __func__, queue_id);
+		LOG_ERR_Q("Invalid queue ID%s", "");
 		return -EINVAL;
 	}
 
@@ -1016,21 +1011,20 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
 	if (queue_id >= config->num_queues) {
-		LOG_ERR("%s: Invalid queue ID: q=%u:", __func__, queue_id);
+		LOG_ERR_Q("Invalid queue ID%s", "");
 		k_spin_unlock(&data->lock, key);
 		return -EINVAL;
 	}
 
 	if (head >= vq_ctx->queue_size) {
-		LOG_ERR("%s: Invalid head: q=%u: head=%u >= queue_size=%zu", __func__, queue_id,
-			head, vq_ctx->queue_size);
+		LOG_ERR_Q("Invalid head: head=%u >= queue_size=%zu", head, vq_ctx->queue_size);
 		k_spin_unlock(&data->lock, key);
 		return -EINVAL;
 	}
 
 	if (vq_ctx->chains[head].chain_head != head) {
-		LOG_ERR("%s: Head not in use: q=%u: head=%u (stored=%d)", __func__, queue_id, head,
-			vq_ctx->chains[head].chain_head);
+		LOG_ERR_Q("Head not in use: head=%u (stored=%d)", head,
+			  vq_ctx->chains[head].chain_head);
 		k_spin_unlock(&data->lock, key);
 		return -EINVAL;
 	}
@@ -1046,14 +1040,12 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 
 	ret = unmap_pages(vq_ctx->chains[head].pages);
 	if (ret < 0) {
-		LOG_ERR("%s: q=%u: gnttab_unmap_refs failed: %d", __func__, queue_id, ret);
+		LOG_ERR_Q("gnttab_unmap_refs failed: %d", ret);
 	}
 
 	key = k_spin_lock(&data->lock);
 	vq_ctx->chains[head].chain_head = -1;
 	vq_ctx->chains[head].pages->count = 0;
-
-	/* Free the dynamically allocated pages structure */
 	k_free(vq_ctx->chains[head].pages);
 	vq_ctx->chains[head].pages = NULL;
 
@@ -1081,7 +1073,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	const size_t max_iovecs = max_read_iovecs + max_write_iovecs;
 
 	if (queue_id >= config->num_queues) {
-		LOG_ERR("%s: Invalid queue ID: q=%u:", __func__, queue_id);
+		LOG_ERR_Q("Invalid queue ID%s", "");
 		return -EINVAL;
 	}
 
@@ -1111,8 +1103,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		queue_id, range_count, total_pages, max_read_iovecs, max_write_iovecs);
 
 	if (head >= vq_ctx->queue_size) {
-		LOG_ERR("%s: Invalid head: q=%u: head=%u >= queue_size=%zu", __func__, queue_id,
-			head, vq_ctx->queue_size);
+		LOG_ERR("Invalid head: head=%u >= queue_size=%zu", head, vq_ctx->queue_size);
 		return -EINVAL;
 	}
 
@@ -1127,13 +1118,14 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		}
 	}
 
-	/* Allocate or reallocate buffer based on total_pages (handles both initial allocation and expansion) */
+	/* Allocate or reallocate buffer based on total_pages (handles both initial allocation and
+	 * expansion) */
 	if (vq_ctx->chains[head].pages == NULL || vq_ctx->chains[head].pages->size < total_pages) {
 		/* Allocate pages structure if not already allocated */
 		if (vq_ctx->chains[head].pages == NULL) {
 			vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
 			if (vq_ctx->chains[head].pages == NULL) {
-				LOG_ERR("%s: q=%u: failed to allocate pages structure", __func__, queue_id);
+				LOG_ERR("Failed to allocate pages structure%s", "");
 				return -ENOMEM;
 			}
 			memset(vq_ctx->chains[head].pages, 0, sizeof(struct mapped_pages));
@@ -1177,7 +1169,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	/* Allocate map_grant after buffer expansion to avoid unnecessary allocation */
 	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
 	if (!map_grant) {
-		LOG_ERR("%s: k_malloc failed: q=%u:", __func__, queue_id);
+		LOG_ERR_Q("k_malloc failed%s", "");
 		return -ENOMEM;
 	}
 
@@ -1254,7 +1246,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	/* Perform the grant mapping for all iovecs */
 	ret = gnttab_map_refs(map_grant, iovec_count);
 	if (ret < 0) {
-		LOG_ERR("%s: q=%u: gnttab_map_refs failed: %d", __func__, queue_id, ret);
+		LOG_ERR("gnttab_map_refs failed: %d", ret);
 		goto cleanup;
 	}
 
@@ -1270,8 +1262,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		unmap->status = map->status;
 
 		if (map->status != GNTST_okay) {
-			LOG_ERR("%s: q=%u: map[%zu] failed: status=%d", __func__, queue_id, i,
-				map->status);
+			LOG_ERR_Q("map[%zu] failed: status=%d", i, map->status);
 			any_map_failed = true;
 		}
 	}
@@ -1328,7 +1319,7 @@ static int vhost_xen_mmio_set_notify_callback(const struct device *dev, uint16_t
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
 	if (queue_id >= config->num_queues) {
-		LOG_ERR("%s: Invalid queue ID: %d", __func__, queue_id);
+		LOG_ERR_Q("Invalid queue ID%s", "");
 		return -EINVAL;
 	}
 
