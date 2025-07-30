@@ -40,6 +40,10 @@ LOG_MODULE_REGISTER(xen_vhost_mmio);
 
 #define DT_DRV_COMPAT xen_vhost_mmio
 
+/* Grant table resource tracking */
+static atomic_t total_allocated_pages = ATOMIC_INIT(0);
+static atomic_t allocation_failures = ATOMIC_INIT(0);
+
 #define PAGE_SHIFT         (__builtin_ctz(CONFIG_MMU_PAGE_SIZE))
 #define XEN_GRANT_ADDR_OFF (1ULL << 63)
 
@@ -355,10 +359,13 @@ static int free_pages(struct mapped_pages *pool, size_t len)
 	int ret = 0;
 
 	for (int i = 0; i < len; i++) {
-		int rc = unmap_pages(&pool[i]);
-		if (rc < 0) {
-			LOG_ERR("unmap_pages failed: %d", rc);
-			ret = rc;
+		/* Only unmap if the buffer was actually allocated */
+		if (pool[i].buf || pool[i].unmap) {
+			int rc = unmap_pages(&pool[i]);
+			if (rc < 0) {
+				LOG_ERR("unmap_pages failed: %d", rc);
+				ret = rc;
+			}
 		}
 
 		if (pool[i].unmap) {
@@ -367,14 +374,25 @@ static int free_pages(struct mapped_pages *pool, size_t len)
 		}
 
 		if (pool[i].buf) {
-			rc = gnttab_put_pages(pool[i].buf, pool[i].unmap_pages);
+			int rc = gnttab_put_pages(pool[i].buf, pool[i].unmap_pages);
 			if (rc < 0) {
 				LOG_ERR("gnttab_put_pages failed: %d", rc);
 				ret = rc;
+			} else {
+				/* Decrease allocation count on successful release */
+				atomic_sub(&total_allocated_pages, pool[i].unmap_pages);
+				LOG_DBG("Released %u pages, total now: %d", pool[i].unmap_pages,
+					atomic_get(&total_allocated_pages));
 			}
 
 			pool[i].buf = NULL;
 		}
+
+		/* Reset the page structure */
+		pool[i].unmap_count = 0;
+		pool[i].unmap_pages = 0;
+		pool[i].len = 0;
+		pool[i].gpa = 0;
 	}
 
 	return ret;
@@ -493,25 +511,40 @@ static int allocate_chain_buffer(const struct device *dev, uint16_t queue_id, ui
 			return -ENOMEM;
 		}
 		memset(vq_ctx->chains[head].pages, 0, sizeof(struct mapped_pages));
-	} else {
-		/* Clean up old buffer using free_pages */
+	} else if (vq_ctx->chains[head].pages->unmap_pages != total_pages) {
+		/* Only reallocate if size differs - this will also update statistics */
 		free_pages(vq_ctx->chains[head].pages, 1);
+	} else {
+		/* Buffer is already the right size, just reset the count */
+		vq_ctx->chains[head].pages->unmap_count = 0;
+		LOG_DBG("%s: q=%u: Reusing existing buffer with %u pages", __func__, queue_id,
+			total_pages);
+		return 0;
 	}
 
 	/* Allocate new buffer with the required size */
-	LOG_DBG("%s: q=%u: Allocating %u pages for chain buffer", __func__, queue_id, total_pages);
+	atomic_t current_total = atomic_add(&total_allocated_pages, total_pages);
+	LOG_DBG("%s: q=%u: Allocating %u pages for chain buffer (total: %d)", __func__, queue_id,
+		total_pages, current_total + total_pages);
+
 	uint8_t *new_buf = gnttab_get_pages(total_pages);
 	struct gnttab_unmap_grant_ref *new_unmap =
 		k_malloc(sizeof(struct gnttab_unmap_grant_ref) * total_pages);
 
 	if (new_buf == NULL || new_unmap == NULL) {
+		/* Adjust allocation count back if failed */
+		atomic_sub(&total_allocated_pages, total_pages);
+		atomic_inc(&allocation_failures);
+
 		if (new_buf) {
 			gnttab_put_pages(new_buf, total_pages);
 		}
 		if (new_unmap) {
 			k_free(new_unmap);
 		}
-		LOG_ERR("%s: q=%u: failed to allocate pages/unmap array for %u pages", __func__, queue_id, total_pages);
+		LOG_ERR("%s: q=%u: failed to allocate pages/unmap array for %u pages (failures: "
+			"%d)",
+			__func__, queue_id, total_pages, atomic_get(&allocation_failures));
 		return -ENOMEM;
 	}
 
@@ -1202,6 +1235,7 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 	vq_ctx->chains[head].chain_head = -1;
 	vq_ctx->chains[head].pages->unmap_count = 0;
 
+#if 0
 	/* Free the buffers inside pages before freeing pages structure */
 	if (vq_ctx->chains[head].pages->buf) {
 		gnttab_put_pages(vq_ctx->chains[head].pages->buf,
@@ -1215,7 +1249,7 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 
 	k_free(vq_ctx->chains[head].pages);
 	vq_ctx->chains[head].pages = NULL;
-
+#endif
 	k_spin_unlock(&data->lock, key);
 
 	return ret;
@@ -1290,6 +1324,13 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 			LOG_ERR_Q("allocate_chain_buffer failed: %d", ret);
 			return ret;
 		}
+	}
+
+	/* Additional check for allocation success and consistency */
+	if (vq_ctx->chains[head].pages->unmap_pages < total_pages) {
+		LOG_ERR_Q("Chain buffer allocation inconsistent: allocated=%u needed=%u",
+			  vq_ctx->chains[head].pages->unmap_pages, total_pages);
+		return -ENOMEM;
 	}
 
 	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
