@@ -404,13 +404,6 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 	memset(vq_ctx->meta, 0, sizeof(struct mapped_pages) * NUM_OF_VIRTQ_PARTS);
 	memset(vq_ctx->chains, 0, sizeof(struct descriptor_chain) * config->queue_size_max);
 
-	/* Initialize descriptor chains */
-	for (int i = 0; i < config->queue_size_max; i++) {
-		vq_ctx->chains[i].pages = NULL;        /* Will be allocated dynamically */
-		vq_ctx->chains[i].max_descriptors = 1; /* Initially one descriptor per chain */
-		vq_ctx->chains[i].chain_head = -1;     /* Invalid head value */
-	}
-
 	k_spin_unlock(&data->lock, key);
 }
 
@@ -427,6 +420,7 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
  */
 static int setup_queue(const struct device *dev, uint16_t queue_id)
 {
+	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 	const size_t num_pages[] = {DIV_ROUND_UP(16 * (vq_ctx->queue_size), XEN_PAGE_SIZE),
@@ -493,6 +487,13 @@ end:
 	vq_ctx->meta[0].count = num_pages[0];
 	vq_ctx->meta[1].count = num_pages[1];
 	vq_ctx->meta[2].count = num_pages[2];
+
+	/* Initialize descriptor chains */
+	for (int i = 0; i < config->queue_size_max; i++) {
+		vq_ctx->chains[i].pages = NULL;        /* Will be allocated dynamically */
+		vq_ctx->chains[i].max_descriptors = 1; /* Initially one descriptor per chain */
+		vq_ctx->chains[i].chain_head = -1;     /* Invalid head value */
+	}
 
 	k_spin_unlock(&data->lock, key);
 
@@ -1072,7 +1073,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 	size_t read_iovec_count = 0, write_iovec_count = 0;
 	size_t iovec_count = 0;
-	int ret;
+	int ret = 0;
 	k_spinlock_key_t key;
 	bool any_map_failed = false;
 	struct gnttab_map_grant_ref *map_grant = NULL;
@@ -1115,16 +1116,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		return -EINVAL;
 	}
 
-	/* Allocate pages structure if not already allocated */
-	if (vq_ctx->chains[head].pages == NULL) {
-		vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
-		if (vq_ctx->chains[head].pages == NULL) {
-			LOG_ERR("%s: q=%u: failed to allocate pages structure", __func__, queue_id);
-			return -ENOMEM;
-		}
-		memset(vq_ctx->chains[head].pages, 0, sizeof(struct mapped_pages));
-	}
-
 	if (vq_ctx->chains[head].chain_head == head) {
 		LOG_WRN("Found unreleased head: %d", head);
 
@@ -1136,10 +1127,20 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		}
 	}
 
-	/* Pre-allocate buffer based on total_pages */
-	if (vq_ctx->chains[head].pages->size < total_pages) {
-		/* Clean up old buffer using free_pages */
-		free_pages(vq_ctx->chains[head].pages, 1);
+	/* Allocate or reallocate buffer based on total_pages (handles both initial allocation and expansion) */
+	if (vq_ctx->chains[head].pages == NULL || vq_ctx->chains[head].pages->size < total_pages) {
+		/* Allocate pages structure if not already allocated */
+		if (vq_ctx->chains[head].pages == NULL) {
+			vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
+			if (vq_ctx->chains[head].pages == NULL) {
+				LOG_ERR("%s: q=%u: failed to allocate pages structure", __func__, queue_id);
+				return -ENOMEM;
+			}
+			memset(vq_ctx->chains[head].pages, 0, sizeof(struct mapped_pages));
+		} else {
+			/* Clean up old buffer using free_pages */
+			free_pages(vq_ctx->chains[head].pages, 1);
+		}
 
 		/* Allocate new buffer with the required size */
 		uint8_t *new_buf = gnttab_get_pages(total_pages);
@@ -1283,19 +1284,12 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		goto cleanup;
 	}
 
-	/* Update pool count with successful mappings */
 	vq_ctx->chains[head].pages->count += iovec_count;
-
-	/* Set chain head for tracking */
 	vq_ctx->chains[head].chain_head = head;
 
 end:
-	/* Set output counts */
 	*read_count = read_iovec_count;
 	*write_count = write_iovec_count;
-
-	k_free(map_grant);
-	return 0;
 
 cleanup:
 	if (map_grant) {
