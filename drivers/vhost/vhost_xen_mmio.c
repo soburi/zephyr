@@ -1136,13 +1136,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		}
 	}
 
-	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
-
-	if (!map_grant) {
-		LOG_ERR("%s: k_malloc failed: q=%u:", __func__, queue_id);
-		return -ENOMEM;
-	}
-
 	/* Pre-allocate buffer based on total_pages */
 	if (vq_ctx->chains[head].pages->size < total_pages) {
 		/* Clean up old buffer using free_pages */
@@ -1160,7 +1153,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 			if (new_unmap) {
 				k_free(new_unmap);
 			}
-			k_free(map_grant);
 			LOG_ERR("%s: q=%u: failed to allocate pages/unmap array", __func__,
 				queue_id);
 			return -ENOMEM;
@@ -1179,6 +1171,13 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 		LOG_DBG("%s: q=%u: Pre-allocated buffer with %u pages", __func__, queue_id,
 			total_pages);
+	}
+
+	/* Allocate map_grant after buffer expansion to avoid unnecessary allocation */
+	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
+	if (!map_grant) {
+		LOG_ERR("%s: k_malloc failed: q=%u:", __func__, queue_id);
+		return -ENOMEM;
 	}
 
 	key = k_spin_lock(&data->lock);
