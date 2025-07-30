@@ -1084,8 +1084,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		const uint64_t end_page = (gpa + len - 1) >> 12;
 
 		if (!(gpa & XEN_GRANT_ADDR_OFF)) {
-			LOG_ERR("%s: q=%u: addr missing grant marker: 0x%" PRIx64, __func__,
-				queue_id, gpa);
+			LOG_ERR_Q("addr missing grant marker: 0x%" PRIx64, gpa);
 			return -EINVAL;
 		}
 
@@ -1120,7 +1119,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	/* Allocate or reallocate buffer based on total_pages (handles both initial allocation and
 	 * expansion) */
-	if (vq_ctx->chains[head].pages == NULL || vq_ctx->chains[head].pages->size < total_pages) {
+	if (vq_ctx->chains[head].pages == NULL || vq_ctx->chains[head].pages[0].size < total_pages) {
 		/* Allocate pages structure if not already allocated */
 		if (vq_ctx->chains[head].pages == NULL) {
 			vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
@@ -1157,10 +1156,10 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		}
 
 		/* Set new pre-allocated buffer */
-		vq_ctx->chains[head].pages->buf = new_buf;
-		vq_ctx->chains[head].pages->unmap = new_unmap;
-		vq_ctx->chains[head].pages->size = total_pages;
-		vq_ctx->chains[head].pages->len = total_pages * XEN_PAGE_SIZE;
+		vq_ctx->chains[head].pages[0].buf = new_buf;
+		vq_ctx->chains[head].pages[0].unmap = new_unmap;
+		vq_ctx->chains[head].pages[0].size = total_pages;
+		vq_ctx->chains[head].pages[0].len = total_pages * XEN_PAGE_SIZE;
 
 		LOG_DBG("%s: q=%u: Pre-allocated buffer with %u pages", __func__, queue_id,
 			total_pages);
@@ -1181,11 +1180,11 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		bool is_write = ranges[range_idx].is_write;
 
 		while (remains > 0) {
-			size_t page_count = vq_ctx->chains[head].pages->count + iovec_count;
+			size_t page_count = vq_ctx->chains[head].pages[0].count + iovec_count;
 
-			if (page_count >= vq_ctx->chains[head].pages->size) {
+			if (page_count >= vq_ctx->chains[head].pages[0].size) {
 				LOG_ERR("%s: q=%u: no more reserved pages: %zu >= %lu", __func__,
-					queue_id, page_count, vq_ctx->chains[head].pages->size);
+					queue_id, page_count, vq_ctx->chains[head].pages[0].size);
 				k_spin_unlock(&data->lock, key);
 				ret = -ENOMEM;
 				goto cleanup;
@@ -1208,7 +1207,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 			/* Get the page and calculate offset and chunk size */
 			const void *host_page =
-				vq_ctx->chains[head].pages->buf + (XEN_PAGE_SIZE * page_count);
+				vq_ctx->chains[head].pages[0].buf + (XEN_PAGE_SIZE * page_count);
 			const size_t page_offset = gpa & (XEN_PAGE_SIZE - 1);
 			const void *va = (void *)(((uintptr_t)host_page) + page_offset);
 			const size_t chunk = MIN(remains, XEN_PAGE_SIZE - page_offset);
@@ -1251,9 +1250,9 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	}
 
 	for (size_t i = 0; i < iovec_count; i++) {
-		const size_t page_idx = i + vq_ctx->chains[head].pages->count;
+		const size_t page_idx = i + vq_ctx->chains[head].pages[0].count;
 		const struct gnttab_map_grant_ref *map = &map_grant[i];
-		struct gnttab_unmap_grant_ref *unmap = &vq_ctx->chains[head].pages->unmap[page_idx];
+		struct gnttab_unmap_grant_ref *unmap = &vq_ctx->chains[head].pages[0].unmap[page_idx];
 
 		/* Set up unmap information */
 		unmap->host_addr = map->host_addr;
@@ -1269,13 +1268,13 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 
 	if (any_map_failed) {
 		gnttab_unmap_refs(
-			&vq_ctx->chains[head].pages->unmap[vq_ctx->chains[head].pages->count],
+			&vq_ctx->chains[head].pages[0].unmap[vq_ctx->chains[head].pages[0].count],
 			iovec_count);
 		ret = -EIO;
 		goto cleanup;
 	}
 
-	vq_ctx->chains[head].pages->count += iovec_count;
+	vq_ctx->chains[head].pages[0].count += iovec_count;
 	vq_ctx->chains[head].chain_head = head;
 
 end:
