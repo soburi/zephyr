@@ -1082,7 +1082,7 @@ static int setup_iovec_mappings(const struct device *dev, uint16_t queue_id, uin
 			return -E2BIG;
 		}
 
-		const void *host_page = dchain->pages->buf + (XEN_PAGE_SIZE * (r_count + w_count));
+		const void *host_page = dchain->pages[i].buf;
 		const size_t page_offset = ranges[i].gpa & (XEN_PAGE_SIZE - 1);
 		const void *va = (void *)(((uintptr_t)host_page) + page_offset);
 		struct gnttab_map_grant_ref *map = &map_grant[r_count + w_count];
@@ -1111,18 +1111,18 @@ static int setup_iovec_mappings(const struct device *dev, uint16_t queue_id, uin
 }
 
 static int yyy(const struct device *dev, uint16_t queue_id, uint16_t head,
-				struct gnttab_map_grant_ref *map_grant, size_t iovec_count)
+	       const struct vhost_gpa_range *ranges, size_t ranges_len,
+	       struct gnttab_map_grant_ref *map_grant, size_t iovec_count)
 {
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	struct descriptor_chain *dchain = &vq_ctx->chains[head];
 
 	bool any_map_failed = false;
 
-	for (size_t i = 0; i < iovec_count; i++) {
-		const size_t page_idx = i + vq_ctx->chains[head].pages[0].unmap_count;
+	for (size_t i = 0; i < ranges_len; i++) {
 		const struct gnttab_map_grant_ref *map = &map_grant[i];
-		struct gnttab_unmap_grant_ref *unmap =
-			&vq_ctx->chains[head].pages[0].unmap[page_idx];
+		struct gnttab_unmap_grant_ref *unmap = dchain->pages[i].unmap;
 
 		/* Set up unmap information */
 		unmap->host_addr = map->host_addr;
@@ -1130,22 +1130,23 @@ static int yyy(const struct device *dev, uint16_t queue_id, uint16_t head,
 		unmap->handle = map->handle;
 		unmap->status = map->status;
 
+		dchain->pages[i].unmap_pages = DIV_ROUND_UP(ranges[i].len, XEN_PAGE_SIZE);
+
 		if (map->status != GNTST_okay) {
 			LOG_ERR_Q("map[%zu] failed: status=%d", i, map->status);
 			any_map_failed = true;
 		}
 	}
 
-	if (any_map_failed) {
-		gnttab_unmap_refs(&vq_ctx->chains[head]
-					   .pages[0]
-					   .unmap[vq_ctx->chains[head].pages[0].unmap_count],
-				  iovec_count);
-		return -EIO;
-		//goto cleanup;
+	if (!any_map_failed) {
+		return 0;
 	}
 
-	return 0;
+	for (size_t i = 0; i < ranges_len; i++) {
+		gnttab_unmap_refs(dchain->pages[i].unmap, dchain->pages[i].unmap_pages);
+	}
+
+	return -EIO;
 }
 
 static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
@@ -1264,9 +1265,9 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	}
 
 	size_t read_iovec_count = 0, write_iovec_count = 0;
-	const size_t iovec_count = setup_iovec_mappings(dev, queue_id, head, ranges, range_count,
-							read_iovec, max_read_iovecs, write_iovec,
-						       	max_write_iovecs, map_grant, &read_iovec_count, &write_iovec_count);
+	const size_t iovec_count = setup_iovec_mappings(
+		dev, queue_id, head, ranges, range_count, read_iovec, max_read_iovecs, write_iovec,
+		max_write_iovecs, map_grant, &read_iovec_count, &write_iovec_count);
 	if (iovec_count <= 0) {
 		LOG_ERR_Q("setup_iovec_mappings failed: %d", ret);
 		goto cleanup;
@@ -1307,7 +1308,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	}
 #endif
 
-	ret = yyy(dev, queue_id, head, map_grant, iovec_count);
+	ret = yyy(dev, queue_id, head, ranges, range_count, map_grant, iovec_count);
 	if (ret < 0) {
 		goto cleanup;
 	}
