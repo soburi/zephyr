@@ -332,67 +332,67 @@ static uintptr_t query_irq(struct xenstore *xs, domid_t domid, int deviceid)
 	return irq_val;
 }
 
-static int unmap_pages(struct mapped_pages *pool)
+static int unmap_pages(struct mapped_pages *pages)
 {
 	int ret = 0;
 
-	if (!pool->unmap) {
+	if (!pages->unmap) {
 		return 0;
 	}
 
-	for (int i = 0; i < pool->unmap_count; i++) {
-		if (pool->unmap[i].status == GNTST_okay) {
-			int rc = gnttab_unmap_refs(&pool->unmap[i], 1);
+	for (int i = 0; i < pages->unmap_count; i++) {
+		if (pages->unmap[i].status == GNTST_okay) {
+			int rc = gnttab_unmap_refs(&pages->unmap[i], 1);
 			if (rc < 0) {
 				LOG_ERR("gnttab_unmap_refs failed: %d", rc);
 				ret = rc;
 			}
-			pool->unmap[i].status = GNTST_general_error;
+			pages->unmap[i].status = GNTST_general_error;
 		}
 	}
 
 	return ret;
 }
 
-static int free_pages(struct mapped_pages *pool, size_t len)
+static int free_pages(struct mapped_pages *pages, size_t len)
 {
 	int ret = 0;
 
 	for (int i = 0; i < len; i++) {
 		/* Only unmap if the buffer was actually allocated */
-		if (pool[i].buf || pool[i].unmap) {
-			int rc = unmap_pages(&pool[i]);
+		if (pages[i].buf || pages[i].unmap) {
+			int rc = unmap_pages(&pages[i]);
 			if (rc < 0) {
 				LOG_ERR("unmap_pages failed: %d", rc);
 				ret = rc;
 			}
 		}
 
-		if (pool[i].unmap) {
-			k_free(pool[i].unmap);
-			pool[i].unmap = NULL;
+		if (pages[i].unmap) {
+			k_free(pages[i].unmap);
+			pages[i].unmap = NULL;
 		}
 
-		if (pool[i].buf) {
-			int rc = gnttab_put_pages(pool[i].buf, pool[i].unmap_pages);
+		if (pages[i].buf) {
+			int rc = gnttab_put_pages(pages[i].buf, pages[i].unmap_pages);
 			if (rc < 0) {
 				LOG_ERR("gnttab_put_pages failed: %d", rc);
 				ret = rc;
 			} else {
 				/* Decrease allocation count on successful release */
-				atomic_sub(&total_allocated_pages, pool[i].unmap_pages);
-				LOG_DBG("Released %u pages, total now: %d", pool[i].unmap_pages,
+				atomic_sub(&total_allocated_pages, pages[i].unmap_pages);
+				LOG_DBG("Released %u pages, total now: %d", pages[i].unmap_pages,
 					atomic_get(&total_allocated_pages));
 			}
 
-			pool[i].buf = NULL;
+			pages[i].buf = NULL;
 		}
 
 		/* Reset the page structure */
-		pool[i].unmap_count = 0;
-		pool[i].unmap_pages = 0;
-		pool[i].len = 0;
-		pool[i].gpa = 0;
+		pages[i].unmap_count = 0;
+		pages[i].unmap_pages = 0;
+		pages[i].len = 0;
+		pages[i].gpa = 0;
 	}
 
 	return ret;
