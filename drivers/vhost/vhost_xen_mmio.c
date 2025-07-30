@@ -1122,10 +1122,11 @@ static int setup_unmap_info(const struct device *dev, uint16_t queue_id, uint16_
 	struct descriptor_chain *dchain = &vq_ctx->chains[head];
 
 	bool any_map_failed = false;
+	const size_t initial_count = dchain->pages->unmap_count;
 
 	for (size_t i = 0; i < iovec_count; i++) {
 		const struct gnttab_map_grant_ref *map = &map_grant[i];
-		const size_t page_idx = i + dchain->pages->unmap_count;
+		const size_t page_idx = initial_count + i;
 		struct gnttab_unmap_grant_ref *unmap = &dchain->pages->unmap[page_idx];
 
 		/* Set up unmap information */
@@ -1138,20 +1139,22 @@ static int setup_unmap_info(const struct device *dev, uint16_t queue_id, uint16_
 			LOG_ERR_Q("map[%zu] failed: status=%d", i, map->status);
 			any_map_failed = true;
 		}
-
-		dchain->pages->unmap_count++;
 	}
 
 	if (any_map_failed) {
 		/* Unmap the ones that were mapped */
-		gnttab_unmap_refs(&dchain->pages->unmap[dchain->pages->unmap_count], iovec_count);
+		gnttab_unmap_refs(&dchain->pages->unmap[initial_count], iovec_count);
 		return -EIO;
 	}
+
+	/* Update count only after successful mapping */
+	dchain->pages->unmap_count += iovec_count;
 
 	return 0;
 }
 
-int zzz(const struct device *dev, uint16_t queue_id, uint16_t head, uint16_t total_pages)
+static int allocate_chain_buffer(const struct device *dev, uint16_t queue_id, uint16_t head,
+				 uint16_t total_pages)
 {
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
@@ -1195,8 +1198,11 @@ int zzz(const struct device *dev, uint16_t queue_id, uint16_t head, uint16_t tot
 	vq_ctx->chains[head].pages->unmap = new_unmap;
 	vq_ctx->chains[head].pages->unmap_pages = total_pages;
 	vq_ctx->chains[head].pages->len = total_pages * XEN_PAGE_SIZE;
+	vq_ctx->chains[head].pages->unmap_count = 0; /* Reset count for new buffer */
 
 	LOG_DBG("%s: q=%u: Pre-allocated buffer with %u pages", __func__, queue_id, total_pages);
+
+	return 0;
 }
 
 static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
@@ -1264,58 +1270,11 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	if (vq_ctx->chains[head].pages == NULL ||
 	    vq_ctx->chains[head].pages->unmap_pages < total_pages) {
 
-		ret = zzz(dev, queue_id, head, total_pages);
+		ret = allocate_chain_buffer(dev, queue_id, head, total_pages);
 		if (ret < 0) {
-			LOG_ERR_Q("zzz failed%s", "");
+			LOG_ERR_Q("allocate_chain_buffer failed: %d", ret);
 			return ret;
 		}
-
-#if 0
-		/* Allocate pages structure if not already allocated */
-		if (vq_ctx->chains[head].pages == NULL) {
-			vq_ctx->chains[head].pages = k_malloc(sizeof(struct mapped_pages));
-			if (vq_ctx->chains[head].pages == NULL) {
-				LOG_ERR("Failed to allocate pages structure%s", "");
-				return -ENOMEM;
-			}
-			memset(vq_ctx->chains[head].pages, 0, sizeof(struct mapped_pages));
-		} else {
-			/* Clean up old buffer using free_pages */
-			free_pages(vq_ctx->chains[head].pages, 1);
-		}
-
-		/* Allocate new buffer with the required size */
-		uint8_t *new_buf = gnttab_get_pages(total_pages);
-		struct gnttab_unmap_grant_ref *new_unmap =
-			k_malloc(sizeof(struct gnttab_unmap_grant_ref) * total_pages);
-
-		if (new_buf == NULL || new_unmap == NULL) {
-			if (new_buf) {
-				gnttab_put_pages(new_buf, total_pages);
-			}
-			if (new_unmap) {
-				k_free(new_unmap);
-			}
-			LOG_ERR("%s: q=%u: failed to allocate pages/unmap array", __func__,
-				queue_id);
-			return -ENOMEM;
-		}
-
-		/* Initialize all new unmap entries */
-		for (size_t j = 0; j < total_pages; j++) {
-			new_unmap[j].status = GNTST_general_error;
-		}
-
-		/* Set new pre-allocated buffer */
-		vq_ctx->chains[head].pages->buf = new_buf;
-		vq_ctx->chains[head].pages->unmap = new_unmap;
-		vq_ctx->chains[head].pages->unmap_pages = total_pages;
-		vq_ctx->chains[head].pages->len = total_pages * XEN_PAGE_SIZE;
-
-		LOG_DBG("%s: q=%u: Pre-allocated buffer with %u pages", __func__, queue_id,
-			total_pages);
-
-#endif
 	}
 
 	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
