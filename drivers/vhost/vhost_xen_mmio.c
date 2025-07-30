@@ -1252,9 +1252,6 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		iovec_count++;
 		gpa += chunk;
 		remains -= chunk;
-
-		remains -= chunk;
-		gpa += chunk;
 	}
 
 	k_spin_unlock(&data->lock, key);
