@@ -398,21 +398,21 @@ static int free_pages(struct mapped_pages *pages, size_t len)
 	return ret;
 }
 
-static int setup_iovec_mappings(const struct device *dev, uint16_t queue_id, uint16_t head,
+static int setup_iovec_mappings(struct descriptor_chain *dchain, domid_t domid,
 				const struct vhost_gpa_range *ranges, size_t ranges_len,
 				struct vhost_iovec *r_iovecs, size_t r_iovecs_len,
 				struct vhost_iovec *w_iovecs, size_t w_iovecs_len,
 				struct gnttab_map_grant_ref *map_grant, size_t *r_count_out,
 				size_t *w_count_out)
 {
-	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	struct descriptor_chain *dchain = &vq_ctx->chains[head];
+	//struct vhost_xen_mmio_data *data = dev->data;
+	//struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	//struct descriptor_chain *dchain;// = &vq_ctx->chains[head];
 	size_t r_count = 0;
 	size_t w_count = 0;
 	size_t total_iovec_count = 0;
 
-	k_spinlock_key_t key = k_spin_lock(&data->lock);
+	//k_spinlock_key_t key = k_spin_lock(&data->lock);
 
 	for (size_t i = 0; i < ranges_len; i++) {
 		const bool is_write = ranges[i].is_write;
@@ -421,9 +421,9 @@ static int setup_iovec_mappings(const struct device *dev, uint16_t queue_id, uin
 		struct vhost_iovec *iovec = is_write ? &w_iovecs[w_count] : &r_iovecs[r_count];
 
 		if (current_count >= iovecs_len) {
-			LOG_ERR("%s: q=%u: no more %s iovecs: %zu >= %zu", __func__, queue_id,
+			LOG_ERR("%s: no more %s iovecs: %zu >= %zu", __func__,
 				is_write ? "write" : "read", current_count, iovecs_len);
-			k_spin_unlock(&data->lock, key);
+			//k_spin_unlock(&data->lock, key);
 			return -E2BIG;
 		}
 
@@ -436,7 +436,7 @@ static int setup_iovec_mappings(const struct device *dev, uint16_t queue_id, uin
 		map->host_addr = (uintptr_t)host_page;
 		map->flags = GNTMAP_host_map;
 		map->ref = (ranges[i].gpa & ~XEN_GRANT_ADDR_OFF) >> 12;
-		map->dom = data->fe.domid;
+		map->dom = domid;
 
 		iovec->iov_base = (void *)va;
 		iovec->iov_len = ranges[i].len;
@@ -449,7 +449,7 @@ static int setup_iovec_mappings(const struct device *dev, uint16_t queue_id, uin
 		total_iovec_count++;
 	}
 
-	k_spin_unlock(&data->lock, key);
+	//k_spin_unlock(&data->lock, key);
 
 	*r_count_out = r_count;
 	*w_count_out = w_count;
@@ -457,14 +457,9 @@ static int setup_iovec_mappings(const struct device *dev, uint16_t queue_id, uin
 	return total_iovec_count;
 }
 
-static int setup_unmap_info(const struct device *dev, uint16_t queue_id, uint16_t head,
-			    const struct vhost_gpa_range *ranges, size_t ranges_len,
-			    struct gnttab_map_grant_ref *map_grant, size_t iovec_count)
+static int setup_unmap_info(struct descriptor_chain *dchain, const struct vhost_gpa_range *ranges,
+			    size_t ranges_len, struct gnttab_map_grant_ref *map_grant, size_t iovec_count)
 {
-	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	struct descriptor_chain *dchain = &vq_ctx->chains[head];
-
 	bool any_map_failed = false;
 	const size_t initial_count = dchain->pages->unmap_count;
 
@@ -480,7 +475,7 @@ static int setup_unmap_info(const struct device *dev, uint16_t queue_id, uint16_
 		unmap->status = map->status;
 
 		if (map->status != GNTST_okay) {
-			LOG_ERR_Q("map[%zu] failed: status=%d", i, map->status);
+			LOG_ERR("map[%zu] failed: status=%d", i, map->status);
 			any_map_failed = true;
 		}
 	}
@@ -1264,10 +1259,12 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	struct descriptor_chain *dchain = &vq_ctx->chains[head];
 	int ret = 0;
 	struct gnttab_map_grant_ref *map_grant = NULL;
 	uint16_t total_pages = 0;
 	const size_t max_iovecs = max_read_iovecs + max_write_iovecs;
+	size_t read_iovec_count = 0, write_iovec_count = 0;
 
 	if (queue_id >= config->num_queues) {
 		LOG_ERR_Q("Invalid queue ID%s", "");
@@ -1339,10 +1336,13 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		return -ENOMEM;
 	}
 
-	size_t read_iovec_count = 0, write_iovec_count = 0;
+	k_spinlock_key_t key = k_spin_lock(&data->lock);
+
 	const int iovec_count = setup_iovec_mappings(
-		dev, queue_id, head, ranges, range_count, read_iovec, max_read_iovecs, write_iovec,
+		dchain, data->fe.domid, ranges, range_count, read_iovec, max_read_iovecs, write_iovec,
 		max_write_iovecs, map_grant, &read_iovec_count, &write_iovec_count);
+
+	k_spin_unlock(&data->lock, key);
 
 	if (iovec_count < 0) {
 		LOG_ERR_Q("setup_iovec_mappings failed: %d", iovec_count);
@@ -1356,7 +1356,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		goto cleanup;
 	}
 
-	ret = setup_unmap_info(dev, queue_id, head, ranges, range_count, map_grant, iovec_count);
+	ret = setup_unmap_info(dchain, ranges, range_count, map_grant, iovec_count);
 	if (ret < 0) {
 		LOG_ERR("setup_unmap_info failed: %d", ret);
 		goto cleanup;
