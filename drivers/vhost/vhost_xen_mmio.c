@@ -1055,71 +1055,59 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 }
 
 static int setup_iovec_mappings(const struct device *dev, uint16_t queue_id, uint16_t head,
-				const struct vhost_gpa_range *ranges, size_t range_count,
-				struct vhost_iovec *read_iovec, size_t read_max_iovecs,
-				struct vhost_iovec *write_iovec, size_t write_max_iovecs,
-				struct gnttab_map_grant_ref *map_grant, size_t *read_count_out,
-				size_t *write_count_out)
+				const struct vhost_gpa_range *ranges, size_t ranges_len,
+				struct vhost_iovec *r_iovecs, size_t r_iovecs_len,
+				struct vhost_iovec *w_iovecs, size_t w_iovecs_len,
+				struct gnttab_map_grant_ref *map_grant, size_t *r_count_out,
+				size_t *w_count_out)
 {
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 	struct descriptor_chain *dchain = &vq_ctx->chains[head];
+	size_t r_count = 0;
+	size_t w_count = 0;
+
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
-	size_t read_iovec_count = 0;
-	size_t write_iovec_count = 0;
-	size_t total_iovec_count = 0;
+	for (size_t i = 0; i < ranges_len; i++) {
+		const bool is_write = ranges[i].is_write;
+		const size_t iovecs_len = is_write ? w_iovecs_len : r_iovecs_len;
+		const size_t current_count = is_write ? w_count : r_count;
+		struct vhost_iovec *iovec = is_write ? &w_iovecs[w_count] : &r_iovecs[r_count];
 
-	for (size_t idx = 0; idx < range_count; idx++) {
-		bool is_write = ranges[idx].is_write;
-		size_t max_iovecs = is_write ? write_max_iovecs : read_max_iovecs;
-		size_t current_count = is_write ? write_iovec_count : read_iovec_count;
-		struct vhost_iovec *iovec =
-			is_write ? &write_iovec[write_iovec_count] : &read_iovec[read_iovec_count];
-
-		uint64_t gpa =
-			ranges[idx].gpa; /* Fixed: use idx instead of accessing ranges directly */
-		size_t len =
-			ranges[idx].len; /* Fixed: use idx instead of accessing ranges directly */
-
-		/* Check if we have space in the appropriate iovec array */
-		if (current_count >= max_iovecs) {
+		if (current_count >= iovecs_len) {
 			LOG_ERR("%s: q=%u: no more %s iovecs: %zu >= %zu", __func__, queue_id,
-				is_write ? "write" : "read", current_count, max_iovecs);
+				is_write ? "write" : "read", current_count, iovecs_len);
 			k_spin_unlock(&data->lock, key);
 			return -E2BIG;
 		}
 
-		/* Get the page and calculate offset and chunk size */
-		const void *host_page = dchain->pages->buf + (XEN_PAGE_SIZE * total_iovec_count);
-		const size_t page_offset = gpa & (XEN_PAGE_SIZE - 1);
+		const void *host_page = dchain->pages->buf + (XEN_PAGE_SIZE * (r_count + w_count));
+		const size_t page_offset = ranges[i].gpa & (XEN_PAGE_SIZE - 1);
 		const void *va = (void *)(((uintptr_t)host_page) + page_offset);
-		struct gnttab_map_grant_ref *map = &map_grant[total_iovec_count];
+		struct gnttab_map_grant_ref *map = &map_grant[r_count + w_count];
 
-		/* Set up grant mapping with correct grant reference extraction */
 		map->host_addr = (uintptr_t)host_page;
 		map->flags = GNTMAP_host_map;
-		map->ref = (gpa & ~XEN_GRANT_ADDR_OFF) >> 12;
+		map->ref = (ranges[i].gpa & ~XEN_GRANT_ADDR_OFF) >> 12;
 		map->dom = data->fe.domid;
 
 		iovec->iov_base = (void *)va;
-		iovec->iov_len = len;
+		iovec->iov_len = ranges[i].len;
 
-		/* Update counters properly */
 		if (is_write) {
-			write_iovec_count++;
+			w_count++;
 		} else {
-			read_iovec_count++;
+			r_count++;
 		}
-		total_iovec_count++;
 	}
 
 	k_spin_unlock(&data->lock, key);
 
-	*read_count_out = read_iovec_count;
-	*write_count_out = write_iovec_count;
+	*r_count_out = r_count;
+	*w_count_out = w_count;
 
-	return total_iovec_count;
+	return (r_count + w_count);
 }
 
 static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
@@ -1231,104 +1219,18 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 			total_pages);
 	}
 
-	/* Allocate map_grant after buffer expansion to avoid unnecessary allocation */
 	map_grant = k_malloc(sizeof(struct gnttab_map_grant_ref) * max_iovecs);
 	if (!map_grant) {
 		LOG_ERR_Q("k_malloc failed%s", "");
 		return -ENOMEM;
 	}
 
-	// key = k_spin_lock(&data->lock);
-
 	size_t read_iovec_count = 0, write_iovec_count = 0;
-	size_t iovec_count = 0;
-
-	ret = setup_iovec_mappings(dev, queue_id, head, ranges, range_count, read_iovec,
-				   max_read_iovecs, write_iovec, max_write_iovecs, map_grant,
-				   &read_iovec_count, &write_iovec_count);
-	iovec_count = ret;
-
-	if (ret < 0) {
-		LOG_ERR_Q("setup_iovec_mappings failed: %d", ret);
-		goto cleanup;
-	}
-#if 0
-	for (size_t idx = 0; idx < range_count; idx++) {
-		bool is_write = ranges[idx].is_write;
-
-
-
-		if (is_write) {
-			write_iovec_count++;
-		} else {
-			read_iovec_count++;
-		}
-		iovec_count++;
-		uint64_t gpa = ranges[idx].gpa;
-		size_t remains = ranges[idx].len;
-		bool is_write = ranges[idx].is_write;
-
-		while (remains > 0) {
-			size_t page_count = vq_ctx->chains[head].pages[0].unmap_count + iovec_count;
-
-			if (page_count >= vq_ctx->chains[head].pages[0].unmap_pages) {
-				LOG_ERR("%s: q=%u: no more reserved pages: %zu >= %lu", __func__,
-					queue_id, page_count, vq_ctx->chains[head].pages[0].unmap_pages);
-				k_spin_unlock(&data->lock, key);
-				ret = -ENOMEM;
-				goto cleanup;
-			}
-
-			/* Check if we have space in the appropriate iovec array */
-			if (is_write && write_iovec_count >= max_write_iovecs) {
-				LOG_ERR("%s: q=%u: no more write iovecs: %zu >= %zu", __func__,
-					queue_id, write_iovec_count, max_write_iovecs);
-				k_spin_unlock(&data->lock, key);
-				ret = -E2BIG;
-				goto cleanup;
-			} else if (!is_write && read_iovec_count >= max_read_iovecs) {
-				LOG_ERR("%s: q=%u: no more read iovecs: %zu >= %zu", __func__,
-					queue_id, read_iovec_count, max_read_iovecs);
-				k_spin_unlock(&data->lock, key);
-				ret = -E2BIG;
-				goto cleanup;
-			}
-
-			/* Get the page and calculate offset and chunk size */
-			const void *host_page =
-				vq_ctx->chains[head].pages[0].buf + (XEN_PAGE_SIZE * page_count);
-			const size_t page_offset = gpa & (XEN_PAGE_SIZE - 1);
-			const void *va = (void *)(((uintptr_t)host_page) + page_offset);
-			const size_t chunk = MIN(remains, XEN_PAGE_SIZE - page_offset);
-			struct gnttab_map_grant_ref *map = &map_grant[iovec_count];
-
-			/* Set up grant mapping with correct grant reference extraction */
-			map->host_addr = (uintptr_t)host_page;
-			map->flags = GNTMAP_host_map;
-			map->ref = (gpa & ~XEN_GRANT_ADDR_OFF) >> 12;
-			map->dom = data->fe.domid;
-
-			/* Fill the appropriate iovec array */
-			if (is_write) {
-				write_iovec[write_iovec_count].iov_base = (void *)va;
-				write_iovec[write_iovec_count].iov_len = chunk;
-				write_iovec_count++;
-			} else {
-				read_iovec[read_iovec_count].iov_base = (void *)va;
-				read_iovec[read_iovec_count].iov_len = chunk;
-				read_iovec_count++;
-			}
-
-			iovec_count++;
-			gpa += chunk;
-			remains -= chunk;
-		}
-	}
-#endif
-
-	// k_spin_unlock(&data->lock, key);
-
+	const size_t iovec_count = setup_iovec_mappings(dev, queue_id, head, ranges, range_count,
+							read_iovec, max_read_iovecs, write_iovec,
+						       	max_write_iovecs, map_grant, &read_iovec_count, &write_iovec_count);
 	if (iovec_count <= 0) {
+		LOG_ERR_Q("setup_iovec_mappings failed: %d", ret);
 		goto end;
 	}
 
@@ -1366,7 +1268,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 		goto cleanup;
 	}
 
-	vq_ctx->chains[head].pages[0].unmap_count += iovec_count;
+	vq_ctx->chains[head].pages[0].unmap_count += (read_iovec_count + write_iovec_count);
 	vq_ctx->chains[head].chain_head = head;
 
 end:
