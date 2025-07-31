@@ -97,7 +97,7 @@ struct queue_callback {
 };
 
 struct virtq_context {
-	size_t queue_size; /* Number of descriptors in this queue */
+	size_t queue_size;           /* Number of descriptors in this queue */
 	struct mapped_pages meta[3]; /* Legacy meta pages - will be deprecated */
 	struct descriptor_chain *chains;
 	struct descriptor_chain metachain; /* New unified meta chain for DESC/AVAIL/USED */
@@ -406,14 +406,14 @@ static int setup_iovec_mappings(struct descriptor_chain *dchain, domid_t domid,
 				struct gnttab_map_grant_ref *map_grant, size_t *r_count_out,
 				size_t *w_count_out)
 {
-	//struct vhost_xen_mmio_data *data = dev->data;
-	//struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	//struct descriptor_chain *dchain;// = &vq_ctx->chains[head];
+	// struct vhost_xen_mmio_data *data = dev->data;
+	// struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	// struct descriptor_chain *dchain;// = &vq_ctx->chains[head];
 	size_t r_count = 0;
 	size_t w_count = 0;
 	size_t total_iovec_count = 0;
 
-	//k_spinlock_key_t key = k_spin_lock(&data->lock);
+	// k_spinlock_key_t key = k_spin_lock(&data->lock);
 
 	for (size_t i = 0; i < ranges_len; i++) {
 		const bool is_write = ranges[i].is_write;
@@ -424,7 +424,7 @@ static int setup_iovec_mappings(struct descriptor_chain *dchain, domid_t domid,
 		if (current_count >= iovecs_len) {
 			LOG_ERR("%s: no more %s iovecs: %zu >= %zu", __func__,
 				is_write ? "write" : "read", current_count, iovecs_len);
-			//k_spin_unlock(&data->lock, key);
+			// k_spin_unlock(&data->lock, key);
 			return -E2BIG;
 		}
 
@@ -450,7 +450,7 @@ static int setup_iovec_mappings(struct descriptor_chain *dchain, domid_t domid,
 		total_iovec_count++;
 	}
 
-	//k_spin_unlock(&data->lock, key);
+	// k_spin_unlock(&data->lock, key);
 
 	*r_count_out = r_count;
 	*w_count_out = w_count;
@@ -459,7 +459,8 @@ static int setup_iovec_mappings(struct descriptor_chain *dchain, domid_t domid,
 }
 
 static int setup_unmap_info(struct descriptor_chain *dchain, const struct vhost_gpa_range *ranges,
-			    size_t ranges_len, struct gnttab_map_grant_ref *map_grant, size_t iovec_count)
+			    size_t ranges_len, struct gnttab_map_grant_ref *map_grant,
+			    size_t iovec_count)
 {
 	bool any_map_failed = false;
 	const size_t initial_count = dchain->pages->unmap_count;
@@ -511,8 +512,8 @@ static int allocate_chain_buffer(struct descriptor_chain *dchain, uint16_t total
 	}
 
 	atomic_t current_total = atomic_add(&total_allocated_pages, total_pages);
-	LOG_DBG("%s: Allocating %d pages for chain buffer (total: %ld)", __func__,
-		total_pages, current_total + total_pages);
+	LOG_DBG("%s: Allocating %d pages for chain buffer (total: %ld)", __func__, total_pages,
+		current_total + total_pages);
 
 	uint8_t *new_buf = gnttab_get_pages(total_pages);
 	struct gnttab_unmap_grant_ref *new_unmap =
@@ -556,7 +557,8 @@ static int allocate_chain_buffer(struct descriptor_chain *dchain, uint16_t total
  * @param total_meta_pages Total pages needed for all meta structures
  * @return 0 on success, negative error code on failure
  */
-static int init_virtq_metachain(const struct device *dev, uint16_t queue_id, size_t total_meta_pages)
+static int init_virtq_metachain(const struct device *dev, uint16_t queue_id,
+				size_t total_meta_pages)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
@@ -565,7 +567,8 @@ static int init_virtq_metachain(const struct device *dev, uint16_t queue_id, siz
 	struct gnttab_map_grant_ref *map_grant = NULL;
 	int ret;
 
-	LOG_DBG("%s: q=%u: Initializing metachain with %zu pages", __func__, queue_id, total_meta_pages);
+	LOG_DBG("%s: q=%u: Initializing metachain with %zu pages", __func__, queue_id,
+		total_meta_pages);
 
 	/* Initialize metachain structure */
 	metachain->max_descriptors = 3; /* DESC, AVAIL, USED */
@@ -574,7 +577,8 @@ static int init_virtq_metachain(const struct device *dev, uint16_t queue_id, siz
 	/* Allocate the unified buffer for all meta pages */
 	ret = allocate_chain_buffer(metachain, total_meta_pages);
 	if (ret < 0) {
-		LOG_ERR("%s: q=%u: Failed to allocate metachain buffer: %d", __func__, queue_id, ret);
+		LOG_ERR("%s: q=%u: Failed to allocate metachain buffer: %d", __func__, queue_id,
+			ret);
 		return ret;
 	}
 
@@ -587,10 +591,19 @@ static int init_virtq_metachain(const struct device *dev, uint16_t queue_id, siz
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
 	const struct vhost_gpa_range ranges[] = {
-		{.gpa = vq_ctx->meta[0].gpa, .len=16 * (vq_ctx->queue_size), },
-		{.gpa = vq_ctx->meta[1].gpa, .len=2 * (vq_ctx->queue_size), },
-		{.gpa = vq_ctx->meta[2].gpa, .len=8 * (vq_ctx->queue_size), },
-       	};
+		{
+			.gpa = vq_ctx->meta[0].gpa,
+			.len = 16 * (vq_ctx->queue_size),
+		},
+		{
+			.gpa = vq_ctx->meta[1].gpa,
+			.len = 2 * (vq_ctx->queue_size),
+		},
+		{
+			.gpa = vq_ctx->meta[2].gpa,
+			.len = 8 * (vq_ctx->queue_size),
+		},
+	};
 
 	struct vhost_iovec r_iovec[3];
 	struct vhost_iovec w_iovec[3];
@@ -598,22 +611,31 @@ static int init_virtq_metachain(const struct device *dev, uint16_t queue_id, siz
 	size_t write_iovec_count;
 
 	const int iovec_count = setup_iovec_mappings(
-		metachain, data->fe.domid, ranges, ARRAY_SIZE(ranges),
-	       	r_iovec, ARRAY_SIZE(r_iovec),
-	       	w_iovec, ARRAY_SIZE(w_iovec), /* will ignored */
-	       	map_grant, &read_iovec_count, &write_iovec_count);
+		metachain, data->fe.domid, ranges, ARRAY_SIZE(ranges), r_iovec, ARRAY_SIZE(r_iovec),
+		w_iovec, ARRAY_SIZE(w_iovec), /* will ignored */
+		map_grant, &read_iovec_count, &write_iovec_count);
 
 	k_spin_unlock(&data->lock, key);
+
+	if (iovec_count < 0) {
+		LOG_ERR_Q("setup_iovec_mappings failed: %d", iovec_count);
+		ret = iovec_count;
+		// goto cleanup;
+	}
+
+	ret = gnttab_map_refs(map_grant, iovec_count);
+	if (ret < 0) {
+		LOG_ERR("gnttab_map_refs failed: %d", ret);
+		// goto cleanup;
+	}
 
 	ret = setup_unmap_info(metachain, ranges, ARRAY_SIZE(ranges), map_grant, iovec_count);
 	if (ret < 0) {
 		LOG_ERR("setup_unmap_info failed: %d", ret);
-		//goto cleanup;
+		// goto cleanup;
 	}
 
 	metachain->chain_head = config->queue_size_max;
-
-
 
 	LOG_DBG("%s: q=%u: Metachain initialized successfully", __func__, queue_id);
 	return 0;
@@ -622,7 +644,7 @@ static int init_virtq_metachain(const struct device *dev, uint16_t queue_id, siz
 /**
  * @brief Reset metachain for a queue
  *
- * @param dev VHost device instance 
+ * @param dev VHost device instance
  * @param queue_id Queue ID
  */
 static void reset_virtq_metachain(const struct device *dev, uint16_t queue_id)
@@ -653,17 +675,12 @@ static void debug_metachain_info(const struct device *dev, uint16_t queue_id)
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 	struct descriptor_chain *metachain = &vq_ctx->metachain;
 
-	LOG_DBG("%s: q=%u: metachain info - pages=%p, max_desc=%zu, chain_head=%d", 
-		__func__, queue_id, 
-		metachain->pages, 
-		metachain->max_descriptors, 
-		metachain->chain_head);
-	
+	LOG_DBG("%s: q=%u: metachain info - pages=%p, max_desc=%zu, chain_head=%d", __func__,
+		queue_id, metachain->pages, metachain->max_descriptors, metachain->chain_head);
+
 	if (metachain->pages) {
-		LOG_DBG("%s: q=%u: metachain pages - buf=%p, unmap_pages=%zu, len=%zu", 
-			__func__, queue_id,
-			metachain->pages->buf,
-			metachain->pages->unmap_pages,
+		LOG_DBG("%s: q=%u: metachain pages - buf=%p, unmap_pages=%zu, len=%zu", __func__,
+			queue_id, metachain->pages->buf, metachain->pages->unmap_pages,
 			metachain->pages->len);
 	}
 }
@@ -771,7 +788,7 @@ end:
 
 	/* Calculate total pages needed for metachain */
 	const size_t total_meta_pages = num_pages[0] + num_pages[1] + num_pages[2];
-	
+
 	/* Initialize metachain alongside legacy meta */
 	ret = init_virtq_metachain(dev, queue_id, total_meta_pages);
 	if (ret < 0) {
@@ -1461,8 +1478,8 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
 	const int iovec_count = setup_iovec_mappings(
-		dchain, data->fe.domid, ranges, range_count, read_iovec, max_read_iovecs, write_iovec,
-		max_write_iovecs, map_grant, &read_iovec_count, &write_iovec_count);
+		dchain, data->fe.domid, ranges, range_count, read_iovec, max_read_iovecs,
+		write_iovec, max_write_iovecs, map_grant, &read_iovec_count, &write_iovec_count);
 
 	k_spin_unlock(&data->lock, key);
 
@@ -1595,11 +1612,12 @@ static int vhost_xen_mmio_init(const struct device *dev)
 #define VQCTX_INIT(n, idx)                                                                         \
 	{                                                                                          \
 		.chains = vhost_xen_mmio_vq_ctx_chains_##idx[n],                                   \
-		.metachain = {                                                                     \
-			.pages = NULL,                                                             \
-			.max_descriptors = 0,                                                      \
-			.chain_head = -1,                                                          \
-		},                                                                                 \
+		.metachain =                                                                       \
+			{                                                                          \
+				.pages = NULL,                                                     \
+				.max_descriptors = 0,                                              \
+				.chain_head = -1,                                                  \
+			},                                                                         \
 	}
 
 #define Q_NUM(idx)    DT_INST_PROP_OR(idx, num_queues, 1)
