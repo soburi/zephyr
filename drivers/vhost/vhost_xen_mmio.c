@@ -100,7 +100,7 @@ struct virtq_context {
 	size_t queue_size;           /* Number of descriptors in this queue */
 	struct mapped_pages meta[3]; /* Legacy meta pages - will be deprecated */
 	struct descriptor_chain *chains;
-	struct descriptor_chain metachain; /* New unified meta chain for DESC/AVAIL/USED */
+	struct descriptor_chain metachain[1]; /* New unified meta chain for DESC/AVAIL/USED */
 	struct queue_callback notify_callback;
 	atomic_t notified;
 	uint64_t meta_gpa[3];
@@ -564,7 +564,7 @@ static int init_virtq_metachain(const struct device *dev, uint16_t queue_id,
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	struct descriptor_chain *metachain = &vq_ctx->metachain;
+	struct descriptor_chain *metachain = vq_ctx->metachain;
 	struct gnttab_map_grant_ref *map_grant = NULL;
 	int ret;
 
@@ -652,7 +652,7 @@ static void reset_virtq_metachain(const struct device *dev, uint16_t queue_id)
 {
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	struct descriptor_chain *metachain = &vq_ctx->metachain;
+	struct descriptor_chain *metachain = vq_ctx->metachain;
 
 	if (metachain->pages) {
 		free_pages(metachain->pages, 1);
@@ -674,7 +674,7 @@ static void debug_metachain_info(const struct device *dev, uint16_t queue_id)
 {
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	struct descriptor_chain *metachain = &vq_ctx->metachain;
+	struct descriptor_chain *metachain = vq_ctx->metachain;
 
 	LOG_DBG("%s: q=%u: metachain info - pages=%p, max_desc=%zu, chain_head=%d", __func__,
 		queue_id, metachain->pages, metachain->max_descriptors, metachain->chain_head);
@@ -1616,11 +1616,11 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	{                                                                                          \
 		.chains = vhost_xen_mmio_vq_ctx_chains_##idx[n],                                   \
 		.metachain =                                                                       \
-			{                                                                          \
+		{{                                                                          \
 				.pages = NULL,                                                     \
 				.max_descriptors = 0,                                              \
 				.chain_head = -1,                                                  \
-			},                                                                         \
+			}},                                                                         \
 	}
 
 #define Q_NUM(idx)    DT_INST_PROP_OR(idx, num_queues, 1)
