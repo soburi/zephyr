@@ -98,7 +98,6 @@ struct queue_callback {
 
 struct virtq_context {
 	size_t queue_size;           /* Number of descriptors in this queue */
-	struct mapped_pages meta[3]; /* Legacy meta pages - will be deprecated */
 	struct descriptor_chain *chains;
 	struct descriptor_chain metachain[1]; /* New unified meta chain for DESC/AVAIL/USED */
 	struct queue_callback notify_callback;
@@ -692,7 +691,7 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
-	free_pages(vq_ctx->meta, NUM_OF_VIRTQ_PARTS);
+	//free_pages(vq_ctx->meta, NUM_OF_VIRTQ_PARTS);
 
 	/* Reset metachain */
 	reset_virtq_metachain(dev, queue_id);
@@ -712,7 +711,7 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 	vq_ctx->notify_callback.data = 0;
 	atomic_set(&vq_ctx->notified, 0);
 
-	memset(vq_ctx->meta, 0, sizeof(struct mapped_pages) * NUM_OF_VIRTQ_PARTS);
+	//memset(vq_ctx->meta, 0, sizeof(struct mapped_pages) * NUM_OF_VIRTQ_PARTS);
 	memset(vq_ctx->chains, 0, sizeof(struct descriptor_chain) * config->queue_size_max);
 
 	k_spin_unlock(&data->lock, key);
@@ -738,7 +737,7 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 				    DIV_ROUND_UP(2 * (vq_ctx->queue_size) + 6, XEN_PAGE_SIZE),
 				    DIV_ROUND_UP(8 * (vq_ctx->queue_size) + 6, XEN_PAGE_SIZE)};
 	int ret = 0;
-
+#if 0
 	for (int i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
 		const size_t pages = num_pages[i];
 
@@ -786,6 +785,7 @@ end:
 		reset_queue(dev, queue_id);
 		return ret;
 	}
+#endif
 
 	/* Calculate total pages needed for metachain */
 	const size_t total_meta_pages = num_pages[0] + num_pages[1] + num_pages[2];
@@ -800,9 +800,9 @@ end:
 
 	k_spinlock_key_t key = k_spin_lock(&data->lock);
 
-	vq_ctx->meta[0].unmap_count = num_pages[0];
-	vq_ctx->meta[1].unmap_count = num_pages[1];
-	vq_ctx->meta[2].unmap_count = num_pages[2];
+	//vq_ctx->meta[0].unmap_count = num_pages[0];
+	//vq_ctx->meta[1].unmap_count = num_pages[1];
+	//vq_ctx->meta[2].unmap_count = num_pages[2];
 
 	for (int i = 0; i < config->queue_size_max; i++) {
 		vq_ctx->chains[i].pages = NULL;
@@ -968,12 +968,11 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 		if (queue_id < config->num_queues) {
 			const size_t part = (addr_offset - VIRTIO_MMIO_QUEUE_DESC_LOW) / 0x10;
 			const bool hi = !!((addr_offset - VIRTIO_MMIO_QUEUE_DESC_LOW) % 0x10);
-			uint64_t *p_gpa = &data->vq_ctx[queue_id].meta[part].gpa;
-			uint64_t *p_gpa2 = &data->vq_ctx[queue_id].meta_gpa[part];
+			//uint64_t *p_gpa = &data->vq_ctx[queue_id].meta[part].gpa;
+			uint64_t *p_gpa = &data->vq_ctx[queue_id].meta_gpa[part];
 
 			*p_gpa = hi ? ((r->data << 32) | (*p_gpa & UINT32_MAX))
 				    : (r->data | (*p_gpa & 0xFFFFFFFF00000000));
-			*p_gpa2 = *p_gpa;
 		}
 	} break;
 	case VIRTIO_MMIO_QUEUE_NOTIFY: {
@@ -1233,15 +1232,16 @@ static bool vhost_xen_mmio_queue_is_ready(const struct device *dev, uint16_t que
 	}
 
 	for (size_t i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
-		if (vq_ctx->meta[i].buf == NULL) {
+		if (vq_ctx->metachain[0].pages[i].buf == NULL) {
 			return false;
 		}
-
-		for (size_t j = 0; j < vq_ctx->meta[i].unmap_count; j++) {
-			if (vq_ctx->meta[i].unmap[j].status != GNTST_okay) {
+/*
+		for (size_t j = 0; j < vq_ctx->metachain[0].pages[i].unmap_count; j++) {
+			if (vq_ctx->metachain[0].pages[i].unmap[j].status != GNTST_okay) {
 				return false;
 			}
 		}
+*/
 	}
 
 	return vq_ctx->meta_gpa[DESC] != 0 && vq_ctx->meta_gpa[AVAIL] != 0 &&
@@ -1266,7 +1266,7 @@ static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
 	}
 
 	for (int i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
-		parts[i] = vq_ctx->meta[i].buf + (vq_ctx->meta_gpa[i] & (XEN_PAGE_SIZE - 1));
+		parts[i] = vq_ctx->metachain[0].pages[i].buf + (vq_ctx->meta_gpa[i] & (XEN_PAGE_SIZE - 1));
 	}
 
 	if (!parts[DESC] || !parts[AVAIL] || !parts[USED]) {
