@@ -103,6 +103,7 @@ struct virtq_context {
 	struct descriptor_chain metachain; /* New unified meta chain for DESC/AVAIL/USED */
 	struct queue_callback notify_callback;
 	atomic_t notified;
+	uint64_t meta_gpa[3];
 };
 
 struct vhost_xen_mmio_data {
@@ -592,15 +593,15 @@ static int init_virtq_metachain(const struct device *dev, uint16_t queue_id,
 
 	const struct vhost_gpa_range ranges[] = {
 		{
-			.gpa = vq_ctx->meta[0].gpa,
+			.gpa = vq_ctx->meta_gpa[0],
 			.len = 16 * (vq_ctx->queue_size),
 		},
 		{
-			.gpa = vq_ctx->meta[1].gpa,
+			.gpa = vq_ctx->meta_gpa[1],
 			.len = 2 * (vq_ctx->queue_size),
 		},
 		{
-			.gpa = vq_ctx->meta[2].gpa,
+			.gpa = vq_ctx->meta_gpa[2],
 			.len = 8 * (vq_ctx->queue_size),
 		},
 	};
@@ -751,7 +752,7 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 		}
 
 		for (int j = 0; j < num_pages[i]; j++) {
-			const uint64_t page_gpa = vq_ctx->meta[i].gpa + (j * XEN_PAGE_SIZE);
+			const uint64_t page_gpa = vq_ctx->meta_gpa[i] + (j * XEN_PAGE_SIZE);
 			struct gnttab_map_grant_ref op = {
 				.host_addr = (uintptr_t)vq_ctx->meta[i].buf + (j * XEN_PAGE_SIZE),
 				.flags = GNTMAP_host_map,
@@ -968,9 +969,11 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 			const size_t part = (addr_offset - VIRTIO_MMIO_QUEUE_DESC_LOW) / 0x10;
 			const bool hi = !!((addr_offset - VIRTIO_MMIO_QUEUE_DESC_LOW) % 0x10);
 			uint64_t *p_gpa = &data->vq_ctx[queue_id].meta[part].gpa;
+			uint64_t *p_gpa2 = &data->vq_ctx[queue_id].meta_gpa[part];
 
 			*p_gpa = hi ? ((r->data << 32) | (*p_gpa & UINT32_MAX))
 				    : (r->data | (*p_gpa & 0xFFFFFFFF00000000));
+			*p_gpa2 = *p_gpa;
 		}
 	} break;
 	case VIRTIO_MMIO_QUEUE_NOTIFY: {
@@ -1241,8 +1244,8 @@ static bool vhost_xen_mmio_queue_is_ready(const struct device *dev, uint16_t que
 		}
 	}
 
-	return vq_ctx->meta[DESC].gpa != 0 && vq_ctx->meta[AVAIL].gpa != 0 &&
-	       vq_ctx->meta[USED].gpa != 0;
+	return vq_ctx->meta_gpa[DESC] != 0 && vq_ctx->meta_gpa[AVAIL] != 0 &&
+	       vq_ctx->meta_gpa[USED] != 0;
 }
 
 static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id, void **parts,
@@ -1263,7 +1266,7 @@ static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
 	}
 
 	for (int i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
-		parts[i] = vq_ctx->meta[i].buf + (vq_ctx->meta[i].gpa & (XEN_PAGE_SIZE - 1));
+		parts[i] = vq_ctx->meta[i].buf + (vq_ctx->meta_gpa[i] & (XEN_PAGE_SIZE - 1));
 	}
 
 	if (!parts[DESC] || !parts[AVAIL] || !parts[USED]) {
