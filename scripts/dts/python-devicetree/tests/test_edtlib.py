@@ -130,6 +130,45 @@ def test_interrupts():
         edtlib.ControllerAndData(node=node, controller=edt.get_node('/interrupt-map-bitops-test/controller'), data={'one': 3, 'two': 2}, name=None, basename=None)
     ]
 
+
+def test_maps():
+    '''Tests for the maps property.'''
+
+    with from_here():
+        edt = edtlib.EDT("test.dts", ["test-bindings"])
+
+    def expected(node, controller, child_specifiers, parent_specifiers, basename):
+        values = {f"child_specifier_{i}": val for i, val in enumerate(child_specifiers)}
+        values.update({f"parent_specifier_{i}": val for i, val in enumerate(parent_specifiers)})
+        return edtlib.ControllerAndData(
+            node=node,
+            controller=controller,
+            data=values,
+            name=None,
+            basename=basename,
+        )
+
+    connector = edt.get_node("/gpio-map/connector")
+    destination = edt.get_node("/gpio-map/destination")
+    assert connector.maps == [
+        expected(connector, destination, [1, 2], [5], "gpio"),
+        expected(connector, destination, [3, 4], [6], "gpio"),
+    ]
+
+    nexus = edt.get_node("/interrupt-map-test/nexus")
+    controller_0 = edt.get_node('/interrupt-map-test/controller-0')
+    controller_1 = edt.get_node('/interrupt-map-test/controller-1')
+    controller_2 = edt.get_node('/interrupt-map-test/controller-2')
+    assert nexus.maps == [
+        expected(nexus, controller_0, [0, 0, 0, 0], [0, 0], "interrupt"),
+        expected(nexus, controller_1, [0, 0, 0, 1], [0, 0, 0, 1], "interrupt"),
+        expected(nexus, controller_2, [0, 0, 0, 2], [0, 0, 0, 0, 0, 2], "interrupt"),
+        expected(nexus, controller_0, [0, 1, 0, 0], [0, 3], "interrupt"),
+        expected(nexus, controller_1, [0, 1, 0, 1], [0, 0, 0, 4], "interrupt"),
+        expected(nexus, controller_2, [0, 1, 0, 2], [0, 0, 0, 0, 0, 5], "interrupt"),
+    ]
+
+
 def test_ranges():
     '''Tests for the ranges property'''
     with from_here():
