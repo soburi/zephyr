@@ -6,6 +6,8 @@
 
 #define DT_DRV_COMPAT raspberrypi_pico_sha256
 
+#include <errno.h>
+
 #include <zephyr/crypto/crypto.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util_macro.h>
@@ -23,31 +25,44 @@ struct crypto_rpi_pico_sha256_data {
 };
 
 static int crypto_rpi_pico_sha256_hash_handler(struct hash_ctx *ctx, struct hash_pkt *pkt,
-					       bool finish)
+                                              bool finish)
 {
-	struct crypto_rpi_pico_sha256_data *data = ctx->device->data;
+        struct crypto_rpi_pico_sha256_data *data = ctx->device->data;
 
-	if (!data->state.locked) {
-		LOG_ERR("Invalid status");
-		return -EINVAL;
-	}
+        if (!data->state.locked) {
+                LOG_ERR("Invalid status");
+                return -EINVAL;
+        }
 
-	data->state.cache_used = 0;
-	data->state.cache.word = 0;
-	data->state.total_data_size = 0;
+        if (!finish) {
+                LOG_ERR("Multipart hash operations are not supported");
+                return -ENOTSUP;
+        }
 
-	sha256_err_not_ready_clear();
-	sha256_set_bswap(true);
-	sha256_start();
+        if ((pkt->in_len != 0U) && (pkt->in_buf == NULL)) {
+                LOG_ERR("Input buffer missing");
+                return -EINVAL;
+        }
 
-	pico_sha256_update(&data->state, pkt->in_buf, pkt->in_len);
+        if (pkt->out_buf == NULL) {
+                LOG_ERR("Output buffer missing");
+                return -EINVAL;
+        }
 
-	if (!finish) {
-		return 0;
-	}
+        data->state.cache_used = 0;
+        data->state.cache.word = 0;
+        data->state.total_data_size = 0;
 
-	pico_sha256_write_padding(&data->state);
-	sha256_wait_valid_blocking();
+        sha256_err_not_ready_clear();
+        sha256_set_bswap(true);
+        sha256_start();
+
+        if (pkt->in_len != 0U) {
+                pico_sha256_update(&data->state, pkt->in_buf, pkt->in_len);
+        }
+
+        pico_sha256_write_padding(&data->state);
+        sha256_wait_valid_blocking();
 
 	for (uint i = 0; i < 8; i++) {
 		((uint32_t *)pkt->out_buf)[i] = BSWAP_32((uint32_t)sha256_hw->sum[i]);

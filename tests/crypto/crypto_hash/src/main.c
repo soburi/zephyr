@@ -8,6 +8,7 @@
 #include <zephyr/crypto/crypto.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <errno.h>
 
 #ifdef CONFIG_CRYPTO_MBEDTLS_SHIM
 #define CRYPTO_DRV_NAME CONFIG_CRYPTO_MBEDTLS_SHIM_DRV_NAME
@@ -136,8 +137,8 @@ uint8_t sha256_results[7][32] = {
 
 ZTEST_USER(crypto_hash, test_hash)
 {
-	int ret;
-	struct hash_ctx ctx;
+        int ret;
+        struct hash_ctx ctx;
 
 #ifdef CRYPTO_DRV_NAME
 	const struct device *dev = device_get_binding(CRYPTO_DRV_NAME);
@@ -183,5 +184,46 @@ ZTEST_USER(crypto_hash, test_hash)
 
 	hash_free_session(dev, &ctx);
 }
+
+#if DT_HAS_COMPAT_STATUS_OKAY(raspberrypi_pico_sha256)
+ZTEST_USER(crypto_hash, test_hash_multipart_rejected)
+{
+        int ret;
+        struct hash_ctx ctx;
+        const struct device *dev = DEVICE_DT_GET_ONE(raspberrypi_pico_sha256);
+
+        if (!device_is_ready(dev)) {
+                zassert(0, "Crypto device is not ready");
+        }
+
+        ctx.flags = CAP_SYNC_OPS | CAP_SEPARATE_IO_BUFS;
+
+        ret = hash_begin_session(dev, &ctx, CRYPTO_HASH_ALGO_SHA256);
+        zassert_true(ret == 0, "Failed to init sha256 session");
+
+        uint8_t out_buf[32] = {0};
+        struct hash_pkt pkt = {
+                .in_buf = test4,
+                .in_len = sizeof(test4),
+                .out_buf = out_buf,
+        };
+
+        ret = hash_update(&ctx, &pkt);
+        zassert_equal(ret, -ENOTSUP, "Unexpected multipart hash support");
+
+        ret = hash_compute(&ctx, &pkt);
+        zassert_true(ret == 0, "Failed to compute hash after multipart rejection");
+
+        ret = memcmp(pkt.out_buf, sha256_results[3], 32);
+        zassert_true(ret == 0, "Failed to compute hash after multipart rejection");
+
+        hash_free_session(dev, &ctx);
+}
+#else
+ZTEST_USER(crypto_hash, test_hash_multipart_rejected)
+{
+        ztest_test_skip();
+}
+#endif
 
 ZTEST_SUITE(crypto_hash, NULL, NULL, NULL, NULL, NULL);
