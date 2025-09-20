@@ -192,6 +192,27 @@ application.
          :board: m5stack_cores3/esp32s3/procpu/se
          :goals: flash
 
+Display
+=======
+
+The on-board ILI9342C LCD can be exercised with the LVGL sample application.
+
+.. tabs::
+
+   .. group-tab:: M5Stack CoreS3
+
+      .. zephyr-app-commands::
+         :zephyr-app: samples/subsys/display/lvgl
+         :board: m5stack_cores3/esp32s3/procpu
+         :goals: build
+
+   .. group-tab:: M5Stack CoreS3 SE
+
+      .. zephyr-app-commands::
+         :zephyr-app: samples/subsys/display/lvgl
+         :board: m5stack_cores3/esp32s3/procpu/se
+         :goals: build
+
 The baud rate of 921600bps is set by default. If experiencing issues when flashing,
 try using different values by using ``--esp-baud-rate <BAUD>`` option during
 ``west flash`` (e.g. ``west flash --esp-baud-rate 115200``).
