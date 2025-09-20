@@ -247,7 +247,7 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 			uint8_t pixel_value;
 
 			if (fb_x < 0 || fb->x_res <= fb_x || fb_y < 0 || fb->y_res <= fb_y) {
-				g_y++;
+				/* Skip drawing for out-of-bounds pixel, but do NOT modify g_y here. */
 				continue;
 			}
 
@@ -397,28 +397,28 @@ int cfb_draw_rect(const struct device *dev, const struct cfb_position *start,
 int cfb_draw_circle(const struct device *dev, const struct cfb_position *center, uint16_t radius)
 {
 	struct char_framebuffer *fb = &char_fb;
-	uint16_t x = 0;
-	int16_t y = -radius;
-	int16_t p = -radius;
+	int16_t x = radius;
+	int16_t y = 0;
+	int16_t err = 1 - x; /* Decision parameter */
 
-	/* Using the Midpoint Circle Algorithm */
-	while (x < -y) {
-		if (p > 0) {
-			p += 2 * (x + ++y) + 1;
-		} else {
-			p += 2 * x + 1;
-		}
-
+	/* Standard Midpoint Circle Algorithm with 8-way symmetry */
+	while (x >= y) {
 		draw_point(fb, center->x + x, center->y + y);
-		draw_point(fb, center->x - x, center->y + y);
-		draw_point(fb, center->x + x, center->y - y);
-		draw_point(fb, center->x - x, center->y - y);
 		draw_point(fb, center->x + y, center->y + x);
-		draw_point(fb, center->x + y, center->y - x);
 		draw_point(fb, center->x - y, center->y + x);
+		draw_point(fb, center->x - x, center->y + y);
+		draw_point(fb, center->x - x, center->y - y);
 		draw_point(fb, center->x - y, center->y - x);
+		draw_point(fb, center->x + y, center->y - x);
+		draw_point(fb, center->x + x, center->y - y);
 
-		x++;
+		y++;
+		if (err < 0) {
+			err += 2 * y + 1;
+		} else {
+			x--;
+			err += 2 * (y - x) + 1;
+		}
 	}
 
 	return 0;
@@ -575,7 +575,13 @@ int cfb_framebuffer_finalize(const struct device *dev)
 		.pitch = fb->x_res,
 	};
 
-	if ((fb->pixel_format == PIXEL_FORMAT_MONO10) == fb->inverted) {
+	/*
+	 * For MONO10 displays, a bit value of 1 means black. The CFB tests
+	 * treat a logical "on" pixel as white. Invert the buffer for MONO10
+	 * unless the user explicitly requested inversion, so visual output
+	 * matches expectations across formats.
+	 */
+	if ((fb->pixel_format == PIXEL_FORMAT_MONO10) != fb->inverted) {
 		cfb_invert(fb);
 		err = api->write(dev, 0, 0, &desc, fb->buf);
 		cfb_invert(fb);

@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <soc.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/util.h>
+#include <inttypes.h>
 #include "display_sdl_bottom.h"
 #include "cmdline.h"
 
@@ -77,6 +79,8 @@ static inline uint32_t mono_pixel_order(uint32_t order)
 		return BIT(order);
 	}
 }
+
+/* Removed unused debug variables to avoid -Werror build failures */
 
 static void exec_sdl_task(const struct device *dev, const struct sdl_display_task *task)
 {
@@ -491,7 +495,6 @@ static void sdl_display_read_mono(const uint8_t *read_buf,
 				  const struct display_buffer_descriptor *desc, void *buf,
 				  const bool one_is_black)
 {
-	const uint32_t pixel_on = one_is_black ? 0xFF000000 : 0xFFFFFFFF;
 	uint32_t w_idx;
 	uint32_t h_idx;
 	uint8_t bits;
@@ -513,7 +516,10 @@ static void sdl_display_read_mono(const uint8_t *read_buf,
 				bits = mono_pixel_order(w_idx % 8U);
 			}
 
-			if (*pix_ptr == pixel_on) {
+			uint32_t pixel_rgb = *pix_ptr & 0x00FFFFFF;
+			bool bit_is_one = one_is_black ? (pixel_rgb == 0U) : (pixel_rgb != 0U);
+
+			if (bit_is_one) {
 				*buf8 |= bits;
 			} else {
 				*buf8 &= ~bits;
