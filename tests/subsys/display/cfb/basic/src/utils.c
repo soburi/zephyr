@@ -30,16 +30,27 @@ inline uint32_t mono_pixel_order(uint32_t order)
 
 uint32_t display_pixel(int x, int y)
 {
-	const uint8_t *ptr = read_buffer + (display_width * (y / 8) + x);
+	const uint8_t *ptr;
 	struct display_capabilities display_caps;
 
 	display_get_capabilities(dev, &display_caps);
 
-	if (display_caps.current_pixel_format == PIXEL_FORMAT_MONO10) {
-		return !(*ptr & mono_pixel_order(y % 8));
+	/*
+	 * read_buffer layout mirrors the driver's display_read() packing:
+	 * - VTILED: bytes advance vertically, bit selects by (y % 8)
+	 * - HTILED: bytes advance horizontally, bit selects by (x % 8)
+	 */
+	if (IS_ENABLED(CONFIG_SDL_DISPLAY_MONO_VTILED)) {
+		/* Vertical tiling: one byte per column per 8-pixel tall tile */
+		ptr = read_buffer + (display_width * (y / 8)) + x;
+		bool on = !!(*ptr & mono_pixel_order(y % 8));
+		return (display_caps.current_pixel_format == PIXEL_FORMAT_MONO10) ? !on : on;
+	} else {
+		/* Horizontal tiling: one byte per 8 horizontal pixels per row */
+		ptr = read_buffer + (y * (display_width / 8)) + (x / 8);
+		bool on = !!(*ptr & mono_pixel_order(x % 8));
+		return (display_caps.current_pixel_format == PIXEL_FORMAT_MONO10) ? !on : on;
 	}
-
-	return !!(*ptr & mono_pixel_order(y % 8));
 }
 
 uint32_t image_pixel(const uint32_t *img, size_t width, int x, int y)
