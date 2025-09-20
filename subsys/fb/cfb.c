@@ -225,6 +225,7 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 	const struct cfb_font *fptr = &(fb->fonts[fb->font_idx]);
 	const bool font_is_msbfirst = (fptr->caps & CFB_FONT_MSB_FIRST) != 0;
 	const bool display_is_msbfirst = (fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0;
+	const bool font_is_vpacked = (fptr->caps & CFB_FONT_MONO_VPACKED) != 0;
 	uint8_t *glyph_ptr;
 
 	if (c < fptr->first_char || c > fptr->last_char) {
@@ -241,8 +242,8 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 
 		for (size_t g_x = 0; g_x < fptr->width; g_x++) {
 			const int16_t fb_x = x + g_x;
-			const size_t fb_pixel_index = fb_y * fb->x_res + fb_x;
-			const size_t fb_byte_index = fb_pixel_index / 8;
+			/* HTILED framebuffer layout: bytes advance horizontally. */
+			const size_t fb_byte_index = (fb_x / 8) + (fb_y * (fb->x_res / 8));
 			uint8_t byte;
 			uint8_t pixel_value;
 
@@ -255,7 +256,19 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 			if (font_is_msbfirst) {
 				byte = byte_reverse(byte);
 			}
-			pixel_value = byte & BIT(g_y % 8);
+
+			/*
+			 * Extract a single pixel from the glyph byte depending on the font packing:
+			 * - MONO_VPACKED: the byte contains 8 vertical pixels at (x, y..y+7),
+			 *                 so select by y % 8.
+			 * - MONO_HPACKED: the byte contains 8 horizontal pixels at (x..x+7, y),
+			 *                 so select by x % 8.
+			 */
+			if (font_is_vpacked) {
+				pixel_value = byte & BIT(g_y % 8);
+			} else {
+				pixel_value = byte & BIT(g_x % 8);
+			}
 
 			if (pixel_value) {
 				if (display_is_msbfirst) {
@@ -435,7 +448,7 @@ int cfb_print(const struct device *dev, const char *const str, uint16_t x, uint1
 }
 
 int cfb_invert_area(const struct device *dev, uint16_t x, uint16_t y,
-		    uint16_t width, uint16_t height)
+					uint16_t width, uint16_t height)
 {
 	const struct char_framebuffer *fb = &char_fb;
 	const bool need_reverse = ((fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0);
@@ -517,8 +530,52 @@ int cfb_invert_area(const struct device *dev, uint16_t x, uint16_t y,
 		return 0;
 	}
 
-	LOG_ERR("Unsupported framebuffer configuration");
-	return -EINVAL;
+	/* HTILED (horizontal) layout */
+	{
+		if (x > fb->x_res) {
+			x = fb->x_res;
+		}
+
+		if (y > fb->y_res) {
+			y = fb->y_res;
+		}
+
+		if (x + width > fb->x_res) {
+			width = fb->x_res - x;
+		}
+
+		if (y + height > fb->y_res) {
+			height = fb->y_res - y;
+		}
+
+		const size_t bytes_per_row = fb->x_res / 8U;
+
+		for (uint16_t j = y; j < (y + height); j++) {
+			const uint16_t start_byte = x / 8U;
+			const uint16_t end_byte = (x + width - 1U) / 8U;
+
+			for (uint16_t b = start_byte; b <= end_byte; b++) {
+				const size_t index = j * bytes_per_row + b;
+				const uint8_t bit_start = (b == start_byte) ? (x % 8U) : 0U;
+				const uint8_t bit_end = (b == end_byte) ? ((x + width - 1U) % 8U) : 7U;
+				uint8_t m;
+
+				if (bit_end >= bit_start) {
+					m = BIT_MASK(bit_end - bit_start + 1U) << bit_start;
+				} else {
+					m = 0U;
+				}
+
+				if (need_reverse) {
+					m = byte_reverse(m);
+				}
+
+				fb->buf[index] ^= m;
+			}
+		}
+
+		return 0;
+	}
 }
 
 static int cfb_invert(const struct char_framebuffer *fb)
