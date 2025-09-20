@@ -270,10 +270,7 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 				pixel_value = byte & BIT(g_x % 8);
 			}
 
-			LOG_DBG("HTMONO g(%zu,%zu)->fb(%d,%d) b=0x%02x px=%d idx=%zu bit=%d dispMSB=%d fontMSB=%d vpack=%d",
-				g_x, g_y, fb_x, fb_y, byte, !!pixel_value, fb_byte_index,
-				font_is_vpacked ? (int)(g_y % 8) : (int)(g_x % 8),
-				(int)display_is_msbfirst, (int)font_is_msbfirst, (int)font_is_vpacked);
+			/* pixel set handled below */
 
 			if (pixel_value) {
 				if (display_is_msbfirst) {
@@ -300,7 +297,7 @@ static inline void draw_point(struct char_framebuffer *fb, int16_t x, int16_t y)
 	} else {
 		index = ((x / 8) + y * (fb->x_res / 8));
 		m = BIT(x % 8);
-		LOG_DBG("HTILED draw_point (%d,%d) index=%zu bit=%d", x, y, index, (int)(x % 8));
+	/* HTILED index/bit computed above */
 	}
 
 	if (x < 0 || x >= fb->x_res) {
@@ -576,7 +573,7 @@ int cfb_invert_area(const struct device *dev, uint16_t x, uint16_t y,
 					m = byte_reverse(m);
 				}
 
-				LOG_DBG("invert HT x=%u y=%u b=%u idx=%zu mask=0x%02x", x, j, b, index, m);
+				/* invert byte with computed mask */
 				fb->buf[index] ^= m;
 			}
 		}
