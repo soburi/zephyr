@@ -71,6 +71,7 @@
 			interrupt-controller;
 		};
 		nexus {
+			#address-cells = <2>;
 			#interrupt-cells = <2>;
 			interrupt-map = <
 				0 0  0 0  &{/interrupt-map-test/controller-0}  0      0
@@ -79,6 +80,11 @@
 				0 1  0 0  &{/interrupt-map-test/controller-0}  0      3
 				0 1  0 1  &{/interrupt-map-test/controller-1}  0 0    0 4
 				0 1  0 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 5>;
+		};
+		empty {
+			#address-cells = <2>;
+			#interrupt-cells = <2>;
+			interrupt-map = <>;
 		};
 		nexus-0 {
 			#address-cells = <0>;
