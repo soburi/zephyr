@@ -78,7 +78,13 @@ static inline uint8_t get_glyph_byte(uint8_t *glyph_ptr, const struct cfb_font *
 {
 	if (fptr->caps & CFB_FONT_MONO_VPACKED) {
 		if (vtiled) {
-			return glyph_ptr[x * DIV_ROUND_UP(fptr->height, 8U) + y];
+			const size_t glyph_height_tiles = DIV_ROUND_UP(fptr->height, 8U);
+
+			if (y >= glyph_height_tiles) {
+				return 0;
+			}
+
+			return glyph_ptr[x * glyph_height_tiles + y];
 		} else {
 			return glyph_ptr[(x * fptr->height + y) / 8];
 		}
