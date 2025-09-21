@@ -44,15 +44,14 @@
 		input = <&ft6336_touch>;
 	};
 
-	mipi_dbi {
+	mipi_dbi: mipi_dbi {
 		compatible = "zephyr,mipi-dbi-spi";
 		spi-dev = <&spi2>;
-		duplex = <SPI_HALF_DUPLEX>;
-		mipi-mode = "MIPI_DBI_MODE_SPI_3WIRE";
 		write-only;
 		reset-gpios = <&aw9523b_gpio 13 GPIO_ACTIVE_LOW>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+		status = "okay";
 
 		ili9342c: ili9342c@0 {
 		        compatible = "ilitek,ili9342c";
@@ -64,6 +63,7 @@
 		        width = <320>;
 		        height = <240>;
 		        rotation = <0>;
+			status = "okay";
 		};
 	};
 };

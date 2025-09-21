@@ -538,7 +538,7 @@ static const struct ili9xxx_quirks ili9488_quirks = {
 		.dbi_config = {                                                \
 			.mode = DT_STRING_UPPER_TOKEN_OR(                      \
 				INST_DT_ILI9XXX(n, t),                         \
-				mipi_mode, MIPI_DBI_MODE_SPI_4WIRE),           \
+				mipi_mode, MIPI_DBI_MODE_SPI_3WIRE),           \
 			.config = MIPI_DBI_SPI_CONFIG_DT(                      \
 						INST_DT_ILI9XXX(n, t),         \
 						SPI_OP_MODE_MASTER |           \
