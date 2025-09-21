@@ -1,0 +1,13 @@
+sample:
+  description: AW88298 smart amplifier playback sample
+  name: AW88298 audio playback
+common:
+  tags: audio i2s
+  harness: console
+  harness_config:
+    type: one_line
+    regex: "AW88298 playback complete"
+tests:
+  sample.drivers.audio.aw88298:
+    platform_allow:
+      - m5stack_cores3/esp32s3/procpu
