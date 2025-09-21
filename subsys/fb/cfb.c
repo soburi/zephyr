@@ -218,22 +218,14 @@ static uint8_t draw_char_vtmono(const struct char_framebuffer *fb,
  * a byte is interpreted as 8 pixels ordered horizontally among each other.
  */
 static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
-				uint8_t c, uint16_t x, uint16_t y,
-				bool draw_bg)
+                               uint8_t c, uint16_t x, uint16_t y,
+                               bool draw_bg)
 {
-	const struct cfb_font *fptr = &(fb->fonts[fb->font_idx]);
-	const bool font_is_msbfirst = (fptr->caps & CFB_FONT_MSB_FIRST) != 0;
-	const bool display_is_msbfirst = (fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0;
-	uint8_t *glyph_ptr;
-
-	if (c < fptr->first_char || c > fptr->last_char) {
-		c = ' ';
-	}
-
-	glyph_ptr = get_glyph_ptr(fptr, c);
-	if (!glyph_ptr) {
-		return 0;
-	}
+       const struct cfb_font *fptr = &(fb->fonts[fb->font_idx]);
+       const bool font_is_msbfirst = (fptr->caps & CFB_FONT_MSB_FIRST) != 0;
+       const bool display_is_msbfirst = (fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0;
+	const uint8_t *glyph_ptr = get_glyph_ptr(fptr, c);
+	const bool glyph_available = glyph_ptr != NULL;
 
 	for (size_t g_y = 0; g_y < fptr->height; g_y++) {
 		const int16_t fb_y = y + g_y;
@@ -243,8 +235,23 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 			const size_t fb_byte_index = (fb_x / 8) + (fb_y * (fb->x_res / 8));
 			uint8_t byte;
 			uint8_t pixel_value;
+			uint8_t pixel_mask;
 
 			if (fb_x < 0 || fb->x_res <= fb_x || fb_y < 0 || fb->y_res <= fb_y) {
+				continue;
+			}
+
+			if (display_is_msbfirst) {
+				pixel_mask = BIT(7 - (fb_x % 8));
+			} else {
+				pixel_mask = BIT(fb_x % 8);
+			}
+
+			if (draw_bg) {
+				fb->buf[fb_byte_index] &= ~pixel_mask;
+			}
+
+			if (!glyph_available) {
 				continue;
 			}
 
@@ -255,11 +262,7 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 			pixel_value = byte & BIT(g_y % 8);
 
 			if (pixel_value) {
-				if (display_is_msbfirst) {
-					fb->buf[fb_byte_index] |= BIT(7 - (fb_x % 8));
-				} else {
-					fb->buf[fb_byte_index] |= BIT(fb_x % 8);
-				}
+				fb->buf[fb_byte_index] |= pixel_mask;
 			}
 		}
 	}
