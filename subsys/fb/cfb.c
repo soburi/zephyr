@@ -241,7 +241,6 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 
 		for (size_t g_x = 0; g_x < fptr->width; g_x++) {
 			const int16_t fb_x = x + g_x;
-			/* HTILED framebuffer layout: bytes advance horizontally. */
 			const size_t fb_byte_index = (fb_x / 8) + (fb_y * (fb->x_res / 8));
 			uint8_t byte;
 			uint8_t pixel_value;
