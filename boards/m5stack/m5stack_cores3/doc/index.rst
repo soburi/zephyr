@@ -16,6 +16,7 @@ M5Stack CoreS3/CoreS3 SE features consist of:
 - Capacitive multi touch FT6336U
 - Speaker 1W AW88298
 - Dual Microphones ES7210 Audio decoder
+- Smart speaker amplifier AW88298 connected to I2S1 BCK (GPIO34), LRCK (GPIO33) and DATA (GPIO13)
 - RTC BM8563
 - USB-C
 - SD-Card slot
@@ -95,6 +96,23 @@ To build the sample application using sysbuild use the command:
 .. tabs::
 
    .. group-tab:: M5Stack CoreS3
+
+Audio
+=====
+
+The internal 1 W loudspeaker is driven by an AW88298 smart amplifier on the internal I2C bus
+at address ``0x36``. The amplifier enable signal is provided by the AW9523 GPIO expander
+(``P0_2``), and the audio stream uses the ESP32-S3 ``I2S1`` peripheral with the following
+signals:
+
+* ``GPIO34`` – I2S bit clock (BCK)
+* ``GPIO33`` – I2S word select (LRCK)
+* ``GPIO13`` – I2S data output (DIN on the amplifier)
+
+An ``awinic,aw88298`` codec instance is available through the :ref:`audio codec API
+<audio_codec_interface>` at the ``audio-codec`` alias. Applications can configure the codec
+and stream PCM data using the Zephyr I2S driver. See the :zephyr:code-sample:`aw88298`
+sample for a ready-to-run sine-wave playback demonstration.
 
       .. zephyr-app-commands::
          :tool: west

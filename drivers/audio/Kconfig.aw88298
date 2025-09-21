@@ -1,0 +1,10 @@
+# Copyright (c) 2025 The Zephyr Authors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+config AUDIO_CODEC_AW88298
+bool "Awinic AW88298 smart amplifier"
+depends on I2C
+select AUDIO_CODEC
+help
+  Enable support for the Awinic AW88298 I2S smart power amplifier.

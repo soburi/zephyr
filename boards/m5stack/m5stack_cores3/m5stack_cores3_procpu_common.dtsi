@@ -31,9 +31,11 @@
 		watchdog0 = &wdt0;
 		rtc = &bm8563_rtc;
 		sdhc0 = &sd0;
-		led0 = &axp2101_led;
-		fuel-gauge0 = &fuel_gauge;
-	};
+                led0 = &axp2101_led;
+                fuel-gauge0 = &fuel_gauge;
+                audio-codec = &aw88298;
+                i2s-tx = &i2s1;
+        };
 
 	lvgl_pointer {
 		compatible = "zephyr,lvgl-pointer-input";
@@ -178,10 +180,10 @@
 		status = "okay";
 	};
 
-	aw9523b: aw9523b@58 {
-		compatible = "awinic,aw9523b";
-		reg = <0x58>;
-		status = "okay";
+        aw9523b: aw9523b@58 {
+                compatible = "awinic,aw9523b";
+                reg = <0x58>;
+                status = "okay";
 
 		aw9523b_gpio: gpio {
 			compatible = "awinic,aw9523b-gpio";
@@ -189,8 +191,21 @@
 			#gpio-cells = <2>;
 			port0-push-pull;
 			int-gpios = <&gpio0 21 GPIO_ACTIVE_LOW>;
-		};
-	};
+        };
+
+        aw88298: aw88298@36 {
+                compatible = "awinic,aw88298";
+                status = "okay";
+                reg = <0x36>;
+                enable-gpios = <&aw9523b_gpio 2 GPIO_ACTIVE_HIGH>;
+        };
+};
+
+&i2s1 {
+        status = "okay";
+        pinctrl-0 = <&i2s1_default>;
+        pinctrl-names = "default";
+};
 
 	ft6336_touch: ft5336@38 {
 		status = "okay";

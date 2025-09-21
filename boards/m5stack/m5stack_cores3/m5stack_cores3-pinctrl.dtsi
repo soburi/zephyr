@@ -77,10 +77,26 @@
 		};
 	};
 
-	twai_default: twai_default {
-		group1 {
-			pinmux = <TWAI_TX_GPIO7>,
-				 <TWAI_RX_GPIO6>;
-		};
-	};
+        twai_default: twai_default {
+                group1 {
+                        pinmux = <TWAI_TX_GPIO7>,
+                                 <TWAI_RX_GPIO6>;
+                };
+        };
+
+        i2s1_default: i2s1_default {
+                group1 {
+                        pinmux = <I2S1_BCK_GPIO34>,
+                                 <I2S1_WS_GPIO33>;
+                };
+
+                group2 {
+                        pinmux = <I2S1_DATA_OUT0_GPIO13>;
+                };
+
+                group3 {
+                        pinmux = <I2S1_DATA_IN0_GPIO14>;
+                        bias-disable;
+                };
+        };
 };
