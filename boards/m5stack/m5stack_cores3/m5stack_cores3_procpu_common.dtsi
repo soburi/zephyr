@@ -6,39 +6,66 @@
 
 #include <espressif/esp32s3/esp32s3_wroom_n16r8.dtsi>
 #include <espressif/partitions_0x0_amp.dtsi>
+#include <dt-bindings/spi/spi.h>
+#include <zephyr/dt-bindings/display/ili9xxx.h>
 #include "m5stack_cores3-pinctrl.dtsi"
 #include "m5stack_mbus_connectors.dtsi"
 #include "grove_connectors.dtsi"
 
 / {
-	chosen {
-		zephyr,sram = &sram1;
-		zephyr,console = &usb_serial;
-		zephyr,shell-uart = &usb_serial;
-		zephyr,flash = &flash0;
-		zephyr,code-partition = &slot0_partition;
-		zephyr,rtc = &bm8563_rtc;
-		zephyr,bt-hci = &esp32_bt_hci;
-		zephyr,touch = &ft6336_touch;
-	};
+        chosen {
+                zephyr,sram = &sram1;
+                zephyr,console = &usb_serial;
+                zephyr,shell-uart = &usb_serial;
+                zephyr,flash = &flash0;
+                zephyr,code-partition = &slot0_partition;
+                zephyr,rtc = &bm8563_rtc;
+                zephyr,bt-hci = &esp32_bt_hci;
+                zephyr,touch = &ft6336_touch;
+                zephyr,display = &ili9342c;
+        };
 
-	aliases {
-		uart-0 = &uart0;
-		uart-1 = &uart1;
-		uart-2 = &uart2;
-		i2c-0 = &i2c0;
-		i2c-1 = &i2c1;
-		watchdog0 = &wdt0;
-		rtc = &bm8563_rtc;
-		sdhc0 = &sd0;
-		led0 = &axp2101_led;
-		fuel-gauge0 = &fuel_gauge;
-	};
+        aliases {
+                uart-0 = &uart0;
+                uart-1 = &uart1;
+                uart-2 = &uart2;
+                i2c-0 = &i2c0;
+                i2c-1 = &i2c1;
+                watchdog0 = &wdt0;
+                rtc = &bm8563_rtc;
+                sdhc0 = &sd0;
+                led0 = &axp2101_led;
+                fuel-gauge0 = &fuel_gauge;
+                display = &ili9342c;
+        };
 
-	lvgl_pointer {
-		compatible = "zephyr,lvgl-pointer-input";
-		input = <&ft6336_touch>;
-	};
+        lvgl_pointer {
+                compatible = "zephyr,lvgl-pointer-input";
+                input = <&ft6336_touch>;
+        };
+
+       mipi_dbi {
+               compatible = "zephyr,mipi-dbi-spi";
+               spi-dev = <&spi2>;
+               write-only;
+               reset-gpios = <&aw9523b_gpio 13 GPIO_ACTIVE_LOW>;
+               #address-cells = <1>;
+               #size-cells = <0>;
+
+               ili9342c: ili9342c@0 {
+                       compatible = "ilitek,ili9342c";
+                       reg = <0>;
+                       mipi-max-frequency = <40000000>;
+                       duplex = <SPI_HALF_DUPLEX>;
+                       mipi-mode = "MIPI_DBI_MODE_SPI_3WIRE";
+                       vin-supply = <&vcc_bl>;
+                       pixel-format = <ILI9XXX_PIXEL_FORMAT_RGB565>;
+                        display-inversion;
+                        width = <320>;
+                        height = <240>;
+                        rotation = <0>;
+                };
+        };
 };
 
 &usb_serial {
@@ -209,15 +236,15 @@
 };
 
 &spi2 {
-	status = "okay";
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "okay";
-	pinctrl-0 = <&spim2_default>;
-	pinctrl-names = "default";
-	clock-frequency = <20000000>;
-	cs-gpios = <&gpio0 3 GPIO_ACTIVE_LOW>, /* LCD     */
-		   <&gpio0 4 GPIO_ACTIVE_LOW>; /* TF-CARD */
+        status = "okay";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        pinctrl-0 = <&spim2_default>;
+        pinctrl-names = "default";
+        dma-enabled;
+        clock-frequency = <40000000>;
+        cs-gpios = <&gpio0 3 GPIO_ACTIVE_LOW>, /* LCD     */
+                   <&gpio0 4 GPIO_ACTIVE_LOW>; /* TF-CARD */
 
 	sd0: sd@1 {
 		compatible = "zephyr,sdhc-spi-slot";
