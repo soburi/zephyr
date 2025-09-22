@@ -334,8 +334,8 @@ static int free_pages_array(struct mapped_pages *pages, size_t len)
 }
 
 static inline k_spinlock_key_t wait_for_chunk_ready(struct virtq_context *ctx,
-					 struct mapped_pages_chunk *chunk,
-					 k_spinlock_key_t key)
+						    struct mapped_pages_chunk *chunk,
+						    k_spinlock_key_t key)
 {
 	while (chunk->releasing) {
 		k_spin_unlock(&ctx->lock, key);
@@ -359,17 +359,18 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 		key = wait_for_chunk_ready(vq_ctx, chunk, key);
 
 		if (chunk->map && chunk->count > 0) {
+			struct mapped_pages *map = chunk->map;
 			const size_t count = chunk->count;
 
 			chunk->releasing = true;
-			chunk->map = NULL;
-			chunk->count = 0;
 			k_spin_unlock(&vq_ctx->lock, key);
 
-			free_pages_array(chunk->map, count);
-			k_free(chunk->map);
+			free_pages_array(map, count);
+			k_free(map);
 
 			key = k_spin_lock(&vq_ctx->lock);
+			chunk->map = NULL;
+			chunk->count = 0;
 			chunk->releasing = false;
 		} else {
 			chunk->count = 0;
