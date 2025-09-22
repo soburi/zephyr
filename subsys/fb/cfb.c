@@ -77,10 +77,12 @@ static inline uint8_t get_glyph_byte(uint8_t *glyph_ptr, const struct cfb_font *
 				     uint8_t x, uint8_t y, bool vtiled)
 {
 	if (fptr->caps & CFB_FONT_MONO_VPACKED) {
+		const size_t bytes_per_column = DIV_ROUND_UP(fptr->height, 8U);
+
 		if (vtiled) {
-			return glyph_ptr[x * DIV_ROUND_UP(fptr->height, 8U) + y];
+			return glyph_ptr[x * bytes_per_column + y];
 		} else {
-			return glyph_ptr[(x * fptr->height + y) / 8];
+			return glyph_ptr[x * bytes_per_column + (y / 8U)];
 		}
 	} else if (fptr->caps & CFB_FONT_MONO_HPACKED) {
 		return glyph_ptr[y * (fptr->width) + x];
