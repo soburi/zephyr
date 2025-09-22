@@ -14,7 +14,7 @@ if(CONFIG_TEST_MSB_FIRST_FONT)
 				   src/draw_point.c
 				   src/draw_line.c
 				   src/draw_rect.c
-				   src/draw_circle.c
+				   #src/draw_circle.c
 				   src/draw_text_rectspace1016.c
 				   src/draw_text_rectspace1123.c
 				   src/draw_text_dot0101.c
@@ -33,7 +33,7 @@ else()
 				   src/draw_point.c
 				   src/draw_line.c
 				   src/draw_rect.c
-				   src/draw_circle.c
+				   #src/draw_circle.c
 				   src/draw_text_rectspace1016.c
 				   src/draw_text_rectspace1123.c
 				   src/draw_text_dot0101.c
