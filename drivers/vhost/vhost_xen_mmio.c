@@ -358,19 +358,20 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 
 		key = wait_for_chunk_ready(vq_ctx, chunk, key);
 
-		if (chunk->map && chunk->count > 0) {
-			const size_t count = chunk->count;
+               if (chunk->map && chunk->count > 0) {
+                       struct mapped_pages *map = chunk->map;
+                       const size_t count = chunk->count;
 
-			chunk->releasing = true;
-			chunk->map = NULL;
-			chunk->count = 0;
-			k_spin_unlock(&vq_ctx->lock, key);
+                       chunk->releasing = true;
+                       chunk->map = NULL;
+                       chunk->count = 0;
+                       k_spin_unlock(&vq_ctx->lock, key);
 
-			free_pages_array(chunk->map, count);
-			k_free(chunk->map);
+                       free_pages_array(map, count);
+                       k_free(map);
 
-			key = k_spin_lock(&vq_ctx->lock);
-			chunk->releasing = false;
+                       key = k_spin_lock(&vq_ctx->lock);
+                       chunk->releasing = false;
 		} else {
 			chunk->count = 0;
 		}
