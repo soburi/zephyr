@@ -12,8 +12,21 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Runtime metadata gathered from the virtio-fs handshake.
+ *
+ * Virtio 1.3, Chapter 5 "Device Types", §"File System Device"
+ * requires the driver to initiate a FUSE session and honour the
+ * limits advertised during @c FUSE_INIT. This structure keeps track
+ * of those negotiated parameters for a mounted instance.
+ */
 struct virtiofs_fs_data {
-	uint32_t max_write;
+        /**
+         * Maximum payload size accepted by FUSE_WRITE as reported in the
+         * FUSE_INIT reply, see Virtio 1.3, "File System Device" — Device
+         * Operation.
+         */
+        uint32_t max_write;
 };
 
 #ifdef __cplusplus
