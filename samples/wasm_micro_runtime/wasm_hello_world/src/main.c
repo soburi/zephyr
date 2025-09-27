@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zephyr/kernel.h>
+#include <zephyr/fs/fs.h>
 #include <zephyr/sys/printk.h>
 
 #include "bh_platform.h"
@@ -35,8 +36,8 @@ app_instance_main(wasm_module_inst_t module_inst)
 
 	wasm_application_execute_main(module_inst, app_argc, app_argv);
 	exception = wasm_runtime_get_exception(module_inst);
-	if (exception != NULL)
-		printf("%s\n", exception);
+       if (exception != NULL)
+               printk("%s\n", exception);
 	return NULL;
 }
 
@@ -115,17 +116,17 @@ iwasm_main(void *arg1, void *arg2, void *arg3)
 	init_args.mem_alloc_option.pool.heap_size = sizeof(global_heap_buf);
 
 	/* initialize runtime environment */
-	if (!wasm_runtime_full_init(&init_args)) {
-		printf("Init runtime environment failed.\n");
-		return;
-	}
+       if (!wasm_runtime_full_init(&init_args)) {
+               printk("Init runtime environment failed.\n");
+               return;
+       }
 
 #ifdef CONFIG_BOARD_ESP32
 	/* Initialize executable memory */
-	if (esp32_exec_mem_init() != 0) {
-		printf("Init executable memory failed.\n");
-		goto fail1;
-	}
+       if (esp32_exec_mem_init() != 0) {
+               printk("Init executable memory failed.\n");
+               goto fail1;
+       }
 	/* Set hook functions for executable memory management */
 	set_exec_mem_alloc_func(esp32_exec_mem_alloc, esp32_exec_mem_free);
 #endif
@@ -142,8 +143,8 @@ iwasm_main(void *arg1, void *arg2, void *arg3)
 							  wasm_file_size,
 							  error_buf,
 							  sizeof(error_buf));
-	if (!wasm_module) {
-		printf("%s\n", error_buf);
+       if (!wasm_module) {
+               printk("%s\n", error_buf);
 #ifdef CONFIG_BOARD_ESP32
 		goto fail2;
 #else
@@ -158,10 +159,10 @@ iwasm_main(void *arg1, void *arg2, void *arg3)
 							APP_HEAP_SIZE,
 							error_buf,
 							sizeof(error_buf));
-	if (!wasm_module_inst) {
-		printf("%s\n", error_buf);
-		goto fail3;
-	}
+       if (!wasm_module_inst) {
+               printk("%s\n", error_buf);
+               goto fail3;
+       }
 
 	/* invoke the main function */
 	app_instance_main(wasm_module_inst);
@@ -183,7 +184,7 @@ fail1:
 	/* destroy runtime environment */
 	wasm_runtime_destroy();
 	end = k_uptime_get_32();
-	printf("elpase: %d\n", (end - start));
+       printk("elpase: %d\n", (end - start));
 }
 
 K_THREAD_STACK_DEFINE(iwasm_main_thread_stack, MAIN_THREAD_STACK_SIZE);

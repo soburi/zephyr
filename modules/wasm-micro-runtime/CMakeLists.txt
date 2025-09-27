@@ -7,6 +7,10 @@ if(CONFIG_WAMR)
 
   zephyr_library()
 
+  zephyr_library_compile_options(
+    $<$<COMPILE_LANGUAGE:C>:-includezephyr/fs/fs.h>
+  )
+
   zephyr_include_directories(
     ${WAMR_DIR}/core
     ${WAMR_DIR}/core/iwasm/include
@@ -42,6 +46,7 @@ if(CONFIG_WAMR)
     ${WAMR_DIR}/core/shared/utils/bh_queue.c
     ${WAMR_DIR}/core/shared/utils/bh_vector.c
     ${WAMR_DIR}/core/shared/utils/runtime_timer.c
+    ${WAMR_DIR}/core/shared/utils/bh_leb128.c
     ${WAMR_DIR}/core/iwasm/common/wasm_runtime_common.c
     ${WAMR_DIR}/core/iwasm/common/wasm_exec_env.c
     ${WAMR_DIR}/core/iwasm/common/wasm_native.c
@@ -49,6 +54,7 @@ if(CONFIG_WAMR)
     ${WAMR_DIR}/core/iwasm/common/wasm_shared_memory.c
     ${WAMR_DIR}/core/iwasm/common/wasm_c_api.c
     ${WAMR_DIR}/core/iwasm/common/wasm_application.c
+    ${WAMR_DIR}/core/iwasm/common/wasm_loader_common.c
   )
 
   # Build target macros and source files
