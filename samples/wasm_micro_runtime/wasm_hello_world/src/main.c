@@ -201,7 +201,9 @@ static bool iwasm_init(void)
 	return tid ? true : false;
 }
 
-void main(void)
+int main(void)
 {
 	iwasm_init();
+
+	return 0;
 }

@@ -24,7 +24,7 @@ manifest:
     - name: babblesim
       url-base: https://github.com/BabbleSim
     - name: bytecodealliance
-      url-base: https://github.com/bytecodealliance/wasm-micro-runtime.git
+      url-base: https://github.com/bytecodealliance
 
   group-filter: [-babblesim, -optional]
 
