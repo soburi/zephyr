@@ -75,16 +75,27 @@ int ili9xxx_transmit(const struct device *dev, uint8_t cmd, const void *tx_data,
 
 static int ili9xxx_exit_sleep(const struct device *dev)
 {
-	int r;
+        int r;
 
-	r = ili9xxx_transmit(dev, ILI9XXX_SLPOUT, NULL, 0);
-	if (r < 0) {
-		return r;
-	}
+        r = ili9xxx_transmit(dev, ILI9XXX_SLPOUT, NULL, 0);
+        if (r < 0) {
+                return r;
+        }
 
-	k_sleep(K_MSEC(ILI9XXX_SLEEP_OUT_TIME));
+        k_sleep(K_MSEC(ILI9XXX_SLEEP_OUT_TIME));
 
-	return 0;
+        /*
+         * Some panels, including the one fitted to the M5Stack Core2,
+         * keep the display output blank after SLPOUT until a DISPON
+         * command is issued.  Applications are still free to call
+         * display_blanking_off(), as sending DISPON twice is harmless.
+         */
+        r = ili9xxx_display_blanking_off(dev);
+        if (r < 0) {
+                return r;
+        }
+
+        return 0;
 }
 
 static void ili9xxx_hw_reset(const struct device *dev)
