@@ -34,7 +34,6 @@
 		i2c-1 = &i2c1;
 		watchdog0 = &wdt0;
 		rtc = &bm8563_rtc;
-		sdhc0 = &sd0;
 		led0 = &axp2101_led;
 		fuel-gauge0 = &fuel_gauge;
 	};
@@ -49,7 +48,6 @@
 		spi-dev = <&spi2>;
 		write-only;
 		dc-gpios = <&gpio0 35 GPIO_ACTIVE_HIGH>;
-		zephyr,dc-shared-miso;
 		status = "okay";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -245,21 +243,8 @@
 	pinctrl-0 = <&spim2_default>;
 	pinctrl-names = "default";
 	clock-frequency = <20000000>;
-	cs-gpios = <&gpio0 3 GPIO_ACTIVE_LOW>, /* LCD     */
-		   <&gpio0 4 GPIO_ACTIVE_LOW>; /* TF-CARD */
+	cs-gpios = <&gpio0 3 GPIO_ACTIVE_LOW>; /* LCD */
 
-	sd0: sd@1 {
-		compatible = "zephyr,sdhc-spi-slot";
-		reg = <1>;
-		status = "disabled";
-		spi-max-frequency = <20000000>;
-
-		mmc {
-			compatible = "zephyr,sdmmc-disk";
-			disk-name = "SD";
-			status = "disabled";
-		};
-	};
 };
 
 &twai {
