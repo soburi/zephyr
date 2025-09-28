@@ -59,6 +59,7 @@ if(CONFIG_WAMR)
     ${WAMR_DIR}/core/iwasm/common/wasm_c_api.c
     ${WAMR_DIR}/core/iwasm/common/wasm_application.c
     ${WAMR_DIR}/core/iwasm/common/wasm_loader_common.c
+    ${WAMR_DIR}/core/iwasm/common/wasm_blocking_op.c
   )
 
   zephyr_library_sources_ifdef(CONFIG_WAMR_LIBC_WASI
@@ -357,6 +358,7 @@ if(CONFIG_WAMR)
 
   # libc WASI
   zephyr_compile_definitions_ifdef(CONFIG_WAMR_LIBC_WASI
+    WASM_ENABLE_MODULE_INST_CONTEXT=1
     WASM_ENABLE_LIBC_WASI=1
   )
 

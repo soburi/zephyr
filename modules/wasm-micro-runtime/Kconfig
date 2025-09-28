@@ -74,6 +74,12 @@ config WAMR_LIBC_BUILTIN
 config WAMR_LIBC_WASI
 	bool "WAMR WASI libc native library support"
 	default n
+	select NETWORKING
+	select NET_NATIVE
+	select NET_SOCKETS
+	select ZVFS
+	select ZVFS_POLL
+	select FILE_SYSTEM
 	help
 	  Enable WAMR WASI libc native library
 
