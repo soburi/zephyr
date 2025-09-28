@@ -53,12 +53,3 @@ properties:
       optimized out for size.
       It can also be used as an alternative to half duplex when
       only one data line is connected.
-
-  zephyr,dc-shared-miso:
-    type: boolean
-    description: |
-      Indicates that the command/data GPIO shares the physical line with
-      the SPI MISO signal. When set, the driver will configure the GPIO as
-      an output only for the duration of display transactions and release it
-      back to an input afterwards so the SPI bus can be reused by another
-      device.
