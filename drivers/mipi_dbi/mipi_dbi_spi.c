@@ -10,7 +10,9 @@
 #include <zephyr/drivers/mipi_dbi.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/pinctrl.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/util.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(mipi_dbi_spi, CONFIG_MIPI_DBI_LOG_LEVEL);
@@ -58,35 +60,74 @@ uint32_t var = MIPI_DBI_SPI_READ_REQUIRED;
 #define MIPI_DBI_DC_BIT BIT(8)
 
 struct mipi_dbi_spi_config {
-	/* SPI hardware used to send data */
-	const struct device *spi_dev;
-	/* Command/Data gpio */
-	const struct gpio_dt_spec cmd_data;
-	/* Tearing Effect GPIO */
-	const struct gpio_dt_spec tearing_effect;
-	/* Reset GPIO */
-	const struct gpio_dt_spec reset;
-	/* Minimum transfer bits */
-	const uint8_t xfr_min_bits;
+        /* SPI hardware used to send data */
+        const struct device *spi_dev;
+        /* Command/Data gpio */
+        const struct gpio_dt_spec cmd_data;
+        /* Tearing Effect GPIO */
+        const struct gpio_dt_spec tearing_effect;
+        /* Reset GPIO */
+        const struct gpio_dt_spec reset;
+        /* Minimum transfer bits */
+        const uint8_t xfr_min_bits;
+        const struct pinctrl_dev_config *pcfg;
 };
 
 struct mipi_dbi_spi_data {
-	struct k_mutex lock;
+        struct k_mutex lock;
 #if MIPI_DBI_SPI_TE_REQUIRED
-	struct k_sem te_signal;
-	k_timeout_t te_delay;
-	atomic_t in_active_area;
-	struct gpio_callback te_cb_data;
+        struct k_sem te_signal;
+        k_timeout_t te_delay;
+        atomic_t in_active_area;
+        struct gpio_callback te_cb_data;
 #endif
-	/* Used for 3 wire mode */
-	uint16_t spi_byte;
+        /* Used for 3 wire mode */
+        uint16_t spi_byte;
 };
+
+#if CONFIG_PINCTRL
+static int mipi_dbi_spi_select_pins(const struct mipi_dbi_spi_config *config)
+{
+        if (config->pcfg == NULL) {
+                return 0;
+        }
+
+        int ret = pinctrl_apply_state(config->pcfg, PINCTRL_STATE_DEFAULT);
+
+        return (ret == -ENOENT) ? 0 : ret;
+}
+
+static int mipi_dbi_spi_release_pins(const struct mipi_dbi_spi_config *config)
+{
+        if (config->pcfg == NULL) {
+                return 0;
+        }
+
+        int ret = pinctrl_apply_state(config->pcfg, PINCTRL_STATE_SLEEP);
+
+        return (ret == -ENOENT) ? 0 : ret;
+}
+#else
+static inline int mipi_dbi_spi_select_pins(const struct mipi_dbi_spi_config *config)
+{
+        ARG_UNUSED(config);
+
+        return 0;
+}
+
+static inline int mipi_dbi_spi_release_pins(const struct mipi_dbi_spi_config *config)
+{
+        ARG_UNUSED(config);
+
+        return 0;
+}
+#endif
 
 #if MIPI_DBI_SPI_TE_REQUIRED
 
 static void mipi_dbi_spi_te_cb(const struct device *dev,
-				struct gpio_callback *cb,
-				uint32_t pins)
+                                struct gpio_callback *cb,
+                                uint32_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -301,17 +342,22 @@ static int mipi_dbi_spi_write_helper(const struct device *dev,
 	struct mipi_dbi_spi_data *data = dev->data;
 	int ret = 0;
 
-	ret = k_mutex_lock(&data->lock, K_FOREVER);
-	if (ret < 0) {
-		return ret;
-	}
+        ret = k_mutex_lock(&data->lock, K_FOREVER);
+        if (ret < 0) {
+                return ret;
+        }
 
-	if (dbi_config->mode == MIPI_DBI_MODE_SPI_3WIRE &&
-	    IS_ENABLED(CONFIG_MIPI_DBI_SPI_3WIRE)) {
-		ret = mipi_dbi_spi_write_helper_3wire(dev, dbi_config,
-						      cmd_present, cmd,
-						      data_buf, len);
-		goto out;
+        ret = mipi_dbi_spi_select_pins(config);
+        if (ret < 0) {
+                goto out_unlock;
+        }
+
+        if (dbi_config->mode == MIPI_DBI_MODE_SPI_3WIRE &&
+            IS_ENABLED(CONFIG_MIPI_DBI_SPI_3WIRE)) {
+                ret = mipi_dbi_spi_write_helper_3wire(dev, dbi_config,
+                                                      cmd_present, cmd,
+                                                      data_buf, len);
+                goto out;
 	}
 
 	if (dbi_config->mode == MIPI_DBI_MODE_SPI_4WIRE) {
@@ -336,14 +382,23 @@ static int mipi_dbi_spi_write_helper(const struct device *dev,
 		}
 #endif
 
-	}
+        }
 
-	/* Otherwise, unsupported mode */
-	ret = -ENOTSUP;
+        /* Otherwise, unsupported mode */
+        ret = -ENOTSUP;
 
 out:
-	k_mutex_unlock(&data->lock);
-	return ret;
+        {
+                int pret = mipi_dbi_spi_release_pins(config);
+
+                if (ret == 0 && pret < 0) {
+                        ret = pret;
+                }
+        }
+
+out_unlock:
+        k_mutex_unlock(&data->lock);
+        return ret;
 }
 
 static int mipi_dbi_spi_command_write(const struct device *dev,
@@ -504,39 +559,49 @@ out:
 }
 
 static int mipi_dbi_spi_command_read(const struct device *dev,
-				     const struct mipi_dbi_config *dbi_config,
-				     uint8_t *cmds, size_t num_cmds,
-				     uint8_t *response, size_t len)
+                                     const struct mipi_dbi_config *dbi_config,
+                                     uint8_t *cmds, size_t num_cmds,
+                                     uint8_t *response, size_t len)
 {
-	struct mipi_dbi_spi_data *data = dev->data;
-	int ret = 0;
+        struct mipi_dbi_spi_data *data = dev->data;
+        const struct mipi_dbi_spi_config *config = dev->config;
+        int ret = 0;
 
-	ret = k_mutex_lock(&data->lock, K_FOREVER);
-	if (ret < 0) {
-		return ret;
-	}
-	if (dbi_config->mode == MIPI_DBI_MODE_SPI_3WIRE &&
-	    IS_ENABLED(CONFIG_MIPI_DBI_SPI_3WIRE)) {
-		ret = mipi_dbi_spi_read_helper_3wire(dev, dbi_config,
-						     cmds, num_cmds,
-						     response, len);
-		if (ret < 0) {
-			goto out;
-		}
-	} else if (dbi_config->mode == MIPI_DBI_MODE_SPI_4WIRE) {
-		ret = mipi_dbi_spi_read_helper_4wire(dev, dbi_config,
-						     cmds, num_cmds,
-						     response, len);
-		if (ret < 0) {
-			goto out;
-		}
-	} else {
-		/* Otherwise, unsupported mode */
-		ret = -ENOTSUP;
-	}
-out:
-	k_mutex_unlock(&data->lock);
-	return ret;
+        ret = k_mutex_lock(&data->lock, K_FOREVER);
+        if (ret < 0) {
+                return ret;
+        }
+
+        ret = mipi_dbi_spi_select_pins(config);
+        if (ret < 0) {
+                goto out_unlock;
+        }
+
+        if (dbi_config->mode == MIPI_DBI_MODE_SPI_3WIRE &&
+            IS_ENABLED(CONFIG_MIPI_DBI_SPI_3WIRE)) {
+                ret = mipi_dbi_spi_read_helper_3wire(dev, dbi_config,
+                                                     cmds, num_cmds,
+                                                     response, len);
+        } else if (dbi_config->mode == MIPI_DBI_MODE_SPI_4WIRE) {
+                ret = mipi_dbi_spi_read_helper_4wire(dev, dbi_config,
+                                                     cmds, num_cmds,
+                                                     response, len);
+        } else {
+                /* Otherwise, unsupported mode */
+                ret = -ENOTSUP;
+        }
+
+        {
+                int pret = mipi_dbi_spi_release_pins(config);
+
+                if (ret == 0 && pret < 0) {
+                        ret = pret;
+                }
+        }
+
+out_unlock:
+        k_mutex_unlock(&data->lock);
+        return ret;
 }
 
 #endif /* MIPI_DBI_SPI_READ_REQUIRED */
@@ -564,11 +629,17 @@ static int mipi_dbi_spi_reset(const struct device *dev, k_timeout_t delay)
 }
 
 static int mipi_dbi_spi_release(const struct device *dev,
-				const struct mipi_dbi_config *dbi_config)
+                                const struct mipi_dbi_config *dbi_config)
 {
-	const struct mipi_dbi_spi_config *config = dev->config;
+        const struct mipi_dbi_spi_config *config = dev->config;
+        int ret;
 
-	return spi_release(config->spi_dev, &dbi_config->config);
+        ret = mipi_dbi_spi_release_pins(config);
+        if (ret < 0) {
+                return ret;
+        }
+
+        return spi_release(config->spi_dev, &dbi_config->config);
 }
 
 #if MIPI_DBI_SPI_TE_REQUIRED
@@ -637,16 +708,21 @@ static int mipi_dbi_spi_init(const struct device *dev)
 	struct mipi_dbi_spi_data *data = dev->data;
 	int ret;
 
-	if (!device_is_ready(config->spi_dev)) {
-		LOG_ERR("SPI device is not ready");
-		return -ENODEV;
-	}
+        if (!device_is_ready(config->spi_dev)) {
+                LOG_ERR("SPI device is not ready");
+                return -ENODEV;
+        }
 
-	if (mipi_dbi_has_pin(&config->cmd_data)) {
-		if (!gpio_is_ready_dt(&config->cmd_data)) {
-			return -ENODEV;
-		}
-		ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
+        ret = mipi_dbi_spi_release_pins(config);
+        if (ret < 0) {
+                return ret;
+        }
+
+        if (mipi_dbi_has_pin(&config->cmd_data)) {
+                if (!gpio_is_ready_dt(&config->cmd_data)) {
+                        return -ENODEV;
+                }
+                ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
 		if (ret < 0) {
 			LOG_ERR("Could not configure command/data GPIO (%d)", ret);
 			return ret;
@@ -682,23 +758,25 @@ static DEVICE_API(mipi_dbi, mipi_dbi_spi_driver_api) = {
 #endif
 };
 
-#define MIPI_DBI_SPI_INIT(n)							\
-	static const struct mipi_dbi_spi_config					\
-	    mipi_dbi_spi_config_##n = {						\
-		    .spi_dev = DEVICE_DT_GET(					\
-				    DT_INST_PHANDLE(n, spi_dev)),		\
-		    .cmd_data = GPIO_DT_SPEC_INST_GET_OR(n, dc_gpios, {}),	\
-		    .tearing_effect = GPIO_DT_SPEC_INST_GET_OR(n, te_gpios, {}),  \
-		    .reset = GPIO_DT_SPEC_INST_GET_OR(n, reset_gpios, {}),	\
-		    .xfr_min_bits = DT_INST_STRING_UPPER_TOKEN(n, xfr_min_bits) \
-	};									\
-	static struct mipi_dbi_spi_data mipi_dbi_spi_data_##n;			\
-										\
-	DEVICE_DT_INST_DEFINE(n, mipi_dbi_spi_init, NULL,			\
-			&mipi_dbi_spi_data_##n,					\
-			&mipi_dbi_spi_config_##n,				\
-			POST_KERNEL,						\
-			CONFIG_MIPI_DBI_INIT_PRIORITY,				\
-			&mipi_dbi_spi_driver_api);
+#define MIPI_DBI_SPI_INIT(n)                                                    \
+        COND_CODE_1(CONFIG_PINCTRL, (PINCTRL_DT_INST_DEFINE(n);), ())          \
+        static const struct mipi_dbi_spi_config                                 \
+            mipi_dbi_spi_config_##n = {                                         \
+                    .spi_dev = DEVICE_DT_GET(                                   \
+                                    DT_INST_PHANDLE(n, spi_dev)),               \
+                    .cmd_data = GPIO_DT_SPEC_INST_GET_OR(n, dc_gpios, {}),      \
+                    .tearing_effect = GPIO_DT_SPEC_INST_GET_OR(n, te_gpios, {}),  \
+                    .reset = GPIO_DT_SPEC_INST_GET_OR(n, reset_gpios, {}),      \
+                    .xfr_min_bits = DT_INST_STRING_UPPER_TOKEN(n, xfr_min_bits), \
+                    .pcfg = COND_CODE_1(CONFIG_PINCTRL, (PINCTRL_DT_INST_DEV_CONFIG_GET(n)), (NULL)), \
+        };                                                                      \
+        static struct mipi_dbi_spi_data mipi_dbi_spi_data_##n;                  \
+                                                                                \
+        DEVICE_DT_INST_DEFINE(n, mipi_dbi_spi_init, NULL,                       \
+                        &mipi_dbi_spi_data_##n,                                 \
+                        &mipi_dbi_spi_config_##n,                               \
+                        POST_KERNEL,                                            \
+                        CONFIG_MIPI_DBI_INIT_PRIORITY,                          \
+                        &mipi_dbi_spi_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(MIPI_DBI_SPI_INIT)

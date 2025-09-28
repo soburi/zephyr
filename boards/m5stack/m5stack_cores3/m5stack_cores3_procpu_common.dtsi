@@ -44,29 +44,32 @@
                 input = <&ft6336_touch>;
         };
 
-        mipi_dbi {
-                compatible = "zephyr,mipi-dbi-spi";
-                spi-dev = <&spi2>;
-                write-only;
-                status = "okay";
-                #address-cells = <1>;
-                #size-cells = <0>;
+	mipi_dbi {
+		compatible = "zephyr,mipi-dbi-spi";
+		spi-dev = <&spi2>;
+		write-only;
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		pinctrl-0 = <&spim2_ili9342c_3wire>;
+		pinctrl-1 = <&spim2_default>;
+		pinctrl-names = "default", "sleep";
 
-                ili9342c: ili9342c@0 {
-                        compatible = "ilitek,ili9342c";
-                        reg = <0>;
-                        status = "okay";
-                        mipi-max-frequency = <20000000>;
-                        duplex = <SPI_HALF_DUPLEX>;
-                        mipi-mode = "MIPI_DBI_MODE_SPI_3WIRE";
-                        vin-supply = <&vcc_bl>;
-                        pixel-format = <ILI9XXX_PIXEL_FORMAT_RGB565>;
-                        display-inversion;
-                        width = <320>;
-                        height = <240>;
-                        rotation = <0>;
-                };
-        };
+		ili9342c: ili9342c@0 {
+			compatible = "ilitek,ili9342c";
+			reg = <0>;
+			status = "okay";
+			mipi-max-frequency = <20000000>;
+			duplex = <SPI_HALF_DUPLEX>;
+			mipi-mode = "MIPI_DBI_MODE_SPI_3WIRE";
+			vin-supply = <&vcc_bl>;
+			pixel-format = <ILI9XXX_PIXEL_FORMAT_RGB565>;
+			display-inversion;
+			width = <320>;
+			height = <240>;
+			rotation = <0>;
+		};
+	};
 };
 
 &usb_serial {

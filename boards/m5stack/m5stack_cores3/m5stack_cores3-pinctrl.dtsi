@@ -48,7 +48,18 @@
 	spim2_default: spim2_default {
 		group1 {
 			pinmux = <SPIM2_MISO_GPIO35>,
-				 <SPIM2_SCLK_GPIO36>;
+			         <SPIM2_SCLK_GPIO36>;
+		};
+
+		group2 {
+			pinmux = <SPIM2_MOSI_GPIO37>;
+			output-low;
+		};
+	};
+
+	spim2_ili9342c_3wire: spim2_ili9342c_3wire {
+		group1 {
+			pinmux = <SPIM2_SCLK_GPIO36>;
 		};
 
 		group2 {
