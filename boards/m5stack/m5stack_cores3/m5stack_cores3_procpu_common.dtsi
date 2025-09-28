@@ -48,6 +48,8 @@
 		compatible = "zephyr,mipi-dbi-spi";
 		spi-dev = <&spi2>;
 		write-only;
+		dc-gpios = <&gpio0 35 GPIO_ACTIVE_HIGH>;
+		zephyr,dc-shared-miso;
 		status = "okay";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -57,7 +59,7 @@
 			reg = <0>;
 			status = "okay";
 			mipi-max-frequency = <20000000>;
-			mipi-mode = "MIPI_DBI_MODE_SPI_3WIRE";
+			mipi-mode = "MIPI_DBI_MODE_SPI_4WIRE";
 			vin-supply = <&vcc_bl>;
 			pixel-format = <ILI9XXX_PIXEL_FORMAT_RGB565>;
 			display-inversion;

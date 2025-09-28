@@ -11,6 +11,7 @@
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/byteorder.h>
+#include <stdbool.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(mipi_dbi_spi, CONFIG_MIPI_DBI_LOG_LEVEL);
@@ -62,6 +63,8 @@ struct mipi_dbi_spi_config {
 	const struct device *spi_dev;
 	/* Command/Data gpio */
 	const struct gpio_dt_spec cmd_data;
+	/* Command/Data GPIO is shared with SPI MISO */
+	bool cmd_data_shared;
 	/* Tearing Effect GPIO */
 	const struct gpio_dt_spec tearing_effect;
 	/* Reset GPIO */
@@ -81,6 +84,53 @@ struct mipi_dbi_spi_data {
 	/* Used for 3 wire mode */
 	uint16_t spi_byte;
 };
+
+static inline bool mipi_dbi_has_pin(const struct gpio_dt_spec *spec)
+{
+	return spec->port != NULL;
+}
+
+static inline int mipi_dbi_spi_prepare_cmd_data(const struct mipi_dbi_spi_config *config,
+					    bool needed)
+{
+	int ret;
+
+	if (!needed) {
+		return 0;
+	}
+
+	if (!mipi_dbi_has_pin(&config->cmd_data)) {
+		return -ENOTSUP;
+	}
+
+	if (!config->cmd_data_shared) {
+		return 0;
+	}
+
+	ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
+	if (ret < 0) {
+		LOG_ERR("Failed to switch command/data GPIO to output (%d)", ret);
+	}
+
+	return ret;
+}
+
+static inline void mipi_dbi_spi_release_cmd_data(const struct mipi_dbi_spi_config *config,
+					       bool needed)
+{
+	if (!needed) {
+		return;
+	}
+
+	if (!mipi_dbi_has_pin(&config->cmd_data) || !config->cmd_data_shared) {
+		return;
+	}
+
+	int ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_INPUT);
+	if (ret < 0) {
+		LOG_DBG("Command/data GPIO release failed (%d)", ret);
+	}
+}
 
 #if MIPI_DBI_SPI_TE_REQUIRED
 
@@ -155,9 +205,9 @@ out:
 
 static inline int
 mipi_dbi_spi_write_helper_4wire_8bit(const struct device *dev,
-				     const struct mipi_dbi_config *dbi_config,
-				     bool cmd_present, uint8_t cmd,
-				     const uint8_t *data_buf, size_t len)
+			     const struct mipi_dbi_config *dbi_config,
+			     bool cmd_present, uint8_t cmd,
+			     const uint8_t *data_buf, size_t len)
 {
 	const struct mipi_dbi_spi_config *config = dev->config;
 	struct spi_buf buffer;
@@ -165,23 +215,28 @@ mipi_dbi_spi_write_helper_4wire_8bit(const struct device *dev,
 		.buffers = &buffer,
 		.count = 1,
 	};
-	int ret = 0;
+	bool need_dc = cmd_present || (len > 0);
+	int ret;
 
-	/*
-	 * 4 wire mode is much simpler. We just toggle the
-	 * command/data GPIO to indicate if we are sending
-	 * a command or data
-	 */
+	ret = mipi_dbi_spi_prepare_cmd_data(config, need_dc);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = 0;
 
 	buffer.buf = &cmd;
 	buffer.len = sizeof(cmd);
 
 	if (cmd_present) {
-		/* Set CD pin low for command */
-		gpio_pin_set_dt(&config->cmd_data, 0);
+		ret = gpio_pin_set_dt(&config->cmd_data, 0);
+		if (ret < 0) {
+			goto release;
+		}
+
 		ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
 		if (ret < 0) {
-			goto out;
+			goto release;
 		}
 	}
 
@@ -189,14 +244,26 @@ mipi_dbi_spi_write_helper_4wire_8bit(const struct device *dev,
 		buffer.buf = (void *)data_buf;
 		buffer.len = len;
 
-		/* Set CD pin high for data */
-		gpio_pin_set_dt(&config->cmd_data, 1);
+		ret = gpio_pin_set_dt(&config->cmd_data, 1);
+		if (ret < 0) {
+			goto release;
+		}
+
 		ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
 		if (ret < 0) {
-			goto out;
+			goto release;
 		}
 	}
-out:
+
+	if (need_dc) {
+		int tmp = gpio_pin_set_dt(&config->cmd_data, 1);
+		if (tmp < 0) {
+			ret = tmp;
+		}
+	}
+
+release:
+	mipi_dbi_spi_release_cmd_data(config, need_dc);
 	return ret;
 }
 
@@ -206,9 +273,9 @@ out:
 
 static inline int
 mipi_dbi_spi_write_helper_4wire_16bit(const struct device *dev,
-				      const struct mipi_dbi_config *dbi_config,
-				      bool cmd_present, uint8_t cmd,
-				      const uint8_t *data_buf, size_t len)
+			      const struct mipi_dbi_config *dbi_config,
+			      bool cmd_present, uint8_t cmd,
+			      const uint8_t *data_buf, size_t len)
 {
 	const struct mipi_dbi_spi_config *config = dev->config;
 	struct spi_buf buffer;
@@ -217,76 +284,81 @@ mipi_dbi_spi_write_helper_4wire_16bit(const struct device *dev,
 		.count = 1,
 	};
 	uint16_t data16;
-	int ret = 0;
+	bool need_dc = cmd_present || (len > 0);
+	int ret;
 
-	/*
-	 * 4 wire mode with toggle the command/data GPIO
-	 * to indicate if we are sending a command or data
-	 * but send 16-bit blocks (with bit stuffing).
-	 */
+	ret = mipi_dbi_spi_prepare_cmd_data(config, need_dc);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = 0;
+
+	buffer.buf = &data16;
+	buffer.len = sizeof(data16);
 
 	if (cmd_present) {
 		data16 = sys_cpu_to_be16(cmd);
-		buffer.buf = &data16;
-		buffer.len = sizeof(data16);
-
-		/* Set CD pin low for command */
-		gpio_pin_set_dt(&config->cmd_data, 0);
-		ret = spi_write(config->spi_dev, &dbi_config->config,
-				&buf_set);
+		ret = gpio_pin_set_dt(&config->cmd_data, 0);
 		if (ret < 0) {
-			goto out;
+			goto release;
 		}
 
-		/* Set CD pin high for data, if there are any */
-		if (len > 0) {
-			gpio_pin_set_dt(&config->cmd_data, 1);
+		ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
+		if (ret < 0) {
+			goto release;
 		}
+	}
 
-		/* iterate command data */
+	if (len > 0) {
+		ret = gpio_pin_set_dt(&config->cmd_data, 1);
+		if (ret < 0) {
+			goto release;
+		}
+	}
+
+	if (cmd_present) {
 		for (int i = 0; i < len; i++) {
 			data16 = sys_cpu_to_be16(data_buf[i]);
-
-			ret = spi_write(config->spi_dev, &dbi_config->config,
-					&buf_set);
+			ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
 			if (ret < 0) {
-				goto out;
+				goto release;
 			}
 		}
-	} else {
+	} else if (len > 0) {
 		int stuffing = len % sizeof(data16);
 
-		/* Set CD pin high for data, if there are any */
-		if (len > 0) {
-			gpio_pin_set_dt(&config->cmd_data, 1);
-		}
-
-		/* pass through generic device data */
 		if (len - stuffing > 0) {
 			buffer.buf = (void *)data_buf;
 			buffer.len = len - stuffing;
 
-			ret = spi_write(config->spi_dev, &dbi_config->config,
-					&buf_set);
+			ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
 			if (ret < 0) {
-				goto out;
+				goto release;
 			}
 		}
 
-		/* iterate remaining data with stuffing */
 		for (int i = len - stuffing; i < len; i++) {
 			data16 = sys_cpu_to_be16(data_buf[i]);
 			buffer.buf = &data16;
 			buffer.len = sizeof(data16);
 
-			ret = spi_write(config->spi_dev, &dbi_config->config,
-					&buf_set);
+			ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
 			if (ret < 0) {
-				goto out;
+				goto release;
 			}
 		}
 	}
-out:
+
+	if (need_dc) {
+		int tmp = gpio_pin_set_dt(&config->cmd_data, 1);
+		if (tmp < 0) {
+			ret = tmp;
+		}
+	}
+
+release:
+	mipi_dbi_spi_release_cmd_data(config, need_dc);
 	return ret;
 }
 
@@ -448,9 +520,9 @@ out:
 
 static inline int
 mipi_dbi_spi_read_helper_4wire(const struct device *dev,
-			       const struct mipi_dbi_config *dbi_config,
-			       uint8_t *cmds, size_t num_cmds,
-			       uint8_t *response, size_t len)
+		       const struct mipi_dbi_config *dbi_config,
+		       uint8_t *cmds, size_t num_cmds,
+		       uint8_t *response, size_t len)
 {
 	const struct mipi_dbi_spi_config *config = dev->config;
 	struct spi_config tmp_config;
@@ -459,7 +531,8 @@ mipi_dbi_spi_read_helper_4wire(const struct device *dev,
 		.buffers = &buffer,
 		.count = 1,
 	};
-	int ret = 0;
+	bool need_dc = (num_cmds > 0) || (len > 0);
+	int ret;
 
 	/*
 	 * 4 wire mode is much simpler. We just toggle the
@@ -472,16 +545,26 @@ mipi_dbi_spi_read_helper_4wire(const struct device *dev,
 	memcpy(&tmp_config, &dbi_config->config, sizeof(tmp_config));
 	tmp_config.operation |= SPI_HOLD_ON_CS;
 
+	ret = mipi_dbi_spi_prepare_cmd_data(config, need_dc);
+	if (ret < 0) {
+		goto out_release_spi;
+	}
+
+	ret = 0;
+
 	if (num_cmds > 0) {
 		buffer.buf = cmds;
 		buffer.len = num_cmds;
 
 		/* Set CD pin low for command */
-		gpio_pin_set_dt(&config->cmd_data, 0);
+		ret = gpio_pin_set_dt(&config->cmd_data, 0);
+		if (ret < 0) {
+			goto release_dc;
+		}
 
 		ret = spi_write(config->spi_dev, &tmp_config, &buf_set);
 		if (ret < 0) {
-			goto out;
+			goto release_dc;
 		}
 	}
 
@@ -490,15 +573,27 @@ mipi_dbi_spi_read_helper_4wire(const struct device *dev,
 		buffer.len = len;
 
 		/* Set CD pin high for data */
-		gpio_pin_set_dt(&config->cmd_data, 1);
+		ret = gpio_pin_set_dt(&config->cmd_data, 1);
+		if (ret < 0) {
+			goto release_dc;
+		}
 
 		ret = spi_read(config->spi_dev, &tmp_config, &buf_set);
 		if (ret < 0) {
-			goto out;
+			goto release_dc;
 		}
 	}
 
-out:
+release_dc:
+	if (need_dc) {
+		int tmp = gpio_pin_set_dt(&config->cmd_data, 1);
+		if (tmp < 0) {
+			ret = tmp;
+		}
+	}
+	mipi_dbi_spi_release_cmd_data(config, need_dc);
+
+out_release_spi:
 	spi_release(config->spi_dev, &tmp_config);
 	return ret;
 }
@@ -540,11 +635,6 @@ out:
 }
 
 #endif /* MIPI_DBI_SPI_READ_REQUIRED */
-
-static inline bool mipi_dbi_has_pin(const struct gpio_dt_spec *spec)
-{
-	return spec->port != NULL;
-}
 
 static int mipi_dbi_spi_reset(const struct device *dev, k_timeout_t delay)
 {
@@ -646,7 +736,8 @@ static int mipi_dbi_spi_init(const struct device *dev)
 		if (!gpio_is_ready_dt(&config->cmd_data)) {
 			return -ENODEV;
 		}
-		ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
+		gpio_flags_t flags = config->cmd_data_shared ? GPIO_INPUT : GPIO_OUTPUT;
+		ret = gpio_pin_configure_dt(&config->cmd_data, flags);
 		if (ret < 0) {
 			LOG_ERR("Could not configure command/data GPIO (%d)", ret);
 			return ret;
@@ -688,6 +779,7 @@ static DEVICE_API(mipi_dbi, mipi_dbi_spi_driver_api) = {
 		    .spi_dev = DEVICE_DT_GET(					\
 				    DT_INST_PHANDLE(n, spi_dev)),		\
 		    .cmd_data = GPIO_DT_SPEC_INST_GET_OR(n, dc_gpios, {}),	\
+		    .cmd_data_shared = DT_INST_PROP_OR(n, zephyr_dc_shared_miso, false), \
 		    .tearing_effect = GPIO_DT_SPEC_INST_GET_OR(n, te_gpios, {}),  \
 		    .reset = GPIO_DT_SPEC_INST_GET_OR(n, reset_gpios, {}),	\
 		    .xfr_min_bits = DT_INST_STRING_UPPER_TOKEN(n, xfr_min_bits) \
