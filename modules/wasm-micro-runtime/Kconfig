@@ -73,13 +73,15 @@ config WAMR_LIBC_BUILTIN
 
 config WAMR_LIBC_WASI
 	bool "WAMR WASI libc native library support"
-	default n
+	depends on TEST_RANDOM_GENERATOR || ENTROPY_HAS_DRIVER
+	depends on FILE_SYSTEM
+	depends on NET_SOCKETS
+	depends on POSIX_TIMERS
 	help
 	  Enable WAMR WASI libc native library
 
 config WAMR_LIB_PTHREAD
 	bool "WAMR pthread native native library support"
-	default n
 	help
 	  Enable WAMR built-in libc native library
 
@@ -92,25 +94,21 @@ config WAMR_SIMD
 
 config WAMR_REF_TYPES
 	bool "WAMR reference types support"
-	default n
 	help
 	  Enable WAMR reference types feature
 
 config WAMR_MEMORY_PROFILING
 	bool "WAMR runtime memory profiling support"
-	default n
 	help
 	  Enable WAMR runtime memory profiling feature
 
 config WAMR_PERF_PROFILING
 	bool "WAMR runtime performance profiling support"
-	default n
 	help
 	  Enable WAMR runtime performance profiling feature
 
 config WAMR_DUMP_CALL_STACK
 	bool "WAMR runtime dump call stack support"
-	default n
 	help
 	  Enable dumping call stack when runtime throws
 	  exception while executing wasm functions
