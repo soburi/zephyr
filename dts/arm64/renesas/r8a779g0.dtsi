@@ -262,6 +262,7 @@
 				max-bitrate = <1000000>;
 				status = "disabled";
 			};
+
 			channel5 {
 				max-bitrate = <1000000>;
 				status = "disabled";

@@ -19,6 +19,7 @@
 		zephyr,sram = &ram;
 		zephyr,console = &hscif0;
 		zephyr,shell-uart = &hscif0;
+		zephyr,canbus = &canfd;
 	};
 
 	aliases {
