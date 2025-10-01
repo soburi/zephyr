@@ -95,49 +95,44 @@
 	}
 
 /**
- * @brief Length of 'clocks' property which type is 'phandle-array'
+ * @brief Macro function to construct a npcx_clk_cfg item for each entry in the
+ * clocks property.
  *
- * @param inst instance number for compatible defined in DT_DRV_COMPAT.
- * @return length of 'clocks' property which type is 'phandle-array'
+ * @param node_id Node identifier.
+ * @param prop Clocks property name. (i.e. 'clocks')
+ * @param idx Property entry index.
  */
-#define NPCX_DT_CLK_CFG_ITEMS_LEN(inst) DT_INST_PROP_LEN(inst, clocks)
+#define NPCX_DT_CLK_CFG_ITEMS_INIT(node_id, prop, idx)                 \
+        {                                                             \
+          .bus  = DT_CLOCKS_CELL_BY_IDX(node_id, idx, bus),           \
+          .ctrl = DT_CLOCKS_CELL_BY_IDX(node_id, idx, ctl),           \
+          .bit  = DT_CLOCKS_CELL_BY_IDX(node_id, idx, bit),           \
+        }
 
 /**
- * @brief Macro function to construct npcx_clk_cfg item in UTIL_LISTIFY
- * extension.
- *
- * @param child child index in UTIL_LISTIFY extension.
- * @param inst instance number for compatible defined in DT_DRV_COMPAT.
- * @return macro function to construct a npcx_clk_cfg structure.
- */
-#define NPCX_DT_CLK_CFG_ITEMS_FUNC(child, inst) \
-					NPCX_DT_CLK_CFG_ITEM_BY_IDX(inst, child)
-
-/**
- * @brief Macro function to construct a list of npcx_clk_cfg items by
- * UTIL_LISTIFY func
+ * @brief Macro function to construct a list of npcx_clk_cfg items using the
+ * devicetree clocks property.
  *
  * Example devicetree fragment:
  *    / {
- *		host_sub: lpc@400c1000 {
- *			clocks = <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 3>,
- *				 <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 4>,
- *				 <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 5>,
- *				 <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 6>,
- *				 <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 7>;
- *			...
- *		};
+ *              host_sub: lpc@400c1000 {
+ *                      clocks = <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 3>,
+ *                               <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 4>,
+ *                               <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 5>,
+ *                               <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 6>,
+ *                               <&pcc NPCX_CLOCK_BUS_APB3 NPCX_PWDWN_CTL5 7>;
+ *                      ...
+ *              };
  * Example usage:
- *	const struct npcx_clk_cfg clk_cfg[] = NPCX_DT_CLK_CFG_ITEMS_LIST(0);
+ *      const struct npcx_clk_cfg clk_cfg[] = NPCX_DT_CLK_CFG_ITEMS_LIST(0);
  *
  * @param inst instance number for compatible defined in DT_DRV_COMPAT.
  * @return an array of npcx_clk_cfg items.
  */
-#define NPCX_DT_CLK_CFG_ITEMS_LIST(inst) {        \
-	LISTIFY(NPCX_DT_CLK_CFG_ITEMS_LEN(inst),  \
-		NPCX_DT_CLK_CFG_ITEMS_FUNC, (,),  \
-		inst)                             \
-	}
+#define NPCX_DT_CLK_CFG_ITEMS_LIST(inst) {                                        \
+        DT_INST_FOREACH_PROP_ELEM_SEP(inst, clocks,                              \
+                                      NPCX_DT_CLK_CFG_ITEMS_INIT, (,))           \
+        }
 
 /**
  * @brief Get phandle from "name" property which contains wui information.
@@ -167,65 +162,38 @@
 	}
 
 /**
- * @brief Get phandle from 'wui-maps' prop which type is 'phandles' at index 'i'
+ * @brief Construct a npcx_wui structure from the 'wui-maps' property entry.
  *
- * @param inst instance number for compatible defined in DT_DRV_COMPAT.
- * @param i index of 'wui-maps' prop which type is 'phandles'
- * @return phandle from 'wui-maps' prop at index 'i'
+ * @param node_id Node identifier.
+ * @param prop Low voltage configurations property name. (i.e. 'wui-maps')
+ * @param idx Property entry index.
  */
-#define NPCX_DT_PHANDLE_FROM_WUI_MAPS(inst, i) \
-	DT_INST_PHANDLE_BY_IDX(inst, wui_maps, i)
+#define NPCX_DT_WUI_ITEMS_INIT(node_id, prop, idx)                         \
+        {                                                                  \
+          .table = DT_PROP(DT_PHANDLE(DT_PROP_BY_IDX(node_id, prop, idx),  \
+                                        miwus), index),                    \
+          .group = DT_PHA(DT_PROP_BY_IDX(node_id, prop, idx), miwus,       \
+                                        group),                            \
+          .bit   = DT_PHA(DT_PROP_BY_IDX(node_id, prop, idx), miwus, bit), \
+        }
 
 /**
- * @brief Construct a npcx_wui structure from wui-maps property at index 'i'
- *
- * @param inst instance number for compatible defined in DT_DRV_COMPAT.
- * @param i index of 'wui-maps' prop which type is 'phandles'
- * @return npcx_wui item at index 'i'
- */
-#define NPCX_DT_WUI_ITEM_BY_IDX(inst, i) \
-	{                                                                      \
-	  .table = DT_PROP(DT_PHANDLE(NPCX_DT_PHANDLE_FROM_WUI_MAPS(inst, i),  \
-					miwus), index),                        \
-	  .group = DT_PHA(NPCX_DT_PHANDLE_FROM_WUI_MAPS(inst, i), miwus,       \
-							group),                \
-	  .bit = DT_PHA(NPCX_DT_PHANDLE_FROM_WUI_MAPS(inst, i), miwus, bit),   \
-	}
-
-/**
- * @brief Length of npcx_wui structures in 'wui-maps' property
- *
- * @param inst instance number for compatible defined in DT_DRV_COMPAT.
- * @return length of 'wui-maps' prop which type is 'phandles'
- */
-#define NPCX_DT_WUI_ITEMS_LEN(inst) DT_INST_PROP_LEN(inst, wui_maps)
-
-/**
- * @brief Macro function to construct a list of npcx_wui items by UTIL_LISTIFY
- *
- * @param child child index in UTIL_LISTIFY extension.
- * @param inst instance number for compatible defined in DT_DRV_COMPAT.
- * @return macro function to construct a npcx_wui structure.
- */
-#define NPCX_DT_WUI_ITEMS_FUNC(child, inst) NPCX_DT_WUI_ITEM_BY_IDX(inst, child)
-
-/**
- * @brief Macro function to construct a list of npcx_wui items by UTIL_LISTIFY
- * func.
+ * @brief Macro function to construct a list of npcx_wui items from the
+ * devicetree 'wui-maps' property.
  *
  * Example devicetree fragment:
  *    / {
- *		uart1: serial@400c4000 {
- *			uart-rx = <&wui_cr_sin1>;
- *			...
- *		};
+ *              uart1: serial@400c4000 {
+ *                      uart-rx = <&wui_cr_sin1>;
+ *                      ...
+ *              };
  *
- *		gpio0: gpio@40081000 {
- *			wui-maps = <&wui_io00 &wui_io01 &wui_io02 &wui_io03
- *				    &wui_io04 &wui_io05 &wui_io06 &wui_io07>;
- *			...
- *		};
- *	};
+ *              gpio0: gpio@40081000 {
+ *                      wui-maps = <&wui_io00 &wui_io01 &wui_io02 &wui_io03
+ *                                  &wui_io04 &wui_io05 &wui_io06 &wui_io07>;
+ *                      ...
+ *              };
+ *      };
  *
  * Example usage:
  * const struct npcx_wui wui_map = NPCX_DT_PHANDLE_FROM_WUI_NAME(inst, uart_rx);
@@ -234,11 +202,10 @@
  * @param inst instance number for compatible defined in DT_DRV_COMPAT.
  * @return an array of npcx_wui items.
  */
-#define NPCX_DT_WUI_ITEMS_LIST(inst) {        \
-	LISTIFY(NPCX_DT_WUI_ITEMS_LEN(inst),  \
-		NPCX_DT_WUI_ITEMS_FUNC, (,),  \
-		inst)                         \
-	}
+#define NPCX_DT_WUI_ITEMS_LIST(inst) {                                           \
+        DT_INST_FOREACH_PROP_ELEM_SEP(inst, wui_maps,                           \
+                                      NPCX_DT_WUI_ITEMS_INIT, (,))              \
+        }
 
 /**
  * @brief Get a node from path '/npcx_miwus_map/map_miwu(0/1/2)_groups'
