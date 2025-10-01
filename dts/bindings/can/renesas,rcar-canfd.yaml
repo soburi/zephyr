@@ -1,0 +1,24 @@
+description: Renesas R-Car Gen4 RS-CANFD controller (V4H)
+
+compatible: "renesas,rcar-canfd"
+
+include: [can-fd-controller.yaml, pinctrl-device.yaml]
+
+properties:
+  reg:
+    required: true
+  interrupts:
+    required: false
+  clocks:
+    required: false
+  resets:
+    type: phandle-array
+    required: false
+    description: |
+      Reset line for the CANFD controller (CPG module reset).
+
+  reset-names:
+    type: string-array
+    required: false
+    description: |
+      Names of reset lines.

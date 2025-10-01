@@ -22,4 +22,21 @@
 	hscif1_data_rx_default: hscif1_data_rx_default {
 		pin = <PIN_MSIOF2_SS1 FUNC_HTX1>;
 	};
+
+	// CANFD3 and CANFD4 are enabled in SH
+	canfd3_data_a_tx_default: canfd3_data_a_tx_default {
+		pin = <PIN_CANFD3_TX FUNC_CANFD3_TX> ;
+	};
+	canfd3_data_a_rx_default: canfd3_data_a_rx_default {
+		pin = <PIN_CANFD3_RX FUNC_CANFD3_RX> ;
+	};
+	canfd4_data_a_tx_default: canfd4_data_a_tx_default {
+		pin = <PIN_CANFD4_TX FUNC_CANFD4_TX> ;
+	};
+	canfd4_data_a_rx_default: canfd4_data_a_rx_default {
+		pin = <PIN_CANFD4_RX FUNC_CANFD4_RX> ;
+	};
+	can_clk_pin: can_clk_pin {
+		pin = <PIN_CAN_CLK FUNC_CAN_CLK>;
+	};
 };
