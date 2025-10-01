@@ -17,6 +17,8 @@
 		zephyr,sram = &sram0;
 		zephyr,console = &hscif1;
 		zephyr,shell-uart = &hscif1;
+		zephyr,canbus = &canfd;
+
 	};
 };
 
@@ -31,4 +33,31 @@
 	pinctrl-0 = <&hscif1_data_tx_default &hscif1_data_rx_default>;
 	pinctrl-names = "default";
 	status = "okay";
+};
+
+&can_clk {
+	clock-frequency = <40000000>;
+};
+
+&canfd {
+	pinctrl-0 = <&canfd3_data_a_tx_default &canfd3_data_a_rx_default
+		     &canfd4_data_a_tx_default &canfd4_data_a_rx_default
+                     &can_clk_pin>;
+	pinctrl-names = "default";
+	status = "okay";
+
+clocks = <&cpg CPG_MOD 328>,              /* fck: module clock */
+         <&cpg CPG_CORE R8A779G0_CLK_CANFD>, /* canfdφ (clkc) */
+         <&can_clk>,                      /* CAN_CLK external */
+         <&cpg CPG_CORE R8A779G0_CLK_SASYNCPERD1>, /* clk_ram */
+         <&cpg CPG_CORE R8A779G0_CLK_SASYNCPERD2>; /* pclk */
+clock-names = "fck", "canfd", "can_clk", "clk_ram", "pclk";
+
+	channel3 {
+		status = "okay";
+	};
+
+	channel4 {
+		status = "okay";
+	};
 };
