@@ -65,20 +65,15 @@ config WAMR_AOT
 	help
 	  Enable WebAssembly Ahead of Time
 
+choice WAMR_LIBC
+
 config WAMR_LIBC_BUILTIN
 	bool "WAMR built-in libc native library support"
 	default y
 	help
 	  Enable WAMR built-in libc native library
 
-config WAMR_LIBC_WASI
-	bool "WAMR WASI libc native library support"
-	depends on TEST_RANDOM_GENERATOR || ENTROPY_HAS_DRIVER
-	depends on FILE_SYSTEM
-	depends on NET_SOCKETS
-	depends on POSIX_TIMERS
-	help
-	  Enable WAMR WASI libc native library
+endchoice
 
 config WAMR_LIB_PTHREAD
 	bool "WAMR pthread native native library support"
@@ -96,22 +91,6 @@ config WAMR_REF_TYPES
 	bool "WAMR reference types support"
 	help
 	  Enable WAMR reference types feature
-
-config WAMR_MEMORY_PROFILING
-	bool "WAMR runtime memory profiling support"
-	help
-	  Enable WAMR runtime memory profiling feature
-
-config WAMR_PERF_PROFILING
-	bool "WAMR runtime performance profiling support"
-	help
-	  Enable WAMR runtime performance profiling feature
-
-config WAMR_DUMP_CALL_STACK
-	bool "WAMR runtime dump call stack support"
-	help
-	  Enable dumping call stack when runtime throws
-	  exception while executing wasm functions
 
 config WAMR_MPU_STACK_COUNT
 	int "WAMR MPU stack count"
