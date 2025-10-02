@@ -26,6 +26,24 @@ M5Stack CoreS3/CoreS3 SE features consist of:
 - Proximity sensor LTR-553ALS-WA (Not available for CoreS3 SE)
 - 6-Axis IMU BMI270 (Not available for CoreS3 SE)
 
+Display
+=======
+
+The integrated 2" SPI display is supported via the :dtcompatible:`ilitek,ili9342c`
+driver. Applications can access the panel through the
+:kconfig:option:`CONFIG_DISPLAY` API. For example, the following command builds
+the :zephyr:code-sample:`lvgl` sample for the primary CPU:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/subsys/display/lvgl
+   :board: m5stack_cores3/esp32s3/procpu
+   :goals: build
+   :compact:
+
+The sample enables the LVGL GUI library by default. Once flashed, the graphical
+output is rendered on the CoreS3 screen and touch input is provided by the
+FT6336 controller.
+
 Start Application Development
 *****************************
 
