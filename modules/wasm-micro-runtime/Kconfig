@@ -65,15 +65,11 @@ config WAMR_AOT
 	help
 	  Enable WebAssembly Ahead of Time
 
-choice WAMR_LIBC
-
 config WAMR_LIBC_BUILTIN
 	bool "WAMR built-in libc native library support"
 	default y
 	help
 	  Enable WAMR built-in libc native library
-
-endchoice
 
 config WAMR_LIB_PTHREAD
 	bool "WAMR pthread native native library support"
