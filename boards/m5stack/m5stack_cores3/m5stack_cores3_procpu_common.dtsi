@@ -57,6 +57,7 @@
 			mipi-max-frequency = <30000000>;
 			vin-supply = <&vcc_bl>;
 			pixel-format = <ILI9XXX_PIXEL_FORMAT_RGB565>;
+			color-order = "rgb";
 			display-inversion;
 			width = <320>;
 			height = <240>;

@@ -42,3 +42,15 @@ properties:
     description:
       Display inversion mode. Every bit is inverted from the frame memory to
       the display.
+
+  color-order:
+    type: string
+    enum:
+      - "rgb"
+      - "bgr"
+    default: "bgr"
+    description: |
+      Define the byte order used when updating display memory. Some panels
+      require RGB ordering while others expect BGR ordering. The default value
+      keeps backwards compatibility with existing boards that rely on the
+      BGR order.

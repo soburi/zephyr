@@ -62,6 +62,11 @@ enum madctl_cmd_set {
 	CMD_SET_2,	/* Used by ILI9342c */
 };
 
+enum ili9xxx_color_order {
+	ILI9XXX_COLOR_ORDER_RGB,
+	ILI9XXX_COLOR_ORDER_BGR,
+};
+
 struct ili9xxx_quirks {
 	enum madctl_cmd_set cmd_set;
 };
@@ -78,6 +83,7 @@ struct ili9xxx_config {
 	uint8_t te_mode;
 	const void *regs;
 	int (*regs_init_fn)(const struct device *dev);
+	enum ili9xxx_color_order color_order;
 };
 
 int ili9xxx_transmit(const struct device *dev, uint8_t cmd,

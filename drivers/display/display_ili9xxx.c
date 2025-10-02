@@ -324,7 +324,8 @@ static int ili9xxx_set_orientation(const struct device *dev,
 	struct ili9xxx_data *data = dev->data;
 
 	int r;
-	uint8_t tx_data = ILI9XXX_MADCTL_BGR;
+        uint8_t tx_data = (config->color_order == ILI9XXX_COLOR_ORDER_BGR) ?
+                                   ILI9XXX_MADCTL_BGR : 0U;
 	if (config->quirks->cmd_set == CMD_SET_1) {
 		if (orientation == DISPLAY_ORIENTATION_NORMAL) {
 			tx_data |= ILI9XXX_MADCTL_MX;
@@ -549,11 +550,13 @@ static const struct ili9xxx_quirks ili9488_quirks = {
 		.rotation = DT_PROP(INST_DT_ILI9XXX(n, t), rotation),          \
 		.x_resolution = ILI##t##_X_RES,                                \
 		.y_resolution = ILI##t##_Y_RES,                                \
-		.inversion = DT_PROP(INST_DT_ILI9XXX(n, t), display_inversion),\
-		.te_mode = MIPI_DBI_TE_MODE_DT(INST_DT_ILI9XXX(n, t), te_mode),\
-		.regs = &ili##t##_regs_##n,                                    \
-		.regs_init_fn = ili##t##_regs_init,                            \
-	};                                                                     \
+                .inversion = DT_PROP(INST_DT_ILI9XXX(n, t), display_inversion),\
+                .te_mode = MIPI_DBI_TE_MODE_DT(INST_DT_ILI9XXX(n, t), te_mode),\
+                .regs = &ili##t##_regs_##n,                                    \
+                .regs_init_fn = ili##t##_regs_init,                            \
+                .color_order =                                                 \
+                        DT_ENUM_IDX(INST_DT_ILI9XXX(n, t), color_order),       \
+        };                                                                     \
 									       \
 	static struct ili9xxx_data ili9##t##_data_##n;                         \
 									       \
