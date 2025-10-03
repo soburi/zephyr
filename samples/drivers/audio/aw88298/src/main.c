@@ -16,43 +16,8 @@
 #include "sine.h"
 #endif
 
-static const int16_t sine_wave[] = {
- 3211,   6392,   9511,  12539,  15446,  18204,  20787,  23169,
-25329,  27244,  28897,  30272,  31356,  32137,  32609,  32767,
-32609,  32137,  31356,  30272,  28897,  27244,  25329,  23169,
-20787,  18204,  15446,  12539,   9511,   6392,   3211,	  0,
--3212,  -6393,  -9512, -12540, -15447, -18205, -20788, -23170,
--25330, -27245, -28898, -30273, -31357, -32138, -32610, -32767,
--32610, -32138, -31357, -30273, -28898, -27245, -25330, -23170,
--20788, -18205, -15447, -12540,  -9512,  -6393,  -3212,	 -1,
-};
-
-#define I2S_CODEC_TX DT_ALIAS(i2s_codec_tx)
-
-#define SAMPLE_FREQUENCY 48000U
-#define SAMPLE_BIT_WIDTH (16U)
-#define BYTES_PER_SAMPLE sizeof(int16_t)
-#if CONFIG_USE_DMIC
-#define NUMBER_OF_CHANNELS CONFIG_DMIC_CHANNELS
-#else
-#define NUMBER_OF_CHANNELS (2U)
-#endif
-/* Such block length provides an echo with the delay of 100 ms. */
-#define SAMPLES_PER_BLOCK ARRAY_SIZE(sine_wave)
-#define INITIAL_BLOCKS	4 //CONFIG_I2S_INIT_BUFFERS
-#define TIMEOUT           (2000U)
-
-#define BLOCK_SIZE  (SAMPLES_PER_BLOCK * NUMBER_OF_CHANNELS * sizeof(int16_t))
-#define BLOCK_COUNT (INITIAL_BLOCKS + 4U)
-
-K_MEM_SLAB_DEFINE_IN_SECT_STATIC(mem_slab, __nocache, BLOCK_SIZE, BLOCK_COUNT, 4);
-
-
-#define PLAYBACK_SECONDS  4U
-#define TOTAL_BLOCKS	  ((PLAYBACK_SECONDS * SAMPLE_FREQUENCY) / SAMPLES_PER_BLOCK)
-
-
 #if !CONFIG_USE_DMIC
+static const int16_t sine_block[] __NOCACHE;
 static const int16_t sine_block[] = {
         3211,  3211,  6392,  6392,  9511,  9511, 12539, 12539,
        15446, 15446, 18204, 18204, 20787, 20787, 23169, 23169,
@@ -71,12 +36,33 @@ static const int16_t sine_block[] = {
       -20788,-20788,-18205,-18205,-15447,-15447,-12540,-12540,
        -9512, -9512, -6393, -6393, -3212, -3212,    -1,    -1,
 };
-
-static void fill_block(int16_t *buffer)
-{
-        memcpy(buffer, sine_block, sizeof(sine_block));
-}
 #endif
+
+#define I2S_CODEC_TX DT_ALIAS(i2s_codec_tx)
+
+#define SAMPLE_FREQUENCY 48000U
+#define SAMPLE_BIT_WIDTH (16U)
+#define BYTES_PER_SAMPLE sizeof(int16_t)
+#if CONFIG_USE_DMIC
+#define NUMBER_OF_CHANNELS CONFIG_DMIC_CHANNELS
+#else
+#define NUMBER_OF_CHANNELS (2U)
+#endif
+/* Such block length provides an echo with the delay of 100 ms. */
+#define SAMPLES_PER_BLOCK ARRAY_SIZE(sine_block)
+#define INITIAL_BLOCKS    CONFIG_I2S_INIT_BUFFERS
+#define TIMEOUT           (2000U)
+
+#define BLOCK_SIZE  (SAMPLES_PER_BLOCK * NUMBER_OF_CHANNELS * sizeof(int16_t))
+#define BLOCK_COUNT (INITIAL_BLOCKS + 4U)
+
+K_MEM_SLAB_DEFINE_IN_SECT_STATIC(mem_slab, __nocache, BLOCK_SIZE, BLOCK_COUNT, 4);
+
+
+#define PLAYBACK_SECONDS  4U
+#define TOTAL_BLOCKS	  ((PLAYBACK_SECONDS * SAMPLE_FREQUENCY) / SAMPLES_PER_BLOCK)
+
+
 
 static bool configure_tx_streams(const struct device *i2s_dev, struct i2s_config *config)
 {
@@ -250,7 +236,7 @@ int main(void)
 
                         ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
 #else
-                        fill_block((int16_t *)mem_block);
+			mem_block = (void *)&sine_block;
 
                         ret = i2s_buf_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
 #endif
@@ -282,17 +268,20 @@ int main(void)
 				ret = dmic_read(dmic_dev, 0, &mem_block, &block_size, TIMEOUT);
 				if (ret < 0) {
 					printk("read failed: %d", ret);
-					k_mem_slab_free(&mem_slab, mem_block);
 					break;
 				}
 
-				ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
+				ret = i2s_write(i2s_dev_codec, mem_block, block_size);
 #else
-                                /* If not using DMIC, play a sine wave 440Hz */
+				/* If not using DMIC, play a sine wave 440Hz */
 
-                                fill_block((int16_t *)mem_block);
+				//BUILD_ASSERT(
+				//	BLOCK_SIZE <= sizeof(sine_block),
+				//	"BLOCK_SIZE is bigger than test sine wave buffer size."
+				//);
+				mem_block = (void *)&sine_block;
 
-                                ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
+				ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
 #endif
 				if (ret < 0) {
 					printk("Failed to write data: %d\n", ret);
