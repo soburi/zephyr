@@ -33,8 +33,7 @@
 		sdhc0 = &sd0;
 		led0 = &axp2101_led;
 		fuel-gauge0 = &fuel_gauge;
-		i2s-codec-tx = &aw88298;
-		i2s-tx = &i2s1;
+		i2s-codec-tx = &i2s1;
 	};
 
 	lvgl_pointer {
@@ -174,7 +173,7 @@
 		};
 	};
 
-	aw88298: aw88298@36 {
+	audio_codec: aw88298@36 {
 		compatible = "awinic,aw88298";
 		status = "okay";
 		reg = <0x36>;
