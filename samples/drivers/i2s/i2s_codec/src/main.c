@@ -10,6 +10,8 @@
 #include <zephyr/drivers/i2s.h>
 #include <zephyr/audio/codec.h>
 #include <zephyr/toolchain.h>
+#include <zephyr/sys/util.h>
+#include <stdint.h>
 #include <string.h>
 
 #ifndef CONFIG_USE_DMIC
@@ -36,9 +38,30 @@
 
 K_MEM_SLAB_DEFINE_IN_SECT_STATIC(mem_slab, __nocache, BLOCK_SIZE, BLOCK_COUNT, 4);
 
+#if !CONFIG_USE_DMIC
+#define SINE_SAMPLE_BYTES __16kHz16bit_stereo_sine_pcm_len
+
+static void fill_block(uint8_t *buffer, size_t block_size, uint32_t block_idx)
+{
+        size_t offset = (block_idx * block_size) % SINE_SAMPLE_BYTES;
+        size_t remaining = block_size;
+        uint8_t *dst = buffer;
+
+        while (remaining > 0U) {
+                size_t copy = MIN(remaining, SINE_SAMPLE_BYTES - offset);
+
+                memcpy(dst, &__16kHz16bit_stereo_sine_pcm[offset], copy);
+
+                remaining -= copy;
+                dst += copy;
+                offset = (offset + copy) % SINE_SAMPLE_BYTES;
+        }
+}
+#endif
+
 static bool configure_tx_streams(const struct device *i2s_dev, struct i2s_config *config)
 {
-	int ret;
+        int ret;
 
 	ret = i2s_configure(i2s_dev, I2S_DIR_TX, config);
 	if (ret < 0) {
@@ -71,7 +94,8 @@ int main(void)
 	const struct device *const codec_dev = DEVICE_DT_GET(DT_NODELABEL(audio_codec));
 	struct i2s_config config;
 	struct audio_codec_cfg audio_cfg;
-	int ret = 0;
+        audio_property_value_t volume = {.vol = 80};
+        int ret = 0;
 
 #if CONFIG_USE_DMIC
 	struct pcm_stream_cfg stream = {
@@ -126,8 +150,19 @@ int main(void)
 	audio_cfg.dai_cfg.i2s.frame_clk_freq = SAMPLE_FREQUENCY;
 	audio_cfg.dai_cfg.i2s.mem_slab = &mem_slab;
 	audio_cfg.dai_cfg.i2s.block_size = BLOCK_SIZE;
-	audio_codec_configure(codec_dev, &audio_cfg);
-	k_msleep(1000);
+        audio_codec_configure(codec_dev, &audio_cfg);
+        k_msleep(1000);
+
+        ret = audio_codec_set_property(codec_dev, AUDIO_PROPERTY_OUTPUT_VOLUME,
+                                       AUDIO_CHANNEL_ALL, volume);
+        if (ret < 0) {
+                printk("Failed to set codec volume: %d\n", ret);
+        }
+
+        ret = audio_codec_apply_properties(codec_dev);
+        if (ret < 0) {
+                printk("Failed to apply codec properties: %d\n", ret);
+        }
 
 #if CONFIG_USE_DMIC
 	cfg.channel.req_num_chan = 2;
@@ -163,9 +198,11 @@ int main(void)
 		return 0;
 	}
 
-	printk("start streams\n");
-	for (;;) {
-		bool started = false;
+        audio_codec_start_output(codec_dev);
+
+        printk("start streams\n");
+        for (;;) {
+                bool started = false;
 #if CONFIG_USE_DMIC
 		ret = dmic_trigger(dmic_dev, DMIC_TRIGGER_START);
 		if (ret < 0) {
@@ -173,47 +210,45 @@ int main(void)
 			return ret;
 		}
 #endif
-		while (1) {
-			void *mem_block;
-			uint32_t block_size = BLOCK_SIZE;
-			int i;
+                uint32_t block_idx = 0U;
 
-			for (i = 0; i < CONFIG_I2S_INIT_BUFFERS; i++) {
+                while (1) {
+                        void *mem_block = NULL;
+                        uint32_t block_size = BLOCK_SIZE;
+
 #if CONFIG_USE_DMIC
-				/* If using DMIC, use a buffer (memory slab) from dmic_read */
-				ret = dmic_read(dmic_dev, 0, &mem_block, &block_size, TIMEOUT);
-				if (ret < 0) {
-					printk("read failed: %d", ret);
-					break;
-				}
-
-				ret = i2s_write(i2s_dev_codec, mem_block, block_size);
+                        ret = dmic_read(dmic_dev, 0, &mem_block, &block_size, TIMEOUT);
+                        if (ret < 0) {
+                                printk("read failed: %d", ret);
+                                break;
+                        }
 #else
-				/* If not using DMIC, play a sine wave 440Hz */
+                        ret = k_mem_slab_alloc(&mem_slab, &mem_block, K_FOREVER);
+                        if (ret < 0) {
+                                printk("Failed to allocate TX mem_block: %d\n", ret);
+                                break;
+                        }
 
-				BUILD_ASSERT(
-					BLOCK_SIZE <= __16kHz16bit_stereo_sine_pcm_len,
-					"BLOCK_SIZE is bigger than test sine wave buffer size."
-				);
-				mem_block = (void *)&__16kHz16bit_stereo_sine_pcm;
-
-				ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
+                        fill_block(mem_block, block_size, block_idx);
 #endif
-				if (ret < 0) {
-					printk("Failed to write data: %d\n", ret);
-					break;
-				}
-			}
-			if (ret < 0) {
-				printk("error %d\n", ret);
-				break;
-			}
-			if (!started) {
-				i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_START);
-				started = true;
-			}
-		}
-		if (!trigger_command(i2s_dev_codec, I2S_TRIGGER_DROP)) {
+
+                        ret = i2s_write(i2s_dev_codec, mem_block, block_size);
+                        if (ret < 0) {
+                                printk("Failed to write data: %d\n", ret);
+#if !CONFIG_USE_DMIC
+                                k_mem_slab_free(&mem_slab, &mem_block);
+#endif
+                                break;
+                        }
+
+                        block_idx++;
+
+                        if (!started) {
+                                i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_START);
+                                started = true;
+                        }
+                }
+                if (!trigger_command(i2s_dev_codec, I2S_TRIGGER_DROP)) {
 			printk("Send I2S trigger DRAIN failed: %d", ret);
 			return 0;
 		}
