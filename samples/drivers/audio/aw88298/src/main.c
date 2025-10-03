@@ -52,20 +52,31 @@ K_MEM_SLAB_DEFINE_IN_SECT_STATIC(mem_slab, __nocache, BLOCK_SIZE, BLOCK_COUNT, 4
 #define TOTAL_BLOCKS	  ((PLAYBACK_SECONDS * SAMPLE_FREQUENCY) / SAMPLES_PER_BLOCK)
 
 
-static void fill_block(int16_t *buffer, uint32_t block_idx)
+#if !CONFIG_USE_DMIC
+static const int16_t sine_block[] = {
+        3211,  3211,  6392,  6392,  9511,  9511, 12539, 12539,
+       15446, 15446, 18204, 18204, 20787, 20787, 23169, 23169,
+       25329, 25329, 27244, 27244, 28897, 28897, 30272, 30272,
+       31356, 31356, 32137, 32137, 32609, 32609, 32767, 32767,
+       32609, 32609, 32137, 32137, 31356, 31356, 30272, 30272,
+       28897, 28897, 27244, 27244, 25329, 25329, 23169, 23169,
+       20787, 20787, 18204, 18204, 15446, 15446, 12539, 12539,
+        9511,  9511,  6392,  6392,  3211,  3211,     0,     0,
+       -3212, -3212, -6393, -6393, -9512, -9512,-12540,-12540,
+      -15447,-15447,-18205,-18205,-20788,-20788,-23170,-23170,
+      -25330,-25330,-27245,-27245,-28898,-28898,-30273,-30273,
+      -31357,-31357,-32138,-32138,-32610,-32610,-32767,-32767,
+      -32610,-32610,-32138,-32138,-31357,-31357,-30273,-30273,
+      -28898,-28898,-27245,-27245,-25330,-25330,-23170,-23170,
+      -20788,-20788,-18205,-18205,-15447,-15447,-12540,-12540,
+       -9512, -9512, -6393, -6393, -3212, -3212,    -1,    -1,
+};
+
+static void fill_block(int16_t *buffer)
 {
-	const size_t count = ARRAY_SIZE(sine_wave);
-	const uint32_t attenuation = block_idx % 3U;
-
-	for (size_t i = 0; i < count; i++) {
-		int16_t sample_l = sine_wave[i] >> attenuation;
-		size_t right_index = (i + count / 4U) % count;
-		int16_t sample_r = sine_wave[right_index] >> attenuation;
-
-		buffer[NUMBER_OF_CHANNELS * i] = sample_l;
-		buffer[NUMBER_OF_CHANNELS * i + 1] = sample_r;
-	}
+        memcpy(buffer, sine_block, sizeof(sine_block));
 }
+#endif
 
 static bool configure_tx_streams(const struct device *i2s_dev, struct i2s_config *config)
 {
@@ -219,20 +230,30 @@ int main(void)
 			return ret;
 		}
 #endif
-		for (uint32_t i = 0U; i < INITIAL_BLOCKS; i++) {
-			void *mem_block;
-			uint32_t block_size = BLOCK_SIZE;
-			int i;
+                for (uint32_t i = 0U; i < INITIAL_BLOCKS; i++) {
+                        void *mem_block;
+                        uint32_t block_size = BLOCK_SIZE;
 
-			ret = k_mem_slab_alloc(&mem_slab, &mem_block, K_FOREVER);
-			if (ret < 0) {
-				printk("Failed to allocate TX mem_block: %d\n", ret);
-				return ret;
-			}
+                        ret = k_mem_slab_alloc(&mem_slab, &mem_block, K_FOREVER);
+                        if (ret < 0) {
+                                printk("Failed to allocate TX mem_block: %d\n", ret);
+                                return ret;
+                        }
 
-			fill_block((int16_t *)mem_block, i);
+#if CONFIG_USE_DMIC
+                        ret = dmic_read(dmic_dev, 0, &mem_block, &block_size, TIMEOUT);
+                        if (ret < 0) {
+                                printk("read failed: %d", ret);
+                                k_mem_slab_free(&mem_slab, mem_block);
+                                break;
+                        }
 
-			ret = i2s_buf_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
+                        ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
+#else
+                        fill_block((int16_t *)mem_block);
+
+                        ret = i2s_buf_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
+#endif
 			if (ret < 0) {
 				printk("Failed to queue TX mem_block: %d\n", ret);
 				k_mem_slab_free(&mem_slab, mem_block);
@@ -247,10 +268,10 @@ int main(void)
 				//goto cleanup;
 			}
 
-			for (uint32_t block_idx = INITIAL_BLOCKS; block_idx < TOTAL_BLOCKS; block_idx++) {
-				void *mem_block;
+                        for (uint32_t block_idx = INITIAL_BLOCKS; block_idx < TOTAL_BLOCKS; block_idx++) {
+                                void *mem_block;
 
-				ret = k_mem_slab_alloc(&mem_slab, &mem_block, K_FOREVER);
+                                ret = k_mem_slab_alloc(&mem_slab, &mem_block, K_FOREVER);
 				if (ret < 0) {
 					printk("Failed to allocate TX mem_block: %d\n", ret);
 					//goto cleanup;
@@ -267,11 +288,11 @@ int main(void)
 
 				ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
 #else
-				/* If not using DMIC, play a sine wave 440Hz */
+                                /* If not using DMIC, play a sine wave 440Hz */
 
-				fill_block((int16_t *)mem_block, block_idx);
+                                fill_block((int16_t *)mem_block);
 
-				ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
+                                ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
 #endif
 				if (ret < 0) {
 					printk("Failed to write data: %d\n", ret);
