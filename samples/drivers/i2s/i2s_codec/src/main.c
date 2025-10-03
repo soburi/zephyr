@@ -71,6 +71,7 @@ int main(void)
 	const struct device *const codec_dev = DEVICE_DT_GET(DT_NODELABEL(audio_codec));
 	struct i2s_config config;
 	struct audio_codec_cfg audio_cfg;
+	audio_property_value_t volume = {.vol = 100};
 	int ret = 0;
 
 #if CONFIG_USE_DMIC
@@ -162,6 +163,20 @@ int main(void)
 		printk("failure to config streams\n");
 		return 0;
 	}
+
+
+	ret = audio_codec_set_property(codec_dev, AUDIO_PROPERTY_OUTPUT_VOLUME,
+								   AUDIO_CHANNEL_ALL, volume);
+	if (ret < 0) {
+		printk("Failed to set codec volume: %d\n", ret);
+	}
+
+	ret = audio_codec_apply_properties(codec_dev);
+	if (ret < 0) {
+		printk("Failed to apply codec properties: %d\n", ret);
+	}
+
+	audio_codec_start_output(codec_dev);
 
 	printk("start streams\n");
 	for (;;) {
