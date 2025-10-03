@@ -18,7 +18,7 @@ PYTHON_DEVICETREE = SCRIPT_DIR / "python-devicetree" / "src"
 sys.path.insert(0, str(PYTHON_DEVICETREE))
 
 try:
-    from devicetree.edtlib import Binding, bindings_from_paths  # type: ignore  # noqa: E402
+    from devicetree.edtlib import Binding, EDTError  # type: ignore  # noqa: E402
 except ModuleNotFoundError as exc:  # pragma: no cover - environment guard
     if exc.name == "yaml":
         raise SystemExit(
@@ -64,6 +64,29 @@ def find_binding_files(root: Path) -> List[Path]:
     if not files:
         raise SystemExit(f"No binding YAML files found under '{root}'")
     return sorted(files)
+
+
+def load_bindings(binding_files: Sequence[str]) -> List[Binding]:
+    """Return bindings, skipping ones that fail to load."""
+
+    fname2path = {Path(path).name: path for path in binding_files}
+
+    bindings: List[Binding] = []
+    errors: List[Tuple[str, EDTError]] = []
+
+    for path in binding_files:
+        try:
+            bindings.append(Binding(path, fname2path))
+        except EDTError as err:
+            errors.append((path, err))
+
+    for path, err in errors:
+        print(
+            f"warning: failed to load binding {path}: {err}",
+            file=sys.stderr,
+        )
+
+    return bindings
 
 
 def relative_label(path: Path, root: Path, depth: int) -> str:
@@ -132,7 +155,7 @@ def main() -> None:
     bindings_root = args.bindings_root.resolve()
     binding_files = [str(path) for path in find_binding_files(bindings_root)]
 
-    bindings = bindings_from_paths(binding_files)
+    bindings = load_bindings(binding_files)
 
     rows: List[Tuple[str, str, str]] = []
     for binding in bindings:
