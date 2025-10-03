@@ -33,5 +33,6 @@ repository will disappear, and a standalone repository will be the
 
 Additional utilities in this directory include helper scripts for
 exploring the binding metadata.  For example, ``list_bus_nodes.py``
-summarizes bindings that define a bus or appear on one, making it
-easier to review the supported bus topologies.
+summarizes bindings that define a bus or appear on one, including the
+binding's ``compatible`` string, making it easier to review the
+supported bus topologies.

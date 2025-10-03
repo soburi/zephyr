@@ -104,15 +104,18 @@ def relative_label(path: Path, root: Path, depth: int) -> str:
     return f"{rel} ({suffix})"
 
 
-def collect_binding_rows(binding: Binding, root: Path, depth: int = 0) -> List[Tuple[str, str, str]]:
-    rows: List[Tuple[str, str, str]] = []
+def collect_binding_rows(
+    binding: Binding, root: Path, depth: int = 0
+) -> List[Tuple[str, str, str, str]]:
+    rows: List[Tuple[str, str, str, str]] = []
     binding_path = Path(binding.path) if binding.path else None
 
     if binding_path is not None and (binding.buses or binding.on_bus):
         label = relative_label(binding_path, root, depth)
         buses = ", ".join(binding.buses) if binding.buses else ""
         on_bus = binding.on_bus or ""
-        rows.append((label, buses, on_bus))
+        compatible = binding.compatible or ""
+        rows.append((label, compatible, buses, on_bus))
 
     if binding.child_binding is not None:
         rows.extend(collect_binding_rows(binding.child_binding, root, depth + 1))
@@ -120,19 +123,19 @@ def collect_binding_rows(binding: Binding, root: Path, depth: int = 0) -> List[T
     return rows
 
 
-def sort_rows(rows: Iterable[Tuple[str, str, str]]) -> List[Tuple[str, str, str]]:
+def sort_rows(rows: Iterable[Tuple[str, str, str, str]]) -> List[Tuple[str, str, str, str]]:
     return sorted(rows, key=lambda row: row[0])
 
 
-def emit_csv(rows: Sequence[Tuple[str, str, str]]) -> None:
+def emit_csv(rows: Sequence[Tuple[str, str, str, str]]) -> None:
     writer = csv.writer(sys.stdout)
-    writer.writerow(["Binding", "Buses", "On Bus"])
+    writer.writerow(["Binding", "Compatible", "Buses", "On Bus"])
     for row in rows:
         writer.writerow(row)
 
 
-def emit_table(rows: Sequence[Tuple[str, str, str]]) -> None:
-    headers = ("Binding", "Buses", "On Bus")
+def emit_table(rows: Sequence[Tuple[str, str, str, str]]) -> None:
+    headers = ("Binding", "Compatible", "Buses", "On Bus")
     if not rows:
         print("No bus-related bindings found.")
         return
@@ -157,7 +160,7 @@ def main() -> None:
 
     bindings = load_bindings(binding_files)
 
-    rows: List[Tuple[str, str, str]] = []
+    rows: List[Tuple[str, str, str, str]] = []
     for binding in bindings:
         rows.extend(collect_binding_rows(binding, bindings_root))
 
