@@ -104,8 +104,6 @@ int main(void)
 	struct i2s_config config;
 	struct audio_codec_cfg audio_cfg;
 	audio_property_value_t volume = {.vol = 80};
-	bool codec_started = false;
-	bool i2s_started = false;
 	int ret = 0;
 
 #if CONFIG_USE_DMIC
@@ -204,6 +202,8 @@ int main(void)
 		printk("Failed to apply codec properties: %d\n", ret);
 	}
 
+	audio_codec_start_output(codec_dev);
+
 	printk("start streams\n");
 	for (;;) {
 		bool started = false;
@@ -233,15 +233,11 @@ int main(void)
 				return ret;
 			}
 
-			audio_codec_start_output(codec_dev);
-			codec_started = true;
-
 			ret = i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_START);
 			if (ret < 0) {
 				printk("Failed to start I2S stream: %d\n", ret);
 				//goto cleanup;
 			}
-			i2s_started = true;
 
 			for (uint32_t block_idx = INITIAL_BLOCKS; block_idx < TOTAL_BLOCKS; block_idx++) {
 				void *mem_block;
