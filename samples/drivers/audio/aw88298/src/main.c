@@ -226,56 +226,46 @@ int main(void)
 				printk("Failed to queue TX mem_block: %d\n", ret);
 				return ret;
 			}
-		}
 
-		audio_codec_start_output(codec_dev);
-		codec_started = true;
+			audio_codec_start_output(codec_dev);
+			codec_started = true;
 
-		ret = i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_START);
-		if (ret < 0) {
-			printk("Failed to start I2S stream: %d\n", ret);
-			goto cleanup;
-		}
-		i2s_started = true;
-
-		for (uint32_t block_idx = INITIAL_BLOCKS; block_idx < TOTAL_BLOCKS; block_idx++) {
-			void *mem_block;
-
-			ret = k_mem_slab_alloc(&mem_slab, &mem_block, K_FOREVER);
+			ret = i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_START);
 			if (ret < 0) {
-				printk("Failed to allocate TX mem_block: %d\n", ret);
-				goto cleanup;
+				printk("Failed to start I2S stream: %d\n", ret);
+				//goto cleanup;
 			}
+			i2s_started = true;
 
-			fill_block((int16_t *)mem_block, block_idx);
+			for (uint32_t block_idx = INITIAL_BLOCKS; block_idx < TOTAL_BLOCKS; block_idx++) {
+				void *mem_block;
 
-			ret = i2s_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
+				ret = k_mem_slab_alloc(&mem_slab, &mem_block, K_FOREVER);
+				if (ret < 0) {
+					printk("Failed to allocate TX mem_block: %d\n", ret);
+					//goto cleanup;
+				}
+
+				fill_block((int16_t *)mem_block, block_idx);
+
+				ret = i2s_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
+				if (ret < 0) {
+					printk("Failed to queue TX mem_block: %d\n", ret);
+					//goto cleanup;
+				}
+			}
 			if (ret < 0) {
-				printk("Failed to queue TX mem_block: %d\n", ret);
-				goto cleanup;
+				printk("error %d\n", ret);
+				break;
+			}
+			if (!started) {
+				i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_START);
+				started = true;
 			}
 		}
-
-		ret = i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_DRAIN);
-		if (ret < 0) {
-			printk("Failed to drain I2S stream: %d\n", ret);
-			goto cleanup;
-		}
-
-		i2s_started = false;
-
-cleanup:
-		if (i2s_started) {
-			(void)i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_STOP);
-		}
-
-		if (codec_started) {
-			audio_codec_stop_output(codec_dev);
-		}
-
-		if (ret < 0) {
-			printk("Playback finished with error: %d\n", ret);
-			return ret;
+		if (!trigger_command(i2s_dev_codec, I2S_TRIGGER_DROP)) {
+			printk("Send I2S trigger DRAIN failed: %d", ret);
+			return 0;
 		}
 #if CONFIG_USE_DMIC
 		ret = dmic_trigger(dmic_dev, DMIC_TRIGGER_STOP);
