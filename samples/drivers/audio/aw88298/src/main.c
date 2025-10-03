@@ -156,6 +156,8 @@ int main(void)
 	audio_cfg.dai_cfg.i2s.options = I2S_OPT_FRAME_CLK_SLAVE | I2S_OPT_BIT_CLK_SLAVE;
 #endif
 	audio_cfg.dai_cfg.i2s.frame_clk_freq = SAMPLE_FREQUENCY;
+	audio_cfg.dai_cfg.i2s.mem_slab = &mem_slab;
+	audio_cfg.dai_cfg.i2s.block_size = BLOCK_SIZE;
 	audio_codec_configure(codec_dev, &audio_cfg);
 	k_msleep(1000);
 
