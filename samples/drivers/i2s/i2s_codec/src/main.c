@@ -232,7 +232,7 @@ int main(void)
                         fill_block(mem_block, block_size, block_idx);
 #endif
 
-                        ret = i2s_write(i2s_dev_codec, mem_block, block_size);
+                       ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
                         if (ret < 0) {
                                 printk("Failed to write data: %d\n", ret);
 #if !CONFIG_USE_DMIC
