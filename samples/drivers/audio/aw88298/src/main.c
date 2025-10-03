@@ -232,11 +232,14 @@ int main(void)
 
 			fill_block((int16_t *)mem_block, i);
 
-			ret = i2s_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
+			ret = i2s_buf_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
 			if (ret < 0) {
 				printk("Failed to queue TX mem_block: %d\n", ret);
+				k_mem_slab_free(&mem_slab, mem_block);
 				return ret;
 			}
+
+			k_mem_slab_free(&mem_slab, mem_block);
 
 			ret = i2s_trigger(i2s_dev_codec, I2S_DIR_TX, I2S_TRIGGER_START);
 			if (ret < 0) {
@@ -258,21 +261,25 @@ int main(void)
 				ret = dmic_read(dmic_dev, 0, &mem_block, &block_size, TIMEOUT);
 				if (ret < 0) {
 					printk("read failed: %d", ret);
+					k_mem_slab_free(&mem_slab, mem_block);
 					break;
 				}
 
-				ret = i2s_write(i2s_dev_codec, mem_block, block_size);
+				ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
 #else
 				/* If not using DMIC, play a sine wave 440Hz */
 
 				fill_block((int16_t *)mem_block, block_idx);
 
-				ret = i2s_write(i2s_dev_codec, mem_block, block_size);
+				ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
 #endif
 				if (ret < 0) {
 					printk("Failed to write data: %d\n", ret);
+					k_mem_slab_free(&mem_slab, mem_block);
 					break;
 				}
+
+				k_mem_slab_free(&mem_slab, mem_block);
 			}
 			if (ret < 0) {
 				printk("error %d\n", ret);
