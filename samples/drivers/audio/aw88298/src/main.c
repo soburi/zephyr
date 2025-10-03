@@ -153,7 +153,11 @@ int main(void)
 	audio_cfg.dai_cfg.i2s.word_size = SAMPLE_BIT_WIDTH;
 	audio_cfg.dai_cfg.i2s.channels = 2;
 	audio_cfg.dai_cfg.i2s.format = I2S_FMT_DATA_FORMAT_I2S;
+#ifdef CONFIG_USE_CODEC_CLOCK
 	audio_cfg.dai_cfg.i2s.options = I2S_OPT_FRAME_CLK_MASTER | I2S_OPT_BIT_CLK_MASTER;
+#else
+	audio_cfg.dai_cfg.i2s.options = I2S_OPT_FRAME_CLK_SLAVE | I2S_OPT_BIT_CLK_SLAVE;
+#endif
 	audio_cfg.dai_cfg.i2s.frame_clk_freq = SAMPLE_FREQUENCY;
 	audio_codec_configure(codec_dev, &audio_cfg);
 	k_msleep(1000);
@@ -212,6 +216,8 @@ int main(void)
 #endif
 		for (uint32_t i = 0U; i < INITIAL_BLOCKS; i++) {
 			void *mem_block;
+			uint32_t block_size = BLOCK_SIZE;
+			int i;
 
 			ret = k_mem_slab_alloc(&mem_slab, &mem_block, K_FOREVER);
 			if (ret < 0) {
@@ -246,12 +252,25 @@ int main(void)
 					//goto cleanup;
 				}
 
+#if CONFIG_USE_DMIC
+				/* If using DMIC, use a buffer (memory slab) from dmic_read */
+				ret = dmic_read(dmic_dev, 0, &mem_block, &block_size, TIMEOUT);
+				if (ret < 0) {
+					printk("read failed: %d", ret);
+					break;
+				}
+
+				ret = i2s_write(i2s_dev_codec, mem_block, block_size);
+#else
+				/* If not using DMIC, play a sine wave 440Hz */
+
 				fill_block((int16_t *)mem_block, block_idx);
 
-				ret = i2s_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
+				ret = i2s_write(i2s_dev_codec, mem_block, block_size);
+#endif
 				if (ret < 0) {
-					printk("Failed to queue TX mem_block: %d\n", ret);
-					//goto cleanup;
+					printk("Failed to write data: %d\n", ret);
+					break;
 				}
 			}
 			if (ret < 0) {
