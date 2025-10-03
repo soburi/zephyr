@@ -45,7 +45,7 @@ static const int16_t sine_wave[] = {
 #define BLOCK_SIZE  (SAMPLES_PER_BLOCK * NUMBER_OF_CHANNELS * sizeof(int16_t))
 #define BLOCK_COUNT (INITIAL_BLOCKS + 4U)
 
-K_MEM_SLAB_DEFINE(mem_slab, BLOCK_SIZE, BLOCK_COUNT, 4);
+K_MEM_SLAB_DEFINE_IN_SECT_STATIC(mem_slab, __nocache, BLOCK_SIZE, BLOCK_COUNT, 4);
 
 
 #define PLAYBACK_SECONDS  4U
