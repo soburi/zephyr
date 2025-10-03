@@ -226,20 +226,9 @@ int main(void)
                                 return ret;
                         }
 
-#if CONFIG_USE_DMIC
-                        ret = dmic_read(dmic_dev, 0, &mem_block, &block_size, TIMEOUT);
-                        if (ret < 0) {
-                                printk("read failed: %d", ret);
-                                k_mem_slab_free(&mem_slab, mem_block);
-                                break;
-                        }
-
-                        ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
-#else
 			mem_block = (void *)&sine_block;
 
                         ret = i2s_buf_write(i2s_dev_codec, mem_block, BLOCK_SIZE);
-#endif
 			if (ret < 0) {
 				printk("Failed to queue TX mem_block: %d\n", ret);
 				k_mem_slab_free(&mem_slab, mem_block);
@@ -275,11 +264,11 @@ int main(void)
 #else
 				/* If not using DMIC, play a sine wave 440Hz */
 
-				//BUILD_ASSERT(
-				//	BLOCK_SIZE <= sizeof(sine_block),
-				//	"BLOCK_SIZE is bigger than test sine wave buffer size."
-				//);
-				mem_block = (void *)&sine_block;
+				BUILD_ASSERT(
+					BLOCK_SIZE <= __16kHz16bit_stereo_sine_pcm_len,
+					"BLOCK_SIZE is bigger than test sine wave buffer size."
+				);
+				mem_block = (void *)&__16kHz16bit_stereo_sine_pcm;
 
 				ret = i2s_buf_write(i2s_dev_codec, mem_block, block_size);
 #endif
