@@ -105,6 +105,7 @@ node-macro =/ %s"DT_N" path-id %s"_FOREACH_NODELABEL" [ %s"_VARGS" ]
 node-macro =/ %s"DT_N" path-id %s"_NODELABEL_NUM"
 ; Macros which expand to the node identifiers for each child by index.
 node-macro =/ %s"DT_N" path-id %s"_CHILD_IDX_" DIGIT
+node-macro =/ %s"DT_N" path-id %s"_CHILD_IDX_" 2*DIGIT
 ; The node's status macro; dt-name in this case is something like "okay"
 ; or "disabled".
 node-macro =/ %s"DT_N" path-id %s"_STATUS_" dt-name
