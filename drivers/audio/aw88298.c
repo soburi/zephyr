@@ -73,32 +73,6 @@ struct aw88298_data {
 	bool mute;
 };
 
-static int aw88298_write_reg(const struct device *dev, uint8_t reg, uint16_t value)
-{
-	const struct aw88298_config *cfg = dev->config;
-	struct aw88298_data *data = dev->data;
-	uint8_t tx[3];
-	int ret;
-
-	if (!device_is_ready(cfg->bus.bus)) {
-		LOG_ERR("I2C bus not ready");
-		return -ENODEV;
-	}
-
-	tx[0] = reg;
-	sys_put_be16(value, &tx[1]);
-
-	k_mutex_lock(&data->lock, K_FOREVER);
-	ret = i2c_write_dt(&cfg->bus, tx, sizeof(tx));
-	k_mutex_unlock(&data->lock);
-
-	if (ret < 0) {
-		LOG_ERR("Failed to write reg 0x%02x (%d)", reg, ret);
-	}
-
-	return ret;
-}
-
 static int aw88298_update_reg(const struct device *dev, uint8_t reg, uint16_t mask, uint16_t value)
 {
 	const struct aw88298_config *cfg = dev->config;
