@@ -58,7 +58,7 @@ node-macro =/ %s"DT_N" path-id %s"_RANGES_IDX_" DIGIT
 node-macro =/ %s"DT_N" path-id %s"_FOREACH_RANGE"
 ; Subnodes of the fixed-partitions compatible get macros which contain
 ; a unique ordinal value for each partition
-node-macro =/ %s"DT_N" path-id %s"_PARTITION_ID" DIGIT
+node-macro =/ %s"DT_N" path-id %s"_PARTITION_ID"
 ; Macros are generated for each of a node's compatibles;
 ; dt-name in this case is something like "vnd_device".
 node-macro =/ %s"DT_N" path-id %s"_COMPAT_MATCHES_" dt-name
@@ -185,6 +185,11 @@ pinctrl-macro = %s"DT_N" path-id %s"_PINCTRL_NUM"
 ;     #define DT_N_<node path>_PINCTRL_IDX_0_EXISTS 1
 ;     #define DT_N_<node path>_PINCTRL_IDX_1_EXISTS 1
 pinctrl-macro =/ %s"DT_N" path-id %s"_PINCTRL_IDX_" DIGIT %s"_EXISTS"
+; Tokenized variants of a given pinctrl-DIGIT property.
+; These mirror the node FULL_NAME token macros to make use of existing
+; helpers that expect both lower and upper token forms.
+pinctrl-macro =/ %s"DT_N" path-id %s"_PINCTRL_IDX_" DIGIT %s"_TOKEN"
+pinctrl-macro =/ %s"DT_N" path-id %s"_PINCTRL_IDX_" DIGIT %s"_UPPER_TOKEN"
 ; A given pinctrl property name exists.
 ;
 ;     #define DT_N_<node path>_PINCTRL_NAME_default_EXISTS 1
@@ -255,6 +260,10 @@ gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_EXISTS"
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_IDX_1_PH <node id for 'gpio1'>
 ;   #define DT_N_<node-2 path>_GPIO_HOGS_IDX_0_PH <node id for 'gpio1'>
 gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_PH"
+; Iteration helpers for the specifier cells exposed by DT_FOREACH_* macros.
+gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_FOREACH_CELL"
+gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_FOREACH_CELL_SEP"
+gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_NUM_CELLS"
 ; The pin cell of a logical index in the GPIO hogs array exists.
 ;
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_IDX_0_VAL_pin_EXISTS 1
@@ -405,7 +414,7 @@ other-macro =/ %s"DT_COMPAT_HAS_OKAY_" dt-name
 ; Currently used to allow mapping a lowercase-and-underscores "label"
 ; property to a fixed-partitions node. See the flash map API docs
 ; for an example.
-other-macro =/ %s"DT_COMPAT_" dt-name %s"_LABEL_" dt-name
+other-macro =/ %s"DT_COMPAT_" dt-name %s"_LABEL_" dt-name [ %s"_EXISTS" ]
 ; Helper macros expanded while iterating over nodes.
 other-macro =/ %s"DT_FOREACH_VARGS_HELPER"
 other-macro =/ %s"DT_FOREACH_OKAY_VARGS_HELPER"
