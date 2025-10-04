@@ -81,7 +81,7 @@ struct aw88298_config {
 
 struct aw88298_data {
 	struct k_mutex lock;
-	uint16_t volume;
+	uint8_t volume;
 	bool mute;
 };
 
