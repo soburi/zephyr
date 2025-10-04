@@ -236,127 +236,164 @@ static int aw88298_get_i2s_mode_code(audio_dai_type_t type, i2s_fmt_t format, ui
 	}
 }
 
-static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *cfg)
+static int aw88298_get_sysctrl_cfg(uint16_t *mask, uint16_t *value)
+{
+        *mask = AW88298_REG_SYSCTRL_I2SEN | AW88298_REG_SYSCTRL_PWDN;
+        *value = AW88298_REG_SYSCTRL_I2SEN;
+
+        return 0;
+}
+
+static int aw88298_get_i2sctrl_cfg(const struct audio_codec_cfg *cfg, uint16_t *mask,
+                                   uint16_t *value)
 {
         const i2s_opt_t options = cfg->dai_cfg.i2s.options;
         const i2s_fmt_t format = cfg->dai_cfg.i2s.format;
-        uint16_t channel_sel;
-        uint16_t channel_en;
-        uint16_t rate_code;
+        uint16_t clk_flags = 0U;
         uint16_t mode_code;
         uint16_t fs_code;
         uint16_t bck_code;
-        uint16_t clk_flags = 0U;
-	int ret;
+        uint16_t rate_code;
+        int ret;
 
-	if ((cfg->dai_cfg.i2s.channels != 1U) && (cfg->dai_cfg.i2s.channels != 2U)) {
-		LOG_ERR("Unsupported channel count %u", cfg->dai_cfg.i2s.channels);
-		return -ENOTSUP;
-	}
+        ret = aw88298_get_i2s_mode_code(cfg->dai_type, format, &mode_code);
+        if (ret < 0) {
+                return ret;
+        }
 
-	ret = aw88298_get_i2s_mode_code(cfg->dai_type, format, &mode_code);
-	if (ret < 0) {
-		return ret;
-	}
+        ret = aw88298_get_word_size_codes(cfg->dai_cfg.i2s.word_size, &fs_code, &bck_code);
+        if (ret < 0) {
+                return ret;
+        }
 
-	ret = aw88298_get_word_size_codes(cfg->dai_cfg.i2s.word_size, &fs_code, &bck_code);
-	if (ret < 0) {
-		return ret;
-	}
+        if ((format & I2S_FMT_DATA_ORDER_LSB) != 0U) {
+                LOG_ERR("LSB-first data ordering not supported");
+                return -ENOTSUP;
+        }
 
-	if ((format & I2S_FMT_DATA_ORDER_LSB) != 0U) {
-		LOG_ERR("LSB-first data ordering not supported");
-		return -ENOTSUP;
-	}
+        switch (format & I2S_FMT_CLK_FORMAT_MASK) {
+        case I2S_FMT_CLK_NF_NB:
+                break;
+        case I2S_FMT_CLK_NF_IB:
+                clk_flags |= AW88298_REG_I2SCTRL_BCLK_POL;
+                break;
+        case I2S_FMT_CLK_IF_NB:
+                clk_flags |= AW88298_REG_I2SCTRL_LRCLK_POL;
+                break;
+        case I2S_FMT_CLK_IF_IB:
+                clk_flags |= AW88298_REG_I2SCTRL_LRCLK_POL | AW88298_REG_I2SCTRL_BCLK_POL;
+                break;
+        default:
+                LOG_ERR("Unsupported I2S clock format 0x%x", format & I2S_FMT_CLK_FORMAT_MASK);
+                return -ENOTSUP;
+        }
 
-	switch (format & I2S_FMT_CLK_FORMAT_MASK) {
-	case I2S_FMT_CLK_NF_NB:
-		break;
-	case I2S_FMT_CLK_NF_IB:
-		clk_flags |= AW88298_REG_I2SCTRL_BCLK_POL;
-		break;
-	case I2S_FMT_CLK_IF_NB:
-		clk_flags |= AW88298_REG_I2SCTRL_LRCLK_POL;
-		break;
-	case I2S_FMT_CLK_IF_IB:
-		clk_flags |= AW88298_REG_I2SCTRL_LRCLK_POL | AW88298_REG_I2SCTRL_BCLK_POL;
-		break;
-	default:
-		LOG_ERR("Unsupported I2S clock format 0x%x", format & I2S_FMT_CLK_FORMAT_MASK);
-		return -ENOTSUP;
-	}
+        if ((format & ~(I2S_FMT_DATA_FORMAT_MASK | I2S_FMT_DATA_ORDER_LSB |
+                        I2S_FMT_CLK_FORMAT_MASK)) != 0U) {
+                LOG_WRN("Ignoring unsupported I2S format bits 0x%x",
+                        format & ~(I2S_FMT_DATA_FORMAT_MASK | I2S_FMT_DATA_ORDER_LSB |
+                                   I2S_FMT_CLK_FORMAT_MASK));
+        }
 
-	if ((format & ~(I2S_FMT_DATA_FORMAT_MASK | I2S_FMT_DATA_ORDER_LSB |
-			I2S_FMT_CLK_FORMAT_MASK)) != 0U) {
-		LOG_WRN("Ignoring unsupported I2S format bits 0x%x",
-			format & ~(I2S_FMT_DATA_FORMAT_MASK | I2S_FMT_DATA_ORDER_LSB |
-				   I2S_FMT_CLK_FORMAT_MASK));
-	}
+        ret = aw88298_get_sample_rate_code(cfg->dai_cfg.i2s.frame_clk_freq, &rate_code);
+        if (ret < 0) {
+                return ret;
+        }
 
-	ret = aw88298_get_sample_rate_code(cfg->dai_cfg.i2s.frame_clk_freq, &rate_code);
-	if (ret < 0) {
-		return ret;
-	}
+        if ((options & (I2S_OPT_LOOPBACK | I2S_OPT_PINGPONG)) != 0U) {
+                LOG_WRN("Ignoring unsupported I2S options 0x%x",
+                        options & (I2S_OPT_LOOPBACK | I2S_OPT_PINGPONG));
+        }
 
-	if ((cfg->dai_route != AUDIO_ROUTE_PLAYBACK) && (cfg->dai_route != AUDIO_ROUTE_BYPASS)) {
-		LOG_ERR("Unsupported route %u", cfg->dai_route);
-		return -ENOTSUP;
-	}
+        if ((options & I2S_OPT_BIT_CLK_GATED) != 0U) {
+                LOG_WRN("Bit clock gating not supported");
+        }
 
-	if ((options & (I2S_OPT_LOOPBACK | I2S_OPT_PINGPONG)) != 0U) {
-		LOG_WRN("Ignoring unsupported I2S options 0x%x",
-			options & (I2S_OPT_LOOPBACK | I2S_OPT_PINGPONG));
-	}
+        if (((options & I2S_OPT_BIT_CLK_SLAVE) != 0U) !=
+            ((options & I2S_OPT_FRAME_CLK_SLAVE) != 0U)) {
+                LOG_ERR("Inconsistent clock master/slave options 0x%x", options);
+                return -ENOTSUP;
+        }
 
-	if ((options & I2S_OPT_BIT_CLK_GATED) != 0U) {
-		LOG_WRN("Bit clock gating not supported");
-	}
+        if ((options & I2S_OPT_BIT_CLK_SLAVE) == 0U) {
+                LOG_ERR("AW88298 requires external LRCLK/BCLK (slave mode)");
+                return -ENOTSUP;
+        }
 
-	if (((options & I2S_OPT_BIT_CLK_SLAVE) != 0U) !=
-	    ((options & I2S_OPT_FRAME_CLK_SLAVE) != 0U)) {
-		LOG_ERR("Inconsistent clock master/slave options 0x%x", options);
-		return -ENOTSUP;
-	}
+        *mask = AW88298_REG_I2SCTRL_I2S_CFG_MASK;
+        *value = rate_code | AW88298_REG_I2SCTRL_FRAME_FLAGS |
+                 AW88298_I2SCTRL_I2SMD_VAL(mode_code | AW88298_I2SCTRL_MODE_SLAVE) |
+                 AW88298_I2SCTRL_I2SFS_VAL(fs_code) | AW88298_I2SCTRL_I2SBCK_VAL(bck_code) |
+                 clk_flags;
 
-	if ((options & I2S_OPT_BIT_CLK_SLAVE) == 0U) {
-		LOG_ERR("AW88298 requires external LRCLK/BCLK (slave mode)");
-		return -ENOTSUP;
-	}
+        return 0;
+}
 
-	mode_code |= AW88298_I2SCTRL_MODE_SLAVE;
-
-	LOG_DBG("Configure: rate=%u channels=%u options=0x%x", cfg->dai_cfg.i2s.frame_clk_freq,
-		cfg->dai_cfg.i2s.channels, cfg->dai_cfg.i2s.options);
+static int aw88298_get_i2scfg1_cfg(const struct audio_codec_cfg *cfg, uint16_t *mask,
+                                   uint16_t *value)
+{
+        if ((cfg->dai_cfg.i2s.channels != 1U) && (cfg->dai_cfg.i2s.channels != 2U)) {
+                LOG_ERR("Unsupported channel count %u", cfg->dai_cfg.i2s.channels);
+                return -ENOTSUP;
+        }
 
         if (cfg->dai_cfg.i2s.channels == 1U) {
                 /* Sum the left/right data stream and feed a single slot */
-                channel_sel = AW88298_I2SCFG1_RXSEL_VAL(0x3U);
-                channel_en = AW88298_I2SCFG1_RXEN_VAL(BIT(0));
+                *value = AW88298_I2SCFG1_RXSEL_VAL(0x3U) | AW88298_I2SCFG1_RXEN_VAL(BIT(0));
         } else {
-                channel_sel = AW88298_I2SCFG1_RXSEL_VAL(0x0U);
-                channel_en = AW88298_I2SCFG1_RXEN_VAL(BIT(0) | BIT(1));
+                *value = AW88298_I2SCFG1_RXSEL_VAL(0x0U) |
+                         AW88298_I2SCFG1_RXEN_VAL(BIT(0) | BIT(1));
         }
 
-        rate_code |= AW88298_REG_I2SCTRL_FRAME_FLAGS | AW88298_I2SCTRL_I2SMD_VAL(mode_code) |
-                     AW88298_I2SCTRL_I2SFS_VAL(fs_code) | AW88298_I2SCTRL_I2SBCK_VAL(bck_code) |
-                     clk_flags;
+        *mask = AW88298_REG_I2SCFG1_RXSEL | AW88298_REG_I2SCFG1_RXEN;
 
-        ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL,
-                                 AW88298_REG_SYSCTRL_I2SEN | AW88298_REG_SYSCTRL_PWDN,
-                                 AW88298_REG_SYSCTRL_I2SEN);
+        return 0;
+}
+
+static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *cfg)
+{
+        uint16_t sysctrl_mask;
+        uint16_t sysctrl_value;
+        uint16_t i2sctrl_mask;
+        uint16_t i2sctrl_value;
+        uint16_t i2scfg1_mask;
+        uint16_t i2scfg1_value;
+        int ret;
+
+        if ((cfg->dai_route != AUDIO_ROUTE_PLAYBACK) && (cfg->dai_route != AUDIO_ROUTE_BYPASS)) {
+                LOG_ERR("Unsupported route %u", cfg->dai_route);
+                return -ENOTSUP;
+        }
+
+        LOG_DBG("Configure: rate=%u channels=%u options=0x%x", cfg->dai_cfg.i2s.frame_clk_freq,
+                cfg->dai_cfg.i2s.channels, cfg->dai_cfg.i2s.options);
+
+        ret = aw88298_get_sysctrl_cfg(&sysctrl_mask, &sysctrl_value);
         if (ret < 0) {
                 return ret;
         }
 
-        ret = aw88298_update_reg(dev, AW88298_REG_I2SCTRL, AW88298_REG_I2SCTRL_I2S_CFG_MASK,
-                                 rate_code);
+        ret = aw88298_get_i2sctrl_cfg(cfg, &i2sctrl_mask, &i2sctrl_value);
         if (ret < 0) {
                 return ret;
         }
 
-        ret = aw88298_update_reg(dev, AW88298_REG_I2SCFG1,
-                                 AW88298_REG_I2SCFG1_RXSEL | AW88298_REG_I2SCFG1_RXEN,
-                                 channel_sel | channel_en);
+        ret = aw88298_get_i2scfg1_cfg(cfg, &i2scfg1_mask, &i2scfg1_value);
+        if (ret < 0) {
+                return ret;
+        }
+
+        ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL, sysctrl_mask, sysctrl_value);
+        if (ret < 0) {
+                return ret;
+        }
+
+        ret = aw88298_update_reg(dev, AW88298_REG_I2SCTRL, i2sctrl_mask, i2sctrl_value);
+        if (ret < 0) {
+                return ret;
+        }
+
+        ret = aw88298_update_reg(dev, AW88298_REG_I2SCFG1, i2scfg1_mask, i2scfg1_value);
         if (ret < 0) {
                 return ret;
         }
