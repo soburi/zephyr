@@ -18,9 +18,17 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(aw88298);
 
+#define AW88298_REG_ID       0x00
+#define AW88298_REG_SYSST    0x01
+#define AW88298_REG_SYSINT   0x02
+#define AW88298_REG_SYSINTM  0x03
 #define AW88298_REG_SYSCTRL  0x04
 #define AW88298_REG_SYSCTRL2 0x05
 #define AW88298_REG_I2SCTRL  0x06
+#define AW88298_REG_I2SCFG1  0x07
+#define AW88298_REG_HAGCCFG1 0x09
+#define AW88298_REG_HAGCCFG2 0x0A
+#define AW88298_REG_HAGCCFG3 0x0B
 #define AW88298_REG_HAGCCFG4 0x0C
 
 #define AW88298_REG_SYSCTRL_PWDN  BIT(0)
@@ -40,18 +48,6 @@ LOG_MODULE_REGISTER(aw88298);
 
 #define AW88298_REG_HAGCCFG4_VOL (BIT_MASK(8) << 8)
 
-#define AW88298_I2SCTRL_MODE_I2S 0x4U
-
-#define AW88298_I2SCTRL_FS_32BIT 0U
-#define AW88298_I2SCTRL_FS_24BIT 1U
-#define AW88298_I2SCTRL_FS_20BIT 2U
-#define AW88298_I2SCTRL_FS_16BIT 3U
-
-#define AW88298_I2SCTRL_BCK_32BIT 3U
-#define AW88298_I2SCTRL_BCK_24BIT 2U
-#define AW88298_I2SCTRL_BCK_20BIT 1U
-#define AW88298_I2SCTRL_BCK_16BIT 0U
-
 #define AW88298_I2SCTRL_I2SMD_VAL(val)  (((uint16_t)(val) << 8) & AW88298_REG_I2SCTRL_I2SMD)
 #define AW88298_I2SCTRL_I2SFS_VAL(val)  (((uint16_t)(val) << 6) & AW88298_REG_I2SCTRL_I2SFS)
 #define AW88298_I2SCTRL_I2SBCK_VAL(val) (((uint16_t)(val) << 4) & AW88298_REG_I2SCTRL_I2SBCK)
@@ -61,6 +57,22 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_RESET_DELAY_MS 50
 
 #define AW88298_VOLUME_MAX 0x00FF
+
+#define AW88298_I2SCTRL_MODE_I2S 0x4U
+
+enum {
+	AW88298_I2SCTRL_FS_32BIT, //0U
+	AW88298_I2SCTRL_FS_24BIT, //1U
+	AW88298_I2SCTRL_FS_20BIT, //2U
+	AW88298_I2SCTRL_FS_16BIT, //3U
+};
+
+enum {
+	AW88298_I2SCTRL_BCK_16BIT, //0U
+	AW88298_I2SCTRL_BCK_20BIT, //1U
+	AW88298_I2SCTRL_BCK_24BIT, //2U
+	AW88298_I2SCTRL_BCK_32BIT, //3U
+};
 
 struct aw88298_config {
 	struct i2c_dt_spec bus;
@@ -309,14 +321,13 @@ static int aw88298_apply_properties(const struct device *dev)
 {
 	const struct aw88298_config *cfg = dev->config;
 	struct aw88298_data *data = dev->data;
-	uint8_t gain = data->mute ? 0U : (uint8_t)data->volume;
-	uint16_t volume_field = AW88298_HAGCCFG4_VOL_VAL(gain);
+	const uint16_t mute_field = data->mute ? AW88298_REG_SYSCTRL2_HMUTE : 0;
+	const uint16_t volume_field = AW88298_HAGCCFG4_VOL_VAL(data->volume);
 	int ret;
 
 	LOG_DBG("Using I2C addr 0x%02x", cfg->bus.addr);
 
-	ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL2, AW88298_REG_SYSCTRL2_HMUTE,
-				 data->mute ? 0xFFFF : 0);
+	ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL2, AW88298_REG_SYSCTRL2_HMUTE, mute_field);
 	if (ret < 0) {
 		return ret;
 	}
