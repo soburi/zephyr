@@ -5,19 +5,26 @@
  */
 
 / {
-	aliases {
-		i2s-codec-tx = &i2s1;
-	};
+        aliases {
+                i2s-codec-tx = &i2s1;
+        };
 };
 
 audio_codec: &aw88298 {
-	status = "okay";
+        status = "okay";
 };
 
 &i2s1 {
-	status = "okay";
+        status = "okay";
+
+        dmic_dev: es7210_dmic@0 {
+                compatible = "everest,es7210-dmic";
+                reg = <0>;
+                status = "okay";
+                codec = <&es7210>;
+        };
 };
 
 &dma {
-	status = "okay";
+        status = "okay";
 };

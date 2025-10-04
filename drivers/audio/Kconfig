@@ -37,7 +37,6 @@ source "subsys/logging/Kconfig.template.log_config"
 
 source "drivers/audio/Kconfig.aw88298"
 source "drivers/audio/Kconfig.cs43l22"
-source "drivers/audio/Kconfig.es7210"
 source "drivers/audio/Kconfig.max98091"
 source "drivers/audio/Kconfig.pcm1681"
 source "drivers/audio/Kconfig.tas6422dac"
@@ -69,6 +68,7 @@ source "drivers/audio/Kconfig.mpxxdtyy"
 source "drivers/audio/Kconfig.dmic_pdm_nrfx"
 source "drivers/audio/Kconfig.dmic_mcux"
 source "drivers/audio/Kconfig.dmic_ambiq_pdm"
+source "drivers/audio/Kconfig.dmic_es7210"
 
 endif # AUDIO_DMIC
 
