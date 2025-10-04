@@ -215,7 +215,6 @@ static int aw88298_get_i2s_mode_code(audio_dai_type_t type, uint16_t *code)
 
 static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *cfg)
 {
-	struct aw88298_data *data = dev->data;
 	uint16_t rate_code;
 	uint16_t mode_code;
 	uint16_t fs_code;
@@ -270,7 +269,6 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
 
 static void aw88298_start_output(const struct device *dev)
 {
-	struct aw88298_data *data = dev->data;
 	int ret;
 
 	ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL, AW88298_REG_SYSCTRL_AMPPD, 0);
@@ -288,7 +286,6 @@ static void aw88298_start_output(const struct device *dev)
 
 static void aw88298_stop_output(const struct device *dev)
 {
-	struct aw88298_data *data = dev->data;
 	int ret;
 
 	ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL2, AW88298_REG_SYSCTRL2_HMUTE, 0xFFFF);
