@@ -50,7 +50,10 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_RESET_DELAY_MS 50
 
 #define AW88298_VOLUME_DB_MAX 0
-#define AW88298_VOLUME_DB_MIN (-1530)
+#define AW88298_VOLUME_DB_MIN (-960)
+
+#define AW88298_DB_PER_COARSE_STEP_TENTHS 60
+#define AW88298_HAGCCFG4_FINE_STEPS      BIT(8)
 
 enum {
 	AW88298_I2SCTRL_MODE_I2S = 4,
@@ -85,20 +88,22 @@ struct aw88298_data {
 
 static uint16_t aw88298_db2vol(int db)
 {
-	uint8_t hi;
-	uint8_t lo;
+	uint16_t hi;
+	uint16_t lo;
+	int attenuation;
+	int coarse_steps;
+	int remainder;
 
-	if (db > AW88298_VOLUME_DB_MAX) {
-		db = AW88298_VOLUME_DB_MAX;
-	}
+	db = CLAMP(db, AW88298_VOLUME_DB_MIN, AW88298_VOLUME_DB_MAX);
+	attenuation = -db;
 
-	if (db < AW88298_VOLUME_DB_MIN) {
-		db = AW88298_VOLUME_DB_MIN;
-	}
+	coarse_steps = attenuation / AW88298_DB_PER_COARSE_STEP_TENTHS;
+	remainder = attenuation - (coarse_steps * AW88298_DB_PER_COARSE_STEP_TENTHS);
 
-	hi = (-db) / 6;
-	hi = hi < 0xFF ? hi : 0xFF;
-	lo = ((-db) - (hi * 6)) * 2 / 5;
+	hi = MIN(coarse_steps, 0xFF);
+	lo = DIV_ROUND_CLOSEST(remainder * AW88298_HAGCCFG4_FINE_STEPS,
+			       AW88298_DB_PER_COARSE_STEP_TENTHS);
+	lo = MIN(lo, 0xFF);
 
 	return (hi << 8) | lo;
 }
