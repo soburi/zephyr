@@ -42,6 +42,7 @@ node-macro =/ %s"DT_N" path-id %s"_IRQ_LEVEL"
 node-macro =/ %s"DT_N" path-id %s"_IRQ_IDX_" DIGIT "_EXISTS"
 node-macro =/ %s"DT_N" path-id %s"_IRQ_IDX_" DIGIT
               %s"_VAL_" dt-name [ %s"_EXISTS" ]
+node-macro =/ %s"DT_N" path-id %s"_IRQ_IDX_" DIGIT %s"_CONTROLLER"
 node-macro =/ %s"DT_N" path-id %s"_CONTROLLER"
 node-macro =/ %s"DT_N" path-id %s"_IRQ_NAME_" dt-name
               %s"_VAL_" dt-name [ %s"_EXISTS" ]
@@ -65,7 +66,7 @@ node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT %s"_PARENT_SP
 node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT %s"_PARENT_SPECIFIER_LEN"
 ; Subnodes of the fixed-partitions compatible get macros which contain
 ; a unique ordinal value for each partition
-node-macro =/ %s"DT_N" path-id %s"_PARTITION_ID" DIGIT
+node-macro =/ %s"DT_N" path-id %s"_PARTITION_ID"
 ; Macros are generated for each of a node's compatibles;
 ; dt-name in this case is something like "vnd_device".
 node-macro =/ %s"DT_N" path-id %s"_COMPAT_MATCHES_" dt-name
@@ -114,10 +115,20 @@ node-macro =/ %s"DT_N" path-id %s"_ORD"
 node-macro =/ %s"DT_N" path-id %s"_PATH"
 ; The node's name@unit-addr, as a string literal
 node-macro =/ %s"DT_N" path-id %s"_FULL_NAME"
+; The node's name@unit-addr without surrounding quotes.
+node-macro =/ %s"DT_N" path-id %s"_FULL_NAME_UNQUOTED"
+; Tokenized variants of the node's name@unit-addr.
+node-macro =/ %s"DT_N" path-id %s"_FULL_NAME_TOKEN"
+node-macro =/ %s"DT_N" path-id %s"_FULL_NAME_UPPER_TOKEN"
 ; The dependency ordinals of a node's requirements (direct dependencies).
 node-macro =/ %s"DT_N" path-id %s"_REQUIRES_ORDS"
 ; The dependency ordinals of a node supports (reverse direct dependencies).
 node-macro =/ %s"DT_N" path-id %s"_SUPPORTS_ORDS"
+; Helper macros that iterate over the node's ancestors.
+node-macro =/ %s"DT_N" path-id %s"_FOREACH_ANCESTOR"
+; Node specific hash and sortable dependency strings.
+node-macro =/ %s"DT_N" path-id %s"_HASH"
+node-macro =/ %s"DT_N" path-id %s"_ORD_STR_SORTABLE"
 
 ; --------------------------------------------------------------------
 ; pinctrl-macro: a macro related to the pinctrl properties in a node
@@ -144,6 +155,11 @@ pinctrl-macro = %s"DT_N" path-id %s"_PINCTRL_NUM"
 ;     #define DT_N_<node path>_PINCTRL_IDX_0_EXISTS 1
 ;     #define DT_N_<node path>_PINCTRL_IDX_1_EXISTS 1
 pinctrl-macro =/ %s"DT_N" path-id %s"_PINCTRL_IDX_" DIGIT %s"_EXISTS"
+; Tokenized variants of a given pinctrl-DIGIT property.
+; These mirror the node FULL_NAME token macros to make use of existing
+; helpers that expect both lower and upper token forms.
+pinctrl-macro =/ %s"DT_N" path-id %s"_PINCTRL_IDX_" DIGIT %s"_TOKEN"
+pinctrl-macro =/ %s"DT_N" path-id %s"_PINCTRL_IDX_" DIGIT %s"_UPPER_TOKEN"
 ; A given pinctrl property name exists.
 ;
 ;     #define DT_N_<node path>_PINCTRL_NAME_default_EXISTS 1
@@ -195,12 +211,12 @@ pinctrl-macro =/ %s"DT_N" path-id %s"_PINCTRL_NAME_" dt-name %s"_IDX_" DIGIT %s"
 ;
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_EXISTS 1
 ;   #define DT_N_<node-2 path>_GPIO_HOGS_EXISTS 1
-gpioshogs-macro = %s"DT_N" path-id %s"_GPIO_HOGS_EXISTS"
+gpiohogs-macro = %s"DT_N" path-id %s"_GPIO_HOGS_EXISTS"
 ; Number of hogged GPIOs in a node.
 ;
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_NUM 2
 ;   #define DT_N_<node-2 path>_GPIO_HOGS_NUM 1
-gpioshogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_NUM"
+gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_NUM"
 ; A given logical GPIO hog array index exists.
 ;
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_IDX_0_EXISTS 1
@@ -214,6 +230,10 @@ gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_EXISTS"
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_IDX_1_PH <node id for 'gpio1'>
 ;   #define DT_N_<node-2 path>_GPIO_HOGS_IDX_0_PH <node id for 'gpio1'>
 gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_PH"
+; Iteration helpers for the specifier cells exposed by DT_FOREACH_* macros.
+gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_FOREACH_CELL"
+gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_FOREACH_CELL_SEP"
+gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_IDX_" DIGIT %s"_NUM_CELLS"
 ; The pin cell of a logical index in the GPIO hogs array exists.
 ;
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_IDX_0_VAL_pin_EXISTS 1
@@ -280,8 +300,9 @@ property-macro =  %s"DT_N" path-id %s"_P_" prop-id [prop-suf]
 ;           };
 ;   };
 ;
-; has path-id "_S_foo_123_S_bar_baz".
-path-id = 1*( %s"_S_" dt-name )
+; has path-id "_S_foo_123_S_bar_baz". The root node "/" has an empty
+; path-id, which results in a bare "DT_N" identifier.
+path-id = *( %s"_S_" dt-name )
 
 ; ----------------------------------------------------------------------
 ; prop-id: a property identifier
@@ -349,6 +370,7 @@ other-macro =/ %s"DT_FOREACH_OKAY_INST_" dt-name
 other-macro =/ %s"DT_FOREACH_OKAY_INST_VARGS_" dt-name
 ; E.g.: #define DT_CHOSEN_zephyr_flash
 other-macro =/ %s"DT_CHOSEN_" dt-name
+other-macro =/ %s"DT_CHOSEN_" dt-name %s"_EXISTS"
 ; Declares that a compatible has at least one node on a bus.
 ; Example:
 ;
@@ -362,7 +384,12 @@ other-macro =/ %s"DT_COMPAT_HAS_OKAY_" dt-name
 ; Currently used to allow mapping a lowercase-and-underscores "label"
 ; property to a fixed-partitions node. See the flash map API docs
 ; for an example.
-other-macro =/ %s"DT_COMPAT_" dt-name %s"_LABEL_" dt-name
+other-macro =/ %s"DT_COMPAT_" dt-name %s"_LABEL_" dt-name [ %s"_EXISTS" ]
+; Helper macros expanded while iterating over nodes.
+other-macro =/ %s"DT_FOREACH_VARGS_HELPER"
+other-macro =/ %s"DT_FOREACH_OKAY_VARGS_HELPER"
+; Removes brackets while expanding variadic helper macros.
+other-macro =/ %s"DT_DEBRACKET_INTERNAL"
 
 ; --------------------------------------------------------------------
 ; alternate-id: another way to specify a node besides a path-id
