@@ -34,6 +34,8 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_REG_I2SCTRL_I2SBCK (BIT_MASK(2) << 4)
 #define AW88298_REG_I2SCTRL_I2SSR  BIT_MASK(4)
 
+#define AW88298_REG_I2SCTRL_I2S_CFG_MASK BIT_MASK(10)
+
 #define AW88298_I2SCTRL_FRAME_FLAGS BIT(12)
 
 #define AW88298_REG_HAGCCFG4_VOL (BIT_MASK(8) << 8)
@@ -259,7 +261,7 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
 		return ret;
 	}
 
-	ret = aw88298_write_reg(dev, AW88298_REG_I2SCTRL, rate_code);
+	ret = aw88298_update_reg(dev, AW88298_REG_I2SCTRL, AW88298_REG_I2SCTRL_I2S_CFG_MASK, rate_code);
 	if (ret < 0) {
 		return ret;
 	}
