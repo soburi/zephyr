@@ -363,19 +363,23 @@ static void aw88298_stop_output(const struct device *dev)
 }
 
 static int aw88298_set_property(const struct device *dev, audio_property_t property,
-				audio_channel_t channel, audio_property_value_t val)
+				 audio_channel_t channel, audio_property_value_t val)
 {
 	struct aw88298_data *data = dev->data;
+	int ret = 0;
 
 	if (channel != AUDIO_CHANNEL_ALL && channel != AUDIO_CHANNEL_FRONT_LEFT &&
 	    channel != AUDIO_CHANNEL_FRONT_RIGHT) {
 		return -EINVAL;
 	}
 
+	k_mutex_lock(&data->lock, K_FOREVER);
+
 	switch (property) {
 	case AUDIO_PROPERTY_OUTPUT_VOLUME:
 		if (val.vol < AW88298_VOLUME_DB_MIN || val.vol > AW88298_VOLUME_DB_MAX) {
-			return -EINVAL;
+			ret = -EINVAL;
+			break;
 		}
 
 		data->volume = val.vol;
@@ -384,18 +388,31 @@ static int aw88298_set_property(const struct device *dev, audio_property_t prope
 		data->mute = val.mute;
 		break;
 	default:
-		return -ENOTSUP;
+		ret = -ENOTSUP;
+		break;
 	}
 
-	return 0;
+	k_mutex_unlock(&data->lock);
+
+	return ret;
 }
 
 static int aw88298_apply_properties(const struct device *dev)
 {
 	struct aw88298_data *data = dev->data;
-	const uint16_t mute_field = data->mute ? AW88298_REG_SYSCTRL2_HMUTE : 0;
-	const uint16_t volume_field = AW88298_HAGCCFG4_VOL_VAL(aw88298_db2vol(data->volume));
+	bool mute;
+	int volume;
+	uint16_t mute_field;
+	uint16_t volume_field;
 	int ret;
+
+	k_mutex_lock(&data->lock, K_FOREVER);
+	mute = data->mute;
+	volume = data->volume;
+	k_mutex_unlock(&data->lock);
+
+	mute_field = mute ? AW88298_REG_SYSCTRL2_HMUTE : 0;
+	volume_field = AW88298_HAGCCFG4_VOL_VAL(aw88298_db2vol(volume));
 
 	ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL2, AW88298_REG_SYSCTRL2_HMUTE, mute_field);
 	if (ret < 0) {
