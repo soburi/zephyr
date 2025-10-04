@@ -241,12 +241,12 @@ pinctrl-macro =/ %s"DT_N" path-id %s"_PINCTRL_NAME_" dt-name %s"_IDX_" DIGIT %s"
 ;
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_EXISTS 1
 ;   #define DT_N_<node-2 path>_GPIO_HOGS_EXISTS 1
-gpioshogs-macro = %s"DT_N" path-id %s"_GPIO_HOGS_EXISTS"
+gpiohogs-macro = %s"DT_N" path-id %s"_GPIO_HOGS_EXISTS"
 ; Number of hogged GPIOs in a node.
 ;
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_NUM 2
 ;   #define DT_N_<node-2 path>_GPIO_HOGS_NUM 1
-gpioshogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_NUM"
+gpiohogs-macro =/ %s"DT_N" path-id %s"_GPIO_HOGS_NUM"
 ; A given logical GPIO hog array index exists.
 ;
 ;   #define DT_N_<node-1 path>_GPIO_HOGS_IDX_0_EXISTS 1
