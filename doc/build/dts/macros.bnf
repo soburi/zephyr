@@ -74,6 +74,44 @@ node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_FOREACH_PROP_ELEM"
 node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_FOREACH_PROP_ELEM_SEP"
 node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_FOREACH_PROP_ELEM_VARGS"
 node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_FOREACH_PROP_ELEM_SEP_VARGS"
+; Map properties generate additional macros consumed by DT_MAP_* APIs.
+; The following examples assume something like this mapping nexus:
+;
+;     connector {
+;             gpio-map = <1 2 &{/gpio-map-test/parent} 3
+;                         4 5 &{/gpio-map-test/parent} 6>;
+;     };
+;
+; Total number of entries in the mapping array.
+;
+;   #define DT_N_<connector path>_P_gpio_map_MAP_LEN 2
+node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_LEN"
+; Each mapping entry expands to the child specifier cells, the parent node,
+; and the parent specifier cells. DT_MAP_BY_IDX() retrieves this list.
+;
+;   #define DT_N_<connector path>_P_gpio_map_MAP_IDX_0 1, 2, DT_N_<parent path>, 3
+node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT
+; Offsets for the child specifier cells within an entry. These support
+; DT_MAP_CHILD_SPECIFIER_ARGS_BY_IDX(), which slices out just those cells.
+;
+;   #define DT_N_<connector path>_P_gpio_map_MAP_IDX_0_CHILD_SPECIFIER_POS 0
+;   #define DT_N_<connector path>_P_gpio_map_MAP_IDX_0_CHILD_SPECIFIER_LEN 2
+node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT %s"_CHILD_SPECIFIER_POS"
+node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT %s"_CHILD_SPECIFIER_LEN"
+; Offsets for the parent node argument. DT_MAP_PARENT_ARG_BY_IDX() uses
+; these to extract the parent node identifier.
+;
+;   #define DT_N_<connector path>_P_gpio_map_MAP_IDX_0_PARENT_POS 2
+;   #define DT_N_<connector path>_P_gpio_map_MAP_IDX_0_PARENT_LEN 1
+node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT %s"_PARENT_POS"
+node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT %s"_PARENT_LEN"
+; Offsets for the parent specifier cells used by
+; DT_MAP_PARENT_SPECIFIER_ARGS_BY_IDX().
+;
+;   #define DT_N_<connector path>_P_gpio_map_MAP_IDX_0_PARENT_SPECIFIER_POS 3
+;   #define DT_N_<connector path>_P_gpio_map_MAP_IDX_0_PARENT_SPECIFIER_LEN 1
+node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT %s"_PARENT_SPECIFIER_POS"
+node-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_IDX_" DIGIT %s"_PARENT_SPECIFIER_LEN"
 ; These are used by DT_CHILD_NUM and DT_CHILD_NUM_STATUS_OKAY macros
 node-macro =/ %s"DT_N" path-id %s"_CHILD_NUM"
 node-macro =/ %s"DT_N" path-id %s"_CHILD_NUM_STATUS_OKAY"
