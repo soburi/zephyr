@@ -38,18 +38,19 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_REG_I2SCTRL_I2SBCK (BIT_MASK(2) << 4)
 #define AW88298_REG_I2SCTRL_I2SFS  (BIT_MASK(2) << 6)
 #define AW88298_REG_I2SCTRL_I2SMD  (BIT_MASK(3) << 8)
-#define AW88298_REG_HAGCCFG4_VOL   (BIT_MASK(8) << 8)
+#define AW88298_REG_HAGCCFG4_VOL   BIT_MASK(16)
 
 #define AW88298_ID_SOFTRESET            0x55AA
 #define AW88298_I2SCTRL_I2SSR_VAL(val)  (((val) << 0) & AW88298_REG_I2SCTRL_I2SSR)
 #define AW88298_I2SCTRL_I2SBCK_VAL(val) (((val) << 4) & AW88298_REG_I2SCTRL_I2SBCK)
 #define AW88298_I2SCTRL_I2SFS_VAL(val)  (((val) << 6) & AW88298_REG_I2SCTRL_I2SFS)
 #define AW88298_I2SCTRL_I2SMD_VAL(val)  (((val) << 8) & AW88298_REG_I2SCTRL_I2SMD)
-#define AW88298_HAGCCFG4_VOL_VAL(val)   (((val) << 8) & AW88298_REG_HAGCCFG4_VOL)
+#define AW88298_HAGCCFG4_VOL_VAL(val)   ((val) & AW88298_REG_HAGCCFG4_VOL)
 
 #define AW88298_RESET_DELAY_MS 50
 
-#define AW88298_VOLUME_MAX 0xFF
+#define AW88298_VOLUME_DB_MAX 0
+#define AW88298_VOLUME_DB_MIN (-1530)
 
 enum {
 	AW88298_I2SCTRL_MODE_I2S = 4,
@@ -78,7 +79,7 @@ struct aw88298_config {
 
 struct aw88298_data {
 	struct k_mutex lock;
-	uint8_t volume;
+	int volume;
 	bool mute;
 };
 
@@ -87,8 +88,12 @@ static uint16_t aw88298_db2vol(int db)
 	uint8_t hi;
 	uint8_t lo;
 
-	if (db > 0) {
-		return 0;
+	if (db > AW88298_VOLUME_DB_MAX) {
+		db = AW88298_VOLUME_DB_MAX;
+	}
+
+	if (db < AW88298_VOLUME_DB_MIN) {
+		db = AW88298_VOLUME_DB_MIN;
 	}
 
 	hi = (-db) / 6;
@@ -373,11 +378,11 @@ static int aw88298_set_property(const struct device *dev, audio_property_t prope
 
 	switch (property) {
 	case AUDIO_PROPERTY_OUTPUT_VOLUME:
-		if (val.vol < 0 || val.vol > AW88298_VOLUME_MAX) {
+		if (val.vol < AW88298_VOLUME_DB_MIN || val.vol > AW88298_VOLUME_DB_MAX) {
 			return -EINVAL;
 		}
 
-		data->volume = (uint8_t)val.vol;
+		data->volume = val.vol;
 		break;
 	case AUDIO_PROPERTY_OUTPUT_MUTE:
 		data->mute = val.mute;
