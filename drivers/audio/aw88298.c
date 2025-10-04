@@ -42,6 +42,8 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_REG_I2SCTRL_I2SFS       (BIT_MASK(2) << 6)
 #define AW88298_REG_I2SCTRL_I2SBCK      (BIT_MASK(2) << 4)
 #define AW88298_REG_I2SCTRL_I2SSR       BIT_MASK(4)
+#define AW88298_REG_I2SCFG1_RXSEL       (BIT_MASK(4) << 8)
+#define AW88298_REG_I2SCFG1_RXEN        BIT_MASK(4)
 #define AW88298_REG_HAGCCFG4_VOL        (BIT_MASK(8) << 8)
 
 #define AW88298_I2SCTRL_MODE_SLAVE BIT(3)
@@ -51,11 +53,13 @@ LOG_MODULE_REGISTER(aw88298);
 	 AW88298_REG_I2SCTRL_FRAME_FLAGS | AW88298_REG_I2SCTRL_I2SMD | AW88298_REG_I2SCTRL_I2SFS | \
 	 AW88298_REG_I2SCTRL_I2SBCK | AW88298_REG_I2SCTRL_I2SSR)
 
-#define AW88298_I2SCTRL_I2SMD_VAL(val)  (((uint16_t)(val) << 8) & AW88298_REG_I2SCTRL_I2SMD)
-#define AW88298_I2SCTRL_I2SFS_VAL(val)  (((uint16_t)(val) << 6) & AW88298_REG_I2SCTRL_I2SFS)
-#define AW88298_I2SCTRL_I2SBCK_VAL(val) (((uint16_t)(val) << 4) & AW88298_REG_I2SCTRL_I2SBCK)
-#define AW88298_I2SCTRL_I2SSR_VAL(val)  ((uint16_t)(val) & AW88298_REG_I2SCTRL_I2SSR)
-#define AW88298_HAGCCFG4_VOL_VAL(val)   (((uint16_t)(val) << 8) & AW88298_REG_HAGCCFG4_VOL)
+#define AW88298_I2SCTRL_I2SMD_VAL(val)   (((uint16_t)(val) << 8) & AW88298_REG_I2SCTRL_I2SMD)
+#define AW88298_I2SCTRL_I2SFS_VAL(val)   (((uint16_t)(val) << 6) & AW88298_REG_I2SCTRL_I2SFS)
+#define AW88298_I2SCTRL_I2SBCK_VAL(val)  (((uint16_t)(val) << 4) & AW88298_REG_I2SCTRL_I2SBCK)
+#define AW88298_I2SCTRL_I2SSR_VAL(val)   ((uint16_t)(val) & AW88298_REG_I2SCTRL_I2SSR)
+#define AW88298_I2SCFG1_RXSEL_VAL(val)   (((uint16_t)(val) << 8) & AW88298_REG_I2SCFG1_RXSEL)
+#define AW88298_I2SCFG1_RXEN_VAL(val)    ((uint16_t)(val) & AW88298_REG_I2SCFG1_RXEN)
+#define AW88298_HAGCCFG4_VOL_VAL(val)    (((uint16_t)(val) << 8) & AW88298_REG_HAGCCFG4_VOL)
 
 #define AW88298_RESET_DELAY_MS 50
 
@@ -234,13 +238,15 @@ static int aw88298_get_i2s_mode_code(audio_dai_type_t type, i2s_fmt_t format, ui
 
 static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *cfg)
 {
-	const i2s_opt_t options = cfg->dai_cfg.i2s.options;
-	const i2s_fmt_t format = cfg->dai_cfg.i2s.format;
-	uint16_t rate_code;
-	uint16_t mode_code;
-	uint16_t fs_code;
-	uint16_t bck_code;
-	uint16_t clk_flags = 0U;
+        const i2s_opt_t options = cfg->dai_cfg.i2s.options;
+        const i2s_fmt_t format = cfg->dai_cfg.i2s.format;
+        uint16_t channel_sel;
+        uint16_t channel_en;
+        uint16_t rate_code;
+        uint16_t mode_code;
+        uint16_t fs_code;
+        uint16_t bck_code;
+        uint16_t clk_flags = 0U;
 	int ret;
 
 	if ((cfg->dai_cfg.i2s.channels != 1U) && (cfg->dai_cfg.i2s.channels != 2U)) {
@@ -322,24 +328,40 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
 	LOG_DBG("Configure: rate=%u channels=%u options=0x%x", cfg->dai_cfg.i2s.frame_clk_freq,
 		cfg->dai_cfg.i2s.channels, cfg->dai_cfg.i2s.options);
 
-	rate_code |= AW88298_REG_I2SCTRL_FRAME_FLAGS | AW88298_I2SCTRL_I2SMD_VAL(mode_code) |
-		     AW88298_I2SCTRL_I2SFS_VAL(fs_code) | AW88298_I2SCTRL_I2SBCK_VAL(bck_code) |
-		     clk_flags;
+        if (cfg->dai_cfg.i2s.channels == 1U) {
+                /* Sum the left/right data stream and feed a single slot */
+                channel_sel = AW88298_I2SCFG1_RXSEL_VAL(0x3U);
+                channel_en = AW88298_I2SCFG1_RXEN_VAL(BIT(0));
+        } else {
+                channel_sel = AW88298_I2SCFG1_RXSEL_VAL(0x0U);
+                channel_en = AW88298_I2SCFG1_RXEN_VAL(BIT(0) | BIT(1));
+        }
 
-	ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL,
-				 AW88298_REG_SYSCTRL_I2SEN | AW88298_REG_SYSCTRL_PWDN,
-				 AW88298_REG_SYSCTRL_I2SEN);
-	if (ret < 0) {
-		return ret;
-	}
+        rate_code |= AW88298_REG_I2SCTRL_FRAME_FLAGS | AW88298_I2SCTRL_I2SMD_VAL(mode_code) |
+                     AW88298_I2SCTRL_I2SFS_VAL(fs_code) | AW88298_I2SCTRL_I2SBCK_VAL(bck_code) |
+                     clk_flags;
 
-	ret = aw88298_update_reg(dev, AW88298_REG_I2SCTRL, AW88298_REG_I2SCTRL_I2S_CFG_MASK,
-				 rate_code);
-	if (ret < 0) {
-		return ret;
-	}
+        ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL,
+                                 AW88298_REG_SYSCTRL_I2SEN | AW88298_REG_SYSCTRL_PWDN,
+                                 AW88298_REG_SYSCTRL_I2SEN);
+        if (ret < 0) {
+                return ret;
+        }
 
-	return 0;
+        ret = aw88298_update_reg(dev, AW88298_REG_I2SCTRL, AW88298_REG_I2SCTRL_I2S_CFG_MASK,
+                                 rate_code);
+        if (ret < 0) {
+                return ret;
+        }
+
+        ret = aw88298_update_reg(dev, AW88298_REG_I2SCFG1,
+                                 AW88298_REG_I2SCFG1_RXSEL | AW88298_REG_I2SCFG1_RXEN,
+                                 channel_sel | channel_en);
+        if (ret < 0) {
+                return ret;
+        }
+
+        return 0;
 }
 
 static void aw88298_start_output(const struct device *dev)
