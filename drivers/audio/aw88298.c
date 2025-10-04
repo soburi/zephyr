@@ -46,7 +46,7 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_REG_I2SCFG1_RXEN        BIT_MASK(4)
 #define AW88298_REG_HAGCCFG4_VOL        (BIT_MASK(8) << 8)
 
-#define AW88298_I2SCTRL_MODE_SLAVE BIT(3)
+#define AW88298_I2SCTRL_MODE_SLAVE 0x8U
 
 #define AW88298_REG_I2SCTRL_I2S_CFG_MASK                                                           \
 	(AW88298_REG_I2SCTRL_BCLK_POL | AW88298_REG_I2SCTRL_LRCLK_POL |                            \
