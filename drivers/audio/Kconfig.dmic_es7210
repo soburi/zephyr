@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config AUDIO_DMIC_ES7210
+bool "Everest Semiconductor ES7210 digital microphone"
+depends on I2C
+depends on I2S
+select AUDIO
+select AUDIO_CODEC
+select AUDIO_CODEC_ES7210
+depends on DT_HAS_EVEREST_ES7210_DMIC_ENABLED
+help
+  Enable support for using the Everest Semiconductor ES7210 audio
+  ADC as a digital microphone source. The device streams audio over
+  an I2S interface and is configured through the ES7210 audio codec
+  driver.
+
+config ES7210_DMIC_I2S_TIMEOUT_MS
+int "I2S read timeout (ms)"
+depends on AUDIO_DMIC_ES7210
+default 2000
+help
+  Timeout, in milliseconds, used for I2S read operations performed
+  by the ES7210 digital microphone driver.

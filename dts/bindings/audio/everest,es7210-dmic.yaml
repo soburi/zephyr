@@ -1,0 +1,43 @@
+# Copyright 2025 The Zephyr Authors
+# SPDX-License-Identifier: Apache-2.0
+
+description: Everest Semiconductor ES7210 digital microphone (I2S)
+
+compatible: "everest,es7210-dmic"
+
+include: i2s-device.yaml
+
+properties:
+  codec:
+    type: phandle
+    required: true
+    description: Phandle to the ES7210 codec device controlling the ADC
+
+  bit-clock-master:
+    type: boolean
+    description: >
+      Set when the ES7210 provides the I2S bit clock. If unset the SoC drives
+      the clock.
+
+  frame-clock-master:
+    type: boolean
+    description: >
+      Set when the ES7210 provides the I2S frame clock. If unset the SoC drives
+      the clock.
+
+  bit-clock-inverted:
+    type: boolean
+    description: Invert the I2S bit clock polarity.
+
+  data-format:
+    type: string
+    enum:
+      - i2s
+      - left-justified
+      - right-justified
+    description: I2S data format provided by the ES7210.
+
+  timeout-ms:
+    type: int
+    default: 2000
+    description: Timeout in milliseconds used for I2S read operations.
