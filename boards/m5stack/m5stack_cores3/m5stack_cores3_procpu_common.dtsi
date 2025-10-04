@@ -207,6 +207,15 @@
 		int-gpios = <&aw9523b_gpio 10 GPIO_ACTIVE_LOW>;
 		reset-gpios = <&aw9523b_gpio 0 GPIO_ACTIVE_LOW>;
 	};
+
+	es7210: es7210@40 {
+		compatible = "everest,es7210";
+		reg = <0x40>;
+		status = "okay";
+		mclk-frequency = <12288000>;
+		mic-select = <0x3>;
+		mic-gain = <11>;
+	};
 };
 
 &i2s1 {
@@ -244,6 +253,12 @@
 			status = "okay";
 		};
 	};
+};
+
+&i2s1 {
+	status = "okay";
+	pinctrl-0 = <&i2s1_default>;
+	pinctrl-names = "default";
 };
 
 &twai {
