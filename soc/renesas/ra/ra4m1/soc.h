@@ -13,9 +13,11 @@
 
 #include <zephyr/irq.h>
 
-#define FSP_CRITICAL_SECTION_DEFINE            unsigned int irq_lock_key
-#define FSP_CRITICAL_SECTION_ENTER             irq_lock_key = irq_lock();
-#define FSP_CRITICAL_SECTION_EXIT              irq_unlock(irq_lock_key);
+#ifndef _ASMLANGUAGE
+#define FSP_CRITICAL_SECTION_DEFINE            unsigned int irq_lock_key __maybe_unused
+#define FSP_CRITICAL_SECTION_ENTER             do { irq_lock_key = irq_lock(); } while (false)
+#define FSP_CRITICAL_SECTION_EXIT              do { irq_unlock(irq_lock_key); } while (false)
+#endif
 
 #include <bsp_api.h>
 
