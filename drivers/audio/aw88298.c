@@ -37,18 +37,19 @@ LOG_MODULE_REGISTER(aw88298);
 
 #define AW88298_REG_SYSCTRL2_HMUTE BIT(4)
 
-#define AW88298_REG_I2SCTRL_BCLK_POL  BIT(14)
-#define AW88298_REG_I2SCTRL_LRCLK_POL BIT(13)
-#define AW88298_REG_I2SCTRL_I2SMD     (BIT_MASK(4) << 8)
-#define AW88298_REG_I2SCTRL_I2SFS     (BIT_MASK(2) << 6)
-#define AW88298_REG_I2SCTRL_I2SBCK    (BIT_MASK(2) << 4)
-#define AW88298_REG_I2SCTRL_I2SSR     BIT_MASK(4)
+#define AW88298_REG_I2SCTRL_BCLK_POL    BIT(14)
+#define AW88298_REG_I2SCTRL_LRCLK_POL   BIT(13)
+#define AW88298_REG_I2SCTRL_FRAME_FLAGS BIT(12)
+#define AW88298_REG_I2SCTRL_I2SMD       (BIT_MASK(4) << 8)
+#define AW88298_REG_I2SCTRL_I2SFS       (BIT_MASK(2) << 6)
+#define AW88298_REG_I2SCTRL_I2SBCK      (BIT_MASK(2) << 4)
+#define AW88298_REG_I2SCTRL_I2SSR       BIT_MASK(4)
 
-#define AW88298_I2SCTRL_FRAME_FLAGS BIT(12)
+#define AW88298_I2SCTRL_MODE_SLAVE BIT(3)
 
 #define AW88298_REG_I2SCTRL_I2S_CFG_MASK                                                           \
 	(AW88298_REG_I2SCTRL_BCLK_POL | AW88298_REG_I2SCTRL_LRCLK_POL |                            \
-	 AW88298_I2SCTRL_FRAME_FLAGS | AW88298_REG_I2SCTRL_I2SMD | AW88298_REG_I2SCTRL_I2SFS |     \
+	 AW88298_REG_I2SCTRL_FRAME_FLAGS | AW88298_REG_I2SCTRL_I2SMD | AW88298_REG_I2SCTRL_I2SFS | \
 	 AW88298_REG_I2SCTRL_I2SBCK | AW88298_REG_I2SCTRL_I2SSR)
 
 #define AW88298_REG_HAGCCFG4_VOL (BIT_MASK(8) << 8)
@@ -64,20 +65,19 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_VOLUME_MAX 0x00FF
 
 #define AW88298_I2SCTRL_MODE_I2S   0x4U
-#define AW88298_I2SCTRL_MODE_SLAVE BIT(3)
 
 enum {
-	AW88298_I2SCTRL_FS_32BIT, // 0U
-	AW88298_I2SCTRL_FS_24BIT, // 1U
-	AW88298_I2SCTRL_FS_20BIT, // 2U
-	AW88298_I2SCTRL_FS_16BIT, // 3U
+	AW88298_I2SCTRL_FS_32BIT,
+	AW88298_I2SCTRL_FS_24BIT,
+	AW88298_I2SCTRL_FS_20BIT,
+	AW88298_I2SCTRL_FS_16BIT,
 };
 
 enum {
-	AW88298_I2SCTRL_BCK_16BIT, // 0U
-	AW88298_I2SCTRL_BCK_20BIT, // 1U
-	AW88298_I2SCTRL_BCK_24BIT, // 2U
-	AW88298_I2SCTRL_BCK_32BIT, // 3U
+	AW88298_I2SCTRL_BCK_16BIT,
+	AW88298_I2SCTRL_BCK_20BIT,
+	AW88298_I2SCTRL_BCK_24BIT,
+	AW88298_I2SCTRL_BCK_32BIT,
 };
 
 struct aw88298_config {
@@ -209,13 +209,13 @@ static int aw88298_get_i2s_mode_code(audio_dai_type_t type, uint16_t *code)
 
 static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *cfg)
 {
+	const i2s_opt_t options = cfg->dai_cfg.i2s.options;
+	const i2s_fmt_t format = cfg->dai_cfg.i2s.format;
 	uint16_t rate_code;
 	uint16_t mode_code;
 	uint16_t fs_code;
 	uint16_t bck_code;
 	uint16_t clk_flags = 0U;
-	i2s_opt_t options;
-	i2s_fmt_t format;
 	int ret;
 
 	if ((cfg->dai_cfg.i2s.channels != 1U) && (cfg->dai_cfg.i2s.channels != 2U)) {
@@ -232,8 +232,6 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
 	if (ret < 0) {
 		return ret;
 	}
-
-	format = cfg->dai_cfg.i2s.format;
 
 	if ((format & I2S_FMT_DATA_FORMAT_MASK) != I2S_FMT_DATA_FORMAT_I2S) {
 		LOG_ERR("Unsupported I2S data format 0x%x", format & I2S_FMT_DATA_FORMAT_MASK);
@@ -279,8 +277,6 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
 		return -ENOTSUP;
 	}
 
-	options = cfg->dai_cfg.i2s.options;
-
 	if ((options & (I2S_OPT_LOOPBACK | I2S_OPT_PINGPONG)) != 0U) {
 		LOG_WRN("Ignoring unsupported I2S options 0x%x",
 			options & (I2S_OPT_LOOPBACK | I2S_OPT_PINGPONG));
@@ -306,9 +302,9 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
 	LOG_DBG("Configure: rate=%u channels=%u options=0x%x", cfg->dai_cfg.i2s.frame_clk_freq,
 		cfg->dai_cfg.i2s.channels, cfg->dai_cfg.i2s.options);
 
-	rate_code |= AW88298_I2SCTRL_FRAME_FLAGS | clk_flags |
-		     AW88298_I2SCTRL_I2SMD_VAL(mode_code) | AW88298_I2SCTRL_I2SFS_VAL(fs_code) |
-		     AW88298_I2SCTRL_I2SBCK_VAL(bck_code);
+	rate_code |= AW88298_REG_I2SCTRL_FRAME_FLAGS | AW88298_I2SCTRL_I2SMD_VAL(mode_code) |
+		     AW88298_I2SCTRL_I2SFS_VAL(fs_code) | AW88298_I2SCTRL_I2SBCK_VAL(bck_code) |
+		     clk_flags;
 
 	ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL,
 				 AW88298_REG_SYSCTRL_I2SEN | AW88298_REG_SYSCTRL_PWDN,
