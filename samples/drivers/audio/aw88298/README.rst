@@ -26,6 +26,13 @@ on the internal I2C bus at address ``0x36``, its enable pin is routed through th
 AW9523 GPIO expander (port 0, pin 2), and the audio stream uses ``I2S1`` with
 ``GPIO34`` (BCK), ``GPIO33`` (LRCK), and ``GPIO13`` (SDOUT).
 
+.. note::
+
+   The AW88298 always operates as an I2S slave. The codec driver expects the
+   SoC I2S peripheral to provide both bit and frame clocks; configurations that
+   attempt to let the codec drive the clocks (for example by enabling
+   ``CONFIG_USE_CODEC_CLOCK``) will fail during initialization.
+
 Building and Running
 ********************
 
