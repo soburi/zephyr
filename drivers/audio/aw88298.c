@@ -34,6 +34,7 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_REG_SYSCTRL_AMPPD       BIT(1)
 #define AW88298_REG_SYSCTRL_I2SEN       BIT(6)
 #define AW88298_REG_SYSCTRL2_HMUTE      BIT(4)
+#define AW88298_REG_I2SCTRL_I2SRXEN     (BIT_MASK(4) << 12)
 #define AW88298_REG_I2SCTRL_I2SMD       (BIT_MASK(3) << 8)
 #define AW88298_REG_I2SCTRL_I2SFS       (BIT_MASK(2) << 6)
 #define AW88298_REG_I2SCTRL_I2SBCK      (BIT_MASK(2) << 4)
@@ -44,9 +45,10 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_I2SCTRL_MODE_SLAVE  AW88298_I2SCTRL_CHSEL
 
 #define AW88298_REG_I2SCTRL_I2S_CFG_MASK                                                           \
-        (AW88298_I2SCTRL_CHSEL | AW88298_REG_I2SCTRL_I2SMD | AW88298_REG_I2SCTRL_I2SFS |           \
-         AW88298_REG_I2SCTRL_I2SBCK | AW88298_REG_I2SCTRL_I2SSR)
+        (AW88298_REG_I2SCTRL_I2SRXEN | AW88298_I2SCTRL_CHSEL | AW88298_REG_I2SCTRL_I2SMD |         \
+         AW88298_REG_I2SCTRL_I2SFS | AW88298_REG_I2SCTRL_I2SBCK | AW88298_REG_I2SCTRL_I2SSR)
 
+#define AW88298_I2SCTRL_I2SRXEN_VAL(val) (((uint16_t)(val) << 12) & AW88298_REG_I2SCTRL_I2SRXEN)
 #define AW88298_I2SCTRL_I2SMD_VAL(val)   (((uint16_t)(val) << 8) & AW88298_REG_I2SCTRL_I2SMD)
 #define AW88298_I2SCTRL_I2SFS_VAL(val)   (((uint16_t)(val) << 6) & AW88298_REG_I2SCTRL_I2SFS)
 #define AW88298_I2SCTRL_I2SBCK_VAL(val)  (((uint16_t)(val) << 4) & AW88298_REG_I2SCTRL_I2SBCK)
@@ -245,7 +247,13 @@ static int aw88298_get_i2sctrl_cfg(const struct audio_codec_cfg *cfg, uint16_t *
         uint16_t fs_code;
         uint16_t bck_code;
         uint16_t rate_code;
+        uint16_t rxen_code;
         int ret;
+
+        if (cfg->dai_cfg.i2s.channels != 2U) {
+                LOG_ERR("Unsupported channel count %u", cfg->dai_cfg.i2s.channels);
+                return -ENOTSUP;
+        }
 
         ret = aw88298_get_i2s_mode_code(cfg->dai_type, format, &mode_code);
         if (ret < 0) {
@@ -299,10 +307,12 @@ static int aw88298_get_i2sctrl_cfg(const struct audio_codec_cfg *cfg, uint16_t *
                 return -ENOTSUP;
         }
 
+        rxen_code = AW88298_I2SCTRL_I2SRXEN_VAL(BIT_MASK(cfg->dai_cfg.i2s.channels));
+
         *mask = AW88298_REG_I2SCTRL_I2S_CFG_MASK;
-        *value = AW88298_I2SCTRL_MODE_SLAVE | AW88298_I2SCTRL_I2SMD_VAL(mode_code) |
-                 AW88298_I2SCTRL_I2SFS_VAL(fs_code) | AW88298_I2SCTRL_I2SBCK_VAL(bck_code) |
-                 AW88298_I2SCTRL_I2SSR_VAL(rate_code);
+        *value = AW88298_I2SCTRL_MODE_SLAVE | rxen_code |
+                 AW88298_I2SCTRL_I2SMD_VAL(mode_code) | AW88298_I2SCTRL_I2SFS_VAL(fs_code) |
+                 AW88298_I2SCTRL_I2SBCK_VAL(bck_code) | AW88298_I2SCTRL_I2SSR_VAL(rate_code);
 
         return 0;
 }
@@ -317,11 +327,6 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
 
         if ((cfg->dai_route != AUDIO_ROUTE_PLAYBACK) && (cfg->dai_route != AUDIO_ROUTE_BYPASS)) {
                 LOG_ERR("Unsupported route %u", cfg->dai_route);
-                return -ENOTSUP;
-        }
-
-        if (cfg->dai_cfg.i2s.channels != 2U) {
-                LOG_ERR("Unsupported channel count %u", cfg->dai_cfg.i2s.channels);
                 return -ENOTSUP;
         }
 
