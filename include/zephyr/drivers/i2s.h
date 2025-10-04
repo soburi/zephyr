@@ -293,55 +293,25 @@ enum i2s_trigger_cmd {
  * @remark When I2S data format is selected parameter channels is ignored,
  * number of words in a frame is always 2.
  */
-/**
- * @brief Optional TDM specific configuration.
- */
-struct i2s_tdm_settings {
-        /**
-         * Number of BCLK periods assigned to each time slot. When set to 0 the
-         * @ref i2s_config::word_size value is used.
-         */
-        uint8_t slot_width;
-        /**
-         * Total number of time slots in a frame. When set to 0 the driver will
-         * assume the slots are equal to the number of active channels.
-         */
-        uint8_t slot_count;
-        /**
-         * Bitmask describing which slots are used for transmission. The least
-         * significant bit represents slot 0. When set to 0 the driver selects a
-         * contiguous range starting at slot 0.
-         */
-        uint32_t tx_slot_mask;
-        /**
-         * Bitmask describing which slots are used for reception. The least
-         * significant bit represents slot 0. When set to 0 the driver selects a
-         * contiguous range starting at slot 0.
-         */
-        uint32_t rx_slot_mask;
-};
-
 struct i2s_config {
-        /** Number of bits representing one data word. */
-        uint8_t word_size;
-        /** Number of words per frame. */
-        uint8_t channels;
-        /** Data stream format as defined by I2S_FMT_* constants. */
-        i2s_fmt_t format;
-        /** Configuration options as defined by I2S_OPT_* constants. */
-        i2s_opt_t options;
-        /** Frame clock (WS) frequency, this is sampling rate. */
-        uint32_t frame_clk_freq;
-        /** Memory slab to store RX/TX data. */
-        struct k_mem_slab *mem_slab;
-        /** Size of one RX/TX memory block (buffer) in bytes. */
-        size_t block_size;
-        /** Read/Write timeout. Number of milliseconds to wait in case TX queue
-         * is full or RX queue is empty, or 0, or SYS_FOREVER_MS.
-         */
-        int32_t timeout;
-        /** Optional pointer to additional TDM specific configuration. */
-        const struct i2s_tdm_settings *tdm;
+	/** Number of bits representing one data word. */
+	uint8_t word_size;
+	/** Number of words per frame. */
+	uint8_t channels;
+	/** Data stream format as defined by I2S_FMT_* constants. */
+	i2s_fmt_t format;
+	/** Configuration options as defined by I2S_OPT_* constants. */
+	i2s_opt_t options;
+	/** Frame clock (WS) frequency, this is sampling rate. */
+	uint32_t frame_clk_freq;
+	/** Memory slab to store RX/TX data. */
+	struct k_mem_slab *mem_slab;
+	/** Size of one RX/TX memory block (buffer) in bytes. */
+	size_t block_size;
+	/** Read/Write timeout. Number of milliseconds to wait in case TX queue
+	 * is full or RX queue is empty, or 0, or SYS_FOREVER_MS.
+	 */
+	int32_t timeout;
 };
 
 /**

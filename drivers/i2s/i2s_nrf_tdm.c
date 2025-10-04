@@ -443,13 +443,9 @@ static int tdm_nrf_configure(const struct device *dev, enum i2s_dir dir,
 	nrf_tdm_config_t nrfx_cfg;
 	struct tdm_drv_data *drv_data = dev->data;
 	const struct tdm_drv_cfg *drv_cfg = dev->config;
-	const struct i2s_tdm_settings *tdm_settings = tdm_cfg->tdm;
+	uint32_t chan_mask = 0;
 	uint8_t extra_channels = 0;
 	uint8_t max_num_of_channels = NRFX_TDM_NUM_OF_CHANNELS;
-	uint8_t slot_width_bits = tdm_cfg->word_size;
-	uint8_t total_slots;
-	uint32_t tx_mask;
-	uint32_t rx_mask;
 
 	if (drv_data->state != I2S_STATE_READY) {
 		LOG_ERR("Cannot configure in state: %d", drv_data->state);
@@ -476,11 +472,6 @@ static int tdm_nrf_configure(const struct device *dev, enum i2s_dir dir,
 		return -EINVAL;
 	}
 
-	if (tdm_cfg->channels == 0U) {
-		LOG_ERR("At least one channel must be configured");
-		return -EINVAL;
-	}
-
 	switch (tdm_cfg->word_size) {
 	case 8:
 		nrfx_cfg.sample_width = NRF_TDM_SWIDTH_8BIT;
@@ -497,16 +488,6 @@ static int tdm_nrf_configure(const struct device *dev, enum i2s_dir dir,
 	default:
 		LOG_ERR("Unsupported word size: %u", tdm_cfg->word_size);
 		return -EINVAL;
-	}
-
-	if ((tdm_settings != NULL) && (tdm_settings->slot_width != 0U)) {
-		slot_width_bits = tdm_settings->slot_width;
-
-		if (slot_width_bits < tdm_cfg->word_size) {
-			LOG_ERR("Slot width %u smaller than word size %u", slot_width_bits,
-				tdm_cfg->word_size);
-			return -EINVAL;
-		}
 	}
 
 	switch (tdm_cfg->format & I2S_FMT_DATA_FORMAT_MASK) {
@@ -564,63 +545,13 @@ static int tdm_nrf_configure(const struct device *dev, enum i2s_dir dir,
 		 * The unused half period of LRCK will contain zeros.
 		 */
 		extra_channels = 1;
-	} else if ((tdm_cfg->channels + extra_channels) > max_num_of_channels) {
-		LOG_ERR("Unsupported number of channels: %u", tdm_cfg->channels + extra_channels);
+	} else if (tdm_cfg->channels > max_num_of_channels) {
+		LOG_ERR("Unsupported number of channels: %u", tdm_cfg->channels);
 		return -EINVAL;
 	}
 
-	total_slots = tdm_cfg->channels + extra_channels;
-	if ((tdm_settings != NULL) && (tdm_settings->slot_count != 0U)) {
-		if (tdm_settings->slot_count < total_slots) {
-			LOG_ERR("TDM slot count %u smaller than required channels %u",
-				tdm_settings->slot_count, total_slots);
-			return -EINVAL;
-		}
-
-		total_slots = tdm_settings->slot_count;
-	}
-
-	if (total_slots > max_num_of_channels) {
-		LOG_ERR("Unsupported TDM slot count: %u", total_slots);
-		return -EINVAL;
-	}
-
-	nrfx_cfg.num_of_channels = nrf_tdm_chan_num_get(total_slots);
-
-	tx_mask = BIT_MASK(tdm_cfg->channels);
-	rx_mask = tx_mask;
-
-	if (tdm_settings != NULL) {
-		if (tdm_settings->tx_slot_mask != 0U) {
-			tx_mask = tdm_settings->tx_slot_mask;
-		}
-
-		if (tdm_settings->rx_slot_mask != 0U) {
-			rx_mask = tdm_settings->rx_slot_mask;
-		}
-	}
-
-	uint32_t allowed_mask = (total_slots >= 32U) ? 0xFFFFFFFFU : BIT_MASK(total_slots);
-
-	if ((dir == I2S_DIR_TX || dir == I2S_DIR_BOTH) && tx_mask == 0U) {
-		LOG_ERR("TX slot mask cannot be zero");
-		return -EINVAL;
-	}
-
-	if ((dir == I2S_DIR_RX || dir == I2S_DIR_BOTH) && rx_mask == 0U) {
-		LOG_ERR("RX slot mask cannot be zero");
-		return -EINVAL;
-	}
-
-	if ((tx_mask & ~allowed_mask) != 0U) {
-		LOG_ERR("TX slot mask 0x%08x exceeds slot count %u", tx_mask, total_slots);
-		return -EINVAL;
-	}
-
-	if ((rx_mask & ~allowed_mask) != 0U) {
-		LOG_ERR("RX slot mask 0x%08x exceeds slot count %u", rx_mask, total_slots);
-		return -EINVAL;
-	}
+	nrfx_cfg.num_of_channels = nrf_tdm_chan_num_get(tdm_cfg->channels + extra_channels);
+	chan_mask = BIT_MASK(tdm_cfg->channels);
 
 	if ((tdm_cfg->options & I2S_OPT_BIT_CLK_SLAVE) &&
 	    (tdm_cfg->options & I2S_OPT_FRAME_CLK_SLAVE)) {
@@ -642,7 +573,8 @@ static int tdm_nrf_configure(const struct device *dev, enum i2s_dir dir,
 		nrfx_cfg.mck_setup = div_calculate(src_freq, drv_cfg->mck_frequency);
 	}
 	if (nrfx_cfg.mode == NRF_TDM_MODE_MASTER) {
-		uint32_t sck_freq = slot_width_bits * tdm_cfg->frame_clk_freq * total_slots;
+		uint32_t sck_freq = tdm_cfg->word_size * tdm_cfg->frame_clk_freq *
+				    (tdm_cfg->channels + extra_channels);
 
 		src_freq = (drv_cfg->sck_src == ACLK) ? ACLK_FREQUENCY : drv_cfg->pclk_frequency;
 		nrfx_cfg.sck_setup = div_calculate(src_freq, sck_freq);
@@ -658,14 +590,14 @@ static int tdm_nrf_configure(const struct device *dev, enum i2s_dir dir,
 		return -EINVAL;
 	}
 	if (dir == I2S_DIR_TX || dir == I2S_DIR_BOTH) {
-		nrfx_cfg.channels = FIELD_PREP(NRFX_TDM_TX_CHANNELS_MASK, tx_mask);
+		nrfx_cfg.channels = FIELD_PREP(NRFX_TDM_TX_CHANNELS_MASK, chan_mask);
 		drv_data->tx.cfg = *tdm_cfg;
 		drv_data->tx.nrfx_cfg = nrfx_cfg;
 		drv_data->tx_configured = true;
 	}
 
 	if (dir == I2S_DIR_RX || dir == I2S_DIR_BOTH) {
-		nrfx_cfg.channels = FIELD_PREP(NRFX_TDM_RX_CHANNELS_MASK, rx_mask);
+		nrfx_cfg.channels = FIELD_PREP(NRFX_TDM_RX_CHANNELS_MASK, chan_mask);
 		drv_data->rx.cfg = *tdm_cfg;
 		drv_data->rx.nrfx_cfg = nrfx_cfg;
 		drv_data->rx_configured = true;
