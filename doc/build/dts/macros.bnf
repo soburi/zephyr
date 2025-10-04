@@ -272,8 +272,9 @@ property-macro =  %s"DT_N" path-id %s"_P_" prop-id [prop-suf]
 ;           };
 ;   };
 ;
-; has path-id "_S_foo_123_S_bar_baz".
-path-id = 1*( %s"_S_" dt-name )
+; has path-id "_S_foo_123_S_bar_baz". The root node "/" has an empty
+; path-id, which results in a bare "DT_N" identifier.
+path-id = *( %s"_S_" dt-name )
 
 ; ----------------------------------------------------------------------
 ; prop-id: a property identifier
