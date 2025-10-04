@@ -64,8 +64,8 @@ LOG_MODULE_REGISTER(aw88298);
 
 #define AW88298_VOLUME_MAX 0x00FF
 
-#define AW88298_I2SCTRL_MODE_I2S            0x4U
-#define AW88298_I2SCTRL_MODE_LEFT_JUSTIFIED 0x5U
+#define AW88298_I2SCTRL_MODE_I2S             0x4U
+#define AW88298_I2SCTRL_MODE_LEFT_JUSTIFIED  0x5U
 #define AW88298_I2SCTRL_MODE_RIGHT_JUSTIFIED 0x6U
 
 enum {
@@ -198,42 +198,39 @@ static int aw88298_get_word_size_codes(audio_pcm_width_t width, uint16_t *fs_cod
 	return 0;
 }
 
-static int aw88298_get_i2s_mode_code(audio_dai_type_t type, i2s_fmt_t format,
-                                    uint16_t *code)
+static int aw88298_get_i2s_mode_code(audio_dai_type_t type, i2s_fmt_t format, uint16_t *code)
 {
-       i2s_fmt_t fmt = format & I2S_FMT_DATA_FORMAT_MASK;
+	i2s_fmt_t fmt = format & I2S_FMT_DATA_FORMAT_MASK;
 
-       switch (type) {
-       case AUDIO_DAI_TYPE_I2S:
-               if (fmt != I2S_FMT_DATA_FORMAT_I2S) {
-                       LOG_ERR("I2S DAI requires standard I2S format, got 0x%x", fmt);
-                       return -ENOTSUP;
-               }
+	switch (type) {
+	case AUDIO_DAI_TYPE_I2S:
+		if (fmt != I2S_FMT_DATA_FORMAT_I2S) {
+			LOG_ERR("I2S DAI requires standard I2S format, got 0x%x", fmt);
+			return -ENOTSUP;
+		}
 
-               *code = AW88298_I2SCTRL_MODE_I2S;
-               return 0;
-       case AUDIO_DAI_TYPE_LEFT_JUSTIFIED:
-               if (fmt != I2S_FMT_DATA_FORMAT_LEFT_JUSTIFIED) {
-                       LOG_ERR("Left-justified DAI requires matching data format, got 0x%x",
-                               fmt);
-                       return -ENOTSUP;
-               }
+		*code = AW88298_I2SCTRL_MODE_I2S;
+		return 0;
+	case AUDIO_DAI_TYPE_LEFT_JUSTIFIED:
+		if (fmt != I2S_FMT_DATA_FORMAT_LEFT_JUSTIFIED) {
+			LOG_ERR("Left-justified DAI requires matching data format, got 0x%x", fmt);
+			return -ENOTSUP;
+		}
 
-               *code = AW88298_I2SCTRL_MODE_LEFT_JUSTIFIED;
-               return 0;
-       case AUDIO_DAI_TYPE_RIGHT_JUSTIFIED:
-               if (fmt != I2S_FMT_DATA_FORMAT_RIGHT_JUSTIFIED) {
-                       LOG_ERR("Right-justified DAI requires matching data format, got 0x%x",
-                               fmt);
-                       return -ENOTSUP;
-               }
+		*code = AW88298_I2SCTRL_MODE_LEFT_JUSTIFIED;
+		return 0;
+	case AUDIO_DAI_TYPE_RIGHT_JUSTIFIED:
+		if (fmt != I2S_FMT_DATA_FORMAT_RIGHT_JUSTIFIED) {
+			LOG_ERR("Right-justified DAI requires matching data format, got 0x%x", fmt);
+			return -ENOTSUP;
+		}
 
-               *code = AW88298_I2SCTRL_MODE_RIGHT_JUSTIFIED;
-               return 0;
-       default:
-               LOG_ERR("Unsupported DAI type %d", type);
-               return -ENOTSUP;
-       }
+		*code = AW88298_I2SCTRL_MODE_RIGHT_JUSTIFIED;
+		return 0;
+	default:
+		LOG_ERR("Unsupported DAI type %d", type);
+		return -ENOTSUP;
+	}
 }
 
 static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *cfg)
@@ -252,20 +249,20 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
 		return -ENOTSUP;
 	}
 
-       ret = aw88298_get_i2s_mode_code(cfg->dai_type, format, &mode_code);
-        if (ret < 0) {
-                return ret;
-        }
+	ret = aw88298_get_i2s_mode_code(cfg->dai_type, format, &mode_code);
+	if (ret < 0) {
+		return ret;
+	}
 
-        ret = aw88298_get_word_size_codes(cfg->dai_cfg.i2s.word_size, &fs_code, &bck_code);
-        if (ret < 0) {
-                return ret;
-        }
+	ret = aw88298_get_word_size_codes(cfg->dai_cfg.i2s.word_size, &fs_code, &bck_code);
+	if (ret < 0) {
+		return ret;
+	}
 
-        if ((format & I2S_FMT_DATA_ORDER_LSB) != 0U) {
-                LOG_ERR("LSB-first data ordering not supported");
-                return -ENOTSUP;
-        }
+	if ((format & I2S_FMT_DATA_ORDER_LSB) != 0U) {
+		LOG_ERR("LSB-first data ordering not supported");
+		return -ENOTSUP;
+	}
 
 	switch (format & I2S_FMT_CLK_FORMAT_MASK) {
 	case I2S_FMT_CLK_NF_NB:
