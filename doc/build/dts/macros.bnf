@@ -144,10 +144,20 @@ node-macro =/ %s"DT_N" path-id %s"_ORD"
 node-macro =/ %s"DT_N" path-id %s"_PATH"
 ; The node's name@unit-addr, as a string literal
 node-macro =/ %s"DT_N" path-id %s"_FULL_NAME"
+; The node's name@unit-addr without surrounding quotes.
+node-macro =/ %s"DT_N" path-id %s"_FULL_NAME_UNQUOTED"
+; Tokenized variants of the node's name@unit-addr.
+node-macro =/ %s"DT_N" path-id %s"_FULL_NAME_TOKEN"
+node-macro =/ %s"DT_N" path-id %s"_FULL_NAME_UPPER_TOKEN"
 ; The dependency ordinals of a node's requirements (direct dependencies).
 node-macro =/ %s"DT_N" path-id %s"_REQUIRES_ORDS"
 ; The dependency ordinals of a node supports (reverse direct dependencies).
 node-macro =/ %s"DT_N" path-id %s"_SUPPORTS_ORDS"
+; Helper macros that iterate over the node's ancestors.
+node-macro =/ %s"DT_N" path-id %s"_FOREACH_ANCESTOR"
+; Node specific hash and sortable dependency strings.
+node-macro =/ %s"DT_N" path-id %s"_HASH"
+node-macro =/ %s"DT_N" path-id %s"_ORD_STR_SORTABLE"
 
 ; --------------------------------------------------------------------
 ; pinctrl-macro: a macro related to the pinctrl properties in a node
@@ -310,8 +320,9 @@ property-macro =  %s"DT_N" path-id %s"_P_" prop-id [prop-suf]
 ;           };
 ;   };
 ;
-; has path-id "_S_foo_123_S_bar_baz".
-path-id = 1*( %s"_S_" dt-name )
+; has path-id "_S_foo_123_S_bar_baz". The root node "/" has an empty
+; path-id, which results in a bare "DT_N" identifier.
+path-id = *( %s"_S_" dt-name )
 
 ; ----------------------------------------------------------------------
 ; prop-id: a property identifier
@@ -379,6 +390,7 @@ other-macro =/ %s"DT_FOREACH_OKAY_INST_" dt-name
 other-macro =/ %s"DT_FOREACH_OKAY_INST_VARGS_" dt-name
 ; E.g.: #define DT_CHOSEN_zephyr_flash
 other-macro =/ %s"DT_CHOSEN_" dt-name
+other-macro =/ %s"DT_CHOSEN_" dt-name %s"_EXISTS"
 ; Declares that a compatible has at least one node on a bus.
 ; Example:
 ;
@@ -393,6 +405,11 @@ other-macro =/ %s"DT_COMPAT_HAS_OKAY_" dt-name
 ; property to a fixed-partitions node. See the flash map API docs
 ; for an example.
 other-macro =/ %s"DT_COMPAT_" dt-name %s"_LABEL_" dt-name
+; Helper macros expanded while iterating over nodes.
+other-macro =/ %s"DT_FOREACH_VARGS_HELPER"
+other-macro =/ %s"DT_FOREACH_OKAY_VARGS_HELPER"
+; Removes brackets while expanding variadic helper macros.
+other-macro =/ %s"DT_DEBRACKET_INTERNAL"
 
 ; --------------------------------------------------------------------
 ; alternate-id: another way to specify a node besides a path-id
