@@ -11,7 +11,10 @@ properties:
   codec:
     type: phandle
     required: true
-    description: Phandle to the ES7210 codec device controlling the ADC
+    description: |
+      Phandle to a node describing the ES7210 control interface.
+      The DMIC driver uses the phandle to access the I2C registers and
+      optional clock and microphone configuration properties.
 
   bit-clock-master:
     type: boolean
