@@ -25,7 +25,6 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_REG_SYSCTRL  0x04
 #define AW88298_REG_SYSCTRL2 0x05
 #define AW88298_REG_I2SCTRL  0x06
-#define AW88298_REG_I2SCFG1  0x07
 #define AW88298_REG_HAGCCFG1 0x09
 #define AW88298_REG_HAGCCFG2 0x0A
 #define AW88298_REG_HAGCCFG3 0x0B
@@ -35,31 +34,23 @@ LOG_MODULE_REGISTER(aw88298);
 #define AW88298_REG_SYSCTRL_AMPPD       BIT(1)
 #define AW88298_REG_SYSCTRL_I2SEN       BIT(6)
 #define AW88298_REG_SYSCTRL2_HMUTE      BIT(4)
-#define AW88298_REG_I2SCTRL_BCLK_POL    BIT(14)
-#define AW88298_REG_I2SCTRL_LRCLK_POL   BIT(13)
-#define AW88298_REG_I2SCTRL_FRAME_FLAGS BIT(12)
 #define AW88298_REG_I2SCTRL_I2SMD       (BIT_MASK(3) << 8)
 #define AW88298_REG_I2SCTRL_I2SFS       (BIT_MASK(2) << 6)
 #define AW88298_REG_I2SCTRL_I2SBCK      (BIT_MASK(2) << 4)
 #define AW88298_REG_I2SCTRL_I2SSR       BIT_MASK(4)
-#define AW88298_REG_I2SCFG1_RXSEL       (BIT_MASK(4) << 8)
-#define AW88298_REG_I2SCFG1_RXEN        BIT_MASK(4)
 #define AW88298_REG_HAGCCFG4_VOL        (BIT_MASK(8) << 8)
 
 #define AW88298_I2SCTRL_CHSEL       BIT(11)
 #define AW88298_I2SCTRL_MODE_SLAVE  AW88298_I2SCTRL_CHSEL
 
 #define AW88298_REG_I2SCTRL_I2S_CFG_MASK                                                           \
-        (AW88298_REG_I2SCTRL_BCLK_POL | AW88298_REG_I2SCTRL_LRCLK_POL | AW88298_I2SCTRL_CHSEL | \
-         AW88298_REG_I2SCTRL_FRAME_FLAGS | AW88298_REG_I2SCTRL_I2SMD | AW88298_REG_I2SCTRL_I2SFS | \
+        (AW88298_I2SCTRL_CHSEL | AW88298_REG_I2SCTRL_I2SMD | AW88298_REG_I2SCTRL_I2SFS |           \
          AW88298_REG_I2SCTRL_I2SBCK | AW88298_REG_I2SCTRL_I2SSR)
 
 #define AW88298_I2SCTRL_I2SMD_VAL(val)   (((uint16_t)(val) << 8) & AW88298_REG_I2SCTRL_I2SMD)
 #define AW88298_I2SCTRL_I2SFS_VAL(val)   (((uint16_t)(val) << 6) & AW88298_REG_I2SCTRL_I2SFS)
 #define AW88298_I2SCTRL_I2SBCK_VAL(val)  (((uint16_t)(val) << 4) & AW88298_REG_I2SCTRL_I2SBCK)
 #define AW88298_I2SCTRL_I2SSR_VAL(val)   ((uint16_t)(val) & AW88298_REG_I2SCTRL_I2SSR)
-#define AW88298_I2SCFG1_RXSEL_VAL(val)   (((uint16_t)(val) << 8) & AW88298_REG_I2SCFG1_RXSEL)
-#define AW88298_I2SCFG1_RXEN_VAL(val)    ((uint16_t)(val) & AW88298_REG_I2SCFG1_RXEN)
 #define AW88298_HAGCCFG4_VOL_VAL(val)    (((uint16_t)(val) << 8) & AW88298_REG_HAGCCFG4_VOL)
 
 #define AW88298_RESET_DELAY_MS 50
@@ -250,7 +241,6 @@ static int aw88298_get_i2sctrl_cfg(const struct audio_codec_cfg *cfg, uint16_t *
 {
         const i2s_opt_t options = cfg->dai_cfg.i2s.options;
         const i2s_fmt_t format = cfg->dai_cfg.i2s.format;
-        uint16_t clk_flags = 0U;
         uint16_t mode_code;
         uint16_t fs_code;
         uint16_t bck_code;
@@ -272,19 +262,7 @@ static int aw88298_get_i2sctrl_cfg(const struct audio_codec_cfg *cfg, uint16_t *
                 return -ENOTSUP;
         }
 
-        switch (format & I2S_FMT_CLK_FORMAT_MASK) {
-        case I2S_FMT_CLK_NF_NB:
-                break;
-        case I2S_FMT_CLK_NF_IB:
-                clk_flags |= AW88298_REG_I2SCTRL_BCLK_POL;
-                break;
-        case I2S_FMT_CLK_IF_NB:
-                clk_flags |= AW88298_REG_I2SCTRL_LRCLK_POL;
-                break;
-        case I2S_FMT_CLK_IF_IB:
-                clk_flags |= AW88298_REG_I2SCTRL_LRCLK_POL | AW88298_REG_I2SCTRL_BCLK_POL;
-                break;
-        default:
+        if ((format & I2S_FMT_CLK_FORMAT_MASK) != I2S_FMT_CLK_NF_NB) {
                 LOG_ERR("Unsupported I2S clock format 0x%x", format & I2S_FMT_CLK_FORMAT_MASK);
                 return -ENOTSUP;
         }
@@ -322,31 +300,9 @@ static int aw88298_get_i2sctrl_cfg(const struct audio_codec_cfg *cfg, uint16_t *
         }
 
         *mask = AW88298_REG_I2SCTRL_I2S_CFG_MASK;
-        *value = rate_code | AW88298_REG_I2SCTRL_FRAME_FLAGS | AW88298_I2SCTRL_MODE_SLAVE |
-                 AW88298_I2SCTRL_I2SMD_VAL(mode_code) |
+        *value = AW88298_I2SCTRL_MODE_SLAVE | AW88298_I2SCTRL_I2SMD_VAL(mode_code) |
                  AW88298_I2SCTRL_I2SFS_VAL(fs_code) | AW88298_I2SCTRL_I2SBCK_VAL(bck_code) |
-                 clk_flags;
-
-        return 0;
-}
-
-static int aw88298_get_i2scfg1_cfg(const struct audio_codec_cfg *cfg, uint16_t *mask,
-                                   uint16_t *value)
-{
-        if ((cfg->dai_cfg.i2s.channels != 1U) && (cfg->dai_cfg.i2s.channels != 2U)) {
-                LOG_ERR("Unsupported channel count %u", cfg->dai_cfg.i2s.channels);
-                return -ENOTSUP;
-        }
-
-        if (cfg->dai_cfg.i2s.channels == 1U) {
-                /* Sum the left/right data stream and feed a single slot */
-                *value = AW88298_I2SCFG1_RXSEL_VAL(0x3U) | AW88298_I2SCFG1_RXEN_VAL(BIT(0));
-        } else {
-                *value = AW88298_I2SCFG1_RXSEL_VAL(0x0U) |
-                         AW88298_I2SCFG1_RXEN_VAL(BIT(0) | BIT(1));
-        }
-
-        *mask = AW88298_REG_I2SCFG1_RXSEL | AW88298_REG_I2SCFG1_RXEN;
+                 AW88298_I2SCTRL_I2SSR_VAL(rate_code);
 
         return 0;
 }
@@ -357,12 +313,15 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
         uint16_t sysctrl_value;
         uint16_t i2sctrl_mask;
         uint16_t i2sctrl_value;
-        uint16_t i2scfg1_mask;
-        uint16_t i2scfg1_value;
         int ret;
 
         if ((cfg->dai_route != AUDIO_ROUTE_PLAYBACK) && (cfg->dai_route != AUDIO_ROUTE_BYPASS)) {
                 LOG_ERR("Unsupported route %u", cfg->dai_route);
+                return -ENOTSUP;
+        }
+
+        if (cfg->dai_cfg.i2s.channels != 2U) {
+                LOG_ERR("Unsupported channel count %u", cfg->dai_cfg.i2s.channels);
                 return -ENOTSUP;
         }
 
@@ -379,22 +338,12 @@ static int aw88298_configure(const struct device *dev, struct audio_codec_cfg *c
                 return ret;
         }
 
-        ret = aw88298_get_i2scfg1_cfg(cfg, &i2scfg1_mask, &i2scfg1_value);
-        if (ret < 0) {
-                return ret;
-        }
-
         ret = aw88298_update_reg(dev, AW88298_REG_SYSCTRL, sysctrl_mask, sysctrl_value);
         if (ret < 0) {
                 return ret;
         }
 
         ret = aw88298_update_reg(dev, AW88298_REG_I2SCTRL, i2sctrl_mask, i2sctrl_value);
-        if (ret < 0) {
-                return ret;
-        }
-
-        ret = aw88298_update_reg(dev, AW88298_REG_I2SCFG1, i2scfg1_mask, i2scfg1_value);
         if (ret < 0) {
                 return ret;
         }
