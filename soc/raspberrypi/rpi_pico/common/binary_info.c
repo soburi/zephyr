@@ -41,12 +41,37 @@
 	COND_CODE_1(DT_NODE_HAS_PROP(node_id, pinmux), (DT_PROP_LEN(node_id, pinmux)), (0))
 
 #define PINCTRL_GROUP_PIN_COUNT_SELECT(child, idx)                                                 \
-	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PINCTRL_GROUP_PIN_COUNT(child)), ())
+        COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PINCTRL_GROUP_PIN_COUNT(child)), ())
 #define PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, idx)                                               \
-	(DT_FOREACH_CHILD_VARGS(node_id, PINCTRL_GROUP_PIN_COUNT_SELECT, idx))
+        (DT_FOREACH_CHILD_STATUS_OKAY_VARGS(node_id, PINCTRL_GROUP_PIN_COUNT_SELECT, idx))
 
-#define PINCTRL_OFFSET_TERM(i, node_id)    +PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, i)
-#define PINCTRL_GROUP_OFFSET(node_id, idx) (0 LISTIFY(idx, PINCTRL_OFFSET_TERM, (), node_id))
+#define PINCTRL_GROUP_OFFSET_0(node_id)  (0)
+#define PINCTRL_GROUP_OFFSET_1(node_id)  (PINCTRL_GROUP_OFFSET_0(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 0))
+#define PINCTRL_GROUP_OFFSET_2(node_id)  (PINCTRL_GROUP_OFFSET_1(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 1))
+#define PINCTRL_GROUP_OFFSET_3(node_id)  (PINCTRL_GROUP_OFFSET_2(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 2))
+#define PINCTRL_GROUP_OFFSET_4(node_id)  (PINCTRL_GROUP_OFFSET_3(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 3))
+#define PINCTRL_GROUP_OFFSET_5(node_id)  (PINCTRL_GROUP_OFFSET_4(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 4))
+#define PINCTRL_GROUP_OFFSET_6(node_id)  (PINCTRL_GROUP_OFFSET_5(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 5))
+#define PINCTRL_GROUP_OFFSET_7(node_id)  (PINCTRL_GROUP_OFFSET_6(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 6))
+#define PINCTRL_GROUP_OFFSET_8(node_id)  (PINCTRL_GROUP_OFFSET_7(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 7))
+#define PINCTRL_GROUP_OFFSET_9(node_id)  (PINCTRL_GROUP_OFFSET_8(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 8))
+#define PINCTRL_GROUP_OFFSET_10(node_id) (PINCTRL_GROUP_OFFSET_9(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 9))
+#define PINCTRL_GROUP_OFFSET_11(node_id) (PINCTRL_GROUP_OFFSET_10(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 10))
+#define PINCTRL_GROUP_OFFSET_12(node_id) (PINCTRL_GROUP_OFFSET_11(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 11))
+#define PINCTRL_GROUP_OFFSET_13(node_id) (PINCTRL_GROUP_OFFSET_12(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 12))
+#define PINCTRL_GROUP_OFFSET_14(node_id) (PINCTRL_GROUP_OFFSET_13(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 13))
+#define PINCTRL_GROUP_OFFSET_15(node_id) (PINCTRL_GROUP_OFFSET_14(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 14))
+#define PINCTRL_GROUP_OFFSET_16(node_id) (PINCTRL_GROUP_OFFSET_15(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 15))
+#define PINCTRL_GROUP_OFFSET_17(node_id) (PINCTRL_GROUP_OFFSET_16(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 16))
+#define PINCTRL_GROUP_OFFSET_18(node_id) (PINCTRL_GROUP_OFFSET_17(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 17))
+#define PINCTRL_GROUP_OFFSET_19(node_id) (PINCTRL_GROUP_OFFSET_18(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 18))
+#define PINCTRL_GROUP_OFFSET_20(node_id) (PINCTRL_GROUP_OFFSET_19(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 19))
+#define PINCTRL_GROUP_OFFSET_21(node_id) (PINCTRL_GROUP_OFFSET_20(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 20))
+#define PINCTRL_GROUP_OFFSET_22(node_id) (PINCTRL_GROUP_OFFSET_21(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 21))
+#define PINCTRL_GROUP_OFFSET_23(node_id) (PINCTRL_GROUP_OFFSET_22(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 22))
+#define PINCTRL_GROUP_OFFSET_24(node_id) (PINCTRL_GROUP_OFFSET_23(node_id) + PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, 23))
+
+#define PINCTRL_GROUP_OFFSET(node_id, idx) UTIL_CAT(PINCTRL_GROUP_OFFSET_, idx)(node_id)
 #define PINCTRL_TOTAL_PINS(node_id)        PINCTRL_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
 
 /* Iterate groups and subgroups */
@@ -54,7 +79,7 @@
 #define FOREACH_PINCTRL_SUBGROUP(n, fn, sep, ...)                                                  \
 	DT_FOREACH_PROP_ELEM_SEP_VARGS(n, pinmux, fn, sep, __VA_ARGS__)
 #define FOREACH_PINCTRL_GROUP(n, sep, fn, ...)                                                     \
-	DT_FOREACH_CHILD_SEP_VARGS(n, FOREACH_PINCTRL_SUBGROUP, sep, fn, sep, __VA_ARGS__)
+        DT_FOREACH_CHILD_SEP_VARGS(n, FOREACH_PINCTRL_SUBGROUP, sep, fn, sep, __VA_ARGS__)
 
 /* Encode the pins in a group */
 
@@ -80,17 +105,18 @@
 #define ALL_PINS_FUNC_IS(n, pinfunc)    (FOREACH_PINCTRL_GROUP(n, (&&), EACH_PIN_FUNC_IS, pinfunc))
 
 #define PININFO_PINCTRL_GROUP_(n)                                                                  \
-	BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) > 0, "Group must contain at least one pin");            \
-	BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) <= MAX_PIN_ENTRY, "Too many pin in group");             \
-	BUILD_ASSERT(ALL_PINS_FUNC_IS(n, GROUP_PIN_FUNC(n)), "All pins func must same in group");  \
-	BUILD_ASSERT(PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n) + 1) ==                \
-		PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n)) +                    \
-			PINCTRL_GROUP_PIN_COUNT(n),                                           \
-			"Pinctrl group offsets must accumulate pin counts");                         \
-	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(n) + 1, DT_CHILD_NUM(DT_PARENT(n))),                    \
-		(BUILD_ASSERT(PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n) + 1) ==   \
-			PINCTRL_TOTAL_PINS(DT_PARENT(n)),                                 \
-			"Pinctrl total pins must equal accumulated counts")), ());       \
+        BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) > 0, "Group must contain at least one pin");            \
+        BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) <= MAX_PIN_ENTRY, "Too many pin in group");             \
+        BUILD_ASSERT(DT_CHILD_NUM(DT_PARENT(n)) <= 24, "Too many pinctrl groups for offsets");     \
+        BUILD_ASSERT(ALL_PINS_FUNC_IS(n, GROUP_PIN_FUNC(n)), "All pins func must same in group");  \
+        BUILD_ASSERT(PINCTRL_GROUP_OFFSET(DT_PARENT(n), UTIL_INC(DT_NODE_CHILD_IDX(n))) ==        \
+                PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n)) +                    \
+                        PINCTRL_GROUP_PIN_COUNT(n),                                           \
+                        "Pinctrl group offsets must accumulate pin counts");                         \
+        COND_CODE_1(IS_EQ(UTIL_INC(DT_NODE_CHILD_IDX(n)), DT_CHILD_NUM(DT_PARENT(n))),               \
+                (BUILD_ASSERT(PINCTRL_GROUP_OFFSET(DT_PARENT(n), UTIL_INC(DT_NODE_CHILD_IDX(n))) == \
+                        PINCTRL_TOTAL_PINS(DT_PARENT(n)),                                 \
+                        "Pinctrl total pins must equal accumulated counts")), ());       \
 	bi_decl(BI_ENCODE_PINS_WITH_FUNC(GROUP_PIN_HEADER(n) | ENCODE_GROUP_PINS(n)))
 
 #define PININFO_PINCTRL_GROUP_SELECT(child, idx)                                                   \
