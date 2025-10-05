@@ -803,7 +803,6 @@ static int mipi_dbi_spi_init(const struct device *dev)
 #if defined(CONFIG_PINCTRL)
                         }
 #endif
-                        }
                         data->cmd_data_is_output = false;
                 } else {
                         ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
