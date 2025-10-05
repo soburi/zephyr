@@ -82,14 +82,13 @@
 #define PIN_FUNC_(n, p, i, _) PIN_FUNC(n, i)
 #define PIN_GROUP_FUNC(n)     (FOREACH_PIN_GROUP(n, (|), PIN_FUNC_))
 #define PIN_GROUP_HEADER(n)   (BI_PINS_ENCODING_MULTI | (PIN_GROUP_FUNC(n) << PIN_FUNC_OFFSET))
+#define PIN_AMOUNT(node_id)   PIN_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
+#define ENCODE_GROUP_PINS(n)  (FOREACH_PIN_GROUP(n, (|), ENCODE_EACH_PIN, PIN_GROUP_AMOUNT(n)))
 
 /* Check if pin functions are all equal within a group */
 
 #define PIN_FUNC_IS(n, p, i, func)   (PIN_FUNC(n, i) == func)
 #define ALL_PINS_FUNC_IS(n, pinfunc) (FOREACH_PIN_GROUP(n, (&&), PIN_FUNC_IS, pinfunc))
-
-#define PIN_AMOUNT(node_id)  PIN_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
-#define ENCODE_GROUP_PINS(n) (FOREACH_PIN_GROUP(n, (|), ENCODE_EACH_PIN, PIN_GROUP_AMOUNT(n)))
 
 #define DECLARE_PIN_GROUP(n)                                                                       \
 	BUILD_ASSERT(PIN_AMOUNT(n) > 0, "Group must contain at least one pin");                    \
