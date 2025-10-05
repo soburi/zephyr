@@ -43,8 +43,13 @@
 #define PINCTRL_OFFSET_IF_PRECEDES(child, target)                                                   \
         ((DT_NODE_CHILD_IDX(child) < DT_NODE_CHILD_IDX(target)) ? PINCTRL_GROUP_PIN_COUNT(child) : 0)
 #define PINCTRL_GROUP_OFFSET(parent, child)                                                         \
-        (0 DT_FOREACH_CHILD_SEP_VARGS(parent, PINCTRL_OFFSET_IF_PRECEDES, (+), child))
-#define PINCTRL_TOTAL_PINS(node_id) (0 DT_FOREACH_CHILD_SEP(node_id, PINCTRL_GROUP_PIN_COUNT, (+)))
+        (COND_CODE_0(DT_CHILD_NUM(parent),                                                        \
+                     (0),                                                                         \
+                     (DT_FOREACH_CHILD_SEP_VARGS(parent, PINCTRL_OFFSET_IF_PRECEDES, (+), child))))
+#define PINCTRL_TOTAL_PINS(node_id)                                                                 \
+        (COND_CODE_0(DT_CHILD_NUM(node_id),                                                        \
+                     (0),                                                                         \
+                     (DT_FOREACH_CHILD_SEP(node_id, PINCTRL_GROUP_PIN_COUNT, (+)))))
 
 /* Iterate groups and subgroups */
 
