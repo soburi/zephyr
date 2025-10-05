@@ -60,7 +60,7 @@
 #define PIN_GROUP_OFFSET(node_id, count)  (0 LISTIFY(count, PIN_GROUP_OFFSET_TERM, (), node_id))
 #define PIN_AMOUNT(node_id)               PIN_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
 
-/* Iterate groups and subgroups */
+/* Iterate groups */
 
 #define FOREACH_PIN_GROUP_ENTRY(n, fn, sep, ...)                                                   \
 	DT_FOREACH_PROP_ELEM_SEP_VARGS(n, pinmux, fn, sep, __VA_ARGS__)
@@ -71,9 +71,10 @@
 
 #define IS_LAST_PIN(end, idx, off) (((idx) + (off) + 1) == (end))
 #define PIN_ENTRY(n, p, i, off, end)                                                               \
-	(DT_PROP_HAS_IDX(n, p, i) ? ENCODE_PIN(n, i, off) + IS_LAST_PIN(end, i, off) : 0)
+	(ENCODE_PIN(n, i, off) + IS_LAST_PIN(end, i, off))
 #define ENCODE_EACH_PIN(n, p, i, end)                                                              \
-	PIN_ENTRY(n, p, i, PIN_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n)), end)
+	(DT_PROP_HAS_IDX(n, p, i) ? \
+	PIN_ENTRY(n, p, i, PIN_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n)), end) : 0) 
 #define ENCODE_GROUP_PINS(n) (FOREACH_PIN_GROUP(n, (|), ENCODE_EACH_PIN, PIN_GROUP_AMOUNT(n)))
 
 /* Get group-wide pin functions */
