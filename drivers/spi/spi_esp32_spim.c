@@ -134,6 +134,7 @@ static int IRAM_ATTR spi_esp32_transfer(const struct device *dev)
 	bool prepare_data = true;
 	int err = 0;
 
+
 	if (cfg->dma_enabled) {
 		/* bit_len needs to be at least one byte long when using DMA */
 		bit_len = !bit_len ? 8 : bit_len;
@@ -523,27 +524,35 @@ static int transceive(const struct device *dev,
 	struct spi_esp32_data *data = dev->data;
 	int ret = 0;
 
+	LOG_ERR("transceive %d", __LINE__);
+
+
 #ifndef CONFIG_SPI_ESP32_INTERRUPT
 	if (asynchronous) {
 		return -ENOTSUP;
 	}
 #endif
 
+	LOG_ERR("transceive %d %p", __LINE__, data);
 	spi_context_lock(&data->ctx, asynchronous, cb, userdata, spi_cfg);
 
+	LOG_ERR("transceive %d", __LINE__);
 	data->dfs = spi_esp32_get_frame_size(spi_cfg);
 
+	LOG_ERR("transceive %d", __LINE__);
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, data->dfs);
 
 	if (data->ctx.tx_buf == NULL && data->ctx.rx_buf == NULL) {
 		goto done;
 	}
 
+	LOG_ERR("transceive %d", __LINE__);
 	ret = spi_esp32_configure(dev, spi_cfg);
 	if (ret) {
 		goto done;
 	}
 
+	LOG_ERR("transceive %d", __LINE__);
 	spi_context_cs_control(&data->ctx, true);
 
 #ifdef CONFIG_SPI_ESP32_INTERRUPT
@@ -551,15 +560,18 @@ static int transceive(const struct device *dev,
 	spi_ll_set_int_stat(cfg->spi);
 #else
 
+	LOG_ERR("transceive %d", __LINE__);
 	do {
 		spi_esp32_transfer(dev);
 	} while (spi_esp32_transfer_ongoing(data));
 
+	LOG_ERR("transceive %d", __LINE__);
 	spi_esp32_complete(dev, data, cfg->spi, 0);
 
 #endif  /* CONFIG_SPI_ESP32_INTERRUPT */
 
 done:
+	LOG_ERR("transceive %d", __LINE__);
 	spi_context_release(&data->ctx, ret);
 
 	return ret;

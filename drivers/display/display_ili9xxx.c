@@ -462,12 +462,15 @@ static int ili9xxx_init(const struct device *dev)
 
 	ili9xxx_hw_reset(dev);
 
+	LOG_INF("ili9xxx hw_reset done ");
+
 	r = ili9xxx_transmit(dev, ILI9XXX_SWRESET, NULL, 0);
 	if (r < 0) {
 		LOG_ERR("Error transmit command Software Reset (%d)", r);
 		return r;
 	}
 
+	LOG_INF("ili9xxx sw_reset done ");
 #ifdef CONFIG_ILI9XXX_READ
 	/* Set RGB LUT table to enable display read API */
 	ili9xxx_transmit(dev, ILI9XXX_RGBSET, ili9xxx_rgb_lut, sizeof(ili9xxx_rgb_lut));
@@ -476,14 +479,17 @@ static int ili9xxx_init(const struct device *dev)
 	k_sleep(K_MSEC(ILI9XXX_RESET_WAIT_TIME));
 
 	ili9xxx_display_blanking_on(dev);
+	LOG_INF("ili9xxx_display_blanking_on");
 
 	r = ili9xxx_configure(dev);
+	LOG_INF("ili9xxx_configure");
 	if (r < 0) {
 		LOG_ERR("Could not configure display (%d)", r);
 		return r;
 	}
 
 	r = ili9xxx_exit_sleep(dev);
+	LOG_INF("ili9xxx_exit_sleep");
 	if (r < 0) {
 		LOG_ERR("Could not exit sleep mode (%d)", r);
 		return r;

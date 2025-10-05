@@ -176,9 +176,13 @@ mipi_dbi_spi_write_helper_4wire_8bit(const struct device *dev,
 	buffer.buf = &cmd;
 	buffer.len = sizeof(cmd);
 
+	LOG_WRN("4wire_8bit");
+
 	if (cmd_present) {
 		/* Set CD pin low for command */
+		LOG_WRN("4wire_8bit 1");
 		gpio_pin_set_dt(&config->cmd_data, 0);
+		LOG_WRN("4wire_8bit %p", config->spi_dev);
 		ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
 		if (ret < 0) {
 			goto out;
@@ -189,14 +193,17 @@ mipi_dbi_spi_write_helper_4wire_8bit(const struct device *dev,
 		buffer.buf = (void *)data_buf;
 		buffer.len = len;
 
+		LOG_WRN("4wire_8bit 3");
 		/* Set CD pin high for data */
 		gpio_pin_set_dt(&config->cmd_data, 1);
+		LOG_WRN("4wire_8bit 4");
 		ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
 		if (ret < 0) {
 			goto out;
 		}
 	}
 out:
+	LOG_WRN("4wire_8bit 5");
 	return ret;
 }
 
@@ -301,6 +308,8 @@ static int mipi_dbi_spi_write_helper(const struct device *dev,
 	struct mipi_dbi_spi_data *data = dev->data;
 	int ret = 0;
 
+	LOG_WRN("write_helper");
+
 	ret = k_mutex_lock(&data->lock, K_FOREVER);
 	if (ret < 0) {
 		return ret;
@@ -308,6 +317,7 @@ static int mipi_dbi_spi_write_helper(const struct device *dev,
 
 	if (dbi_config->mode == MIPI_DBI_MODE_SPI_3WIRE &&
 	    IS_ENABLED(CONFIG_MIPI_DBI_SPI_3WIRE)) {
+	LOG_WRN("write_helper1");
 		ret = mipi_dbi_spi_write_helper_3wire(dev, dbi_config,
 						      cmd_present, cmd,
 						      data_buf, len);
@@ -318,6 +328,7 @@ static int mipi_dbi_spi_write_helper(const struct device *dev,
 
 #if MIPI_DBI_SPI_WRITE_8BIT_REQUIRED
 		if (config->xfr_min_bits == MIPI_DBI_SPI_XFR_8BIT) {
+	LOG_WRN("write_helper2");
 			ret = mipi_dbi_spi_write_helper_4wire_8bit(
 							dev, dbi_config,
 							cmd_present, cmd,
@@ -328,6 +339,7 @@ static int mipi_dbi_spi_write_helper(const struct device *dev,
 
 #if MIPI_DBI_SPI_WRITE_16BIT_REQUIRED
 		if (config->xfr_min_bits == MIPI_DBI_SPI_XFR_16BIT) {
+	LOG_WRN("write_helper3");
 			ret = mipi_dbi_spi_write_helper_4wire_16bit(
 							dev, dbi_config,
 							cmd_present, cmd,
@@ -342,6 +354,7 @@ static int mipi_dbi_spi_write_helper(const struct device *dev,
 	ret = -ENOTSUP;
 
 out:
+	LOG_WRN("write_helper end");
 	k_mutex_unlock(&data->lock);
 	return ret;
 }
@@ -551,6 +564,8 @@ static int mipi_dbi_spi_reset(const struct device *dev, k_timeout_t delay)
 	const struct mipi_dbi_spi_config *config = dev->config;
 	int ret;
 
+	LOG_ERR("spi_reset");
+
 	if (!mipi_dbi_has_pin(&config->reset)) {
 		return -ENOTSUP;
 	}
@@ -560,6 +575,7 @@ static int mipi_dbi_spi_reset(const struct device *dev, k_timeout_t delay)
 		return ret;
 	}
 	k_sleep(delay);
+	LOG_ERR("spi_reset done");
 	return gpio_pin_set_dt(&config->reset, 0);
 }
 
