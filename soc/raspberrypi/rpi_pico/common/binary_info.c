@@ -38,7 +38,7 @@
 /* Pin counts and offsets for groups */
 
 #define PINCTRL_GROUP_PIN_COUNT(node_id)                                                           \
-	COND_CODE_1(DT_NODE_HAS_PROP(node_id, pinmux), (DT_PROP_LEN(node_id, pinmux)), (0))
+        COND_CODE_1(DT_NODE_HAS_PROP(node_id, pinmux), (DT_PROP_LEN(node_id, pinmux)), (0))
 
 #define PINCTRL_OFFSET_TERM(i, node_id) +PINCTRL_GROUP_PIN_COUNT(DT_CHILD_BY_IDX(node_id, i))
 #define PINCTRL_GROUP_OFFSET(node_id, idx) (0 LISTIFY(idx, PINCTRL_OFFSET_TERM, (), node_id))
@@ -76,13 +76,18 @@
 #define ALL_PIN_FUNC_IS(n, pinfunc)     (EACH_PINCTRL_GROUP(n, (&&), EACH_PIN_FUNC_IS, pinfunc))
 
 #define BI_PINS_FROM_PINCTRL_GROUP_(n)                                                             \
-	BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) > 0, "Group must contain at least one pin");            \
-	BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) <= MAX_PIN_ENTRY, "Too many pin in group");             \
-	BUILD_ASSERT(ALL_PIN_FUNC_IS(n, GROUP_PIN_FUNC(n)),                                        \
-		     "Group must contain only single function type");                              \
+        BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) > 0, "Group must contain at least one pin");            \
+        BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) <= MAX_PIN_ENTRY, "Too many pin in group");             \
+        BUILD_ASSERT(ALL_PIN_FUNC_IS(n, GROUP_PIN_FUNC(n)),                                        \
+                     "Group must contain only single function type");                              \
         bi_decl(BI_ENCODE_PINS_WITH_FUNC(GROUP_PIN_HEADER(n) | ENCODE_GROUP_PINS(n)))
 
-#define BI_PINS_FROM_PINCTRL_GROUP(n, idx) BI_PINS_FROM_PINCTRL_GROUP_(DT_CHILD_BY_IDX(n, idx))
+#define BI_PINS_FROM_PINCTRL_GROUP_SELECT(child, idx)                                              \
+        UTIL_CAT(BI_PINS_FROM_PINCTRL_GROUP_MATCH_, IS_EQ(DT_NODE_CHILD_IDX(child), idx))(child)
+#define BI_PINS_FROM_PINCTRL_GROUP_MATCH_0(child)
+#define BI_PINS_FROM_PINCTRL_GROUP_MATCH_1(child) BI_PINS_FROM_PINCTRL_GROUP_(child)
+#define BI_PINS_FROM_PINCTRL_GROUP(n, idx)                                                         \
+        DT_FOREACH_CHILD_VARGS(n, BI_PINS_FROM_PINCTRL_GROUP_SELECT, idx)
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
 #define BI_PROGRAM_NAME CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
