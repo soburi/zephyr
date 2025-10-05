@@ -40,43 +40,44 @@
 #define PINCTRL_GROUP_PIN_COUNT(node_id)                                                           \
 	COND_CODE_1(DT_NODE_HAS_PROP(node_id, pinmux), (DT_PROP_LEN(node_id, pinmux)), (0))
 
-#define PINCTRL_GROUP_PIN_COUNT_SELECT(child, idx)                                                 \
-        COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PINCTRL_GROUP_PIN_COUNT(child)), ())
-#define PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, idx)                                               \
+#define PINCTRL_GROUP_PIN_COUNT_MATCH(child, idx)                                                   \
+        COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PINCTRL_GROUP_PIN_COUNT(child)), (0))
+#define PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, idx)                                                \
         /*
          * The raspberrypi,pico-pinctrl child binding does not permit a "status"
-         * property, so the STATUS_OK variant iterates every group.
-         */                                                                                         \
-        (DT_FOREACH_CHILD_STATUS_OKAY_VARGS(node_id, PINCTRL_GROUP_PIN_COUNT_SELECT, idx))
+         * property, so the STATUS_OK iterator still visits every group.
+         */                                                                                          \
+        (DT_FOREACH_CHILD_STATUS_OKAY_SEP_VARGS(node_id, PINCTRL_GROUP_PIN_COUNT_MATCH, (+), idx))
 
+#define PINCTRL_GROUP_OFFSET_STEP_TERM(i, node_id)                                                   \
+        +PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, i)
+#define PINCTRL_GROUP_OFFSET_STEP(node_id, count)                                                    \
+        (0 LISTIFY(count, PINCTRL_GROUP_OFFSET_STEP_TERM, (), node_id))
 #define PINCTRL_GROUP_OFFSET_0(node_id)  (0)
-#define PINCTRL_GROUP_OFFSET_STEP(node_id, idx)                                                     \
-        (UTIL_CAT(PINCTRL_GROUP_OFFSET_, idx)(node_id) +                                           \
-         PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, idx))
-#define PINCTRL_GROUP_OFFSET_1(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 0)
-#define PINCTRL_GROUP_OFFSET_2(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 1)
-#define PINCTRL_GROUP_OFFSET_3(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 2)
-#define PINCTRL_GROUP_OFFSET_4(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 3)
-#define PINCTRL_GROUP_OFFSET_5(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 4)
-#define PINCTRL_GROUP_OFFSET_6(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 5)
-#define PINCTRL_GROUP_OFFSET_7(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 6)
-#define PINCTRL_GROUP_OFFSET_8(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 7)
-#define PINCTRL_GROUP_OFFSET_9(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 8)
-#define PINCTRL_GROUP_OFFSET_10(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 9)
-#define PINCTRL_GROUP_OFFSET_11(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 10)
-#define PINCTRL_GROUP_OFFSET_12(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 11)
-#define PINCTRL_GROUP_OFFSET_13(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 12)
-#define PINCTRL_GROUP_OFFSET_14(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 13)
-#define PINCTRL_GROUP_OFFSET_15(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 14)
-#define PINCTRL_GROUP_OFFSET_16(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 15)
-#define PINCTRL_GROUP_OFFSET_17(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 16)
-#define PINCTRL_GROUP_OFFSET_18(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 17)
-#define PINCTRL_GROUP_OFFSET_19(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 18)
-#define PINCTRL_GROUP_OFFSET_20(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 19)
-#define PINCTRL_GROUP_OFFSET_21(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 20)
-#define PINCTRL_GROUP_OFFSET_22(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 21)
-#define PINCTRL_GROUP_OFFSET_23(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 22)
-#define PINCTRL_GROUP_OFFSET_24(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 23)
+#define PINCTRL_GROUP_OFFSET_1(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 1)
+#define PINCTRL_GROUP_OFFSET_2(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 2)
+#define PINCTRL_GROUP_OFFSET_3(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 3)
+#define PINCTRL_GROUP_OFFSET_4(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 4)
+#define PINCTRL_GROUP_OFFSET_5(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 5)
+#define PINCTRL_GROUP_OFFSET_6(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 6)
+#define PINCTRL_GROUP_OFFSET_7(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 7)
+#define PINCTRL_GROUP_OFFSET_8(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 8)
+#define PINCTRL_GROUP_OFFSET_9(node_id)  PINCTRL_GROUP_OFFSET_STEP(node_id, 9)
+#define PINCTRL_GROUP_OFFSET_10(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 10)
+#define PINCTRL_GROUP_OFFSET_11(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 11)
+#define PINCTRL_GROUP_OFFSET_12(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 12)
+#define PINCTRL_GROUP_OFFSET_13(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 13)
+#define PINCTRL_GROUP_OFFSET_14(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 14)
+#define PINCTRL_GROUP_OFFSET_15(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 15)
+#define PINCTRL_GROUP_OFFSET_16(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 16)
+#define PINCTRL_GROUP_OFFSET_17(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 17)
+#define PINCTRL_GROUP_OFFSET_18(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 18)
+#define PINCTRL_GROUP_OFFSET_19(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 19)
+#define PINCTRL_GROUP_OFFSET_20(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 20)
+#define PINCTRL_GROUP_OFFSET_21(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 21)
+#define PINCTRL_GROUP_OFFSET_22(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 22)
+#define PINCTRL_GROUP_OFFSET_23(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 23)
+#define PINCTRL_GROUP_OFFSET_24(node_id) PINCTRL_GROUP_OFFSET_STEP(node_id, 24)
 
 #define PINCTRL_GROUP_OFFSET(node_id, idx) UTIL_CAT(PINCTRL_GROUP_OFFSET_, idx)(node_id)
 #define PINCTRL_TOTAL_PINS(node_id)        PINCTRL_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
