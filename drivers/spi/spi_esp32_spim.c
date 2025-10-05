@@ -639,8 +639,8 @@ static DEVICE_API(spi, spi_api) = {
 	PINCTRL_DT_INST_DEFINE(idx);	\
 										\
 	static struct spi_esp32_data spi_data_##idx = {	\
-		/*SPI_CONTEXT_INIT_LOCK(spi_data_##idx, ctx),*/	\
-		/*SPI_CONTEXT_INIT_SYNC(spi_data_##idx, ctx),*/	\
+		SPI_CONTEXT_INIT_LOCK(spi_data_##idx, ctx),	\
+		SPI_CONTEXT_INIT_SYNC(spi_data_##idx, ctx),	\
 		SPI_CONTEXT_CS_GPIOS_INITIALIZE(DT_DRV_INST(idx), ctx)	\
 		.hal = {	\
 			.hw = (spi_dev_t *)DT_INST_REG_ADDR(idx),	\
