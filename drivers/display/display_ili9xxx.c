@@ -454,6 +454,7 @@ static int ili9xxx_init(const struct device *dev)
 
 	int r;
 
+	LOG_INF("ili9xxx init start");
 	if (!device_is_ready(config->mipi_dev)) {
 		LOG_ERR("MIPI DBI device is not ready");
 		return -ENODEV;
@@ -488,6 +489,7 @@ static int ili9xxx_init(const struct device *dev)
 		return r;
 	}
 
+	LOG_INF("ili9xxx init done");
 	return 0;
 }
 

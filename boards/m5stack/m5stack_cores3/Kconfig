@@ -6,3 +6,13 @@ config HEAP_MEM_POOL_ADD_SIZE_BOARD
 	default 4096 if BOARD_M5STACK_CORES3_ESP32S3_PROCPU || \
 			BOARD_M5STACK_CORES3_ESP32S3_PROCPU_SE
 	default 256 if BOARD_M5STACK_CORES3_ESP32S3_APPCPU
+
+config M5STACK_CORES3_AW9523_INIT_PRIORITY
+	int "AW9523B board setup init priority"
+	depends on GPIO_AW9523B
+	range 0 99
+	default 70
+	help
+	  Controls the init priority of the board-specific AW9523B configuration.
+	  This should be lower than CONFIG_DISPLAY_INIT_PRIORITY so that the GPIO
+	  expander is ready before the display driver probes.

@@ -95,9 +95,11 @@ static int m5stack_cores3_aw9523_init(void)
 	const struct device *aw = DEVICE_DT_GET(AW9523_NODE);
 
 	if (!device_is_ready(aw)) {
+		LOG_INF("AW9523B device not ready");
 		return 0;
 	}
 
+	LOG_INF("AW9523B board setup start");
 	for (size_t i = 0; i < ARRAY_SIZE(aw_init_table); i++) {
 		int ret = gpio_pin_configure(aw, aw_init_table[i].pin,
 					   aw_init_table[i].flags);
@@ -107,10 +109,12 @@ static int m5stack_cores3_aw9523_init(void)
 	}
 
 	dump_spi2_state();
+	LOG_INF("AW9523B board setup done");
 
 	return 0;
 }
 
-SYS_INIT(m5stack_cores3_aw9523_init, POST_KERNEL, CONFIG_APPLICATION_INIT_PRIORITY);
+SYS_INIT(m5stack_cores3_aw9523_init, POST_KERNEL,
+	 CONFIG_M5STACK_CORES3_AW9523_INIT_PRIORITY);
 
 #endif /* DT_NODE_HAS_STATUS(AW9523_NODE, okay) */
