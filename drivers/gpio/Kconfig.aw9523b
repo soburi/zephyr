@@ -9,3 +9,11 @@ config GPIO_AW9523B
 	select MFD
 	help
 	  Enable the AW9523B GPIO controller.
+
+config GPIO_AW9523B_DUMP_REGS
+	bool "Dump AW9523B register state during init"
+	depends on GPIO_AW9523B
+	help
+	  If enabled, the driver prints the initial INPUT, OUTPUT, CONFIG and
+	  control register values when the AW9523B is initialised. Useful for
+	  bring-up and validation of external pin configuration.

@@ -18,3 +18,11 @@ config MFD_AXP2101_POWER_BUTTON
 	  Enable support for the Power Button available on the AXP2101. This
 	  feature is based on IRQ support from AXP2101 which requires "int-gpios"
 	  device-tree property to be defined in AXP2101 device node.
+
+config MFD_AXP2101_DUMP_REGS
+	bool "Dump AXP2101 register state during init"
+	depends on MFD_AXP2101
+	help
+	  If enabled, the MFD driver prints a snapshot of key AXP2101 registers
+	  after the PMIC is probed. This helps validating regulator configuration
+	  during board bring-up.

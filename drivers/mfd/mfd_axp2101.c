@@ -32,6 +32,71 @@ struct mfd_axp2101_data {
 };
 #endif /* MFD_AXP2101_INTERRUPT */
 
+#if defined(CONFIG_MFD_AXP2101_DUMP_REGS)
+/* Register definitions reused from regulator driver */
+#define AXP2101_REG_LDOGRP1_CONTROL 0x90U
+#define AXP2101_REG_ALDO1_VOLTAGE   0x92U
+#define AXP2101_REG_ALDO2_VOLTAGE   0x93U
+#define AXP2101_REG_ALDO3_VOLTAGE   0x94U
+#define AXP2101_REG_ALDO4_VOLTAGE   0x95U
+#define AXP2101_REG_BLDO1_VOLTAGE   0x96U
+#define AXP2101_REG_BLDO2_VOLTAGE   0x97U
+#define AXP2101_REG_DLDO1_VOLTAGE   0x99U
+#define AXP2101_REG_DLDO2_VOLTAGE   0x9AU
+
+static void axp2101_dump_regs(const struct device *dev, const char *stage)
+{
+	const struct mfd_axp2101_config *config = dev->config;
+	uint8_t val;
+
+	if (i2c_reg_read_byte_dt(&config->i2c, 0x00, &val) == 0) {
+		LOG_INF("%s: 0x00=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, 0x01, &val) == 0) {
+		LOG_INF("%s: 0x01=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, 0x02, &val) == 0) {
+		LOG_INF("%s: 0x02=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, 0x03, &val) == 0) {
+		LOG_INF("%s: 0x03=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_LDOGRP1_CONTROL, &val) == 0) {
+		LOG_INF("%s: LDOGRP1=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_ALDO1_VOLTAGE, &val) == 0) {
+		LOG_INF("%s: ALDO1=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_ALDO2_VOLTAGE, &val) == 0) {
+		LOG_INF("%s: ALDO2=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_ALDO3_VOLTAGE, &val) == 0) {
+		LOG_INF("%s: ALDO3=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_ALDO4_VOLTAGE, &val) == 0) {
+		LOG_INF("%s: ALDO4=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_BLDO1_VOLTAGE, &val) == 0) {
+		LOG_INF("%s: BLDO1=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_BLDO2_VOLTAGE, &val) == 0) {
+		LOG_INF("%s: BLDO2=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_DLDO1_VOLTAGE, &val) == 0) {
+		LOG_INF("%s: DLDO1=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_DLDO2_VOLTAGE, &val) == 0) {
+		LOG_INF("%s: DLDO2=0x%02x", stage, val);
+	}
+}
+#else
+static inline void axp2101_dump_regs(const struct device *dev, const char *stage)
+{
+	ARG_UNUSED(dev);
+	ARG_UNUSED(stage);
+}
+#endif
+
 /* Registers and (some) corresponding values */
 #define AXP2101_REG_CHIP_ID		0x03U
 	#define AXP2101_CHIP_ID				0x4AU
@@ -229,6 +294,8 @@ static int mfd_axp2101_init(const struct device *dev)
 		return ret;
 	}
 #endif /* MFD_AXP2101_INTERRUPT */
+
+	axp2101_dump_regs(dev, "axp2101");
 
 	return 0;
 }

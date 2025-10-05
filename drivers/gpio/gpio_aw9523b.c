@@ -56,6 +56,54 @@ struct gpio_aw9523b_data {
 #endif
 };
 
+#if defined(CONFIG_GPIO_AW9523B_DUMP_REGS)
+static void gpio_aw9523b_dump_regs(const struct device *dev, const char *stage)
+{
+	const struct gpio_aw9523b_config *const config = dev->config;
+	uint8_t regs[2];
+	uint8_t ctl;
+	int err;
+
+	k_sem_take(aw9523b_get_lock(config->mfd_dev), K_FOREVER);
+
+	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_INPUT0, regs, sizeof(regs));
+	if (err == 0) {
+		LOG_INF("%s: IN0=0x%02x IN1=0x%02x", stage, regs[0], regs[1]);
+	} else {
+		LOG_INF("%s: failed to read INPUT registers (%d)", stage, err);
+	}
+
+	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_OUTPUT0, regs, sizeof(regs));
+	if (err == 0) {
+		LOG_INF("%s: OUT0=0x%02x OUT1=0x%02x", stage, regs[0], regs[1]);
+	} else {
+		LOG_INF("%s: failed to read OUTPUT registers (%d)", stage, err);
+	}
+
+	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_CONFIG0, regs, sizeof(regs));
+	if (err == 0) {
+		LOG_INF("%s: CFG0=0x%02x CFG1=0x%02x", stage, regs[0], regs[1]);
+	} else {
+		LOG_INF("%s: failed to read CONFIG registers (%d)", stage, err);
+	}
+
+	err = i2c_reg_read_byte_dt(&config->i2c, AW9523B_REG_CTL, &ctl);
+	if (err == 0) {
+		LOG_INF("%s: CTL=0x%02x", stage, ctl);
+	} else {
+		LOG_INF("%s: failed to read CTL register (%d)", stage, err);
+	}
+
+	k_sem_give(aw9523b_get_lock(config->mfd_dev));
+}
+#else
+static inline void gpio_aw9523b_dump_regs(const struct device *dev, const char *stage)
+{
+	ARG_UNUSED(dev);
+	ARG_UNUSED(stage);
+}
+#endif
+
 static int gpio_aw9523b_pin_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags)
 {
 	const struct gpio_aw9523b_config *const config = dev->config;
@@ -477,6 +525,8 @@ end_hw_reset:
 			return err;
 		}
 	}
+
+	gpio_aw9523b_dump_regs(dev, "aw9523b");
 
 	return 0;
 }
