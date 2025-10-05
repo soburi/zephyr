@@ -67,6 +67,8 @@
 
 #define EACH_PIN_FUNC(n, p, i, _) PIN_FUNC(n, i)
 #define GROUP_PIN_FUNC(n)         (EACH_PINCTRL_GROUP(n, (|), EACH_PIN_FUNC))
+#define GROUP_PIN_HEADER(n)                                                                          \
+        (BI_PINS_ENCODING_MULTI | (GROUP_PIN_FUNC(n) << 3))
 
 /* Check if pin functions are all equal within a group */
 
@@ -78,8 +80,7 @@
 	BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) <= MAX_PIN_ENTRY, "Too many pin in group");             \
 	BUILD_ASSERT(ALL_PIN_FUNC_IS(n, GROUP_PIN_FUNC(n)),                                        \
 		     "Group must contain only single function type");                              \
-	bi_decl(BI_ENCODE_PINS_WITH_FUNC(BI_PINS_ENCODING_MULTI | (GROUP_PIN_FUNC(n) << 3) |       \
-					 ENCODE_GROUP_PINS(n)))
+        bi_decl(BI_ENCODE_PINS_WITH_FUNC(GROUP_PIN_HEADER(n) | ENCODE_GROUP_PINS(n)))
 
 #define BI_PINS_FROM_PINCTRL_GROUP(n, idx) BI_PINS_FROM_PINCTRL_GROUP_(DT_CHILD_BY_IDX(n, idx))
 
