@@ -58,35 +58,80 @@ uint32_t var = MIPI_DBI_SPI_READ_REQUIRED;
 #define MIPI_DBI_DC_BIT BIT(8)
 
 struct mipi_dbi_spi_config {
-	/* SPI hardware used to send data */
-	const struct device *spi_dev;
-	/* Command/Data gpio */
-	const struct gpio_dt_spec cmd_data;
-	/* Tearing Effect GPIO */
-	const struct gpio_dt_spec tearing_effect;
-	/* Reset GPIO */
-	const struct gpio_dt_spec reset;
-	/* Minimum transfer bits */
-	const uint8_t xfr_min_bits;
+        /* SPI hardware used to send data */
+        const struct device *spi_dev;
+        /* Command/Data gpio */
+        const struct gpio_dt_spec cmd_data;
+        /* Tearing Effect GPIO */
+        const struct gpio_dt_spec tearing_effect;
+        /* Reset GPIO */
+        const struct gpio_dt_spec reset;
+        /* Minimum transfer bits */
+        const uint8_t xfr_min_bits;
+        /* Tri-state D/C pin between transfers */
+        const bool cmd_data_tristate;
 };
 
 struct mipi_dbi_spi_data {
-	struct k_mutex lock;
+        struct k_mutex lock;
 #if MIPI_DBI_SPI_TE_REQUIRED
-	struct k_sem te_signal;
-	k_timeout_t te_delay;
-	atomic_t in_active_area;
-	struct gpio_callback te_cb_data;
+        struct k_sem te_signal;
+        k_timeout_t te_delay;
+        atomic_t in_active_area;
+        struct gpio_callback te_cb_data;
 #endif
-	/* Used for 3 wire mode */
-	uint16_t spi_byte;
+        /* Used for 3 wire mode */
+        uint16_t spi_byte;
+        bool cmd_data_is_output;
 };
+
+static int mipi_dbi_spi_cmd_data_set(const struct device *dev, int value)
+{
+        const struct mipi_dbi_spi_config *config = dev->config;
+        struct mipi_dbi_spi_data *data = dev->data;
+
+        if (!mipi_dbi_has_pin(&config->cmd_data)) {
+                return 0;
+        }
+
+        if (config->cmd_data_tristate && !data->cmd_data_is_output) {
+                int ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
+
+                if (ret < 0) {
+                        return ret;
+                }
+
+                data->cmd_data_is_output = true;
+        }
+
+        return gpio_pin_set_dt(&config->cmd_data, value);
+}
+
+static void mipi_dbi_spi_cmd_data_release(const struct device *dev)
+{
+        const struct mipi_dbi_spi_config *config = dev->config;
+        struct mipi_dbi_spi_data *data = dev->data;
+
+        if (!config->cmd_data_tristate || !data->cmd_data_is_output ||
+            !mipi_dbi_has_pin(&config->cmd_data)) {
+                return;
+        }
+
+        int ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_INPUT);
+
+        if (ret < 0) {
+                LOG_WRN("Failed to tri-state D/C GPIO (%d)", ret);
+                return;
+        }
+
+        data->cmd_data_is_output = false;
+}
 
 #if MIPI_DBI_SPI_TE_REQUIRED
 
 static void mipi_dbi_spi_te_cb(const struct device *dev,
-				struct gpio_callback *cb,
-				uint32_t pins)
+                                struct gpio_callback *cb,
+                                uint32_t pins)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(pins);
@@ -178,33 +223,39 @@ mipi_dbi_spi_write_helper_4wire_8bit(const struct device *dev,
 
 	LOG_WRN("4wire_8bit");
 
-	if (cmd_present) {
-		/* Set CD pin low for command */
-		LOG_WRN("4wire_8bit 1");
-		gpio_pin_set_dt(&config->cmd_data, 0);
-		LOG_WRN("4wire_8bit %p", config->spi_dev);
-		ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
-		if (ret < 0) {
-			goto out;
-		}
-	}
+        if (cmd_present) {
+                /* Set CD pin low for command */
+                LOG_WRN("4wire_8bit 1");
+                ret = mipi_dbi_spi_cmd_data_set(dev, 0);
+                if (ret < 0) {
+                        goto out;
+                }
+                LOG_WRN("4wire_8bit %p", config->spi_dev);
+                ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
+                if (ret < 0) {
+                        goto out;
+                }
+        }
 
 	if (len > 0) {
 		buffer.buf = (void *)data_buf;
 		buffer.len = len;
 
-		LOG_WRN("4wire_8bit 3");
-		/* Set CD pin high for data */
-		gpio_pin_set_dt(&config->cmd_data, 1);
-		LOG_WRN("4wire_8bit 4");
-		ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
-		if (ret < 0) {
-			goto out;
-		}
-	}
+                LOG_WRN("4wire_8bit 3");
+                /* Set CD pin high for data */
+                ret = mipi_dbi_spi_cmd_data_set(dev, 1);
+                if (ret < 0) {
+                        goto out;
+                }
+                LOG_WRN("4wire_8bit 4");
+                ret = spi_write(config->spi_dev, &dbi_config->config, &buf_set);
+                if (ret < 0) {
+                        goto out;
+                }
+        }
 out:
-	LOG_WRN("4wire_8bit 5");
-	return ret;
+        LOG_WRN("4wire_8bit 5");
+        return ret;
 }
 
 #endif /* MIPI_DBI_SPI_WRITE_8BIT_REQUIRED */
@@ -232,23 +283,29 @@ mipi_dbi_spi_write_helper_4wire_16bit(const struct device *dev,
 	 * but send 16-bit blocks (with bit stuffing).
 	 */
 
-	if (cmd_present) {
-		data16 = sys_cpu_to_be16(cmd);
-		buffer.buf = &data16;
-		buffer.len = sizeof(data16);
+        if (cmd_present) {
+                data16 = sys_cpu_to_be16(cmd);
+                buffer.buf = &data16;
+                buffer.len = sizeof(data16);
 
-		/* Set CD pin low for command */
-		gpio_pin_set_dt(&config->cmd_data, 0);
-		ret = spi_write(config->spi_dev, &dbi_config->config,
-				&buf_set);
-		if (ret < 0) {
-			goto out;
-		}
+                /* Set CD pin low for command */
+                ret = mipi_dbi_spi_cmd_data_set(dev, 0);
+                if (ret < 0) {
+                        goto out;
+                }
+                ret = spi_write(config->spi_dev, &dbi_config->config,
+                                &buf_set);
+                if (ret < 0) {
+                        goto out;
+                }
 
-		/* Set CD pin high for data, if there are any */
-		if (len > 0) {
-			gpio_pin_set_dt(&config->cmd_data, 1);
-		}
+                /* Set CD pin high for data, if there are any */
+                if (len > 0) {
+                        ret = mipi_dbi_spi_cmd_data_set(dev, 1);
+                        if (ret < 0) {
+                                goto out;
+                        }
+                }
 
 		/* iterate command data */
 		for (int i = 0; i < len; i++) {
@@ -263,10 +320,13 @@ mipi_dbi_spi_write_helper_4wire_16bit(const struct device *dev,
 	} else {
 		int stuffing = len % sizeof(data16);
 
-		/* Set CD pin high for data, if there are any */
-		if (len > 0) {
-			gpio_pin_set_dt(&config->cmd_data, 1);
-		}
+                /* Set CD pin high for data, if there are any */
+                if (len > 0) {
+                        ret = mipi_dbi_spi_cmd_data_set(dev, 1);
+                        if (ret < 0) {
+                                goto out;
+                        }
+                }
 
 		/* pass through generic device data */
 		if (len - stuffing > 0) {
@@ -294,7 +354,7 @@ mipi_dbi_spi_write_helper_4wire_16bit(const struct device *dev,
 		}
 	}
 out:
-	return ret;
+        return ret;
 }
 
 #endif /* MIPI_DBI_SPI_WRITE_16BIT_REQUIRED */
@@ -354,9 +414,10 @@ static int mipi_dbi_spi_write_helper(const struct device *dev,
 	ret = -ENOTSUP;
 
 out:
-	LOG_WRN("write_helper end");
-	k_mutex_unlock(&data->lock);
-	return ret;
+        LOG_WRN("write_helper end");
+        mipi_dbi_spi_cmd_data_release(dev);
+        k_mutex_unlock(&data->lock);
+        return ret;
 }
 
 static int mipi_dbi_spi_command_write(const struct device *dev,
@@ -485,35 +546,41 @@ mipi_dbi_spi_read_helper_4wire(const struct device *dev,
 	memcpy(&tmp_config, &dbi_config->config, sizeof(tmp_config));
 	tmp_config.operation |= SPI_HOLD_ON_CS;
 
-	if (num_cmds > 0) {
-		buffer.buf = cmds;
-		buffer.len = num_cmds;
+        if (num_cmds > 0) {
+                buffer.buf = cmds;
+                buffer.len = num_cmds;
 
-		/* Set CD pin low for command */
-		gpio_pin_set_dt(&config->cmd_data, 0);
+                /* Set CD pin low for command */
+                ret = mipi_dbi_spi_cmd_data_set(dev, 0);
+                if (ret < 0) {
+                        goto out;
+                }
 
-		ret = spi_write(config->spi_dev, &tmp_config, &buf_set);
-		if (ret < 0) {
-			goto out;
-		}
-	}
+                ret = spi_write(config->spi_dev, &tmp_config, &buf_set);
+                if (ret < 0) {
+                        goto out;
+                }
+        }
 
-	if (len > 0) {
-		buffer.buf = (void *)response;
-		buffer.len = len;
+        if (len > 0) {
+                buffer.buf = (void *)response;
+                buffer.len = len;
 
-		/* Set CD pin high for data */
-		gpio_pin_set_dt(&config->cmd_data, 1);
+                /* Set CD pin high for data */
+                ret = mipi_dbi_spi_cmd_data_set(dev, 1);
+                if (ret < 0) {
+                        goto out;
+                }
 
-		ret = spi_read(config->spi_dev, &tmp_config, &buf_set);
-		if (ret < 0) {
-			goto out;
-		}
-	}
+                ret = spi_read(config->spi_dev, &tmp_config, &buf_set);
+                if (ret < 0) {
+                        goto out;
+                }
+        }
 
 out:
-	spi_release(config->spi_dev, &tmp_config);
-	return ret;
+        spi_release(config->spi_dev, &tmp_config);
+        return ret;
 }
 
 static int mipi_dbi_spi_command_read(const struct device *dev,
@@ -548,8 +615,9 @@ static int mipi_dbi_spi_command_read(const struct device *dev,
 		ret = -ENOTSUP;
 	}
 out:
-	k_mutex_unlock(&data->lock);
-	return ret;
+        mipi_dbi_spi_cmd_data_release(dev);
+        k_mutex_unlock(&data->lock);
+        return ret;
 }
 
 #endif /* MIPI_DBI_SPI_READ_REQUIRED */
@@ -580,11 +648,12 @@ static int mipi_dbi_spi_reset(const struct device *dev, k_timeout_t delay)
 }
 
 static int mipi_dbi_spi_release(const struct device *dev,
-				const struct mipi_dbi_config *dbi_config)
+                                const struct mipi_dbi_config *dbi_config)
 {
-	const struct mipi_dbi_spi_config *config = dev->config;
+        const struct mipi_dbi_spi_config *config = dev->config;
 
-	return spi_release(config->spi_dev, &dbi_config->config);
+        mipi_dbi_spi_cmd_data_release(dev);
+        return spi_release(config->spi_dev, &dbi_config->config);
 }
 
 #if MIPI_DBI_SPI_TE_REQUIRED
@@ -658,16 +727,26 @@ static int mipi_dbi_spi_init(const struct device *dev)
 		return -ENODEV;
 	}
 
-	if (mipi_dbi_has_pin(&config->cmd_data)) {
-		if (!gpio_is_ready_dt(&config->cmd_data)) {
-			return -ENODEV;
-		}
-		ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
-		if (ret < 0) {
-			LOG_ERR("Could not configure command/data GPIO (%d)", ret);
-			return ret;
-		}
-	}
+        if (mipi_dbi_has_pin(&config->cmd_data)) {
+                if (!gpio_is_ready_dt(&config->cmd_data)) {
+                        return -ENODEV;
+                }
+                if (config->cmd_data_tristate) {
+                        ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_INPUT);
+                        if (ret < 0) {
+                                LOG_ERR("Could not configure command/data GPIO (%d)", ret);
+                                return ret;
+                        }
+                        data->cmd_data_is_output = false;
+                } else {
+                        ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
+                        if (ret < 0) {
+                                LOG_ERR("Could not configure command/data GPIO (%d)", ret);
+                                return ret;
+                        }
+                        data->cmd_data_is_output = true;
+                }
+        }
 
 	if (mipi_dbi_has_pin(&config->reset)) {
 		if (!gpio_is_ready_dt(&config->reset)) {
@@ -706,7 +785,8 @@ static DEVICE_API(mipi_dbi, mipi_dbi_spi_driver_api) = {
 		    .cmd_data = GPIO_DT_SPEC_INST_GET_OR(n, dc_gpios, {}),	\
 		    .tearing_effect = GPIO_DT_SPEC_INST_GET_OR(n, te_gpios, {}),  \
 		    .reset = GPIO_DT_SPEC_INST_GET_OR(n, reset_gpios, {}),	\
-		    .xfr_min_bits = DT_INST_STRING_UPPER_TOKEN(n, xfr_min_bits) \
+                    .xfr_min_bits = DT_INST_STRING_UPPER_TOKEN(n, xfr_min_bits), \
+                    .cmd_data_tristate = DT_INST_PROP_OR(n, cmd_data_tristate, false) \
 	};									\
 	static struct mipi_dbi_spi_data mipi_dbi_spi_data_##n;			\
 										\

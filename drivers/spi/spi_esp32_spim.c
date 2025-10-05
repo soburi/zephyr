@@ -406,12 +406,8 @@ static int IRAM_ATTR spi_esp32_configure(const struct device *dev,
 		return 0;
 	}
 
-	ctx->config = spi_cfg;
-
-	if (spi_cfg->operation & SPI_HALF_DUPLEX) {
-		LOG_ERR("Half-duplex not supported");
-		return -ENOTSUP;
-	}
+        ctx->config = spi_cfg;
+        hal_dev->half_duplex = (spi_cfg->operation & SPI_HALF_DUPLEX) ? 1 : 0;
 
 	if (spi_cfg->operation & SPI_OP_MODE_SLAVE) {
 		LOG_ERR("Slave mode not supported");

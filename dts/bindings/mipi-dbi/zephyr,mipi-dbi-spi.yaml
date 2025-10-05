@@ -33,6 +33,13 @@ properties:
     description: |
       Reset GPIO pin. Set high to reset the display
 
+  cmd-data-tristate:
+    type: boolean
+    description: |
+      Tri-state the command/data GPIO when the display chip select is
+      inactive. This is required on hardware that multiplexes the D/C
+      signal onto an SPI data line shared with other peripherals.
+
   xfr-min-bits:
     type: string
     default: "MIPI_DBI_SPI_XFR_8BIT"
