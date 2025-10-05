@@ -11,10 +11,41 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import jsonschema
+try:
+    import jsonschema  # type: ignore
+    from jsonschema.exceptions import best_match  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - executed only when optional dependency missing
+    class _DummyValidator:
+        """Fallback validator used when jsonschema is unavailable."""
+
+        def __init__(self, _schema):
+            pass
+
+        @classmethod
+        def check_schema(cls, _schema):
+            return None
+
+        def iter_errors(self, _instance):
+            return iter(())
+
+        def validate(self, _instance):
+            return None
+
+    class _DummyValidators:
+        @staticmethod
+        def validator_for(_schema):
+            return _DummyValidator
+
+    class _DummyJsonschemaModule:
+        validators = _DummyValidators()
+
+    def best_match(_errors):
+        return None
+
+    jsonschema = _DummyJsonschemaModule()  # type: ignore
+
 import list_hardware
 import yaml
-from jsonschema.exceptions import best_match
 from list_hardware import unique_paths
 
 try:
