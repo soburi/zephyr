@@ -40,9 +40,11 @@
 #define PINCTRL_GROUP_PIN_COUNT(node_id)                                                           \
 	COND_CODE_1(DT_NODE_HAS_PROP(node_id, pinmux), (DT_PROP_LEN(node_id, pinmux)), (0))
 
-#define PINCTRL_OFFSET_TERM(i, node_id) +PINCTRL_GROUP_PIN_COUNT(DT_CHILD_BY_IDX(node_id, i))
-#define PINCTRL_GROUP_OFFSET(node_id, idx) (0 LISTIFY(idx, PINCTRL_OFFSET_TERM, (), node_id))
-#define PINCTRL_TOTAL_PINS(node_id) PINCTRL_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
+#define PINCTRL_OFFSET_IF_PRECEDES(child, target)                                                   \
+        ((DT_NODE_CHILD_IDX(child) < DT_NODE_CHILD_IDX(target)) ? PINCTRL_GROUP_PIN_COUNT(child) : 0)
+#define PINCTRL_GROUP_OFFSET(parent, child)                                                         \
+        (0 DT_FOREACH_CHILD_SEP_VARGS(parent, PINCTRL_OFFSET_IF_PRECEDES, (+), child))
+#define PINCTRL_TOTAL_PINS(node_id) (0 DT_FOREACH_CHILD_SEP(node_id, PINCTRL_GROUP_PIN_COUNT, (+)))
 
 /* Iterate groups and subgroups */
 
@@ -58,9 +60,8 @@
 	(IS_LAST_PIN(end, i, offset) ? ENCODE_PIN(n, i, (offset) + 1) : 0)
 #define PIN_ENTRY(n, p, i, off) (DT_PROP_HAS_IDX(n, p, i) ? ENCODE_PIN(n, i, off) : 0)
 #define ENCODE_EACH_PIN(n, p, i, end)                                                              \
-	PIN_ENTRY(n, p, i, PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n))) |             \
-		PIN_TERMINATE(n, p, i, PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n)),   \
-			      end)
+        PIN_ENTRY(n, p, i, PINCTRL_GROUP_OFFSET(DT_PARENT(n), n)) |                                \
+                PIN_TERMINATE(n, p, i, PINCTRL_GROUP_OFFSET(DT_PARENT(n), n), end)
 #define ENCODE_GROUP_PINS(n) (EACH_PINCTRL_GROUP(n, (|), ENCODE_EACH_PIN, PINCTRL_TOTAL_PINS(n)))
 
 /* Get group-wide pin functions */
@@ -81,7 +82,7 @@
 	bi_decl(BI_ENCODE_PINS_WITH_FUNC(BI_PINS_ENCODING_MULTI | (GROUP_PIN_FUNC(n) << 3) |       \
 					 ENCODE_GROUP_PINS(n)))
 
-#define BI_PINS_FROM_PINCTRL_GROUP(n, idx) BI_PINS_FROM_PINCTRL_GROUP_(DT_CHILD_BY_IDX(n, idx))
+#define BI_PINS_FROM_PINCTRL_CHILD(child) BI_PINS_FROM_PINCTRL_GROUP_(child);
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
 #define BI_PROGRAM_NAME CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
@@ -148,100 +149,5 @@ bi_decl(bi_program_build_attribute((uint32_t)"Release"));
 #endif
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PINS_WITH_FUNC_ENABLE
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 0
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 0);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 1
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 1);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 2
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 2);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 3
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 3);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 4
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 4);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 5
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 5);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 6
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 6);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 7
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 7);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 8
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 8);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 9
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 9);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 10
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 10);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 11
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 11);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 12
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 12);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 13
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 13);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 14
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 14);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 15
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 15);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 16
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 16);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 17
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 17);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 18
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 18);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 19
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 19);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 20
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 20);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 21
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 21);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 22
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 22);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 23
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 23);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 24
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 24);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 25
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 25);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 26
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 26);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 27
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 27);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 28
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 28);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 29
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 29);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 30
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 30);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 31
-BI_PINS_FROM_PINCTRL_GROUP(DT_NODELABEL(pinctrl), 31);
-#endif
+DT_FOREACH_CHILD(DT_NODELABEL(pinctrl), BI_PINS_FROM_PINCTRL_CHILD)
 #endif
