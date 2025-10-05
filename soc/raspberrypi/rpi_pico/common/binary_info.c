@@ -40,7 +40,12 @@
 #define PINCTRL_GROUP_PIN_COUNT(node_id)                                                           \
 	COND_CODE_1(DT_NODE_HAS_PROP(node_id, pinmux), (DT_PROP_LEN(node_id, pinmux)), (0))
 
-#define PINCTRL_OFFSET_TERM(i, node_id)    +PINCTRL_GROUP_PIN_COUNT(DT_CHILD_BY_IDX(node_id, i))
+#define PINCTRL_GROUP_PIN_COUNT_SELECT(child, idx)                                                 \
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PINCTRL_GROUP_PIN_COUNT(child)), ())
+#define PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, idx)                                               \
+	(DT_FOREACH_CHILD_VARGS(node_id, PINCTRL_GROUP_PIN_COUNT_SELECT, idx))
+
+#define PINCTRL_OFFSET_TERM(i, node_id)    +PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, i)
 #define PINCTRL_GROUP_OFFSET(node_id, idx) (0 LISTIFY(idx, PINCTRL_OFFSET_TERM, (), node_id))
 #define PINCTRL_TOTAL_PINS(node_id)        PINCTRL_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
 
@@ -78,6 +83,14 @@
 	BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) > 0, "Group must contain at least one pin");            \
 	BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) <= MAX_PIN_ENTRY, "Too many pin in group");             \
 	BUILD_ASSERT(ALL_PINS_FUNC_IS(n, GROUP_PIN_FUNC(n)), "All pins func must same in group");  \
+	BUILD_ASSERT(PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n) + 1) ==                \
+		PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n)) +                    \
+			PINCTRL_GROUP_PIN_COUNT(n),                                           \
+			"Pinctrl group offsets must accumulate pin counts");                         \
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(n) + 1, DT_CHILD_NUM(DT_PARENT(n))),                    \
+		(BUILD_ASSERT(PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n) + 1) ==   \
+			PINCTRL_TOTAL_PINS(DT_PARENT(n)),                                 \
+			"Pinctrl total pins must equal accumulated counts")), ());       \
 	bi_decl(BI_ENCODE_PINS_WITH_FUNC(GROUP_PIN_HEADER(n) | ENCODE_GROUP_PINS(n)))
 
 #define PININFO_PINCTRL_GROUP_SELECT(child, idx)                                                   \
