@@ -61,6 +61,13 @@
 		        mipi-max-frequency = <40000000>;
 		        vin-supply = <&vcc_bl>;
 		        pixel-format = <ILI9XXX_PIXEL_FORMAT_RGB565>;
+		        ifmode = [e0];
+		        disctrl = [08 82 1d 04];
+		        pwctrl1 = [12 12];
+		        pwctrl2 = [03];
+		        vmctrl1 = [f2];
+		        pgamctrl = [00 0c 11 04 11 08 37 89 4c 06 0c 0a 2e 34 0f];
+		        ngamctrl = [00 0b 11 05 13 09 33 67 48 07 0e 0b 2e 33 0f];
 		        display-inversion;
 		        width = <320>;
 		        height = <240>;

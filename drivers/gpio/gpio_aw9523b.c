@@ -87,6 +87,20 @@ static void gpio_aw9523b_dump_regs(const struct device *dev, const char *stage)
 		LOG_INF("%s: failed to read CONFIG registers (%d)", stage, err);
 	}
 
+	err = i2c_reg_read_byte_dt(&config->i2c, AW9523B_REG_ID, &ctl);
+	if (err == 0) {
+		LOG_INF("%s: ID=0x%02x", stage, ctl);
+	} else {
+		LOG_INF("%s: failed to read ID register (%d)", stage, err);
+	}
+
+	err = i2c_burst_read_dt(&config->i2c, AW9523B_REG_MODE0, regs, sizeof(regs));
+	if (err == 0) {
+		LOG_INF("%s: MODE0=0x%02x MODE1=0x%02x", stage, regs[0], regs[1]);
+	} else {
+		LOG_INF("%s: failed to read MODE registers (%d)", stage, err);
+	}
+
 	err = i2c_reg_read_byte_dt(&config->i2c, AW9523B_REG_CTL, &ctl);
 	if (err == 0) {
 		LOG_INF("%s: CTL=0x%02x", stage, ctl);

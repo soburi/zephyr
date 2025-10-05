@@ -61,6 +61,12 @@ static void axp2101_dump_regs(const struct device *dev, const char *stage)
 	if (i2c_reg_read_byte_dt(&config->i2c, 0x03, &val) == 0) {
 		LOG_INF("%s: 0x03=0x%02x", stage, val);
 	}
+	if (i2c_reg_read_byte_dt(&config->i2c, 0x10, &val) == 0) {
+		LOG_INF("%s: 0x10=0x%02x", stage, val);
+	}
+	if (i2c_reg_read_byte_dt(&config->i2c, 0x12, &val) == 0) {
+		LOG_INF("%s: 0x12=0x%02x", stage, val);
+	}
 	if (i2c_reg_read_byte_dt(&config->i2c, AXP2101_REG_LDOGRP1_CONTROL, &val) == 0) {
 		LOG_INF("%s: LDOGRP1=0x%02x", stage, val);
 	}
