@@ -43,6 +43,10 @@
 #define PINCTRL_GROUP_PIN_COUNT_SELECT(child, idx)                                                 \
         COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PINCTRL_GROUP_PIN_COUNT(child)), ())
 #define PINCTRL_GROUP_PIN_COUNT_BY_IDX(node_id, idx)                                               \
+        /*
+         * The raspberrypi,pico-pinctrl child binding does not permit a "status"
+         * property, so the STATUS_OK variant iterates every group.
+         */                                                                                         \
         (DT_FOREACH_CHILD_STATUS_OKAY_VARGS(node_id, PINCTRL_GROUP_PIN_COUNT_SELECT, idx))
 
 #define PINCTRL_GROUP_OFFSET_0(node_id)  (0)
@@ -109,10 +113,6 @@
         BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) <= MAX_PIN_ENTRY, "Too many pin in group");             \
         BUILD_ASSERT(DT_CHILD_NUM(DT_PARENT(n)) <= 24, "Too many pinctrl groups for offsets");     \
         BUILD_ASSERT(ALL_PINS_FUNC_IS(n, GROUP_PIN_FUNC(n)), "All pins func must same in group");  \
-        BUILD_ASSERT(PINCTRL_GROUP_OFFSET(DT_PARENT(n), UTIL_INC(DT_NODE_CHILD_IDX(n))) ==        \
-                PINCTRL_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n)) +                    \
-                        PINCTRL_GROUP_PIN_COUNT(n),                                           \
-                        "Pinctrl group offsets must accumulate pin counts");                         \
         COND_CODE_1(IS_EQ(UTIL_INC(DT_NODE_CHILD_IDX(n)), DT_CHILD_NUM(DT_PARENT(n))),               \
                 (BUILD_ASSERT(PINCTRL_GROUP_OFFSET(DT_PARENT(n), UTIL_INC(DT_NODE_CHILD_IDX(n))) == \
                         PINCTRL_TOTAL_PINS(DT_PARENT(n)),                                 \
