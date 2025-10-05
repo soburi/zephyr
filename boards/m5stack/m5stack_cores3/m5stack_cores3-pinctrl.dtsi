@@ -57,6 +57,20 @@
 		};
 	};
 
+	mipi_dbi_cmd_data_input: mipi_dbi_cmd_data_input {
+		group1 {
+			pinmux = <SPIM2_MISO_GPIO35>;
+			input-enable;
+		};
+	};
+
+	mipi_dbi_cmd_data_output: mipi_dbi_cmd_data_output {
+		group1 {
+			pinmux = <SPIM2_MISO_GPIO35>;
+			output-enable;
+		};
+	};
+
 	i2c0_default: i2c0_default {
 		group1 {
 			pinmux = <I2C0_SDA_GPIO12>,

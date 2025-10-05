@@ -38,7 +38,12 @@ properties:
     description: |
       Tri-state the command/data GPIO when the display chip select is
       inactive. This is required on hardware that multiplexes the D/C
-      signal onto an SPI data line shared with other peripherals.
+      signal onto an SPI data line shared with other peripherals. When
+      pin control states named ``cmd_data_input`` and ``cmd_data_output``
+      are provided, the driver will apply them using
+      ``PINCTRL_STATE_CMD_DATA_INPUT`` and
+      ``PINCTRL_STATE_CMD_DATA_OUTPUT`` to avoid reconfiguring the pin
+      in software for every transfer.
 
   xfr-min-bits:
     type: string

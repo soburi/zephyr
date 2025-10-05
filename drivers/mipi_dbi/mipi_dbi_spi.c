@@ -10,10 +10,19 @@
 #include <zephyr/drivers/mipi_dbi.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/gpio.h>
+#if defined(CONFIG_PINCTRL)
+#include <zephyr/drivers/pinctrl.h>
+#endif
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/util.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(mipi_dbi_spi, CONFIG_MIPI_DBI_LOG_LEVEL);
+
+#if defined(CONFIG_PINCTRL)
+#define PINCTRL_STATE_CMD_DATA_INPUT PINCTRL_STATE_PRIV_START
+#define PINCTRL_STATE_CMD_DATA_OUTPUT (PINCTRL_STATE_PRIV_START + 1U)
+#endif
 
 /* Expands to 1 if the node does not have the `write-only` property */
 #define MIPI_DBI_SPI_WRITE_ONLY_ABSENT(n) (!DT_INST_PROP(n, write_only)) |
@@ -70,6 +79,10 @@ struct mipi_dbi_spi_config {
         const uint8_t xfr_min_bits;
         /* Tri-state D/C pin between transfers */
         const bool cmd_data_tristate;
+#if defined(CONFIG_PINCTRL)
+        /* Optional pinctrl configuration for command/data tristate */
+        const struct pinctrl_dev_config *pinctrl;
+#endif
 };
 
 struct mipi_dbi_spi_data {
@@ -83,19 +96,33 @@ struct mipi_dbi_spi_data {
         /* Used for 3 wire mode */
         uint16_t spi_byte;
         bool cmd_data_is_output;
+#if defined(CONFIG_PINCTRL)
+        const struct pinctrl_state *cmd_data_input_state;
+        const struct pinctrl_state *cmd_data_output_state;
+        bool use_pinctrl_cmd_data;
+#endif
 };
 
 static int mipi_dbi_spi_cmd_data_set(const struct device *dev, int value)
 {
         const struct mipi_dbi_spi_config *config = dev->config;
         struct mipi_dbi_spi_data *data = dev->data;
+        int ret = 0;
 
         if (!mipi_dbi_has_pin(&config->cmd_data)) {
                 return 0;
         }
 
         if (config->cmd_data_tristate && !data->cmd_data_is_output) {
-                int ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
+#if defined(CONFIG_PINCTRL)
+                if (data->use_pinctrl_cmd_data) {
+                        ret = pinctrl_apply_state_direct(config->pinctrl,
+                                                         data->cmd_data_output_state);
+                } else
+#endif
+                {
+                        ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_OUTPUT);
+                }
 
                 if (ret < 0) {
                         return ret;
@@ -117,7 +144,17 @@ static void mipi_dbi_spi_cmd_data_release(const struct device *dev)
                 return;
         }
 
-        int ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_INPUT);
+        int ret;
+
+#if defined(CONFIG_PINCTRL)
+        if (data->use_pinctrl_cmd_data) {
+                ret = pinctrl_apply_state_direct(config->pinctrl,
+                                                 data->cmd_data_input_state);
+        } else
+#endif
+        {
+                ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_INPUT);
+        }
 
         if (ret < 0) {
                 LOG_WRN("Failed to tri-state D/C GPIO (%d)", ret);
@@ -718,9 +755,9 @@ static int mipi_dbi_spi_configure_te(const struct device *dev,
 
 static int mipi_dbi_spi_init(const struct device *dev)
 {
-	const struct mipi_dbi_spi_config *config = dev->config;
-	struct mipi_dbi_spi_data *data = dev->data;
-	int ret;
+        const struct mipi_dbi_spi_config *config = dev->config;
+        struct mipi_dbi_spi_data *data = dev->data;
+        int ret;
 
 	if (!device_is_ready(config->spi_dev)) {
 		LOG_ERR("SPI device is not ready");
@@ -732,10 +769,40 @@ static int mipi_dbi_spi_init(const struct device *dev)
                         return -ENODEV;
                 }
                 if (config->cmd_data_tristate) {
-                        ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_INPUT);
-                        if (ret < 0) {
-                                LOG_ERR("Could not configure command/data GPIO (%d)", ret);
-                                return ret;
+#if defined(CONFIG_PINCTRL)
+                        if (config->pinctrl != NULL) {
+                                ret = pinctrl_lookup_state(config->pinctrl,
+                                                           PINCTRL_STATE_CMD_DATA_INPUT,
+                                                           &data->cmd_data_input_state);
+                                if (ret == 0) {
+                                        ret = pinctrl_lookup_state(config->pinctrl,
+                                                                   PINCTRL_STATE_CMD_DATA_OUTPUT,
+                                                                   &data->cmd_data_output_state);
+                                }
+                                if (ret == 0) {
+                                        ret = pinctrl_apply_state_direct(config->pinctrl,
+                                                                         data->cmd_data_input_state);
+                                }
+                                if (ret == 0) {
+                                        data->use_pinctrl_cmd_data = true;
+                                } else if (ret != -ENOENT) {
+                                        LOG_ERR("Failed to prepare D/C pinctrl state (%d)", ret);
+                                        return ret;
+                                }
+                        }
+#endif
+
+#if defined(CONFIG_PINCTRL)
+                        if (!data->use_pinctrl_cmd_data) {
+#endif
+                                ret = gpio_pin_configure_dt(&config->cmd_data, GPIO_INPUT);
+                                if (ret < 0) {
+                                        LOG_ERR("Could not configure command/data GPIO (%d)", ret);
+                                        return ret;
+                                }
+#if defined(CONFIG_PINCTRL)
+                        }
+#endif
                         }
                         data->cmd_data_is_output = false;
                 } else {
@@ -777,24 +844,26 @@ static DEVICE_API(mipi_dbi, mipi_dbi_spi_driver_api) = {
 #endif
 };
 
-#define MIPI_DBI_SPI_INIT(n)							\
-	static const struct mipi_dbi_spi_config					\
-	    mipi_dbi_spi_config_##n = {						\
-		    .spi_dev = DEVICE_DT_GET(					\
-				    DT_INST_PHANDLE(n, spi_dev)),		\
-		    .cmd_data = GPIO_DT_SPEC_INST_GET_OR(n, dc_gpios, {}),	\
-		    .tearing_effect = GPIO_DT_SPEC_INST_GET_OR(n, te_gpios, {}),  \
-		    .reset = GPIO_DT_SPEC_INST_GET_OR(n, reset_gpios, {}),	\
-                    .xfr_min_bits = DT_INST_STRING_UPPER_TOKEN(n, xfr_min_bits), \
-                    .cmd_data_tristate = DT_INST_PROP_OR(n, cmd_data_tristate, false) \
-	};									\
-	static struct mipi_dbi_spi_data mipi_dbi_spi_data_##n;			\
-										\
-	DEVICE_DT_INST_DEFINE(n, mipi_dbi_spi_init, NULL,			\
-			&mipi_dbi_spi_data_##n,					\
-			&mipi_dbi_spi_config_##n,				\
-			POST_KERNEL,						\
-			CONFIG_MIPI_DBI_INIT_PRIORITY,				\
-			&mipi_dbi_spi_driver_api);
+#define MIPI_DBI_SPI_INIT(n)\
+	static const struct mipi_dbi_spi_config\
+	    mipi_dbi_spi_config_##n = {\
+		.spi_dev = DEVICE_DT_GET(\
+			DT_INST_PHANDLE(n, spi_dev)),\
+		.cmd_data = GPIO_DT_SPEC_INST_GET_OR(n, dc_gpios, {}),\
+		.tearing_effect = GPIO_DT_SPEC_INST_GET_OR(n, te_gpios, {}),  \
+		.reset = GPIO_DT_SPEC_INST_GET_OR(n, reset_gpios, {}),\
+		.xfr_min_bits = DT_INST_STRING_UPPER_TOKEN(n, xfr_min_bits), \
+		.cmd_data_tristate = DT_INST_PROP_OR(n, cmd_data_tristate, false), \
+#if defined(CONFIG_PINCTRL)\
+		.pinctrl = PINCTRL_DT_INST_DEV_CONFIG_GET(n),               \
+#endif\
+	};\
+	static struct mipi_dbi_spi_data mipi_dbi_spi_data_##n;\
+	DEVICE_DT_INST_DEFINE(n, mipi_dbi_spi_init, NULL,\
+		&mipi_dbi_spi_data_##n,\
+		&mipi_dbi_spi_config_##n,\
+		POST_KERNEL,\
+		CONFIG_MIPI_DBI_INIT_PRIORITY,\
+		&mipi_dbi_spi_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(MIPI_DBI_SPI_INIT)

@@ -49,6 +49,9 @@
                 spi-dev = <&spi2>;
                 dc-gpios = <&gpio0 35 GPIO_ACTIVE_HIGH>;
                 cmd-data-tristate;
+                pinctrl-0 = <&mipi_dbi_cmd_data_input>;
+                pinctrl-1 = <&mipi_dbi_cmd_data_output>;
+                pinctrl-names = "cmd_data_input", "cmd_data_output";
                 reset-gpios = <&aw9523b_gpio 13 GPIO_ACTIVE_LOW>;
                 #address-cells = <1>;
                 #size-cells = <0>;
