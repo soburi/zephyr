@@ -58,6 +58,7 @@
 
 #define PIN_GROUP_OFFSET_TERM(i, node_id) +PIN_GROUP_AMOUNT_BY_IDX(node_id, i)
 #define PIN_GROUP_OFFSET(node_id, count)  (0 LISTIFY(count, PIN_GROUP_OFFSET_TERM, (), node_id))
+#define PIN_AMOUNT(node_id)               PIN_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
 
 /* Iterate groups and subgroups */
 
@@ -82,7 +83,6 @@
 #define PIN_FUNC_(n, p, i, _) PIN_FUNC(n, i)
 #define PIN_GROUP_FUNC(n)     (FOREACH_PIN_GROUP(n, (|), PIN_FUNC_))
 #define PIN_GROUP_HEADER(n)   (BI_PINS_ENCODING_MULTI | (PIN_GROUP_FUNC(n) << PIN_FUNC_OFFSET))
-#define PIN_AMOUNT(node_id)   PIN_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
 #define ENCODE_GROUP_PINS(n)  (FOREACH_PIN_GROUP(n, (|), ENCODE_EACH_PIN, PIN_GROUP_AMOUNT(n)))
 
 /* Check if pin functions are all equal within a group */
