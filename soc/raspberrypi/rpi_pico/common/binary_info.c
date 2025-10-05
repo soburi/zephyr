@@ -75,27 +75,24 @@
 #define EACH_PIN_FUNC_IS(n, p, i, func) (PIN_FUNC(n, i) == func)
 #define ALL_PIN_FUNC_IS(n, pinfunc)     (EACH_PINCTRL_GROUP(n, (&&), EACH_PIN_FUNC_IS, pinfunc))
 
-#define BI_BINARY_INFO_UNIQUE(prefix, counter) UTIL_CAT(prefix, counter)
-#define BI_DECLARE_PINS_WITH_FUNC(node_id) BI_DECLARE_PINS_WITH_FUNC_(node_id, __COUNTER__)
-#define BI_DECLARE_PINS_WITH_FUNC_(node_id, counter)                                                \
-        static const struct _binary_info_pins_with_func                                           \
-                BI_BINARY_INFO_UNIQUE(__bi_pin_info_, counter) = {                                 \
-                        .core = {                                                                  \
-                                .type = BINARY_INFO_TYPE_PINS_WITH_FUNC,                           \
-                                .tag = BINARY_INFO_TAG_RASPBERRY_PI,                               \
-                        },                                                                          \
-                        .pin_encoding = ENCODE_GROUP_PINS(node_id),                                \
-                };                                                                                 \
-        __bi_decl(BI_BINARY_INFO_UNIQUE(__bi_ptr_, counter),                                       \
-                  &BI_BINARY_INFO_UNIQUE(__bi_pin_info_, counter).core,                            \
-                  ".binary_info.keep.", __used)
+#define BI_BINARY_INFO_STRUCT_NAME(node_id) DT_CAT(node_id, _bi_pin_info)
+#define BI_BINARY_INFO_PTR_NAME(node_id)    DT_CAT(node_id, _bi_ptr)
 
 #define BI_PINS_FROM_PINCTRL_GROUP_(n)                                                             \
         BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) > 0, "Group must contain at least one pin");            \
         BUILD_ASSERT(PINCTRL_TOTAL_PINS(n) <= MAX_PIN_ENTRY, "Too many pin in group");             \
         BUILD_ASSERT(ALL_PIN_FUNC_IS(n, GROUP_PIN_FUNC(n)),                                        \
                      "Group must contain only single function type");                              \
-        BI_DECLARE_PINS_WITH_FUNC(n)
+        static const struct _binary_info_pins_with_func                                           \
+                BI_BINARY_INFO_STRUCT_NAME(n) = {                                                   \
+                        .core = {                                                                  \
+                                .type = BINARY_INFO_TYPE_PINS_WITH_FUNC,                           \
+                                .tag = BINARY_INFO_TAG_RASPBERRY_PI,                               \
+                        },                                                                          \
+                        .pin_encoding = ENCODE_GROUP_PINS(n),                                      \
+                };                                                                                 \
+        __bi_decl(BI_BINARY_INFO_PTR_NAME(n), &BI_BINARY_INFO_STRUCT_NAME(n).core,                  \
+                  ".binary_info.keep.", __used)
 
 #define BI_PINS_FROM_PINCTRL_CHILD(n) BI_PINS_FROM_PINCTRL_GROUP_(n)
 
