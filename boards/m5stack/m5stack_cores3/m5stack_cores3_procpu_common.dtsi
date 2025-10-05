@@ -48,6 +48,7 @@
 		compatible = "zephyr,mipi-dbi-spi";
 		spi-dev = <&spi2>;
 		write-only;
+		dc-gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&aw9523b_gpio 13 GPIO_ACTIVE_LOW>;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -56,6 +57,7 @@
 		ili9342c: ili9342c@0 {
 		        compatible = "ilitek,ili9342c";
 		        reg = <0>;
+		        mipi-mode = "MIPI_DBI_MODE_SPI_4WIRE";
 		        mipi-max-frequency = <40000000>;
 		        vin-supply = <&vcc_bl>;
 		        pixel-format = <ILI9XXX_PIXEL_FORMAT_RGB565>;
