@@ -50,16 +50,6 @@
 	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PIN_GROUP_AMOUNT(child)), (0))
 #define PIN_GROUP_AMOUNT_BY_IDX(node_id, idx)                                                      \
 	(DT_FOREACH_CHILD_STATUS_OKAY_SEP_VARGS(node_id, PIN_GROUP_AMOUNT_IF_MATCH_IDX, (+), idx))
-/*
- * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
- * The raspberrypi,pico-pinctrl child binding does not permit
- * a "status" property, so the STATUS_OK iterator still visits every group.
- * Use this to avoid nested calls to the same macro.
- */
-
-#define PIN_GROUP_OFFSET_TERM(i, node_id) +PIN_GROUP_AMOUNT_BY_IDX(node_id, i)
-#define PIN_GROUP_OFFSET(node_id, count)  (0 LISTIFY(count, PIN_GROUP_OFFSET_TERM, (), node_id))
-#define PIN_AMOUNT(node_id)               PIN_GROUP_OFFSET(node_id, DT_CHILD_NUM(node_id))
 
 /* Iterate groups */
 
