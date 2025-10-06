@@ -50,12 +50,12 @@
 	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PIN_GROUP_AMOUNT(child)), (0))
 #define PIN_GROUP_AMOUNT_BY_IDX(node_id, idx)                                                      \
 	(DT_FOREACH_CHILD_STATUS_OKAY_SEP_VARGS(node_id, PIN_GROUP_AMOUNT_IF_MATCH_IDX, (+), idx))
-	/*
-	 * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	 * The raspberrypi,pico-pinctrl child binding does not permit
-	 * a "status" property, so the STATUS_OK iterator still visits every group.
-	 * Use this to avoid nested calls to the same macro.
-	 */
+/*
+ * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ * The raspberrypi,pico-pinctrl child binding does not permit
+ * a "status" property, so the STATUS_OK iterator still visits every group.
+ * Use this to avoid nested calls to the same macro.
+ */
 
 #define PIN_GROUP_OFFSET_TERM(i, node_id) +PIN_GROUP_AMOUNT_BY_IDX(node_id, i)
 #define PIN_GROUP_OFFSET(node_id, count)  (0 LISTIFY(count, PIN_GROUP_OFFSET_TERM, (), node_id))
@@ -87,14 +87,14 @@
 
 /* Check if pin functions are all equal within a group */
 
-#define PIN_FUNC_IS(n, p, i, func)   (PIN_FUNC(n, i) == func)
-#define ALL_PINS_FUNC_IS_SAME(n)     (FOREACH_PIN_GROUP(n, (&&), PIN_FUNC_IS, PIN_GROUP_FUNC(n)))
+#define PIN_FUNC_IS(n, p, i, func) (PIN_FUNC(n, i) == func)
+#define ALL_PINS_FUNC_IS_SAME(n)   (FOREACH_PIN_GROUP(n, (&&), PIN_FUNC_IS, PIN_GROUP_FUNC(n)))
 
 #define DECLARE_PINCFG(n)                                                                          \
 	BUILD_ASSERT(PIN_AMOUNT(n) > 0, "Group must contain at least one pin");                    \
 	BUILD_ASSERT(PIN_AMOUNT(n) <= MAX_PIN_ENTRIES, "Too many pins in group");                  \
 	BUILD_ASSERT(ALL_PINS_FUNC_IS_SAME(n), "Group pins must share identical function");        \
-       	bi_decl(ENCODE_PINS_WITH_FUNC(PIN_GROUP_HEADER(n) | ENCODE_GROUP_PINS(n)))
+	bi_decl(ENCODE_PINS_WITH_FUNC(PIN_GROUP_HEADER(n) | ENCODE_GROUP_PINS(n)))
 
 #define DECLARE_PINCFG_IF_MATCH_IDX(child, idx)                                                    \
 	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (DECLARE_PINCFG(child)), ())
@@ -177,14 +177,15 @@ bi_decl(bi_program_build_attribute((uint32_t)"Release"));
  * and violate the uniqueness requirement.
  */
 
-#define CHILD_NUM_OF_GROUP(node_id, group_idx) \
+#define CHILD_NUM_OF_GROUP(node_id, group_idx)                                                     \
 	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), group_idx), (DT_CHILD_NUM(node_id)), ())
 
-#define CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX(node_id, pincfg_idx, group_idx)                            \
+#define CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX(node_id, pincfg_idx, group_idx)                     \
 	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), pincfg_idx), (CHILD_NUM_OF_GROUP(node_id, group_idx)), ())
 
-#define CHILD_NUM_OF_PINCFG_GROUP(node_id, pincfg_idx, group_idx) \
-	DT_FOREACH_CHILD_VARGS(node_id, CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX, pincfg_idx, group_idx)
+#define CHILD_NUM_OF_PINCFG_GROUP(node_id, pincfg_idx, group_idx)                                  \
+	DT_FOREACH_CHILD_VARGS(node_id, CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX, pincfg_idx,        \
+			       group_idx)
 
 int hoge;
 
