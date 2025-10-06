@@ -48,13 +48,14 @@
 	COND_CODE_1(DT_NODE_HAS_PROP(node_id, pinmux), (DT_PROP_LEN(node_id, pinmux)), (0))
 #define PIN_GROUP_AMOUNT_IF_MATCH_IDX(child, idx)                                                  \
 	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PIN_GROUP_AMOUNT(child)), (0))
-/*
- * The raspberrypi,pico-pinctrl child binding does not permit a "status"
- * property, so the STATUS_OK iterator still visits every group.
- * Use this to avoid nested calls to the same macro.
- */
 #define PIN_GROUP_AMOUNT_BY_IDX(node_id, idx)                                                      \
 	(DT_FOREACH_CHILD_STATUS_OKAY_SEP_VARGS(node_id, PIN_GROUP_AMOUNT_IF_MATCH_IDX, (+), idx))
+	/*
+	 * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	 * The raspberrypi,pico-pinctrl child binding does not permit
+	 * a "status" property, so the STATUS_OK iterator still visits every group.
+	 * Use this to avoid nested calls to the same macro.
+	 */
 
 #define PIN_GROUP_OFFSET_TERM(i, node_id) +PIN_GROUP_AMOUNT_BY_IDX(node_id, i)
 #define PIN_GROUP_OFFSET(node_id, count)  (0 LISTIFY(count, PIN_GROUP_OFFSET_TERM, (), node_id))
@@ -87,35 +88,34 @@
 /* Check if pin functions are all equal within a group */
 
 #define PIN_FUNC_IS(n, p, i, func)   (PIN_FUNC(n, i) == func)
-#define ALL_PINS_FUNC_IS(n, pinfunc) (FOREACH_PIN_GROUP(n, (&&), PIN_FUNC_IS, pinfunc))
+#define ALL_PINS_FUNC_IS_SAME(n)     (FOREACH_PIN_GROUP(n, (&&), PIN_FUNC_IS, PIN_GROUP_FUNC(n)))
 
-#define DECLARE_PIN_GROUP(n)                                                                       \
+#define DECLARE_PINCFG(n)                                                                          \
 	BUILD_ASSERT(PIN_AMOUNT(n) > 0, "Group must contain at least one pin");                    \
 	BUILD_ASSERT(PIN_AMOUNT(n) <= MAX_PIN_ENTRIES, "Too many pins in group");                  \
-	BUILD_ASSERT(ALL_PINS_FUNC_IS(n, PIN_GROUP_FUNC(n)),                                       \
-		     "Group pins must share identical function");                                  \
-	bi_decl(ENCODE_PINS_WITH_FUNC(PIN_GROUP_HEADER(n) | ENCODE_GROUP_PINS(n)))
+	BUILD_ASSERT(ALL_PINS_FUNC_IS_SAME(n), "Group pins must share identical function");        \
+       	bi_decl(ENCODE_PINS_WITH_FUNC(PIN_GROUP_HEADER(n) | ENCODE_GROUP_PINS(n)))
 
-#define DECLARE_PIN_GROUP_IF_MATCH_IDX(child, idx)                                                 \
-	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (DECLARE_PIN_GROUP(child)), ())
+#define DECLARE_PINCFG_IF_MATCH_IDX(child, idx)                                                    \
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (DECLARE_PINCFG(child)), ())
 
 #define BINARY_INFO_FROM_PINCFG(node_id, idx)                                                      \
-	DT_FOREACH_CHILD_VARGS(node_id, DECLARE_PIN_GROUP_IF_MATCH_IDX, idx)
+	DT_FOREACH_CHILD_VARGS(node_id, DECLARE_PINCFG_IF_MATCH_IDX, idx)
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
-#define BI_PROGRAM_NAME CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
+#define BI_PROGRAM_NAME CONFIG_RPI_PICO_BINARY_INFO_OVERRIDE_PROGRAM_NAME
 #endif
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_DESCRIPTION
-#define BI_PROGRAM_DESCRIPTION CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_DESCRIPTION
+#define BI_PROGRAM_DESCRIPTION CONFIG_RPI_PICO_BINARY_INFO_OVERRIDE_PROGRAM_DESCRIPTION
 #endif
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_URL
-#define BI_PROGRAM_URL CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_URL
+#define BI_PROGRAM_URL CONFIG_RPI_PICO_BINARY_INFO_OVERRIDE_PROGRAM_URL
 #endif
 
 #ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_BUILD_DATE
-#define BI_PROGRAM_BUILD_DATE CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_BUILD_DATE
+#define BI_PROGRAM_BUILD_DATE CONFIG_RPI_PICO_BINARY_INFO_OVERRIDE_PROGRAM_BUILD_DATE
 #else
 #define BI_PROGRAM_BUILD_DATE __DATE__
 #endif
@@ -123,42 +123,42 @@
 extern uint32_t __rom_region_end;
 bi_decl(bi_binary_end((intptr_t)&__rom_region_end));
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_NAME
 bi_decl(bi_program_name((uint32_t)BI_PROGRAM_NAME));
 #endif
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_PICO_BOARD_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_PICO_BOARD
 bi_decl(bi_string(BINARY_INFO_TAG_RASPBERRY_PI, BINARY_INFO_ID_RP_PICO_BOARD,
 		  (uint32_t)CONFIG_BOARD));
 #endif
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_SDK_VERSION_STRING_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_SDK_VERSION_STRING
 bi_decl(bi_string(BINARY_INFO_TAG_RASPBERRY_PI, BINARY_INFO_ID_RP_SDK_VERSION,
 		  (uint32_t)"zephyr-" STRINGIFY(BUILD_VERSION)));
 #endif
 
-#if defined(CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_VERSION_STRING_ENABLE) && defined(HAS_APP_VERSION)
+#if defined(CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_VERSION_STRING) && defined(HAS_APP_VERSION)
 bi_decl(bi_program_version_string((uint32_t)APP_VERSION_EXTENDED_STRING));
 #endif
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_DESCRIPTION_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_DESCRIPTION
 bi_decl(bi_program_description((uint32_t)BI_PROGRAM_DESCRIPTION));
 #endif
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_URL_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_URL
 bi_decl(bi_program_url((uint32_t)BI_PROGRAM_URL));
 #endif
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_BUILD_DATE_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_PROGRAM_BUILD_DATE
 bi_decl(bi_program_build_date_string((uint32_t)BI_PROGRAM_BUILD_DATE));
 #endif
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_BOOT_STAGE2_NAME_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_BOOT_STAGE2_NAME
 bi_decl(bi_string(BINARY_INFO_TAG_RASPBERRY_PI, BINARY_INFO_ID_RP_BOOT2_NAME,
 		  (uint32_t)PICO_BOOT_STAGE2_NAME));
 #endif
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_ATTRIBUTE_BUILD_TYPE_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_ATTRIBUTE_BUILD_TYPE
 #ifdef CONFIG_DEBUG
 bi_decl(bi_program_build_attribute((uint32_t)"Debug"));
 #else
@@ -166,7 +166,7 @@ bi_decl(bi_program_build_attribute((uint32_t)"Release"));
 #endif
 #endif
 
-#ifdef CONFIG_RPI_PICO_BINARY_INFO_PINS_WITH_FUNC_ENABLE
+#ifdef CONFIG_RPI_PICO_BINARY_INFO_PINS_WITH_FUNC
 #if DT_NODE_EXISTS(DT_NODELABEL(pinctrl))
 /*
  * Extract pin info from pinctrl
@@ -176,6 +176,20 @@ bi_decl(bi_program_build_attribute((uint32_t)"Release"));
  * than using DT_FOREACH_CHILD, which would expand every group on the same line
  * and violate the uniqueness requirement.
  */
+
+#define CHILD_NUM_OF_GROUP(node_id, group_idx) \
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), group_idx), (DT_CHILD_NUM(node_id)), ())
+
+#define CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX(node_id, pincfg_idx, group_idx)                            \
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), pincfg_idx), (CHILD_NUM_OF_GROUP(node_id, group_idx)), ())
+
+#define CHILD_NUM_OF_PINCFG_GROUP(node_id, pincfg_idx, group_idx) \
+	DT_FOREACH_CHILD_VARGS(node_id, CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX, pincfg_idx, group_idx)
+
+int hoge;
+
+CHILD_NUM_OF_PINCFG_GROUP(DT_NODELABEL(pinctrl), 0, 0)
+
 #if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 0
 BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 0);
 #endif
@@ -273,4 +287,4 @@ BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 30);
 BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 31);
 #endif
 #endif /* DT_NODE_EXISTS(DT_NODELABEL(pinctrl)) */
-#endif /* CONFIG_RPI_PICO_BINARY_INFO_PINS_WITH_FUNC_ENABLE */
+#endif /* CONFIG_RPI_PICO_BINARY_INFO_PINS_WITH_FUNC */
