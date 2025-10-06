@@ -181,111 +181,13 @@ bi_decl(bi_program_build_attribute((uint32_t)"Release"));
 	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), group_idx), (DT_CHILD_NUM(node_id)), ())
 
 #define CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX(node_id, pincfg_idx, group_idx)                     \
-	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), pincfg_idx), (CHILD_NUM_OF_GROUP(node_id, group_idx)), ())
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), pincfg_idx), \
+			(CHILD_NUM_OF_GROUP(node_id, group_idx)), ())
 
 #define CHILD_NUM_OF_PINCFG_GROUP(node_id, pincfg_idx, group_idx)                                  \
 	DT_FOREACH_CHILD_VARGS(node_id, CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX, pincfg_idx,        \
 			       group_idx)
 
-int hoge;
-
 CHILD_NUM_OF_PINCFG_GROUP(DT_NODELABEL(pinctrl), 0, 0)
+BINARY_INFO_FROM_GROUP(DT_NODELABEL(pinctrl), 0, 0);
 
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 0
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 0);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 1
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 1);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 2
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 2);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 3
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 3);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 4
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 4);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 5
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 5);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 6
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 6);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 7
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 7);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 8
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 8);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 9
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 9);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 10
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 10);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 11
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 11);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 12
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 12);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 13
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 13);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 14
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 14);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 15
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 15);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 16
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 16);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 17
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 17);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 18
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 18);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 19
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 19);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 20
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 20);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 21
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 21);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 22
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 22);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 23
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 23);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 24
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 24);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 25
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 25);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 26
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 26);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 27
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 27);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 28
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 28);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 29
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 29);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 30
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 30);
-#endif
-#if DT_CHILD_NUM(DT_NODELABEL(pinctrl)) > 31
-BINARY_INFO_FROM_PINCFG(DT_NODELABEL(pinctrl), 31);
-#endif
-#endif /* DT_NODE_EXISTS(DT_NODELABEL(pinctrl)) */
-#endif /* CONFIG_RPI_PICO_BINARY_INFO_PINS_WITH_FUNC */
