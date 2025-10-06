@@ -65,35 +65,29 @@
 
 #define FOREACH_PIN_GROUP_ENTRY(n, fn, sep, ...)                                                   \
 	DT_FOREACH_PROP_ELEM_SEP_VARGS(n, pinmux, fn, sep, __VA_ARGS__)
-#define FOREACH_PIN_GROUP(n, sep, fn, ...)                                                         \
-	DT_FOREACH_CHILD_SEP_VARGS(n, FOREACH_PIN_GROUP_ENTRY, sep, fn, sep, __VA_ARGS__)
 
 /* Encode the pins in a group */
 
 #define IS_LAST_PIN(i, end, off)         (((i) + (off) + 1) == (end))
 #define ENCODE_TERMINATE(n, i, end, off) (IS_LAST_PIN(i, end, off) ? ENCODE_PIN(n, i, off + 1) : 0)
-#define ENCODE_EACH_PIN_(n, p, i, end, off)                                                        \
-	(DT_PROP_HAS_IDX(n, p, i) ? ENCODE_PIN(n, i, off) : 0) | ENCODE_TERMINATE(n, i, end, off)
+#define ENCODE_EACH_PIN_(n, p, i, end)                                                        \
+	(DT_PROP_HAS_IDX(n, p, i) ? ENCODE_PIN(n, i, 0) : 0) | ENCODE_TERMINATE(n, i, end, 0)
 #define ENCODE_EACH_PIN(n, p, i, end)                                                              \
-	ENCODE_EACH_PIN_(n, p, i, end, PIN_GROUP_OFFSET(DT_PARENT(n), DT_NODE_CHILD_IDX(n)))
-#define ENCODE_GROUP_PINS(n) (FOREACH_PIN_GROUP(n, (|), ENCODE_EACH_PIN, PIN_AMOUNT(n)))
+	ENCODE_EACH_PIN_(n, p, i, end)
+#define ENCODE_GROUP_PINS(n) (FOREACH_PIN_GROUP_ENTRY(n, ENCODE_EACH_PIN, (|), PIN_GROUP_AMOUNT(n)))
 
 /* Get group-wide pin functions */
 
 #define PIN_FUNC_OFFSET       3
-#define PIN_FUNC_(n, p, i, _) PIN_FUNC(n, i)
-#define PIN_GROUP_FUNC(n)     (FOREACH_PIN_GROUP(n, (|), PIN_FUNC_))
+#define PIN_FUNC_(n, p, i) PIN_FUNC(n, i)
+#define PIN_GROUP_FUNC(n)     DT_FOREACH_PROP_ELEM(n, pinmux, PIN_FUNC_)
 #define PIN_GROUP_HEADER(n)   (BI_PINS_ENCODING_MULTI | (PIN_GROUP_FUNC(n) << PIN_FUNC_OFFSET))
 
 /* Check if pin functions are all equal within a group */
 
 #define PIN_FUNC_IS(n, p, i, func) (PIN_FUNC(n, i) == func)
-#define ALL_PINS_FUNC_IS_SAME(n)   (FOREACH_PIN_GROUP(n, (&&), PIN_FUNC_IS, PIN_GROUP_FUNC(n)))
 
 #define DECLARE_PINCFG(n)                                                                          \
-	BUILD_ASSERT(PIN_AMOUNT(n) > 0, "Group must contain at least one pin");                    \
-	BUILD_ASSERT(PIN_AMOUNT(n) <= MAX_PIN_ENTRIES, "Too many pins in group");                  \
-	BUILD_ASSERT(ALL_PINS_FUNC_IS_SAME(n), "Group pins must share identical function");        \
 	bi_decl(ENCODE_PINS_WITH_FUNC(PIN_GROUP_HEADER(n) | ENCODE_GROUP_PINS(n)))
 
 #define DECLARE_PINCFG_IF_MATCH_IDX(child, idx)                                                    \
@@ -188,6 +182,27 @@ bi_decl(bi_program_build_attribute((uint32_t)"Release"));
 	DT_FOREACH_CHILD_VARGS(node_id, CHILD_NUM_OF_PINCFG_GROUP_IF_MATCH_IDX, pincfg_idx,        \
 			       group_idx)
 
-CHILD_NUM_OF_PINCFG_GROUP(DT_NODELABEL(pinctrl), 0, 0)
+#define BINARY_INFO_FROM_GROUP_IDX(node_id, group_idx)                                                     \
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), group_idx), (DECLARE_PINCFG(node_id)), ())
+
+
+#define BINARY_INFO_FROM_GROUP_IF_MATCH_GROUP_IDX(node_id, group_idx)                     \
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), group_idx), \
+			(BINARY_INFO_FROM_GROUP_IDX(node_id, group_idx)), ())
+
+#define BINARY_INFO_FROM_GROUP_IF_MATCH_IDX(node_id, pincfg_idx, group_idx)                     \
+	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(node_id), pincfg_idx), \
+		(DT_FOREACH_CHILD_SEP_VARGS(node_id, BINARY_INFO_FROM_GROUP_IF_MATCH_GROUP_IDX, (), group_idx)), \
+		())
+
+
+#define BINARY_INFO_FROM_GROUP(node_id, pincfg_idx, group_idx)                                  \
+	DT_FOREACH_CHILD_VARGS(node_id, BINARY_INFO_FROM_GROUP_IF_MATCH_IDX, pincfg_idx,        \
+			       group_idx)
+
+int hoge;
+
 BINARY_INFO_FROM_GROUP(DT_NODELABEL(pinctrl), 0, 0);
 
+#endif
+#endif
