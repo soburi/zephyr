@@ -46,10 +46,6 @@
 
 #define PIN_GROUP_AMOUNT(node_id)                                                                  \
 	COND_CODE_1(DT_NODE_HAS_PROP(node_id, pinmux), (DT_PROP_LEN(node_id, pinmux)), (0))
-#define PIN_GROUP_AMOUNT_IF_MATCH_IDX(child, idx)                                                  \
-	COND_CODE_1(IS_EQ(DT_NODE_CHILD_IDX(child), idx), (PIN_GROUP_AMOUNT(child)), (0))
-#define PIN_GROUP_AMOUNT_BY_IDX(node_id, idx)                                                      \
-	(DT_FOREACH_CHILD_STATUS_OKAY_SEP_VARGS(node_id, PIN_GROUP_AMOUNT_IF_MATCH_IDX, (+), idx))
 
 /* Iterate groups */
 
@@ -73,8 +69,6 @@
 #define PIN_GROUP_HEADER(n) (BI_PINS_ENCODING_MULTI | (PIN_GROUP_FUNC(n) << PIN_FUNC_OFFSET))
 
 /* Check if pin functions are all equal within a group */
-
-#define PIN_FUNC_IS(n, p, i, func) (PIN_FUNC(n, i) == func)
 
 #define DECLARE_PINCFG(n) bi_decl(ENCODE_PINS_WITH_FUNC(PIN_GROUP_HEADER(n) | ENCODE_GROUP_PINS(n)))
 
