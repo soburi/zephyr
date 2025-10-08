@@ -594,7 +594,7 @@ def write_maps(node: edtlib.Node) -> None:
         if basename != str2ident(cd.basename):
             err(f"Map basename mismatch: {basename} != {str2ident(cd.basename)}")
 
-        macro2val.update(controller_and_data_macros(cd, i, macro, ""))
+        macro2val.update(nexus_map_macros(cd, i, macro, ""))
 
     prop_id = f"{basename}_map"
     plen = len(node.maps)
@@ -631,7 +631,7 @@ def write_maps(node: edtlib.Node) -> None:
 
         args = []
         args.extend([str(v) for v in child_specifiers])
-        args.extend(["DT_" + node_z_path_id(cd.controller)])
+        args.extend(["DT_" + node_z_path_id(cd.parent)])
         args.extend([str(v) for v in parent_specifiers])
 
         macro2val[f"{macro}_MAP_IDX_{i}"] = ", ".join(args)
@@ -903,6 +903,43 @@ def phandle_macros(prop: edtlib.Property, macro: str) -> dict:
                 continue
 
             ret.update(controller_and_data_macros(entry, i, macro, prop.name))
+
+    return ret
+
+
+def nexus_map_macros(entry: edtlib.NexusMap, i: int, macro: str, pname: str):
+    # Helper procedure used by phandle_macros().
+    #
+    # Its purpose is to write the "controller" (i.e. label property of
+    # the phandle's node) and associated data macros for a
+    # ControllerAndData.
+
+    ret = {}
+    data = entry.data
+    node = entry.node
+    pname = edtlib.str_as_token(str2ident(pname))
+
+    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
+    ret[f"{macro}_IDX_{i}_EXISTS"] = 1
+    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_PH
+    ret[f"{macro}_IDX_{i}_PH"] = f"DT_{entry.parent.z_path_id}"
+    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_VAL_<VAL>
+    for cell, val in data.items():
+        ret[f"{macro}_IDX_{i}_VAL_{str2ident(cell)}"] = val
+        ret[f"{macro}_IDX_{i}_VAL_{str2ident(cell)}_EXISTS"] = 1
+    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
+    ret[f"{macro}_IDX_{i}_EXISTS"] = 1
+    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL
+    ret[f"{macro}_IDX_{i}_FOREACH_CELL(fn)"] = (
+            ' \\\n\t'.join(f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})'
+                           for cell in data))
+    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL_SEP
+    ret[f"{macro}_IDX_{i}_FOREACH_CELL_SEP(fn, sep)"] = (
+        ' DT_DEBRACKET_INTERNAL sep \\\n\t'.join(
+            f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})'
+               for cell in data))
+    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_NUM_CELLS
+    ret[f"{macro}_IDX_{i}_NUM_CELLS"] = len(data)
 
     return ret
 

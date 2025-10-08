@@ -898,6 +898,38 @@ class PinCtrl:
         "See the class docstring"
         return str_as_token(self.name) if self.name is not None else None
 
+@dataclass
+class NexusMap:
+    """
+    Represents an entry in an 'interrupts' or 'type: phandle-array' property
+    value, e.g. <&ctrl-1 4 0> in
+
+        cs-gpios = <&ctrl-1 4 0 &ctrl-2 3 4>;
+
+    These attributes are available on ControllerAndData objects:
+
+    node:
+      The Node instance the property appears on
+
+    controller:
+      The Node instance for the controller (e.g. the controller the interrupt
+      gets sent to for interrupts)
+
+    data:
+      A dictionary that maps names from the *-cells key in the binding for the
+      controller to data values, e.g. {"pin": 4, "flags": 0} for the example
+      above.
+
+      'interrupts = <1 2>' might give {"irq": 1, "level": 2}.
+
+    basename:
+      Basename for the controller when supporting named cells. AKA, the specifier space.
+    """
+    node: 'Node'
+    parent: 'Node'
+    data: dict
+    basename: Optional[str]
+
 
 class Node:
     """
@@ -1330,10 +1362,10 @@ class Node:
         return res
 
     @property
-    def maps(self) -> list[ControllerAndData]:
+    def maps(self) -> list[NexusMap]:
         "See the class docstring"
 
-        res: list[ControllerAndData] = []
+        res: list[NexusMap] = []
 
         def count_cells_num(node: dtlib_Node, specifier: str) -> int:
             """
@@ -1405,11 +1437,10 @@ class Node:
                     values[f"parent_specifier_{i}"] = v
 
                 res.append(
-                    ControllerAndData(
+                    NexusMap(
                         node=self,
-                        controller=controller,
+                        parent=controller,
                         data=values,
-                        name=None,
                         basename=specifier_space,
                     )
                 )
