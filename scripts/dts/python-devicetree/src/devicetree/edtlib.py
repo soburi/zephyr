@@ -926,7 +926,9 @@ class NexusMap:
       Basename for the controller when supporting named cells. AKA, the specifier space.
     """
     node: 'Node'
+    child_specifiers: list[int]
     parent: 'Node'
+    parent_specifiers: list[int]
     data: dict
     basename: Optional[str]
 
@@ -1439,7 +1441,9 @@ class Node:
                 res.append(
                     NexusMap(
                         node=self,
+                        child_specifiers=child_specifiers,
                         parent=controller,
+                        parent_specifiers=parent_specifiers,
                         data=values,
                         basename=specifier_space,
                     )

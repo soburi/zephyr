@@ -624,23 +624,18 @@ def write_maps(node: edtlib.Node) -> None:
     macro2val[f"{macro}_EXISTS"] = 1
 
     for i, cd in enumerate(node.maps):
-        parent_specifier_len = len([k for k in cd.data if k.startswith('parent_specifier_')])
-        child_specifiers = list(cd.data.values())[:-parent_specifier_len]
-        parent_specifiers = list(cd.data.values())[-parent_specifier_len:]
-        child_specifier_len = len(child_specifiers)
-
         args = []
-        args.extend([str(v) for v in child_specifiers])
+        args.extend([str(v) for v in cd.child_specifiers])
         args.extend(["DT_" + node_z_path_id(cd.parent)])
-        args.extend([str(v) for v in parent_specifiers])
+        args.extend([str(v) for v in cd.parent_specifiers])
 
         macro2val[f"{macro}_MAP_IDX_{i}"] = ", ".join(args)
         macro2val[f"{macro}_MAP_IDX_{i}_CHILD_SPECIFIER_POS"] = 0
-        macro2val[f"{macro}_MAP_IDX_{i}_CHILD_SPECIFIER_LEN"] = child_specifier_len
-        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_POS"] = child_specifier_len
+        macro2val[f"{macro}_MAP_IDX_{i}_CHILD_SPECIFIER_LEN"] = len(cd.child_specifiers)
+        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_POS"] = len(cd.child_specifiers)
         macro2val[f"{macro}_MAP_IDX_{i}_PARENT_LEN"] = 1
-        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_SPECIFIER_POS"] = child_specifier_len + 1
-        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_SPECIFIER_LEN"] = parent_specifier_len
+        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_SPECIFIER_POS"] = len(cd.child_specifiers) + 1
+        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_SPECIFIER_LEN"] = len(cd.parent_specifiers)
 
     for mc, val in macro2val.items():
         out_dt_define(mc, val)
@@ -915,7 +910,13 @@ def nexus_map_macros(entry: edtlib.NexusMap, i: int, macro: str, pname: str):
     # ControllerAndData.
 
     ret = {}
-    data = entry.data
+    data = {}
+
+    for child_idx, val in enumerate(entry.child_specifiers):
+        data[f"child_specifier_{child_idx}"] = val
+    for parent_idx, val in enumerate(entry.parent_specifiers):
+        data[f"parent_specifier_{parent_idx}"] = val
+
     node = entry.node
     pname = edtlib.str_as_token(str2ident(pname))
 
