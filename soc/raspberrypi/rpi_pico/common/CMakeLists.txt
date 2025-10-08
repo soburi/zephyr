@@ -12,7 +12,6 @@ zephyr_sources_ifdef(CONFIG_RPI_PICO_ROM_BOOTLOADER rom_bootloader.c)
 zephyr_library_sources_ifdef(CONFIG_RPI_PICO_BINARY_INFO
 	binary_info.c
 	binary_info_pins.c
-	binary_info_header.S
 )
 
 zephyr_linker_sources_ifdef(CONFIG_RPI_PICO_BINARY_INFO
