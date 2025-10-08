@@ -591,10 +591,38 @@ def write_maps(node: edtlib.Node) -> None:
     macro2val = {}
 
     for i, cd in enumerate(node.maps):
-        if basename != str2ident(cd.basename):
-            err(f"Map basename mismatch: {basename} != {str2ident(cd.basename)}")
+        data = {}
 
-        macro2val.update(nexus_map_macros(cd, i, macro, ""))
+        for child_idx, val in enumerate(cd.child_specifiers):
+            data[f"child_specifier_{child_idx}"] = val
+        for parent_idx, val in enumerate(cd.parent_specifiers):
+            data[f"parent_specifier_{parent_idx}"] = val
+
+        node = cd.node
+        pname = edtlib.str_as_token(str2ident(""))
+
+        # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
+        macro2val[f"{macro}_IDX_{i}_EXISTS"] = 1
+        # DT_N_<node-id>_P_<prop-id>_IDX_<i>_PH
+        macro2val[f"{macro}_IDX_{i}_PH"] = f"DT_{cd.parent.z_path_id}"
+        # DT_N_<node-id>_P_<prop-id>_IDX_<i>_VAL_<VAL>
+        for cell, val in data.items():
+            macro2val[f"{macro}_IDX_{i}_VAL_{str2ident(cell)}"] = val
+            macro2val[f"{macro}_IDX_{i}_VAL_{str2ident(cell)}_EXISTS"] = 1
+        # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
+        macro2val[f"{macro}_IDX_{i}_EXISTS"] = 1
+        # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL
+        macro2val[f"{macro}_IDX_{i}_FOREACH_CELL(fn)"] = (
+                ' \\\n\t'.join(f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})'
+                               for cell in data))
+        # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL_SEP
+        macro2val[f"{macro}_IDX_{i}_FOREACH_CELL_SEP(fn, sep)"] = (
+            ' DT_DEBRACKET_INTERNAL sep \\\n\t'.join(
+                f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})'
+               for cell in data))
+        # DT_N_<node-id>_P_<prop-id>_IDX_<i>_NUM_CELLS
+        macro2val[f"{macro}_IDX_{i}_NUM_CELLS"] = len(data)
+
 
     prop_id = f"{basename}_map"
     plen = len(node.maps)
@@ -898,49 +926,6 @@ def phandle_macros(prop: edtlib.Property, macro: str) -> dict:
                 continue
 
             ret.update(controller_and_data_macros(entry, i, macro, prop.name))
-
-    return ret
-
-
-def nexus_map_macros(entry: edtlib.NexusMap, i: int, macro: str, pname: str):
-    # Helper procedure used by phandle_macros().
-    #
-    # Its purpose is to write the "controller" (i.e. label property of
-    # the phandle's node) and associated data macros for a
-    # ControllerAndData.
-
-    ret = {}
-    data = {}
-
-    for child_idx, val in enumerate(entry.child_specifiers):
-        data[f"child_specifier_{child_idx}"] = val
-    for parent_idx, val in enumerate(entry.parent_specifiers):
-        data[f"parent_specifier_{parent_idx}"] = val
-
-    node = entry.node
-    pname = edtlib.str_as_token(str2ident(pname))
-
-    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
-    ret[f"{macro}_IDX_{i}_EXISTS"] = 1
-    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_PH
-    ret[f"{macro}_IDX_{i}_PH"] = f"DT_{entry.parent.z_path_id}"
-    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_VAL_<VAL>
-    for cell, val in data.items():
-        ret[f"{macro}_IDX_{i}_VAL_{str2ident(cell)}"] = val
-        ret[f"{macro}_IDX_{i}_VAL_{str2ident(cell)}_EXISTS"] = 1
-    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
-    ret[f"{macro}_IDX_{i}_EXISTS"] = 1
-    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL
-    ret[f"{macro}_IDX_{i}_FOREACH_CELL(fn)"] = (
-            ' \\\n\t'.join(f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})'
-                           for cell in data))
-    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL_SEP
-    ret[f"{macro}_IDX_{i}_FOREACH_CELL_SEP(fn, sep)"] = (
-        ' DT_DEBRACKET_INTERNAL sep \\\n\t'.join(
-            f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})'
-               for cell in data))
-    # DT_N_<node-id>_P_<prop-id>_IDX_<i>_NUM_CELLS
-    ret[f"{macro}_IDX_{i}_NUM_CELLS"] = len(data)
 
     return ret
 

@@ -929,7 +929,6 @@ class NexusMap:
     child_specifiers: list[int]
     parent: 'Node'
     parent_specifiers: list[int]
-    data: dict
     basename: Optional[str]
 
 
@@ -1419,32 +1418,12 @@ class Node:
                 parent_specifiers = to_nums(raw[: 4 * parent_specifier_num])
                 raw = raw[4 * parent_specifier_num :]
 
-                # Although this is rare, if a cell-name is specified for the map node,
-                # it will be reflected.
-                # If not specified, the name of child_specifier_[i] will be set.
-                values: dict[str, int] = {}
-                for i, v in enumerate(child_specifiers):
-                    cell_name = f"child_specifier_{i}"
-                    if (self._binding and
-                        self._binding.specifier2cells and
-                        specifier_space in self._binding.specifier2cells and
-                        i < len(self._binding.specifier2cells[specifier_space])):
-                        cell_name = self._binding.specifier2cells[specifier_space][i]
-
-                    values[cell_name] = v
-
-                # The cell name for parent_specifier cannot be determined.
-                # For convenience, we assign it the name parent_specifier_[i].
-                for i, v in enumerate(parent_specifiers):
-                    values[f"parent_specifier_{i}"] = v
-
                 res.append(
                     NexusMap(
                         node=self,
                         child_specifiers=child_specifiers,
                         parent=controller,
                         parent_specifiers=parent_specifiers,
-                        data=values,
                         basename=specifier_space,
                     )
                 )
