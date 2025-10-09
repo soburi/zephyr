@@ -901,29 +901,31 @@ class PinCtrl:
 @dataclass
 class NexusMap:
     """
-    Represents an entry in an 'interrupts' or 'type: phandle-array' property
-    value, e.g. <&ctrl-1 4 0> in
+    Represents a single entry parsed from a ``*-map`` property. For example,
+    the value ``<&ctrl-1 4 0>`` from ``cs-gpios = <&ctrl-1 4 0 &ctrl-2 3 4>;``
+    becomes one ``NexusMap`` instance.
 
-        cs-gpios = <&ctrl-1 4 0 &ctrl-2 3 4>;
+    These attributes are available on ``NexusMap`` objects:
 
-    These attributes are available on ControllerAndData objects:
+    node:
+      The :class:`Node` instance whose property contains the map entry.
 
     child_specifiers:
-      The Node instance the property appears on
+      A list of integers read from the child side of the map entry. These are
+      the specifier cells that precede the phandle.
 
     parent:
-      The Node instance for the controller (e.g. the controller the interrupt
-      gets sent to for interrupts)
+      The :class:`Node` instance for the controller referenced by the phandle
+      in the map entry.
 
     parent_specifiers:
-      A dictionary that maps names from the *-cells key in the binding for the
-      controller to data values, e.g. {"pin": 4, "flags": 0} for the example
-      above.
-
-      'interrupts = <1 2>' might give {"irq": 1, "level": 2}.
+      A list of integers describing the parent side of the mapping. These
+      values correspond to the ``*-cells`` definition in the controller's
+      binding.
 
     basename:
-      Basename for the controller when supporting named cells. AKA, the specifier space.
+      The base name of the ``*-map`` property, which also describes the
+      specifier space for the mapping.
     """
     node: 'Node'
     child_specifiers: list[int]
