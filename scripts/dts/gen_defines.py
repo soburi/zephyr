@@ -590,21 +590,21 @@ def write_maps(node: edtlib.Node) -> None:
     macro = f"{node.z_path_id}_P_{basename}_map"
     macro2val = {}
 
-    for i, cd in enumerate(node.maps):
+    for i, mp in enumerate(node.maps):
         data = {}
 
-        for child_idx, val in enumerate(cd.child_specifiers):
+        for child_idx, val in enumerate(mp.child_specifiers):
             data[f"child_specifier_{child_idx}"] = val
-        for parent_idx, val in enumerate(cd.parent_specifiers):
+        for parent_idx, val in enumerate(mp.parent_specifiers):
             data[f"parent_specifier_{parent_idx}"] = val
 
-        node = cd.node
+        node = mp.node
         pname = edtlib.str_as_token(str2ident(""))
 
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
         macro2val[f"{macro}_IDX_{i}_EXISTS"] = 1
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_PH
-        macro2val[f"{macro}_IDX_{i}_PH"] = f"DT_{cd.parent.z_path_id}"
+        macro2val[f"{macro}_IDX_{i}_PH"] = f"DT_{mp.parent.z_path_id}"
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_VAL_<VAL>
         for cell, val in data.items():
             macro2val[f"{macro}_IDX_{i}_VAL_{str2ident(cell)}"] = val
@@ -622,7 +622,6 @@ def write_maps(node: edtlib.Node) -> None:
                for cell in data))
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_NUM_CELLS
         macro2val[f"{macro}_IDX_{i}_NUM_CELLS"] = len(data)
-
 
     prop_id = f"{basename}_map"
     plen = len(node.maps)
@@ -651,19 +650,19 @@ def write_maps(node: edtlib.Node) -> None:
     macro2val[f"{macro}_LEN"] = plen
     macro2val[f"{macro}_EXISTS"] = 1
 
-    for i, cd in enumerate(node.maps):
+    for i, mp in enumerate(node.maps):
         args = []
-        args.extend([str(v) for v in cd.child_specifiers])
-        args.extend(["DT_" + node_z_path_id(cd.parent)])
-        args.extend([str(v) for v in cd.parent_specifiers])
+        args.extend([str(v) for v in mp.child_specifiers])
+        args.extend(["DT_" + node_z_path_id(mp.parent)])
+        args.extend([str(v) for v in mp.parent_specifiers])
 
         macro2val[f"{macro}_MAP_IDX_{i}"] = ", ".join(args)
         macro2val[f"{macro}_MAP_IDX_{i}_CHILD_SPECIFIER_POS"] = 0
-        macro2val[f"{macro}_MAP_IDX_{i}_CHILD_SPECIFIER_LEN"] = len(cd.child_specifiers)
-        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_POS"] = len(cd.child_specifiers)
+        macro2val[f"{macro}_MAP_IDX_{i}_CHILD_SPECIFIER_LEN"] = len(mp.child_specifiers)
+        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_POS"] = len(mp.child_specifiers)
         macro2val[f"{macro}_MAP_IDX_{i}_PARENT_LEN"] = 1
-        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_SPECIFIER_POS"] = len(cd.child_specifiers) + 1
-        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_SPECIFIER_LEN"] = len(cd.parent_specifiers)
+        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_SPECIFIER_POS"] = len(mp.child_specifiers) + 1
+        macro2val[f"{macro}_MAP_IDX_{i}_PARENT_SPECIFIER_LEN"] = len(mp.parent_specifiers)
 
     for mc, val in macro2val.items():
         out_dt_define(mc, val)
