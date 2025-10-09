@@ -908,14 +908,14 @@ class NexusMap:
 
     These attributes are available on ControllerAndData objects:
 
-    node:
+    child_specifiers:
       The Node instance the property appears on
 
-    controller:
+    parent:
       The Node instance for the controller (e.g. the controller the interrupt
       gets sent to for interrupts)
 
-    data:
+    parent_specifiers:
       A dictionary that maps names from the *-cells key in the binding for the
       controller to data values, e.g. {"pin": 4, "flags": 0} for the example
       above.
@@ -930,7 +930,6 @@ class NexusMap:
     parent: 'Node'
     parent_specifiers: list[int]
     basename: Optional[str]
-
 
 class Node:
     """
