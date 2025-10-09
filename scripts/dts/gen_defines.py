@@ -612,14 +612,15 @@ def write_maps(node: edtlib.Node) -> None:
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
         macro2val[f"{macro}_IDX_{i}_EXISTS"] = 1
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL
-        macro2val[f"{macro}_IDX_{i}_FOREACH_CELL(fn)"] = (
-                ' \\\n\t'.join(f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})'
-                               for cell in data))
+        macro2val[f"{macro}_IDX_{i}_FOREACH_CELL(fn)"] = ' \\\n\t'.join(
+            f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})' for cell in data
+        )
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL_SEP
         macro2val[f"{macro}_IDX_{i}_FOREACH_CELL_SEP(fn, sep)"] = (
             ' DT_DEBRACKET_INTERNAL sep \\\n\t'.join(
-                f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})'
-               for cell in data))
+                f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})' for cell in data
+            )
+        )
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_NUM_CELLS
         macro2val[f"{macro}_IDX_{i}_NUM_CELLS"] = len(data)
 
