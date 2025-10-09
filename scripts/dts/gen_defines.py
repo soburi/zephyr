@@ -591,15 +591,16 @@ def write_maps(node: edtlib.Node) -> None:
     macro2val = {}
 
     for i, mp in enumerate(node.maps):
-        data = {}
+        node = mp.node
 
+        data = {}
         for child_idx, val in enumerate(mp.child_specifiers):
             data[f"child_specifier_{child_idx}"] = val
         for parent_idx, val in enumerate(mp.parent_specifiers):
             data[f"parent_specifier_{parent_idx}"] = val
 
-        node = mp.node
-        pname = edtlib.str_as_token(str2ident(""))
+        # To keep the grammar simple, the internal representation
+        # uses the phandle-array syntax.
 
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_EXISTS
         macro2val[f"{macro}_IDX_{i}_EXISTS"] = 1
@@ -613,12 +614,12 @@ def write_maps(node: edtlib.Node) -> None:
         macro2val[f"{macro}_IDX_{i}_EXISTS"] = 1
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL
         macro2val[f"{macro}_IDX_{i}_FOREACH_CELL(fn)"] = ' \\\n\t'.join(
-            f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})' for cell in data
+            f'fn(DT_{node.z_path_id}, , {i}, {cell})' for cell in data
         )
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_FOREACH_CELL_SEP
         macro2val[f"{macro}_IDX_{i}_FOREACH_CELL_SEP(fn, sep)"] = (
             ' DT_DEBRACKET_INTERNAL sep \\\n\t'.join(
-                f'fn(DT_{node.z_path_id}, {pname}, {i}, {cell})' for cell in data
+                f'fn(DT_{node.z_path_id}, , {i}, {cell})' for cell in data
             )
         )
         # DT_N_<node-id>_P_<prop-id>_IDX_<i>_NUM_CELLS
