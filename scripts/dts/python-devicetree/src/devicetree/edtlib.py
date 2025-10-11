@@ -1364,30 +1364,35 @@ class Node:
 
         res: list[MapEntry] = []
 
-        def count_cells_num(
-            node: dtlib_Node, specifier: str, include_address_cells: bool
-        ) -> int:
+        def count_cells_num(node: dtlib_Node, specifier: str) -> int:
             """
             Calculate the number of cells in the node.
-            When calculating the number of interrupt cells,
-            add up the values of the address cells.
             """
 
-            num = node.props[f"#{specifier}-cells"].to_num()
+            return node.props[f"#{specifier}-cells"].to_num()
 
-            if include_address_cells and specifier == "interrupt":
-                parent_props = None
-                if node.parent:
-                    parent_props = node.parent.props
+        def interrupt_address_cells(node: dtlib_Node) -> int:
+            parent_props = None
+            if node.parent:
+                parent_props = node.parent.props
 
-                if "#address-cells" in node.props:
-                    num = num + node.props["#address-cells"].to_num()
-                elif parent_props and "#address-cells" in parent_props:
-                    num = num + parent_props["#address-cells"].to_num()
-                else:
-                    num = num + 2
+            if "#address-cells" in node.props:
+                return node.props["#address-cells"].to_num()
+            if parent_props and "#address-cells" in parent_props:
+                return parent_props["#address-cells"].to_num()
+
+            return 2
+
+        def count_child_specifier_cells(prop: dtlib_Property, specifier: str) -> int:
+            num = count_cells_num(prop.node, specifier)
+
+            if specifier == "interrupt":
+                num += interrupt_address_cells(prop.node)
 
             return num
+
+        def count_parent_specifier_cells(node: dtlib_Node, specifier: str) -> int:
+            return count_cells_num(node, specifier)
 
         for prop in [v for k, v in self._node.props.items() if k.endswith("-map")]:
             specifier_space = prop.name[:-4]  # Strip '-map'
@@ -1397,11 +1402,7 @@ class Node:
                     # Not enough room for phandle
                     _err("bad value for " + repr(prop))
 
-                child_specifier_num = count_cells_num(
-                    prop.node,
-                    specifier_space,
-                    include_address_cells=(specifier_space == "interrupt"),
-                )
+                child_specifier_num = count_child_specifier_cells(prop, specifier_space)
 
                 child_specifiers = to_nums(raw[: 4 * child_specifier_num])
                 raw = raw[4 * child_specifier_num :]
@@ -1416,10 +1417,8 @@ class Node:
                 if parent is None:
                     _err("parent cannot be found from: " + repr(parent_node))
 
-                parent_specifier_num = count_cells_num(
-                    parent_node,
-                    specifier_space,
-                    include_address_cells=False,
+                parent_specifier_num = count_parent_specifier_cells(
+                    parent_node, specifier_space
                 )
                 parent_specifiers = to_nums(raw[: 4 * parent_specifier_num])
                 raw = raw[4 * parent_specifier_num :]
