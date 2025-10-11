@@ -150,7 +150,7 @@ def test_maps():
         node=nexus,
         parent=controller_0,
         child_specifiers=[0, 0, 0, 0],
-        parent_specifiers=[0, 0],
+        parent_specifiers=[0],
         basename="interrupt",
     )
 
@@ -158,7 +158,7 @@ def test_maps():
         node=nexus,
         parent=controller_1,
         child_specifiers=[0, 0, 0, 1],
-        parent_specifiers=[0, 0, 0, 1],
+        parent_specifiers=[0, 1],
         basename="interrupt",
     )
 
@@ -166,7 +166,7 @@ def test_maps():
         node=nexus,
         parent=controller_2,
         child_specifiers=[0, 0, 0, 2],
-        parent_specifiers=[0, 0, 0, 0, 0, 2],
+        parent_specifiers=[0, 0, 2],
         basename="interrupt",
     )
 
@@ -174,7 +174,7 @@ def test_maps():
         node=nexus,
         parent=controller_0,
         child_specifiers=[0, 1, 0, 0],
-        parent_specifiers=[0, 3],
+        parent_specifiers=[3],
         basename="interrupt",
     )
 
@@ -182,7 +182,7 @@ def test_maps():
         node=nexus,
         parent=controller_1,
         child_specifiers=[0, 1, 0, 1],
-        parent_specifiers=[0, 0, 0, 4],
+        parent_specifiers=[0, 4],
         basename="interrupt",
     )
 
@@ -190,7 +190,7 @@ def test_maps():
         node=nexus,
         parent=controller_2,
         child_specifiers=[0, 1, 0, 2],
-        parent_specifiers=[0, 0, 0, 0, 0, 5],
+        parent_specifiers=[0, 0, 5],
         basename="interrupt",
     )
 

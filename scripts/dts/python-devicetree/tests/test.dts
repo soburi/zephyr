@@ -72,29 +72,29 @@
 		};
 		nexus {
 			#interrupt-cells = <2>;
-			interrupt-map = <
-				0 0  0 0  &{/interrupt-map-test/controller-0}  0      0
-				0 0  0 1  &{/interrupt-map-test/controller-1}  0 0    0 1
-				0 0  0 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 2
-				0 1  0 0  &{/interrupt-map-test/controller-0}  0      3
-				0 1  0 1  &{/interrupt-map-test/controller-1}  0 0    0 4
-				0 1  0 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 5>;
+                        interrupt-map = <
+                                0 0  0 0  &{/interrupt-map-test/controller-0}  0
+                                0 0  0 1  &{/interrupt-map-test/controller-1}  0 1
+                                0 0  0 2  &{/interrupt-map-test/controller-2}  0 0 2
+                                0 1  0 0  &{/interrupt-map-test/controller-0}  3
+                                0 1  0 1  &{/interrupt-map-test/controller-1}  0 4
+                                0 1  0 2  &{/interrupt-map-test/controller-2}  0 0 5>;
 		};
 		nexus-0 {
 			#address-cells = <0>;
 			#interrupt-cells = <2>;
-			interrupt-map = <
-				0 0  &{/interrupt-map-test/controller-0}  0      0
-				0 1  &{/interrupt-map-test/controller-1}  0 0    0 1
-				1 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 2>;
+                        interrupt-map = <
+                                0 0  &{/interrupt-map-test/controller-0}  0
+                                0 1  &{/interrupt-map-test/controller-1}  0 1
+                                1 2  &{/interrupt-map-test/controller-2}  0 0 2>;
 		};
 		nexus-1 {
 			#address-cells = <1>;
 			#interrupt-cells = <1>;
-			interrupt-map = <
-				4 0  &{/interrupt-map-test/controller-0}  0      3
-				4 1  &{/interrupt-map-test/controller-1}  0 0    0 4
-				4 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 5>;
+                        interrupt-map = <
+                                4 0  &{/interrupt-map-test/controller-0}  3
+                                4 1  &{/interrupt-map-test/controller-1}  0 4
+                                4 2  &{/interrupt-map-test/controller-2}  0 0 5>;
 		};
 		node@0 {
 			reg = <0 0>;
