@@ -53,25 +53,19 @@ struct spi_esp32_config {
 };
 
 struct spi_esp32_data {
-        struct spi_context ctx;
-        spi_hal_context_t hal;
-        spi_hal_config_t hal_config;
+	struct spi_context ctx;
+	spi_hal_context_t hal;
+	spi_hal_config_t hal_config;
 #ifdef SOC_GDMA_SUPPORTED
-        gdma_hal_context_t hal_gdma;
+	gdma_hal_context_t hal_gdma;
 #endif
-        spi_hal_timing_conf_t timing_config;
-        spi_hal_dev_config_t dev_config;
-        spi_hal_trans_config_t trans_config;
-        uint8_t dfs;
-        uint8_t dfs_bits;
-        bool frame_unaligned;
-        bool current_half_duplex;
-        bool current_sio;
-        uint32_t current_frequency;
-        uint32_t last_operation;
-        lldesc_t dma_desc_tx;
-        lldesc_t dma_desc_rx;
-        uint32_t clock_source_hz;
+	spi_hal_timing_conf_t timing_config;
+	spi_hal_dev_config_t dev_config;
+	spi_hal_trans_config_t trans_config;
+	uint8_t dfs;
+	lldesc_t dma_desc_tx;
+	lldesc_t dma_desc_rx;
+	uint32_t clock_source_hz;
 };
 
 #endif /* ZEPHYR_DRIVERS_SPI_ESP32_SPIM_H_ */

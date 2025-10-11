@@ -10,7 +10,6 @@
 #include <hal/spi_hal.h>
 #include <esp_attr.h>
 #include <esp_clk_tree.h>
-#include <errno.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(esp32_spi, CONFIG_SPI_LOG_LEVEL);
@@ -25,7 +24,6 @@ LOG_MODULE_REGISTER(esp32_spi, CONFIG_SPI_LOG_LEVEL);
 #include <zephyr/drivers/dma/dma_esp32.h>
 #endif
 #include <zephyr/drivers/clock_control.h>
-#include <zephyr/sys/util.h>
 #include "spi_context.h"
 #include "spi_esp32_spim.h"
 
@@ -124,32 +122,20 @@ static int IRAM_ATTR spi_esp32_transfer(const struct device *dev)
 {
 	struct spi_esp32_data *data = dev->data;
 	const struct spi_esp32_config *cfg = dev->config;
-        struct spi_context *ctx = &data->ctx;
-        spi_hal_context_t *hal = &data->hal;
-        spi_hal_dev_config_t *hal_dev = &data->dev_config;
-        spi_hal_trans_config_t *hal_trans = &data->trans_config;
-        size_t chunk_len_frames = spi_context_max_continuous_chunk(&data->ctx);
-        size_t chunk_bit_len = chunk_len_frames * data->dfs_bits;
-        size_t max_buf_sz =
-                cfg->dma_enabled ? SPI_DMA_MAX_BUFFER_SIZE : SOC_SPI_MAXIMUM_BUFFER_SIZE;
-        size_t transfer_len_bytes = MIN(DIV_ROUND_UP(chunk_bit_len, 8U), max_buf_sz);
-        size_t bit_len = MIN(chunk_bit_len, transfer_len_bytes * 8U);
-        size_t transfer_len_frames = data->dfs_bits ? (bit_len / data->dfs_bits) : 0U;
-
-        if (transfer_len_frames == 0U && chunk_len_frames > 0U) {
-                LOG_ERR("Frame size %u bits exceeds controller buffer capacity (%zu bytes)",
-                        data->dfs_bits, max_buf_sz);
-                return -EMSGSIZE;
-        }
-
-        bit_len = transfer_len_frames * data->dfs_bits;
-        transfer_len_bytes = DIV_ROUND_UP(bit_len, 8U);
-        uint8_t *rx_temp = NULL;
-        uint8_t *tx_temp = NULL;
-        size_t dma_len_tx =
-                MIN(DIV_ROUND_UP(ctx->tx_len * data->dfs_bits, 8U), SPI_DMA_MAX_BUFFER_SIZE);
-        size_t dma_len_rx =
-                MIN(DIV_ROUND_UP(ctx->rx_len * data->dfs_bits, 8U), SPI_DMA_MAX_BUFFER_SIZE);
+	struct spi_context *ctx = &data->ctx;
+	spi_hal_context_t *hal = &data->hal;
+	spi_hal_dev_config_t *hal_dev = &data->dev_config;
+	spi_hal_trans_config_t *hal_trans = &data->trans_config;
+	size_t chunk_len_bytes = spi_context_max_continuous_chunk(&data->ctx) * data->dfs;
+	size_t max_buf_sz =
+		cfg->dma_enabled ? SPI_DMA_MAX_BUFFER_SIZE : SOC_SPI_MAXIMUM_BUFFER_SIZE;
+	size_t transfer_len_bytes = MIN(chunk_len_bytes, max_buf_sz);
+	size_t transfer_len_frames = transfer_len_bytes / data->dfs;
+	size_t bit_len = transfer_len_bytes << 3;
+	uint8_t *rx_temp = NULL;
+	uint8_t *tx_temp = NULL;
+	size_t dma_len_tx = MIN(ctx->tx_len * data->dfs, SPI_DMA_MAX_BUFFER_SIZE);
+	size_t dma_len_rx = MIN(ctx->rx_len * data->dfs, SPI_DMA_MAX_BUFFER_SIZE);
 	bool prepare_data = true;
 	int err = 0;
 
@@ -192,12 +178,8 @@ static int IRAM_ATTR spi_esp32_transfer(const struct device *dev)
 
 	hal_trans->send_buffer = tx_temp ? tx_temp : (uint8_t *)ctx->tx_buf;
 	hal_trans->rcv_buffer = rx_temp ? rx_temp : ctx->rx_buf;
-	if (cfg->dma_enabled) {
-	        bit_len = bit_len ? bit_len : 8;
-	}
-
-	hal_trans->tx_bitlen = ctx->tx_buf ? bit_len : 0;
-	hal_trans->rx_bitlen = ctx->rx_buf ? bit_len : 0;
+	hal_trans->tx_bitlen = bit_len;
+	hal_trans->rx_bitlen = bit_len;
 
 	/* keep cs line active until last transmission */
 	hal_trans->cs_keep_active =
@@ -415,145 +397,129 @@ static inline uint8_t spi_esp32_get_line_mode(uint16_t operation)
 }
 
 static int IRAM_ATTR spi_esp32_configure(const struct device *dev,
-                                         const struct spi_config *spi_cfg)
+					 const struct spi_config *spi_cfg)
 {
-        const struct spi_esp32_config *cfg = dev->config;
-        struct spi_esp32_data *data = dev->data;
-        struct spi_context *ctx = &data->ctx;
-        spi_hal_context_t *hal = &data->hal;
-        spi_hal_dev_config_t *hal_dev = &data->dev_config;
-        bool config_changed = !spi_context_configured(ctx, spi_cfg);
-        bool operation_changed = (data->last_operation != spi_cfg->operation);
-        bool freq_changed = (data->current_frequency != spi_cfg->frequency);
-        bool request_half_duplex = (spi_cfg->operation & SPI_HALF_DUPLEX) != 0U;
-        bool use_half_duplex = cfg->half_duplex || request_half_duplex;
-        bool use_sio = cfg->sio && use_half_duplex;
-        bool io_mode_changed = (use_half_duplex != data->current_half_duplex) ||
-                               (use_sio != data->current_sio);
-        int freq = 0;
+	const struct spi_esp32_config *cfg = dev->config;
+	struct spi_esp32_data *data = dev->data;
+	struct spi_context *ctx = &data->ctx;
+	spi_hal_context_t *hal = &data->hal;
+	spi_hal_dev_config_t *hal_dev = &data->dev_config;
+	int freq;
 
-        data->last_operation = spi_cfg->operation;
-
-        if (config_changed) {
-                ctx->config = spi_cfg;
-        }
-
-        if (request_half_duplex && !cfg->half_duplex && !cfg->sio) {
-                LOG_ERR("Half-duplex not supported");
-                return -ENOTSUP;
-        }
-
-        if (spi_cfg->operation & SPI_OP_MODE_SLAVE) {
-                LOG_ERR("Slave mode not supported");
-                return -ENOTSUP;
-        }
-
-        if (spi_cfg->operation & SPI_MODE_LOOP) {
-                LOG_ERR("Loopback mode is not supported");
-                return -ENOTSUP;
-        }
-
-        if (config_changed) {
-                hal_dev->cs_pin_id = ctx->config->slave;
-
-                int ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
-
-                if (ret) {
-                        LOG_ERR("Failed to configure SPI pins");
-                        return ret;
-                }
-        }
-
-        if (config_changed || freq_changed || io_mode_changed) {
-                spi_hal_timing_param_t timing_param = {
-                        .half_duplex = use_half_duplex,
-                        .no_compensate = hal_dev->no_compensate,
-                        .expected_freq = spi_cfg->frequency,
-                        .duty_cycle = cfg->duty_cycle == 0 ? 128 : cfg->duty_cycle,
-                        .input_delay_ns = cfg->input_delay_ns,
-                        .use_gpio = !cfg->use_iomux,
-                        .clk_src_hz = data->clock_source_hz,
-                };
-
-                spi_hal_cal_clock_conf(&timing_param, &freq, &hal_dev->timing_conf);
-                data->trans_config.dummy_bits = hal_dev->timing_conf.timing_dummy;
-        }
-
-        if (config_changed || operation_changed) {
-                hal_dev->tx_lsbfirst = spi_cfg->operation & SPI_TRANSFER_LSB ? 1 : 0;
-                hal_dev->rx_lsbfirst = spi_cfg->operation & SPI_TRANSFER_LSB ? 1 : 0;
-
-                data->trans_config.line_mode.data_lines =
-                        spi_esp32_get_line_mode(spi_cfg->operation);
-
-                /* multiline for command and address not supported */
-                data->trans_config.line_mode.addr_lines = 1;
-                data->trans_config.line_mode.cmd_lines = 1;
-
-                hal_dev->mode = 0;
-                if (SPI_MODE_GET(spi_cfg->operation) & SPI_MODE_CPHA) {
-                        hal_dev->mode = BIT(0);
-                }
-                if (SPI_MODE_GET(spi_cfg->operation) & SPI_MODE_CPOL) {
-                        hal_dev->mode |= BIT(1);
-                }
-        }
-
-        if (!spi_cs_is_gpio(spi_cfg) && (config_changed || operation_changed)) {
-                hal_dev->cs_hold = cfg->cs_hold;
-                hal_dev->cs_setup = cfg->cs_setup;
-        }
-
-        hal_dev->half_duplex = use_half_duplex;
-        hal_dev->sio = use_sio;
-
-        if (config_changed || freq_changed || operation_changed || io_mode_changed) {
-                spi_hal_setup_device(hal, hal_dev);
-
-#ifndef CONFIG_SOC_SERIES_ESP32
-                spi_dev_t *hw = hal->hw;
-
-                if (cfg->line_idle_low) {
-                        hw->ctrl.d_pol = 0;
-                        hw->ctrl.q_pol = 0;
-                } else {
-                        hw->ctrl.d_pol = 1;
-                        hw->ctrl.q_pol = 1;
-                }
-#endif
-
-#if (defined(CONFIG_SOC_SERIES_ESP32S3) || defined(CONFIG_SOC_SERIES_ESP32C2) ||                   \
-        defined(CONFIG_SOC_SERIES_ESP32C3) || defined(CONFIG_SOC_SERIES_ESP32C6)) &&               \
-        !defined(DT_SPI_CTX_HAS_NO_CS_GPIOS)
-                if ((config_changed || operation_changed || io_mode_changed) &&
-                    (ctx->num_cs_gpios != 0) && (hal_dev->mode & (SPI_MODE_CPOL | SPI_MODE_CPHA))) {
-                        spi_esp32_transfer(dev);
-                }
-#endif
-
-                data->current_half_duplex = use_half_duplex;
-                data->current_sio = use_sio;
-                data->current_frequency = spi_cfg->frequency;
-        }
-
-        return 0;
-}
-
-static inline void spi_esp32_set_frame_size(struct spi_esp32_data *data,
-	                                    const struct spi_config *spi_cfg)
-{
-	uint8_t bits = SPI_WORD_SIZE_GET(spi_cfg->operation);
-
-	if (bits == 0U) {
-	        bits = 8U;
-	} else if (bits > 32U) {
-	        LOG_WRN("Unsupported dfs, 8-bit size will be used");
-	        bits = 8U;
+	if (spi_context_configured(ctx, spi_cfg)) {
+		return 0;
 	}
 
-        data->dfs_bits = bits;
-        data->dfs = DIV_ROUND_UP(bits, 8U);
-        data->frame_unaligned = (bits % 8U) != 0U;
+	ctx->config = spi_cfg;
+
+	bool request_half_duplex = (spi_cfg->operation & SPI_HALF_DUPLEX) != 0U;
+
+	if (request_half_duplex && !cfg->half_duplex && !cfg->sio) {
+		LOG_ERR("Half-duplex not supported");
+		return -ENOTSUP;
+	}
+
+	if (spi_cfg->operation & SPI_OP_MODE_SLAVE) {
+		LOG_ERR("Slave mode not supported");
+		return -ENOTSUP;
+	}
+
+	if (spi_cfg->operation & SPI_MODE_LOOP) {
+		LOG_ERR("Loopback mode is not supported");
+		return -ENOTSUP;
+	}
+
+	hal_dev->cs_pin_id = ctx->config->slave;
+	int ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
+
+	if (ret) {
+		LOG_ERR("Failed to configure SPI pins");
+		return ret;
+	}
+
+	hal_dev->half_duplex = cfg->half_duplex || request_half_duplex;
+	hal_dev->sio = cfg->sio && hal_dev->half_duplex;
+
+	/* input parameters to calculate timing configuration */
+	spi_hal_timing_param_t timing_param = {
+		.half_duplex = hal_dev->half_duplex,
+		.no_compensate = hal_dev->no_compensate,
+		.expected_freq = spi_cfg->frequency,
+		.duty_cycle = cfg->duty_cycle == 0 ? 128 : cfg->duty_cycle,
+		.input_delay_ns = cfg->input_delay_ns,
+		.use_gpio = !cfg->use_iomux,
+		.clk_src_hz = data->clock_source_hz,
+	};
+
+	spi_hal_cal_clock_conf(&timing_param, &freq, &hal_dev->timing_conf);
+
+	data->trans_config.dummy_bits = hal_dev->timing_conf.timing_dummy;
+
+	hal_dev->tx_lsbfirst = spi_cfg->operation & SPI_TRANSFER_LSB ? 1 : 0;
+	hal_dev->rx_lsbfirst = spi_cfg->operation & SPI_TRANSFER_LSB ? 1 : 0;
+
+	data->trans_config.line_mode.data_lines = spi_esp32_get_line_mode(spi_cfg->operation);
+
+	/* multiline for command and address not supported */
+	data->trans_config.line_mode.addr_lines = 1;
+	data->trans_config.line_mode.cmd_lines = 1;
+
+	/* SPI mode */
+	hal_dev->mode = 0;
+	if (SPI_MODE_GET(spi_cfg->operation) & SPI_MODE_CPHA) {
+		hal_dev->mode = BIT(0);
+	}
+	if (SPI_MODE_GET(spi_cfg->operation) & SPI_MODE_CPOL) {
+		hal_dev->mode |= BIT(1);
+	}
+
+	/* Chip select setup and hold times */
+	/* GPIO CS have their own delay parameter*/
+	if (!spi_cs_is_gpio(spi_cfg)) {
+		hal_dev->cs_hold = cfg->cs_hold;
+		hal_dev->cs_setup = cfg->cs_setup;
+	}
+
+	spi_hal_setup_device(hal, hal_dev);
+
+	/* Workaround to handle default state of MISO and MOSI lines */
+#ifndef CONFIG_SOC_SERIES_ESP32
+	spi_dev_t *hw = hal->hw;
+
+	if (cfg->line_idle_low) {
+		hw->ctrl.d_pol = 0;
+		hw->ctrl.q_pol = 0;
+	} else {
+		hw->ctrl.d_pol = 1;
+		hw->ctrl.q_pol = 1;
+	}
+#endif
+
+	/*
+	 * Workaround for ESP32S3 and ESP32Cx SoC's. This dummy transaction is needed
+	 * to sync CLK and software controlled CS when SPI is in mode 3
+	 */
+#if (defined(CONFIG_SOC_SERIES_ESP32S3) || defined(CONFIG_SOC_SERIES_ESP32C2) ||                   \
+	defined(CONFIG_SOC_SERIES_ESP32C3) || defined(CONFIG_SOC_SERIES_ESP32C6)) &&               \
+	!defined(DT_SPI_CTX_HAS_NO_CS_GPIOS)
+	if ((ctx->num_cs_gpios != 0) && (hal_dev->mode & (SPI_MODE_CPOL | SPI_MODE_CPHA))) {
+		spi_esp32_transfer(dev);
+	}
+#endif
+
+	return 0;
+}
+
+static inline uint8_t spi_esp32_get_frame_size(const struct spi_config *spi_cfg)
+{
+	uint8_t dfs = SPI_WORD_SIZE_GET(spi_cfg->operation);
+
+	dfs /= 8;
+	if ((dfs == 0) || (dfs > 4)) {
+		LOG_WRN("Unsupported dfs, 1-byte size will be used");
+		dfs = 1;
+	}
+	return dfs;
 }
 
 static int transceive(const struct device *dev,
@@ -575,7 +541,7 @@ static int transceive(const struct device *dev,
 
 	spi_context_lock(&data->ctx, asynchronous, cb, userdata, spi_cfg);
 
-	spi_esp32_set_frame_size(data, spi_cfg);
+	data->dfs = spi_esp32_get_frame_size(spi_cfg);
 
 	spi_context_buffers_setup(&data->ctx, tx_bufs, rx_bufs, data->dfs);
 
@@ -701,9 +667,9 @@ static DEVICE_API(spi, spi_api) = {
 		.use_iomux = DT_INST_PROP(idx, use_iomux),	\
 		.dma_enabled = DT_INST_PROP(idx, dma_enabled),	\
 		.dma_host = DT_INST_PROP(idx, dma_host),	\
-		.half_duplex = DT_INST_PROP(idx, half_duplex),	\
-		.sio = DT_INST_PROP(idx, sio),	\
 		SPI_DMA_CFG(idx),				\
+		.half_duplex = DT_INST_PROP(idx, half_duplex), \
+		.sio = DT_INST_PROP(idx, sio), \
 		.cs_setup = DT_INST_PROP_OR(idx, cs_setup_time, 0), \
 		.cs_hold = DT_INST_PROP_OR(idx, cs_hold_time, 0), \
 		.line_idle_low = DT_INST_PROP(idx, line_idle_low), \
