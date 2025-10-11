@@ -30,3 +30,9 @@ by manipulating sys.path for now.
 Eventually, as APIs stabilize, the python-devicetree code in this
 repository will disappear, and a standalone repository will be the
 'main' one.
+
+Additional utilities in this directory include helper scripts for
+exploring the binding metadata.  For example, ``list_bus_nodes.py``
+summarizes bindings that define a bus or appear on one, including the
+binding's ``compatible`` string, making it easier to review the
+supported bus topologies.
