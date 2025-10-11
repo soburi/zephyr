@@ -414,8 +414,8 @@ static int IRAM_ATTR spi_esp32_configure(const struct device *dev,
 
 	bool request_half_duplex = (spi_cfg->operation & SPI_HALF_DUPLEX) != 0U;
 
-	if (request_half_duplex && !cfg->half_duplex && !cfg->sio) {
-		LOG_ERR("Half-duplex not supported");
+	if (request_half_duplex && !cfg->half_duplex) {
+		LOG_ERR("Half-duplex requested but not enabled in devicetree");
 		return -ENOTSUP;
 	}
 
