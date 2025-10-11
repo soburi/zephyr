@@ -1364,26 +1364,32 @@ class Node:
 
         res: list[list[MapEntry]] = []
 
-        def count_cells_num(node: dtlib_Node, specifier: str) -> int:
-            """
-            Calculate the number of cells in the node.
-            When calculating the number of interrupt cells,
-            add up the values of the address cells.
+        def count_cells_num(
+            node: dtlib_Node,
+            specifier: str,
+            *,
+            include_interrupt_address_cells: bool = False,
+        ) -> int:
+            """Return the number of cells for *specifier* in *node*.
+
+            ``interrupt`` map entries begin with the child unit address.  When
+            requested (for the child portion of a mapping), fold in the
+            ``#address-cells`` count from the child side.  Missing
+            ``#address-cells`` properties default to zero, as permitted by the
+            Devicetree specification.
             """
 
             num = node.props[f"#{specifier}-cells"].to_num()
 
-            if specifier == "interrupt":
-                parent_props = None
-                if node.parent:
-                    parent_props = node.parent.props
+            if specifier == "interrupt" and include_interrupt_address_cells:
+                address_cells = 0
 
                 if "#address-cells" in node.props:
-                    num = num + node.props["#address-cells"].to_num()
-                elif parent_props and "#address-cells" in parent_props:
-                    num = num + parent_props["#address-cells"].to_num()
-                else:
-                    _err("Neither the node nor its parent has `#address-cells` property")
+                    address_cells = node.props["#address-cells"].to_num()
+                elif node.parent and "#address-cells" in node.parent.props:
+                    address_cells = node.parent.props["#address-cells"].to_num()
+
+                num += address_cells
 
             return num
 
@@ -1396,7 +1402,11 @@ class Node:
                     # Not enough room for phandle
                     _err("bad value for " + repr(prop))
 
-                child_specifier_num = count_cells_num(prop.node, specifier_space)
+                child_specifier_num = count_cells_num(
+                    prop.node,
+                    specifier_space,
+                    include_interrupt_address_cells=True,
+                )
 
                 child_specifiers = to_nums(raw[: 4 * child_specifier_num])
                 raw = raw[4 * child_specifier_num :]
@@ -1412,8 +1422,25 @@ class Node:
                     _err("parent cannot be found from: " + repr(parent_node))
 
                 parent_specifier_num = count_cells_num(parent_node, specifier_space)
-                parent_specifiers = to_nums(raw[: 4 * parent_specifier_num])
-                raw = raw[4 * parent_specifier_num :]
+                parent_total_cells = count_cells_num(
+                    parent_node,
+                    specifier_space,
+                    include_interrupt_address_cells=True,
+                )
+                if parent_total_cells < parent_specifier_num:
+                    _err(
+                        "parent specifier cell count is smaller than expected for "
+                        + repr(prop)
+                    )
+
+                parent_cells = to_nums(raw[: 4 * parent_total_cells])
+                raw = raw[4 * parent_total_cells :]
+
+                parent_address_cells = parent_total_cells - parent_specifier_num
+                if parent_address_cells:
+                    parent_specifiers = parent_cells[parent_address_cells:]
+                else:
+                    parent_specifiers = parent_cells
 
                 entries.append(
                     MapEntry(
