@@ -1,0 +1,37 @@
+# Copyright 2024 The Zephyr Authors
+# SPDX-License-Identifier: Apache-2.0
+
+description: Everest Semiconductor ES7210 quad-channel audio ADC
+
+compatible: "everest,es7210"
+
+include: [i2c-device.yaml]
+
+properties:
+  reg:
+    required: true
+
+  mclk-frequency:
+    type: int
+    description: Default master clock frequency in Hz used when the
+      runtime configuration does not provide a value.
+
+  mic-select:
+    type: int
+    default: 3
+    description: |
+      Bit mask describing which of the four microphone inputs are enabled.
+      Bit 0 selects MIC1, bit 1 selects MIC2, bit 2 selects MIC3 and bit 3
+      selects MIC4. The M5Stack CoreS3 family uses the first two channels.
+
+  mic-gain:
+    type: int
+    default: 11
+    description: |
+      Programmable gain amplifier step to apply to enabled microphones. The
+      value is expressed as the raw register field and must be in the range
+      0 (0 dB) to 14 (37.5 dB). Each step represents a 3 dB increment with
+      the exception of the last two values which are 34.5 dB and 36 dB.
+
+required:
+  - reg
