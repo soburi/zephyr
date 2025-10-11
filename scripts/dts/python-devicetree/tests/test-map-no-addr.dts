@@ -1,0 +1,20 @@
+/dts-v1/;
+
+/ {
+    map-no-addr {
+        #address-cells = <0>;
+        #size-cells = <0>;
+
+        controller: controller {
+            compatible = "interrupt-one-cell";
+            #interrupt-cells = <1>;
+            interrupt-controller;
+        };
+
+        nexus {
+            #address-cells = <0>;
+            #interrupt-cells = <1>;
+            interrupt-map = <0 &controller 5>;
+        };
+    };
+};

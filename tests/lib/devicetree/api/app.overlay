@@ -947,21 +947,28 @@
 		label = "FOO";
 	};
 
-	gpio-map-test {
-		connector {
-			compatible = "vnd,gpio-nexus";
-			#gpio-cells = <2>;
-			gpio-map = <1 2 &{/gpio-map-test/parent} 3
-				    4 5 &{/gpio-map-test/parent} 6>;
-			gpio-map-mask = <0xffffffff 0xffffffc0>;
-			gpio-map-pass-thru = <0x0 0x3f>;
+		gpio-map-test {
+			connector {
+				compatible = "vnd,gpio-nexus";
+				#gpio-cells = <2>;
+				#pwm-cells = <2>;
+				gpio-map = <1 2 &{/gpio-map-test/parent} 3
+					    4 5 &{/gpio-map-test/parent} 6>;
+				gpio-map-mask = <0xffffffff 0xffffffc0>;
+				gpio-map-pass-thru = <0x0 0x3f>;
+				pwm-map = <7 8 &{/gpio-map-test/pwm-parent} 9>;
+			};
+			parent {
+				compatible = "gpio-dst";
+				gpio-controller;
+				#gpio-cells = <1>;
+			};
+			pwm-parent {
+				compatible = "vnd,pwm-dst";
+				pwm-controller;
+				#pwm-cells = <1>;
+			};
 		};
-		parent {
-			compatible = "gpio-dst";
-			gpio-controller;
-			#gpio-cells = <1>;
-		};
-	};
 
 	interrupt-map-test {
 		#address-cells = <2>;

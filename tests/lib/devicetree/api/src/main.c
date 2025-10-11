@@ -3958,6 +3958,7 @@ ZTEST(devicetree_api, test_map)
 	zassert_equal(DT_PROP_BY_IDX(TEST_GPIO_CONNECTOR, gpio_map_pass_thru, 1), 0x3f);
 
 	zassert_equal(DT_PROP_LEN(TEST_GPIO_CONNECTOR, gpio_map), 2);
+	zassert_equal(DT_PROP_LEN(TEST_GPIO_CONNECTOR, pwm_map), 1);
 
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_LEN(TEST_GPIO_CONNECTOR, gpio_map, 0), 2);
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 1), 1);
@@ -3990,6 +3991,14 @@ ZTEST(devicetree_api, test_map)
 	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 1),
 		      0);
 	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(TEST_GPIO_CONNECTOR, gpio_map, 1, 0), 6);
+
+	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_LEN(TEST_GPIO_CONNECTOR, pwm_map, 0), 2);
+	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(TEST_GPIO_CONNECTOR, pwm_map, 0, 0), 7);
+	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(TEST_GPIO_CONNECTOR, pwm_map, 0, 1), 8);
+	zassert_str_equal(STRINGIFY(DT_MAP_ENTRY_PARENT_BY_IDX(TEST_GPIO_CONNECTOR, pwm_map, 0)),
+       "DT_N_S_gpio_map_test_S_pwm_parent");
+	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(TEST_GPIO_CONNECTOR, pwm_map, 0), 1);
+	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(TEST_GPIO_CONNECTOR, pwm_map, 0, 0), 9);
 
 	DT_FOREACH_MAP_ENTRY(TEST_INTERRUPT_NEXUS, interrupt_map, INTERRUPT_NEXUS_CHECK)
 	DT_FOREACH_MAP_ENTRY_SEP(TEST_INTERRUPT_NEXUS, interrupt_map, INTERRUPT_NEXUS_CHECK, ())

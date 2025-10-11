@@ -191,6 +191,25 @@ def test_maps():
         basename="interrupt",
     )
 
+
+def test_maps_interrupt_parent_without_address_cells():
+    with from_here():
+        edt = edtlib.EDT("test-map-no-addr.dts", ["test-bindings"])
+
+    nexus = edt.get_node("/map-no-addr/nexus")
+    controller = edt.get_node("/map-no-addr/controller")
+
+    assert nexus.maps == [
+        edtlib.MapEntry(
+            node=nexus,
+            parent=controller,
+            child_specifiers=[0],
+            parent_specifiers=[5],
+            basename="interrupt",
+        )
+    ]
+
+
 def test_ranges():
     '''Tests for the ranges property'''
     with from_here():
