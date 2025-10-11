@@ -288,6 +288,13 @@ Here are some more examples.
            required: true
            const: 1
 
+.. note::
+
+   The Devicetree Specification (v0.4, section 2.3.1) defines the default
+   number of address cells for a bus as two when ``#address-cells`` is not
+   present. Zephyr's ``edtlib`` mirrors this behaviour, so nodes that omit the
+   property remain valid unless a binding explicitly marks it as required.
+
        int-with-default:
            type: int
            default: 123
