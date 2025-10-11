@@ -44,6 +44,8 @@ struct spi_esp32_config {
 #else
 	int dma_clk_src;
 #endif
+	bool half_duplex;
+	bool sio;
 	int cs_setup;
 	int cs_hold;
 	bool line_idle_low;

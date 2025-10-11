@@ -1,0 +1,14 @@
+sample:
+  description: Raw SPI access to the CoreS3 LCD using 3-wire mode
+  name: m5stack_cores3_spi_lcd_raw
+
+common:
+  tags:
+    - display
+    - spi
+
+tests:
+  sample.boards.espressif.m5stack_cores3_spi_lcd_raw:
+    build_only: true
+    platform_allow:
+      - m5stack_cores3/esp32s3/procpu

@@ -1,0 +1,17 @@
+&spi2 {
+	status = "okay";
+	half-duplex;
+	sio;
+
+        lcd_spi: display@0 {
+                compatible = "zephyr,spi-device";
+                reg = <0>;
+                spi-max-frequency = <20000000>;
+                spi-interframe-delay-ns = <0>;
+                status = "okay";
+        };
+};
+
+&sd0 {
+	status = "disabled";
+};

@@ -401,14 +401,20 @@ static int IRAM_ATTR spi_esp32_configure(const struct device *dev,
 	spi_hal_dev_config_t *hal_dev = &data->dev_config;
 	int freq;
 
-	if (spi_context_configured(ctx, spi_cfg)) {
-		return 0;
-	}
+       /*
+        * Always reapply the hardware configuration so register state remains
+        * consistent across transactions even when the same spi_config pointer
+        * is reused.  The ESP32 HAL updates a number of user and clock
+        * registers as part of each transfer and these need to be reprogrammed
+        * before the next transaction, otherwise subsequent transfers inherit
+        * the modified state.
+        */
+       ctx->config = spi_cfg;
 
-	ctx->config = spi_cfg;
+	bool request_half_duplex = (spi_cfg->operation & SPI_HALF_DUPLEX) != 0U;
 
-	if (spi_cfg->operation & SPI_HALF_DUPLEX) {
-		LOG_ERR("Half-duplex not supported");
+	if (request_half_duplex && !cfg->half_duplex) {
+		LOG_ERR("Half-duplex requested but not enabled in devicetree");
 		return -ENOTSUP;
 	}
 
@@ -429,6 +435,9 @@ static int IRAM_ATTR spi_esp32_configure(const struct device *dev,
 		LOG_ERR("Failed to configure SPI pins");
 		return ret;
 	}
+
+	hal_dev->half_duplex = cfg->half_duplex || request_half_duplex;
+	hal_dev->sio = cfg->sio && hal_dev->half_duplex;
 
 	/* input parameters to calculate timing configuration */
 	spi_hal_timing_param_t timing_param = {
@@ -658,6 +667,8 @@ static DEVICE_API(spi, spi_api) = {
 		.dma_enabled = DT_INST_PROP(idx, dma_enabled),	\
 		.dma_host = DT_INST_PROP(idx, dma_host),	\
 		SPI_DMA_CFG(idx),				\
+		.half_duplex = DT_INST_PROP(idx, half_duplex), \
+		.sio = DT_INST_PROP(idx, sio), \
 		.cs_setup = DT_INST_PROP_OR(idx, cs_setup_time, 0), \
 		.cs_hold = DT_INST_PROP_OR(idx, cs_hold_time, 0), \
 		.line_idle_low = DT_INST_PROP(idx, line_idle_low), \
