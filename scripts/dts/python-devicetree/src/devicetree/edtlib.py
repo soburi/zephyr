@@ -1385,7 +1385,7 @@ class Node:
                 elif parent_props and "#address-cells" in parent_props:
                     num = num + parent_props["#address-cells"].to_num()
                 else:
-                    _err("Neither the node nor its parent has `#address-cells` property")
+                    num = num + 2
 
             return num
 
