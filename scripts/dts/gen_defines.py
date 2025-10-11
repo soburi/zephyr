@@ -20,7 +20,7 @@ import pathlib
 import pickle
 import re
 import sys
-from typing import Iterable, NoReturn, Optional
+from typing import Dict, Iterable, List, NoReturn, Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'python-devicetree',
                                 'src'))
@@ -586,53 +586,69 @@ def write_maps(node: edtlib.Node) -> None:
 
     out_comment("Map properties:")
 
-    basename = str2ident(node.maps[0].basename)
-    plen = len(node.maps)
-    prop_id = f"{basename}_map"
-    macro = f"{node.z_path_id}_P_{basename}_map"
-    macro2val = {}
+    maps_by_basename: Dict[str, List[edtlib.MapEntry]] = {}
+    basenames_in_order: List[str] = []
 
+    for entry in node.maps:
+        if entry.basename not in maps_by_basename:
+            maps_by_basename[entry.basename] = []
+            basenames_in_order.append(entry.basename)
+        maps_by_basename[entry.basename].append(entry)
 
-    # _LEN and _EXISTS share the grammer with `prop` element.
+    for basename in basenames_in_order:
+        entries = maps_by_basename[basename]
 
-    macro2val[f"{macro}_LEN"] = plen
-    macro2val[f"{macro}_EXISTS"] = 1
+        ident = str2ident(basename)
+        prop_id = f"{ident}_map"
+        macro = f"{node.z_path_id}_P_{prop_id}"
+        macro2val: Dict[str, object] = {}
 
-    # Map node specific definitions
-    for i, mp in enumerate(node.maps):
-        macro2val[f"{macro}_MAP_ENTRY_{i}_EXISTS"] = 1
+        # _LEN and _EXISTS share the grammar with `prop` element.
+        macro2val[f"{macro}_LEN"] = len(entries)
+        macro2val[f"{macro}_EXISTS"] = 1
 
-        macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_LEN"] = len(mp.child_specifiers)
-        for n, sp in enumerate(mp.child_specifiers):
-            macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_IDX_{n}_EXISTS"] = 1
-            macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_IDX_{n}"] = sp
+        # Map node specific definitions
+        for i, mp in enumerate(entries):
+            macro2val[f"{macro}_MAP_ENTRY_{i}_EXISTS"] = 1
 
-        macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT"] = "DT_" + node_z_path_id(mp.parent)
-        macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_SPECIFIER_LEN"] = len(mp.parent_specifiers)
-        for n, sp in enumerate(mp.parent_specifiers):
-            macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_SPECIFIER_IDX_{n}_EXISTS"] = 1
-            macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_SPECIFIER_IDX_{n}"] = sp
+            macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_LEN"] = len(mp.child_specifiers)
+            for n, sp in enumerate(mp.child_specifiers):
+                macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_IDX_{n}_EXISTS"] = 1
+                macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_IDX_{n}"] = sp
 
-    macro2val[f"{macro}_FOREACH_MAP_ENTRY(fn)"] = ' \\\n\t'.join(
-        f'fn(DT_{node.z_path_id}, {prop_id}, {i})' for i in range(plen)
-    )
+            macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT"] = "DT_" + node_z_path_id(mp.parent)
+            macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_SPECIFIER_LEN"] = len(mp.parent_specifiers)
+            for n, sp in enumerate(mp.parent_specifiers):
+                macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_SPECIFIER_IDX_{n}_EXISTS"] = 1
+                macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_SPECIFIER_IDX_{n}"] = sp
 
-    macro2val[f"{macro}_FOREACH_MAP_ENTRY_SEP(fn, sep)"] = ' DT_DEBRACKET_INTERNAL sep \\\n\t'.join(
-        f'fn(DT_{node.z_path_id}, {prop_id}, {i})' for i in range(plen)
-    )
+        entries_range = range(len(entries))
+        join = ' \
+	'
+        join_with_sep = ' DT_DEBRACKET_INTERNAL sep \
+	'
 
-    macro2val[f"{macro}_FOREACH_MAP_ENTRY_VARGS(fn, ...)"] = ' \\\n\t'.join(
-        f'fn(DT_{node.z_path_id}, {prop_id}, {i}, __VA_ARGS__)' for i in range(plen)
-    )
-
-    macro2val[f"{macro}_FOREACH_MAP_ENTRY_SEP_VARGS(fn, sep, ...)"] = (
-        ' DT_DEBRACKET_INTERNAL sep \\\n\t'.join(
-            f'fn(DT_{node.z_path_id}, {prop_id}, {i}, __VA_ARGS__)' for i in range(plen)
+        macro2val[f"{macro}_FOREACH_MAP_ENTRY(fn)"] = join.join(
+            f'fn(DT_{node.z_path_id}, {prop_id}, {i})' for i in entries_range
         )
-    )
 
-    for mc, val in macro2val.items():
-        out_dt_define(mc, val)
+        macro2val[f"{macro}_FOREACH_MAP_ENTRY_SEP(fn, sep)"] = join_with_sep.join(
+            f'fn(DT_{node.z_path_id}, {prop_id}, {i})' for i in entries_range
+        )
+
+        macro2val[f"{macro}_FOREACH_MAP_ENTRY_VARGS(fn, ...)"] = join.join(
+            f'fn(DT_{node.z_path_id}, {prop_id}, {i}, __VA_ARGS__)' for i in entries_range
+        )
+
+        macro2val[f"{macro}_FOREACH_MAP_ENTRY_SEP_VARGS(fn, sep, ...)"] = (
+            join_with_sep.join(
+                f'fn(DT_{node.z_path_id}, {prop_id}, {i}, __VA_ARGS__)' for i in entries_range
+            )
+        )
+
+
+        for mc, val in macro2val.items():
+            out_dt_define(mc, val)
 
 
 def write_vanilla_props(node: edtlib.Node) -> None:

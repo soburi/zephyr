@@ -1364,7 +1364,9 @@ class Node:
 
         res: list[MapEntry] = []
 
-        def count_cells_num(node: dtlib_Node, specifier: str) -> int:
+        def count_cells_num(
+            node: dtlib_Node, specifier: str, include_address_cells: bool
+        ) -> int:
             """
             Calculate the number of cells in the node.
             When calculating the number of interrupt cells,
@@ -1373,7 +1375,7 @@ class Node:
 
             num = node.props[f"#{specifier}-cells"].to_num()
 
-            if specifier == "interrupt":
+            if include_address_cells and specifier == "interrupt":
                 parent_props = None
                 if node.parent:
                     parent_props = node.parent.props
@@ -1395,7 +1397,11 @@ class Node:
                     # Not enough room for phandle
                     _err("bad value for " + repr(prop))
 
-                child_specifier_num = count_cells_num(prop.node, specifier_space)
+                child_specifier_num = count_cells_num(
+                    prop.node,
+                    specifier_space,
+                    include_address_cells=(specifier_space == "interrupt"),
+                )
 
                 child_specifiers = to_nums(raw[: 4 * child_specifier_num])
                 raw = raw[4 * child_specifier_num :]
@@ -1410,7 +1416,11 @@ class Node:
                 if parent is None:
                     _err("parent cannot be found from: " + repr(parent_node))
 
-                parent_specifier_num = count_cells_num(parent_node, specifier_space)
+                parent_specifier_num = count_cells_num(
+                    parent_node,
+                    specifier_space,
+                    include_address_cells=False,
+                )
                 parent_specifiers = to_nums(raw[: 4 * parent_specifier_num])
                 raw = raw[4 * parent_specifier_num :]
 
