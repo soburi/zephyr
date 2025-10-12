@@ -38,8 +38,10 @@ extern "C" {
  *  - &gpio0 is the parent node.
  *  - `2 3` are the parent specifiers.
  *
- * The map API provides the following macros for access to * specific parts of a mapping entry:
+ * The map API provides the following macros for access to specific parts of a mapping entry:
+ *  - DT_MAP_ENTRY_CHILD_ADDRESS_BY_IDX()
  *  - DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX()
+ *  - DT_MAP_ENTRY_PARENT_ADDRESS_BY_IDX()
  *  - DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX()
  *  - DT_MAP_ENTRY_PARENT_BY_IDX()
  *
@@ -104,6 +106,42 @@ extern "C" {
 	IS_ENABLED(DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _EXISTS))
 
 /**
+ * @brief Get the number of child addresses.
+ *
+ * @param node_id The node identifier.
+ * @param prop The map property name. i.e. "gpio_map"
+ * @param entry_idx The mapping entry index.
+ * @return The number of child addresses.
+ */
+#define DT_MAP_ENTRY_CHILD_ADDRESS_LEN(node_id, prop, entry_idx)                                   \
+        DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_ADDRESS_LEN)
+
+/**
+ * @brief Checks if the child address has the specified index.
+ *
+ * @param node_id The node identifier.
+ * @param prop The map property name. i.e. "gpio_map"
+ * @param entry_idx The mapping entry index.
+ * @param param_idx The index in the child addresses.
+ * @retval True if the child address has the index, otherwise 0.
+ */
+#define DT_MAP_ENTRY_CHILD_ADDRESS_HAS_IDX(node_id, prop, entry_idx, param_idx)                    \
+        IS_ENABLED(DT_CAT8(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_ADDRESS_IDX_,        \
+                           param_idx, _EXISTS))
+
+/**
+ * @brief Get the child address element from a mapping entry, by index.
+ *
+ * @param node_id The node identifier.
+ * @param prop The map property name. i.e. "gpio_map"
+ * @param entry_idx The mapping entry index.
+ * @param param_idx The index in the child addresses.
+ * @return The element of the specified position of the child addresses.
+ */
+#define DT_MAP_ENTRY_CHILD_ADDRESS_BY_IDX(node_id, prop, entry_idx, param_idx)                     \
+        DT_CAT7(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_ADDRESS_IDX_, param_idx)
+
+/**
  * @brief Get the number of child specifiers.
  *
  * @param node_id The node identifier.
@@ -112,7 +150,7 @@ extern "C" {
  * @return The number of child specifiers.
  */
 #define DT_MAP_ENTRY_CHILD_SPECIFIER_LEN(node_id, prop, entry_idx)                                 \
-	DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_SPECIFIER_LEN)
+        DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_SPECIFIER_LEN)
 
 /**
  * @brief Checks if the child specifier has the specified index.
@@ -148,7 +186,43 @@ extern "C" {
  * @return The parent node id.
  */
 #define DT_MAP_ENTRY_PARENT_BY_IDX(node_id, prop, entry_idx)                                       \
-	DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT)
+        DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT)
+
+/**
+ * @brief Get the number of parent addresses.
+ *
+ * @param node_id The node identifier.
+ * @param prop The map property name. i.e. "gpio_map"
+ * @param entry_idx The mapping entry index.
+ * @return The number of parent addresses.
+ */
+#define DT_MAP_ENTRY_PARENT_ADDRESS_LEN(node_id, prop, entry_idx)                                  \
+        DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT_ADDRESS_LEN)
+
+/**
+ * @brief Checks if the parent address has the specified index.
+ *
+ * @param node_id The node identifier.
+ * @param prop The map property name. i.e. "gpio_map"
+ * @param entry_idx The mapping entry index.
+ * @param param_idx The index in the parent addresses.
+ * @retval True if the parent address has the index, otherwise 0.
+ */
+#define DT_MAP_ENTRY_PARENT_ADDRESS_HAS_IDX(node_id, prop, entry_idx, param_idx)                   \
+        IS_ENABLED(DT_CAT8(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT_ADDRESS_IDX_,       \
+                           param_idx, _EXISTS))
+
+/**
+ * @brief Get the parent address element from a mapping entry, by index.
+ *
+ * @param node_id The node identifier.
+ * @param prop The map property name. i.e. "gpio_map"
+ * @param entry_idx The mapping entry index.
+ * @param param_idx The index in the parent addresses.
+ * @retval The element of the specified position of the parent addresses.
+ */
+#define DT_MAP_ENTRY_PARENT_ADDRESS_BY_IDX(node_id, prop, entry_idx, param_idx)                    \
+        DT_CAT7(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT_ADDRESS_IDX_, param_idx)
 
 /**
  * @brief Get the number of parent specifiers.

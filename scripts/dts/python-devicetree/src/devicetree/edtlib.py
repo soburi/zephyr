@@ -910,25 +910,41 @@ class MapEntry:
     node:
       The Node instance whose property contains the map entry.
 
+    child_addresses:
+      A list of integers describing the unit address portion that precedes the
+      child specifier.  ``interrupt-map`` entries, for example, begin with the
+      child unit address whose length is determined by ``#address-cells`` on the
+      nexus node or its parent.  When no address cells are defined this list is
+      empty.
+
     child_specifiers:
-      A list of integers read from the child side of the map entry.
-      These are the specifier cells that precede the parent phandle.
+      A list of integers read from the child side of the map entry after any
+      address words.  These are the specifier cells that precede the parent
+      phandle.
 
     parent:
       The parent Node instance.
 
+    parent_addresses:
+      The unit address portion that follows the parent phandle.  Its length is
+      derived from the parent's ``#address-cells`` (with the same parent lookup
+      fallback as in the devicetree specification).  Empty when no address cells
+      are provided.
+
     parent_specifiers:
-      A list of integers describing the parent side of the mapping.
-      These values correspond to the ``*-cells`` definition in the
-      parent's binding.
+      A list of integers describing the parent side of the mapping after any
+      parent address cells.  These values correspond to the ``*-cells``
+      definition in the parent's binding.
 
     basename:
       The base name of the ``*-map`` property, which also describes the
       specifier space for the mapping.
     """
     node: 'Node'
+    child_addresses: list[int]
     child_specifiers: list[int]
     parent: 'Node'
+    parent_addresses: list[int]
     parent_specifiers: list[int]
     basename: str
 
@@ -1364,44 +1380,39 @@ class Node:
 
         res: list[list[MapEntry]] = []
 
-        def count_cells_num(
-            node: dtlib_Node,
-            specifier: str,
-            *,
-            include_interrupt_address_cells: bool = False,
-            context: str | None = None,
+        def count_specifier_cells(
+            node: dtlib_Node, specifier: str, *, context: str | None = None
         ) -> int:
-            """Return the number of cells for *specifier* in *node*.
-
-            ``interrupt`` map entries begin with the child unit address.  When
-            requested (for the child portion of a mapping), fold in the
-            ``#address-cells`` count from the child side.  Missing
-            ``#address-cells`` properties default to zero, as permitted by the
-            Devicetree specification.
-            """
+            """Return the number of specifier cells for *specifier* in *node*."""
 
             cells_prop = f"#{specifier}-cells"
 
             if cells_prop not in node.props:
-                where = context or f"#{specifier}-cells"
+                where = context or cells_prop
                 _err(
                     f"{node!r} lacks required '{cells_prop}' property"
                     f" while handling {where}"
                 )
 
-            num = node.props[cells_prop].to_num()
+            return node.props[cells_prop].to_num()
 
-            if specifier == "interrupt" and include_interrupt_address_cells:
-                address_cells = 0
+        def interrupt_address_cells(
+            node: dtlib_Node, *, context: str | None = None
+        ) -> int:
+            """Return the number of interrupt address cells for *node*."""
 
-                if "#address-cells" in node.props:
-                    address_cells = node.props["#address-cells"].to_num()
-                elif node.parent and "#address-cells" in node.parent.props:
-                    address_cells = node.parent.props["#address-cells"].to_num()
+            if "#address-cells" in node.props:
+                return node.props["#address-cells"].to_num()
 
-                num += address_cells
+            if node.parent and "#address-cells" in node.parent.props:
+                return node.parent.props["#address-cells"].to_num()
 
-            return num
+            where = context or "#address-cells"
+            _err(
+                f"{node!r} lacks required '#address-cells' property"
+                f" while handling {where}"
+            )
+            return 0
 
         for prop in [v for k, v in self._node.props.items() if k.endswith("-map")]:
             entries: list[MapEntry] = []
@@ -1412,15 +1423,24 @@ class Node:
                     # Not enough room for phandle
                     _err("bad value for " + repr(prop))
 
-                child_specifier_num = count_cells_num(
-                    prop.node,
-                    specifier_space,
-                    include_interrupt_address_cells=True,
-                    context=prop.name,
+                child_address_cells = (
+                    interrupt_address_cells(prop.node, context=prop.name)
+                    if specifier_space == "interrupt"
+                    else 0
                 )
+                child_specifier_cells = count_specifier_cells(
+                    prop.node, specifier_space, context=prop.name
+                )
+                child_total_cells = child_address_cells + child_specifier_cells
 
-                child_specifiers = to_nums(raw[: 4 * child_specifier_num])
-                raw = raw[4 * child_specifier_num :]
+                if len(raw) < 4 * child_total_cells:
+                    _err("bad value for " + repr(prop))
+
+                child_cells = to_nums(raw[: 4 * child_total_cells])
+                child_addresses = child_cells[:child_address_cells]
+                child_specifiers = child_cells[child_address_cells:]
+
+                raw = raw[4 * child_total_cells :]
                 phandle = to_num(raw[:4])
                 raw = raw[4:]
 
@@ -1432,35 +1452,32 @@ class Node:
                 if parent is None:
                     _err("parent cannot be found from: " + repr(parent_node))
 
-                parent_specifier_num = count_cells_num(
+                parent_address_cells = (
+                    interrupt_address_cells(parent_node, context=prop.name)
+                    if specifier_space == "interrupt"
+                    else 0
+                )
+                parent_specifier_cells = count_specifier_cells(
                     parent_node, specifier_space, context=prop.name
                 )
-                parent_total_cells = count_cells_num(
-                    parent_node,
-                    specifier_space,
-                    include_interrupt_address_cells=True,
-                    context=prop.name,
-                )
-                if parent_total_cells < parent_specifier_num:
-                    _err(
-                        "parent specifier cell count is smaller than expected for "
-                        + repr(prop)
-                    )
+                parent_total_cells = parent_address_cells + parent_specifier_cells
+
+                if len(raw) < 4 * parent_total_cells:
+                    _err("bad value for " + repr(prop))
 
                 parent_cells = to_nums(raw[: 4 * parent_total_cells])
-                raw = raw[4 * parent_total_cells :]
+                parent_addresses = parent_cells[:parent_address_cells]
+                parent_specifiers = parent_cells[parent_address_cells:]
 
-                parent_address_cells = parent_total_cells - parent_specifier_num
-                if parent_address_cells:
-                    parent_specifiers = parent_cells[parent_address_cells:]
-                else:
-                    parent_specifiers = parent_cells
+                raw = raw[4 * parent_total_cells :]
 
                 entries.append(
                     MapEntry(
                         node=self,
+                        child_addresses=child_addresses,
                         child_specifiers=child_specifiers,
                         parent=parent,
+                        parent_addresses=parent_addresses,
                         parent_specifiers=parent_specifiers,
                         basename=specifier_space,
                     )

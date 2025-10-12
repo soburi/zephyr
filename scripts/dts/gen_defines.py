@@ -606,12 +606,21 @@ def write_maps(node: edtlib.Node) -> None:
         for i, mp in enumerate(entries):
             macro2val[f"{macro}_MAP_ENTRY_{i}_EXISTS"] = 1
 
+            macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_ADDRESS_LEN"] = len(mp.child_addresses)
+            for n, addr in enumerate(mp.child_addresses):
+                macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_ADDRESS_IDX_{n}_EXISTS"] = 1
+                macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_ADDRESS_IDX_{n}"] = addr
+
             macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_LEN"] = len(mp.child_specifiers)
             for n, sp in enumerate(mp.child_specifiers):
                 macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_IDX_{n}_EXISTS"] = 1
                 macro2val[f"{macro}_MAP_ENTRY_{i}_CHILD_SPECIFIER_IDX_{n}"] = sp
 
             macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT"] = "DT_" + node_z_path_id(mp.parent)
+            macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_ADDRESS_LEN"] = len(mp.parent_addresses)
+            for n, addr in enumerate(mp.parent_addresses):
+                macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_ADDRESS_IDX_{n}_EXISTS"] = 1
+                macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_ADDRESS_IDX_{n}"] = addr
             macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_SPECIFIER_LEN"] = len(mp.parent_specifiers)
             for n, sp in enumerate(mp.parent_specifiers):
                 macro2val[f"{macro}_MAP_ENTRY_{i}_PARENT_SPECIFIER_IDX_{n}_EXISTS"] = 1

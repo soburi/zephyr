@@ -148,48 +148,60 @@ def test_maps():
 
     assert entries[0] == edtlib.MapEntry(
         node=nexus,
+        child_addresses=[0, 0],
+        child_specifiers=[0, 0],
         parent=controller_0,
-        child_specifiers=[0, 0, 0, 0],
+        parent_addresses=[0],
         parent_specifiers=[0],
         basename="interrupt",
     )
 
     assert entries[1] == edtlib.MapEntry(
         node=nexus,
+        child_addresses=[0, 0],
+        child_specifiers=[0, 1],
         parent=controller_1,
-        child_specifiers=[0, 0, 0, 1],
+        parent_addresses=[0, 0],
         parent_specifiers=[0, 1],
         basename="interrupt",
     )
 
     assert entries[2] == edtlib.MapEntry(
         node=nexus,
+        child_addresses=[0, 0],
+        child_specifiers=[0, 2],
         parent=controller_2,
-        child_specifiers=[0, 0, 0, 2],
+        parent_addresses=[0, 0, 0],
         parent_specifiers=[0, 0, 2],
         basename="interrupt",
     )
 
     assert entries[3] == edtlib.MapEntry(
         node=nexus,
+        child_addresses=[0, 1],
+        child_specifiers=[0, 0],
         parent=controller_0,
-        child_specifiers=[0, 1, 0, 0],
+        parent_addresses=[0],
         parent_specifiers=[3],
         basename="interrupt",
     )
 
     assert entries[4] == edtlib.MapEntry(
         node=nexus,
+        child_addresses=[0, 1],
+        child_specifiers=[0, 1],
         parent=controller_1,
-        child_specifiers=[0, 1, 0, 1],
+        parent_addresses=[0, 0],
         parent_specifiers=[0, 4],
         basename="interrupt",
     )
 
     assert entries[5] == edtlib.MapEntry(
         node=nexus,
+        child_addresses=[0, 1],
+        child_specifiers=[0, 2],
         parent=controller_2,
-        child_specifiers=[0, 1, 0, 2],
+        parent_addresses=[0, 0, 0],
         parent_specifiers=[0, 0, 5],
         basename="interrupt",
     )
