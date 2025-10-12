@@ -140,12 +140,13 @@ def test_maps():
     controller_0 = edt.get_node("/interrupt-map-test/controller-0")
     controller_1 = edt.get_node("/interrupt-map-test/controller-1")
     controller_2 = edt.get_node("/interrupt-map-test/controller-2")
+    controller_no_addr = edt.get_node("/interrupt-map-no-address/controller")
 
     assert len(nexus.maps.keys()) == 1
     assert "interrupt" in nexus.maps.keys()
 
     entries = nexus.maps["interrupt"]
-    assert len(entries) == 6
+    assert len(entries) == 7
 
     assert entries[0] == edtlib.MapEntry(
         node=nexus,
@@ -204,6 +205,16 @@ def test_maps():
         parent=controller_2,
         parent_addresses=[0, 0, 0],
         parent_specifiers=[0, 0, 5],
+        basename="interrupt",
+    )
+
+    assert entries[6] == edtlib.MapEntry(
+        node=nexus,
+        child_addresses=[0, 1],
+        child_specifiers=[1, 0],
+        parent=controller_no_addr,
+        parent_addresses=[],
+        parent_specifiers=[6],
         basename="interrupt",
     )
 

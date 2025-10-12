@@ -1393,10 +1393,10 @@ class Node:
             if "#address-cells" in node.props:
                 return node.props["#address-cells"].to_num()
 
-            if not node.parent or "#address-cells" not in node.parent.props:
-                _err(f"{node!r} lacks required '#address-cells' property")
+            if node.parent and "#address-cells" in node.parent.props:
+                return node.parent.props["#address-cells"].to_num()
 
-            return node.parent.props["#address-cells"].to_num()
+            return 0
 
         for prop in [v for k, v in self._node.props.items() if k.endswith("-map")]:
             specifier_space = prop.name[:-4]  # Strip '-map'

@@ -73,13 +73,14 @@
 		nexus {
 			#address-cells = <2>;
 			#interrupt-cells = <2>;
-			interrupt-map = <
-				0 0  0 0  &{/interrupt-map-test/controller-0}  0      0
-				0 0  0 1  &{/interrupt-map-test/controller-1}  0 0    0 1
-				0 0  0 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 2
-				0 1  0 0  &{/interrupt-map-test/controller-0}  0      3
-				0 1  0 1  &{/interrupt-map-test/controller-1}  0 0    0 4
-				0 1  0 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 5>;
+                        interrupt-map = <
+                                0 0  0 0  &{/interrupt-map-test/controller-0}  0      0
+                                0 0  0 1  &{/interrupt-map-test/controller-1}  0 0    0 1
+                                0 0  0 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 2
+                                0 1  0 0  &{/interrupt-map-test/controller-0}  0      3
+                                0 1  0 1  &{/interrupt-map-test/controller-1}  0 0    0 4
+                                0 1  0 2  &{/interrupt-map-test/controller-2}  0 0 0  0 0 5
+                                0 1  1 0  &{/interrupt-map-no-address/controller}        6>;
 		};
 		empty {
 			#address-cells = <2>;
@@ -139,9 +140,9 @@
 			interrupt-parent = <&{/interrupt-map-test/nexus-1}>;
 		};
 	};
-	interrupt-map-bitops-test {
-		#address-cells = <2>;
-		#size-cells = <0>;
+        interrupt-map-bitops-test {
+                #address-cells = <2>;
+                #size-cells = <0>;
 
 		controller {
 			compatible = "interrupt-two-cell";
@@ -166,11 +167,19 @@
 			reg = <0x7 0xE>;
 			interrupt-parent = <&{/interrupt-map-bitops-test/nexus}>;
 			interrupts = <0x7 0xE>;
-		};
-	};
+                };
+        };
 
-	//
-	// 'ranges'
+        interrupt-map-no-address {
+                controller {
+                        compatible = "interrupt-one-cell";
+                        #interrupt-cells = <1>;
+                        interrupt-controller;
+                };
+        };
+
+        //
+        // 'ranges'
 	//
 
 	ranges-zero-cells {

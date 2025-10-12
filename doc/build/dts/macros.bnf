@@ -256,7 +256,7 @@ map-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_ENTRY_" DIGIT "_EXISTS"
 ; #define DT_N_S_connector_P_interrupt_map_MAP_ENTRY_0_CHILD_ADDRESS_IDX_0_EXISTS 1
 map-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_ENTRY_" DIGIT %s"_CHILD_ADDRESS_LEN"
 map-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_ENTRY_" DIGIT %s"_CHILD_ADDRESS_IDX_" DIGIT
-map-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_ENTRY_" DIGIT %s"_CHILD_ADDRESS_IDX_" DIGIT
+map-macro =/ %s"DT_N" path-id %s"_P_" prop-id %s"_MAP_ENTRY_" DIGIT %s"_CHILD_ADDRESS_IDX_" DIGIT %s"_EXISTS"
 ;
 ; The length of child specifiers length, value, and existence.
 ;
