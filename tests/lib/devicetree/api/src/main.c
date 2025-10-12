@@ -3981,11 +3981,11 @@ ZTEST(devicetree_api, test_map)
 	zassert_str_equal(STRINGIFY(DT_MAP_ENTRY_PARENT_BY_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0)),
 				    "DT_N_S_gpio_map_test_S_parent");
 
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(TEST_GPIO_CONNECTOR, gpio_map, 0), 1);
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 0),
-		      1);
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 1),
-		      0);
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(TEST_GPIO_CONNECTOR, gpio_map, 1), 1);
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 1, 0),
+                      1);
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 1, 1),
+                      0);
 	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 0), 3);
 
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_LEN(TEST_GPIO_CONNECTOR, gpio_map, 1), 2);
