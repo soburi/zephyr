@@ -589,13 +589,10 @@ def write_maps(node: edtlib.Node) -> None:
     macro2val = {}
 
     for entries in node.maps:
-        if not entries:
-            continue
-
-        basename = str2ident(entries[0].basename)
+        basename_token = str2ident(entries.basename)
         plen = len(entries)
-        prop_id = f"{basename}_map"
-        macro = f"{node.z_path_id}_P_{basename}_map"
+        prop_id = f"{basename_token}_map"
+        macro = f"{node.z_path_id}_P_{basename_token}_map"
 
         # _LEN and _EXISTS share the grammer with `prop` element.
 

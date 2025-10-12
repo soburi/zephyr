@@ -114,6 +114,7 @@
 
 #define TEST_GPIO_CONNECTOR  DT_PATH(gpio_map_test, connector)
 #define TEST_INTERRUPT_NEXUS DT_PATH(interrupt_map_test, nexus)
+#define TEST_INTERRUPT_NEXUS_EMPTY DT_PATH(interrupt_map_test, empty)
 
 #define ZEPHYR_USER DT_PATH(zephyr_user)
 
@@ -3995,16 +3996,30 @@ ZTEST(devicetree_api, test_map)
 				    "DT_N_S_gpio_map_test_S_parent");
 
 	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(TEST_GPIO_CONNECTOR, gpio_map, 0), 1);
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 0),
-		      1);
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 1),
-		      0);
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(TEST_GPIO_CONNECTOR, gpio_map, 1, 0), 6);
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 0),
+                      1);
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_HAS_IDX(TEST_GPIO_CONNECTOR, gpio_map, 0, 1),
+                      0);
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(TEST_GPIO_CONNECTOR, gpio_map, 1, 0), 6);
 
-	DT_FOREACH_MAP_ENTRY(TEST_INTERRUPT_NEXUS, interrupt_map, INTERRUPT_NEXUS_CHECK)
-	DT_FOREACH_MAP_ENTRY_SEP(TEST_INTERRUPT_NEXUS, interrupt_map, INTERRUPT_NEXUS_CHECK, ())
-	DT_FOREACH_MAP_ENTRY_VARGS(TEST_INTERRUPT_NEXUS, interrupt_map, INTERRUPT_NEXUS_CHECK_VARGS,
-				   9999);
+        zassert_true(DT_NODE_HAS_MAP(TEST_INTERRUPT_NEXUS_EMPTY, interrupt_map), "");
+        zassert_equal(DT_MAP_LEN(TEST_INTERRUPT_NEXUS_EMPTY, interrupt_map), 0);
+        zassert_equal(DT_MAP_HAS_ENTRY(TEST_INTERRUPT_NEXUS_EMPTY, interrupt_map, 0), 0);
+
+#define EMPTY_MAP_SHOULD_NOT_RUN(...) zassert_unreachable("map should be empty")
+        DT_FOREACH_MAP_ENTRY(TEST_INTERRUPT_NEXUS_EMPTY, interrupt_map, EMPTY_MAP_SHOULD_NOT_RUN);
+        DT_FOREACH_MAP_ENTRY_SEP(TEST_INTERRUPT_NEXUS_EMPTY, interrupt_map,
+                                 EMPTY_MAP_SHOULD_NOT_RUN, ());
+        DT_FOREACH_MAP_ENTRY_VARGS(TEST_INTERRUPT_NEXUS_EMPTY, interrupt_map,
+                                   EMPTY_MAP_SHOULD_NOT_RUN, 1234);
+        DT_FOREACH_MAP_ENTRY_SEP_VARGS(TEST_INTERRUPT_NEXUS_EMPTY, interrupt_map,
+                                       EMPTY_MAP_SHOULD_NOT_RUN, (), 1234);
+#undef EMPTY_MAP_SHOULD_NOT_RUN
+
+        DT_FOREACH_MAP_ENTRY(TEST_INTERRUPT_NEXUS, interrupt_map, INTERRUPT_NEXUS_CHECK)
+        DT_FOREACH_MAP_ENTRY_SEP(TEST_INTERRUPT_NEXUS, interrupt_map, INTERRUPT_NEXUS_CHECK, ())
+        DT_FOREACH_MAP_ENTRY_VARGS(TEST_INTERRUPT_NEXUS, interrupt_map, INTERRUPT_NEXUS_CHECK_VARGS,
+                                   9999);
 	DT_FOREACH_MAP_ENTRY_SEP_VARGS(TEST_INTERRUPT_NEXUS, interrupt_map,
 				       INTERRUPT_NEXUS_CHECK_VARGS, (), 9999);
 }

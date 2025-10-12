@@ -145,6 +145,7 @@ def test_maps():
     assert len(nexus.maps[0]) == 6
 
     entries = nexus.maps[0]
+    assert entries.basename == "interrupt"
 
     assert entries[0] == edtlib.MapEntry(
         node=nexus,
@@ -205,6 +206,11 @@ def test_maps():
         parent_specifiers=[0, 0, 5],
         basename="interrupt",
     )
+
+    empty = edt.get_node("/interrupt-map-test/empty")
+    assert len(empty.maps) == 1
+    assert empty.maps[0].basename == "interrupt"
+    assert len(empty.maps[0]) == 0
 
 def test_ranges():
     '''Tests for the ranges property'''

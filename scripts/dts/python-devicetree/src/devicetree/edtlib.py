@@ -948,6 +948,21 @@ class MapEntry:
     parent_specifiers: list[int]
     basename: str
 
+
+class MapEntries(list[MapEntry]):
+    """Represents all entries for a specific ``*-map`` property."""
+
+    def __init__(self, *, basename: str):
+        super().__init__()
+        self.basename: str = basename
+
+    @property
+    def property_name(self) -> str:
+        """Return the full property name for these entries."""
+
+        return f"{self.basename}-map"
+
+
 class Node:
     """
     Represents a devicetree node, augmented with information from bindings, and
@@ -1095,9 +1110,10 @@ class Node:
       nodes.
 
     maps:
-      A list of lists of MapEntry objects for each entry of in a *-map property on
-      the node. A list containing the entries for each *-map property is created,
-      and this list is a collection of those lists.
+      A list of :class:`MapEntries` instances, one for each ``*-map`` property on
+      the node. Each :class:`MapEntries` behaves like a list of :class:`MapEntry`
+      objects for the property's entries and exposes the ``basename`` attribute
+      describing the specifier space.
 
     is_pci_device:
       True if the node is a PCI device.
@@ -1372,10 +1388,10 @@ class Node:
         return res
 
     @property
-    def maps(self) -> list[list[MapEntry]]:
+    def maps(self) -> list[MapEntries]:
         "See the class docstring"
 
-        res: list[list[MapEntry]] = []
+        res: list[MapEntries] = []
 
         def count_specifier_cells(node: dtlib_Node, specifier: str) -> int:
             """Return the number of specifier cells for *specifier* in *node*."""
@@ -1399,8 +1415,8 @@ class Node:
             return node.parent.props["#address-cells"].to_num()
 
         for prop in [v for k, v in self._node.props.items() if k.endswith("-map")]:
-            entries: list[MapEntry] = []
             specifier_space = prop.name[:-4]  # Strip '-map'
+            entries = MapEntries(basename=specifier_space)
             raw = prop.value
             while raw:
                 if len(raw) < 4:
