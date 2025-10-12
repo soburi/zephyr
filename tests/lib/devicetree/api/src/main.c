@@ -3899,9 +3899,8 @@ ZTEST(devicetree_api, test_nvmem_devictree_inst)
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 1), 0);                         \
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 2), 1);                         \
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 3), 2);                         \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(n, p, i), 2);                              \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 0), 3);                        \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 1), 4);                        \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(n, p, i), 1);                              \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 0), 4);                        \
 	zassert_str_equal(STRINGIFY(DT_MAP_ENTRY_PARENT_BY_IDX(n, p, i)),                          \
 				    "DT_N_S_interrupt_map_test_S_controller_0_0");
 
@@ -3911,11 +3910,9 @@ ZTEST(devicetree_api, test_nvmem_devictree_inst)
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 1), 0);                         \
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 2), 5);                         \
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 3), 6);                         \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(n, p, i), 4);                              \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 0), 7);                        \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 1), 8);                        \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 2), 9);                        \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 3), 0);                        \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(n, p, i), 2);                              \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 0), 9);                        \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 1), 0);                        \
 	zassert_str_equal(STRINGIFY(DT_MAP_ENTRY_PARENT_BY_IDX(n, p, i)),                          \
 				    "DT_N_S_interrupt_map_test_S_controller_1_1");
 
@@ -3925,9 +3922,8 @@ ZTEST(devicetree_api, test_nvmem_devictree_inst)
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 1), 1);                         \
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 2), 9);                         \
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 3), 8);                         \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(n, p, i), 2);                              \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 0), 7);                        \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 1), 6);                        \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(n, p, i), 1);                              \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 0), 6);                        \
 	zassert_str_equal(STRINGIFY(DT_MAP_ENTRY_PARENT_BY_IDX(n, p, i)),                          \
 				    "DT_N_S_interrupt_map_test_S_controller_0_0");
 
@@ -3937,11 +3933,9 @@ ZTEST(devicetree_api, test_nvmem_devictree_inst)
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 1), 1);                         \
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 2), 5);                         \
 	zassert_equal(DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(n, p, i, 3), 4);                         \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(n, p, i), 4);                              \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 0), 3);                        \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 1), 2);                        \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 2), 1);                        \
-	zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 3), 0);                        \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_LEN(n, p, i), 2);                              \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 0), 1);                        \
+        zassert_equal(DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(n, p, i, 1), 0);                        \
 	zassert_str_equal(STRINGIFY(DT_MAP_ENTRY_PARENT_BY_IDX(n, p, i)),                          \
 				    "DT_N_S_interrupt_map_test_S_controller_1_1");
 
