@@ -105,6 +105,12 @@ extern "C" {
 #define DT_MAP_HAS_ENTRY_BY_IDX(node_id, prop, entry_idx)                                          \
 	IS_ENABLED(DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _EXISTS))
 
+/**
+ * @brief Checks if the map property has any entries.
+ *
+ * Equivalent to calling @ref DT_MAP_HAS_ENTRY_BY_IDX with @p entry_idx set to
+ * zero.
+ */
 #define DT_MAP_HAS_ENTRY(node_id, prop) DT_MAP_HAS_ENTRY_BY_IDX(node_id, prop, 0)
 
 /**
@@ -131,8 +137,15 @@ extern "C" {
 	IS_ENABLED(DT_CAT8(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_ADDRESS_IDX_,        \
 			   param_idx, _EXISTS))
 
+/**
+ * @brief Checks if the mapping entry has any child addresses.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_HAS_CHILD_ADDRESS_BY_IDX with
+ * @p param_idx set to zero.
+ */
 #define DT_MAP_ENTRY_HAS_CHILD_ADDRESS(node_id, prop, entry_idx)                                   \
 	DT_MAP_ENTRY_HAS_CHILD_ADDRESS_BY_IDX(node_id, prop, entry_idx, 0)
+
 /**
  * @brief Get the child address element from a mapping entry, by index.
  *
@@ -145,6 +158,12 @@ extern "C" {
 #define DT_MAP_ENTRY_CHILD_ADDRESS_BY_IDX(node_id, prop, entry_idx, param_idx)                     \
 	DT_CAT7(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_ADDRESS_IDX_, param_idx)
 
+/**
+ * @brief Get the first child address element from a mapping entry.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_CHILD_ADDRESS_BY_IDX with
+ * @p param_idx set to zero.
+ */
 #define DT_MAP_ENTRY_CHILD_ADDRESS(node_id, prop, entry_idx)                                       \
 	DT_MAP_ENTRY_CHILD_ADDRESS_BY_IDX(node_id, prop, entry_idx, 0)
 
@@ -172,8 +191,15 @@ extern "C" {
 	IS_ENABLED(DT_CAT8(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_SPECIFIER_IDX_,      \
 			   param_idx, _EXISTS))
 
+/**
+ * @brief Checks if the mapping entry has any child specifiers.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_HAS_CHILD_SPECIFIER_BY_IDX with
+ * @p param_idx set to zero.
+ */
 #define DT_MAP_ENTRY_HAS_CHILD_SPECIFIER(node_id, prop, entry_idx)                                 \
 	DT_MAP_ENTRY_HAS_CHILD_SPECIFIER_BY_IDX(node_id, prop, entry_idx, 0)
+
 /**
  * @brief Get the child specifier element from a mapping entry, by index.
  *
@@ -186,6 +212,12 @@ extern "C" {
 #define DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(node_id, prop, entry_idx, param_idx)                   \
 	DT_CAT7(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _CHILD_SPECIFIER_IDX_, param_idx)
 
+/**
+ * @brief Get the first child specifier element from a mapping entry.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX with
+ * @p param_idx set to zero.
+ */
 #define DT_MAP_ENTRY_CHILD_SPECIFIER(node_id, prop, entry_idx)                                     \
 	DT_MAP_ENTRY_CHILD_SPECIFIER_BY_IDX(node_id, prop, entry_idx, 0)
 
@@ -200,6 +232,12 @@ extern "C" {
 #define DT_MAP_ENTRY_PARENT_BY_IDX(node_id, prop, entry_idx)                                       \
 	DT_CAT6(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT)
 
+/**
+ * @brief Extracts the parent node from the first mapping entry.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_PARENT_BY_IDX with @p entry_idx set
+ * to zero.
+ */
 #define DT_MAP_ENTRY_PARENT(node_id, prop)                                       \
 	DT_MAP_ENTRY_PARENT_BY_IDX(node_id, prop, 0)
 
@@ -227,6 +265,12 @@ extern "C" {
 	IS_ENABLED(DT_CAT8(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT_ADDRESS_IDX_,       \
 			   param_idx, _EXISTS))
 
+/**
+ * @brief Checks if the mapping entry has any parent addresses.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_HAS_PARENT_ADDRESS_BY_IDX with
+ * @p param_idx set to zero.
+ */
 #define DT_MAP_ENTRY_HAS_PARENT_ADDRESS(node_id, prop, entry_idx)                                  \
 	DT_MAP_ENTRY_HAS_PARENT_ADDRESS_BY_IDX(node_id, prop, entry_idx, 0)
 
@@ -242,6 +286,12 @@ extern "C" {
 #define DT_MAP_ENTRY_PARENT_ADDRESS_BY_IDX(node_id, prop, entry_idx, param_idx)                    \
 	DT_CAT7(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT_ADDRESS_IDX_, param_idx)
 
+/**
+ * @brief Get the first parent address element from a mapping entry.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_PARENT_ADDRESS_BY_IDX with
+ * @p param_idx set to zero.
+ */
 #define DT_MAP_ENTRY_PARENT_ADDRESS(node_id, prop, entry_idx)                                      \
 	DT_MAP_ENTRY_PARENT_ADDRESS_BY_IDX(node_id, prop, entry_idx, 0)
 
@@ -268,6 +318,12 @@ extern "C" {
 	IS_ENABLED(DT_CAT8(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT_SPECIFIER_IDX_,     \
 			   param_idx, _EXISTS))
 
+/**
+ * @brief Checks if the mapping entry has any parent specifiers.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_HAS_PARENT_SPECIFIER_BY_IDX with
+ * @p param_idx set to zero.
+ */
 #define DT_MAP_ENTRY_HAS_PARENT_SPECIFIER(node_id, prop, entry_idx)                                \
 	DT_MAP_ENTRY_HAS_PARENT_SPECIFIER_BY_IDX(node_id, prop, entry_idx, 0)
 
@@ -283,6 +339,12 @@ extern "C" {
 #define DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(node_id, prop, entry_idx, param_idx)                  \
 	DT_CAT7(node_id, _P_, prop, _MAP_ENTRY_, entry_idx, _PARENT_SPECIFIER_IDX_, param_idx)
 
+/**
+ * @brief Get the first parent specifier element from a mapping entry.
+ *
+ * Equivalent to calling @ref DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX with
+ * @p param_idx set to zero.
+ */
 #define DT_MAP_ENTRY_PARENT_SPECIFIER(node_id, prop, entry_idx)                                    \
 	DT_MAP_ENTRY_PARENT_SPECIFIER_BY_IDX(node_id, prop, entry_idx, 0)
 
