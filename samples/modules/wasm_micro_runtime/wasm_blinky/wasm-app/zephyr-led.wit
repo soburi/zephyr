@@ -1,0 +1,12 @@
+package zephyr:led;
+
+interface driver {
+    configure: func() -> s32;
+    set: func(value: bool) -> s32;
+    sleep-ms: func(ms: u32) -> s32;
+}
+
+world blink {
+    import driver;
+    export run: func();
+}
