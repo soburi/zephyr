@@ -11,6 +11,7 @@
 #include <zephyr/sys/util_macro.h>
 #include <zephyr/sys/byteorder.h>
 
+#include <hardware/boot_lock.h>
 #include <pico/bootrom/lock.h>
 #include <pico/sha256.h>
 
@@ -19,8 +20,16 @@ LOG_MODULE_REGISTER(crypto_rpi_pico_sha256, CONFIG_CRYPTO_LOG_LEVEL);
 
 struct crypto_rpi_pico_sha256_data {
 	pico_sha256_state_t state;
-	struct k_spinlock lock;
 };
+
+static bool crypto_rpi_pico_sha256_hw_lock_is_locked(void)
+{
+#if defined(NUM_BOOT_LOCKS) && (NUM_BOOT_LOCKS > 0)
+	return is_boot_locked(boot_lock_instance(BOOTROM_LOCK_SHA_256));
+#else
+	return false;
+#endif
+}
 
 static int crypto_rpi_pico_sha256_hash_handler(struct hash_ctx *ctx, struct hash_pkt *pkt,
 					       bool finish)
@@ -63,16 +72,10 @@ static int crypto_rpi_pico_sha256_query_hw_caps(const struct device *dev)
 }
 
 static int crypto_rpi_pico_sha256_hash_begin_session(const struct device *dev, struct hash_ctx *ctx,
-						     enum hash_algo algo)
+                                                     enum hash_algo algo)
 {
 	struct crypto_rpi_pico_sha256_data *data = dev->data;
-	k_spinlock_key_t key;
 	int ret;
-
-	if (data->state.locked) {
-		LOG_ERR("Invalid lock status: locked");
-		return -EINVAL;
-	}
 
 	if (algo != CRYPTO_HASH_ALGO_SHA256) {
 		LOG_ERR("Unsupported algo: %d", algo);
@@ -84,18 +87,20 @@ static int crypto_rpi_pico_sha256_hash_begin_session(const struct device *dev, s
 		return -EINVAL;
 	}
 
-	key = k_spin_lock(&data->lock);
+#if defined(NUM_BOOT_LOCKS) && (NUM_BOOT_LOCKS > 0)
+	if (crypto_rpi_pico_sha256_hw_lock_is_locked()) {
+		LOG_ERR("BOOTROM lock already owned");
+		return -EBUSY;
+	}
+#endif
 
 	ret = bootrom_try_acquire_lock(BOOTROM_LOCK_SHA_256);
 	if (!ret) {
 		LOG_ERR("bootrom_try_acquire_lock failed");
-		k_spin_unlock(&data->lock, key);
 		return -EBUSY;
 	}
 
 	data->state.locked = true;
-
-	k_spin_unlock(&data->lock, key);
 
 	ctx->hash_hndlr = crypto_rpi_pico_sha256_hash_handler;
 
@@ -105,17 +110,21 @@ static int crypto_rpi_pico_sha256_hash_begin_session(const struct device *dev, s
 static int crypto_rpi_pico_sha256_hash_session_free(const struct device *dev, struct hash_ctx *ctx)
 {
 	struct crypto_rpi_pico_sha256_data *data = dev->data;
-	k_spinlock_key_t key;
 
 	if (!data->state.locked) {
 		LOG_ERR("Invalid lock status: unlocked");
 		return -EINVAL;
 	}
 
-	key = k_spin_lock(&data->lock);
-	bootrom_release_lock(BOOTROM_LOCK_SHA_256);
+#if defined(NUM_BOOT_LOCKS) && (NUM_BOOT_LOCKS > 0)
+	if (!crypto_rpi_pico_sha256_hw_lock_is_locked()) {
+		LOG_ERR("BOOTROM lock not held");
+		return -EINVAL;
+	}
+#endif
+
 	data->state.locked = false;
-	k_spin_unlock(&data->lock, key);
+	bootrom_release_lock(BOOTROM_LOCK_SHA_256);
 
 	return 0;
 }
