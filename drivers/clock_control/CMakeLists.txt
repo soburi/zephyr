@@ -61,6 +61,7 @@ if(CONFIG_CLOCK_CONTROL_RCAR_CPG_MSSR)
   zephyr_library_sources_ifdef(CONFIG_DT_HAS_RENESAS_R8A779F0_CPG_MSSR_ENABLED clock_control_r8a779f0_cpg_mssr.c)
   zephyr_library_sources_ifdef(CONFIG_DT_HAS_RENESAS_R8A779G0_CPG_MSSR_ENABLED clock_control_r8a779g0_cpg_mssr.c)
 endif()
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_RCAR_CPG_MSSR_EMUL clock_control_renesas_cpg_mssr_emul.c)
 
 # zephyr-keep-sorted-start
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_ADSP clock_control_adsp.c)
