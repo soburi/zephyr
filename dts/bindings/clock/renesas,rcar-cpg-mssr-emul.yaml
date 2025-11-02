@@ -1,0 +1,16 @@
+# Copyright (c) 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: Renesas CPG/MSSR emulation
+
+include: [clock-controller.yaml, base.yaml]
+
+compatible: "renesas,rcar-cpg-mssr-emul"
+
+properties:
+  "#clock-cells":
+    const: 2
+
+clock-cells:
+  - domain
+  - module
