@@ -1,0 +1,4 @@
+name: sparrowhawk_rcar_v4h_xen_domd
+append:
+  EXTRA_DTC_OVERLAY_FILE: sparrowhawk_rcar_v4h_xen_domd.overlay
+  EXTRA_CONF_FILE: sparrowhawk_rcar_v4h_xen_domd.conf

@@ -1,0 +1,46 @@
+/*
+ * Copyright (C) 2025 TOKITA Hiroshi
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <mem.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/clock/r8a779g0_cpg_mssr.h>
+
+/ {
+        compatible = "retronix,sparrowhawk-v4h-cr52-domd";
+        model = "Retronix Sparrow Hawk on R-Car V4H: Xen DomD";
+
+	chosen {
+		zephyr,shell-uart = &xen_hvc;
+	};
+
+        aliases {
+                led0 = &led0;
+        };
+
+	leds {
+		compatible = "gpio-leds";
+
+		led0: led0 {
+			gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+			label = "LED1";
+		};
+	};
+
+	cpg: clock-controller {
+		compatible = "renesas,rcar-cpg-mssr-emul";
+		#clock-cells = <2>;
+	};
+
+	gpio0: gpio@e6050000 {
+		compatible = "renesas,rcar-gpio";
+		reg = <0xe6050000 0x1D8 0xAA 0xBB>; //TODO
+		#gpio-cells = <2>;
+		gpio-controller;
+		interrupts = <GIC_SPI 422 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>; //TODO
+		clocks = <&cpg CPG_MOD 915>; //TODO
+		status = "okay";
+	};
+};
