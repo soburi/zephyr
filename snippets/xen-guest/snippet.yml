@@ -1,0 +1,7 @@
+name: xen-guest
+
+boards:
+  sparrowhawk_rcar_v4h/r8a779g0/a76:
+    append:
+      EXTRA_DTC_OVERLAY_FILE: boards/sparrowhawk_rcar_v4h_r8a779g0_a76.overlay
+      EXTRA_CONF_FILE: boards/sparrowhawk_rcar_v4h_r8a779g0_a76.conf
