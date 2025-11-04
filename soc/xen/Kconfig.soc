@@ -2,7 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config SOC_XENVM
-	bool
+        bool
+
+config SOC_XENVM_R52
+        bool
 
 config SOC
-	default "xenvm" if SOC_XENVM
+        default "xenvm" if SOC_XENVM
+        default "xenvm_r52" if SOC_XENVM_R52

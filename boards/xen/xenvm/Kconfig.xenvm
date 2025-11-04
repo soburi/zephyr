@@ -2,4 +2,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config BOARD_XENVM
-	select SOC_XENVM
+        select SOC_XENVM if !BOARD_XENVM_XENVM_R52 && !BOARD_XENVM_XENVM_R52_GICV3
+        select SOC_XENVM_R52 if BOARD_XENVM_XENVM_R52 || BOARD_XENVM_XENVM_R52_GICV3

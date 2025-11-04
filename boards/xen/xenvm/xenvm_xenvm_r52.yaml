@@ -1,0 +1,9 @@
+identifier: xenvm/xenvm_r52
+name: ARMv8-R Xen Virtual Machine
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+  - cross-compile
+ram: 16384
+vendor: xen

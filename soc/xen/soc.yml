@@ -2,3 +2,4 @@ series:
 - name: xenvm
   socs:
   - name: xenvm
+  - name: xenvm_r52

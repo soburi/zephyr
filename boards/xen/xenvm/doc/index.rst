@@ -36,6 +36,7 @@ The default configuration for this board can be found in these files:
 
 - :zephyr_file:`boards/xen/xenvm/Kconfig.defconfig`
 - :zephyr_file:`boards/xen/xenvm/xenvm_defconfig`
+- :zephyr_file:`boards/xen/xenvm/xenvm_xenvm_r52_defconfig`
 
 Devices
 ========
@@ -60,13 +61,16 @@ following board configuration variants:
 
 - ``xenvm`` selects GICv2
 - ``xenvm//gicv3`` selects GICv3
+- ``xenvm/xenvm_r52`` selects Cortex-R52 with GICv2
+- ``xenvm/xenvm_r52//gicv3`` selects Cortex-R52 with GICv3
 
 CPU Core type
 -------------
 
 Default core in this configuration is Cortex A72. Depending on yours actual
 hardware you might want to change this option in the same way as Interrupt
-Controller configuration.
+Controller configuration. For Armv8-R hosts there is also a pre-defined
+Cortex-R52 configuration that can be selected via ``xenvm/xenvm_r52``.
 
 Known Problems or Limitations
 ==============================
@@ -108,6 +112,18 @@ guest, for example, with the :zephyr:code-sample:`synchronization` sample:
 .. code-block::
 
    $ west build -b xenvm//gicv3 samples/synchronization
+
+- for Cortex-R52 based guests with GICv2:
+
+.. code-block::
+
+   $ west build -b xenvm/xenvm_r52 samples/synchronization
+
+- for Cortex-R52 based guests with GICv3:
+
+.. code-block::
+
+   $ west build -b xenvm/xenvm_r52//gicv3 samples/synchronization
 
 This will build an image with the synchronization sample app. Next, you need to
 create guest configuration file :code:`zephyr.conf`. There is example:

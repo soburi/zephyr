@@ -6,3 +6,6 @@ board:
   - name: xenvm
     variants:
     - name: gicv3
+  - name: xenvm_r52
+    variants:
+    - name: gicv3
