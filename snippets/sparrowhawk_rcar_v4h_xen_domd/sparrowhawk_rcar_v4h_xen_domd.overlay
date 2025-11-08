@@ -24,7 +24,7 @@
 		compatible = "gpio-leds";
 
 		led0: led0 {
-			gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio1 6 GPIO_ACTIVE_HIGH>;
 			label = "LED1";
 		};
 	};
@@ -34,13 +34,13 @@
 		#clock-cells = <2>;
 	};
 
-	gpio0: gpio@e6050000 {
+	gpio1: gpio@e6050980 {
 		compatible = "renesas,rcar-gpio";
-		reg = <0xe6050000 0x1D8 0xAA 0xBB>; //TODO
+		reg = <0x0 0xe6050980 0x0 0x54>;
 		#gpio-cells = <2>;
 		gpio-controller;
-		interrupts = <GIC_SPI 422 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>; //TODO
-		clocks = <&cpg CPG_MOD 915>; //TODO
+		interrupts = <GIC_SPI 623 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+		clocks = <&cpg CPG_MOD 915>;
 		status = "okay";
 	};
 };
