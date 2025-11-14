@@ -55,7 +55,11 @@ int virtq_create(struct virtq *v, size_t size)
 	v->desc = (struct virtq_desc *)v_area;
 	v->avail = (struct virtq_avail *)((uint8_t *)v->desc + descriptor_table_size);
 	v->used = (struct virtq_used *)((uint8_t *)v->avail + available_ring_size + used_ring_pad);
-	v->recv_cbs = (struct virtq_receive_callback_entry *)((uint8_t *)v->used + used_ring_size);
+        v->recv_cbs = (struct virtq_receive_callback_entry *)((uint8_t *)v->used + used_ring_size);
+        v->used_event = &v->avail->ring[size];
+        v->avail_event = (uint16_t *)((uint8_t *)v->used->ring +
+                                      sizeof(struct virtq_used_elem) * size);
+        v->event_idx_enabled = false;
 
 	/*
 	 * At the beginning of the descriptor table, the available ring and the used ring have to be
@@ -183,6 +187,24 @@ int virtq_get_free_desc(struct virtq *v, uint16_t *desc_idx, k_timeout_t timeout
 
 void virtq_add_free_desc(struct virtq *v, uint16_t desc_idx)
 {
-	k_stack_push(&v->free_desc_stack, desc_idx);
-	v->free_desc_n++;
+        k_stack_push(&v->free_desc_stack, desc_idx);
+        v->free_desc_n++;
+}
+
+void virtq_enable_event_idx(struct virtq *v, bool enable)
+{
+        v->event_idx_enabled = enable;
+
+        if (enable) {
+                *v->used_event = sys_cpu_to_le16(v->last_used_idx);
+        } else {
+                *v->used_event = 0;
+        }
+
+        barrier_dmem_fence_full();
+}
+
+bool virtq_is_event_idx_enabled(const struct virtq *v)
+{
+        return v->event_idx_enabled;
 }

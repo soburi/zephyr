@@ -6,8 +6,9 @@
 
 #ifndef ZEPHYR_VIRTIO_VIRTQUEUE_H_
 #define ZEPHYR_VIRTIO_VIRTQUEUE_H_
-#include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 
 #ifdef __cplusplus
@@ -190,7 +191,22 @@ struct virtq {
 	/**
 	 * array with callbacks invoked after receiving buffers back from the device
 	 */
-	struct virtq_receive_callback_entry *recv_cbs;
+        struct virtq_receive_callback_entry *recv_cbs;
+
+        /**
+         * pointer to used_event field, valid if @ref event_idx_enabled is true
+         */
+        uint16_t *used_event;
+
+        /**
+         * pointer to avail_event field, valid if @ref event_idx_enabled is true
+         */
+        uint16_t *avail_event;
+
+        /**
+         * indicates whether @ref VIRTIO_RING_F_EVENT_IDX was negotiated for the queue
+         */
+        bool event_idx_enabled;
 };
 
 
@@ -266,6 +282,22 @@ void virtq_add_free_desc(struct virtq *v, uint16_t desc_idx);
  * @return 0 or error code on failure
  */
 int virtq_get_free_desc(struct virtq *v, uint16_t *desc_idx, k_timeout_t timeout);
+
+/**
+ * @brief Enables or disables @ref VIRTIO_RING_F_EVENT_IDX support for a queue.
+ *
+ * @param v virtqueue to update
+ * @param enable true when the feature was negotiated
+ */
+void virtq_enable_event_idx(struct virtq *v, bool enable);
+
+/**
+ * @brief Returns true when @ref VIRTIO_RING_F_EVENT_IDX is enabled.
+ *
+ * @param v virtqueue to query
+ * @return true if event index support is enabled
+ */
+bool virtq_is_event_idx_enabled(const struct virtq *v);
 
 /**
  * @}

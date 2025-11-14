@@ -55,15 +55,20 @@ void virtio_isr(const struct device *dev, uint8_t isr_status, uint16_t virtqueue
 					next = vq->desc[curr_le].next;
 					last = !(vq->desc[curr_le].flags & VIRTQ_DESC_F_NEXT);
 					virtq_add_free_desc(vq, curr);
-				}
+                                }
 
-				vq->last_used_idx++;
+                                vq->last_used_idx++;
 
-				if (cbe.cb) {
-					cbe.cb(cbe.opaque, used_len);
-				}
-			}
-		}
+                                if (vq->event_idx_enabled) {
+                                        *vq->used_event = sys_cpu_to_le16(vq->last_used_idx);
+                                        barrier_dmem_fence_full();
+                                }
+
+                                if (cbe.cb) {
+                                        cbe.cb(cbe.opaque, used_len);
+                                }
+                        }
+                }
 	}
 	if (isr_status & VIRTIO_DEVICE_CONFIGURATION_INTERRUPT) {
 		LOG_ERR("device configuration change interrupt is currently unsupported");

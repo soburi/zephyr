@@ -83,17 +83,18 @@ struct virtio_pci_common_cfg {
 #define VIRTIO_PCI_MSIX_NO_VECTOR 0xffff
 
 struct virtio_pci_data {
-	volatile struct virtio_pci_common_cfg *common_cfg;
-	void *device_specific_cfg;
-	volatile uint8_t *isr_status;
-	volatile uint8_t *notify_cfg;
-	uint32_t notify_off_multiplier;
+        volatile struct virtio_pci_common_cfg *common_cfg;
+        void *device_specific_cfg;
+        volatile uint8_t *isr_status;
+        volatile uint8_t *notify_cfg;
+        uint32_t notify_off_multiplier;
 
-	struct virtq *virtqueues;
-	uint16_t virtqueue_count;
+        struct virtq *virtqueues;
+        uint16_t virtqueue_count;
+        bool event_idx_enabled;
 
-	struct k_spinlock isr_lock;
-	struct k_spinlock notify_lock;
+        struct k_spinlock isr_lock;
+        struct k_spinlock notify_lock;
 };
 
 struct virtio_pci_config {
@@ -284,16 +285,18 @@ static int virtio_pci_init_virtqueues(
 
 		uint16_t queue_size = cb(i, sys_le16_to_cpu(data->common_cfg->queue_size), opaque);
 
-		ret = virtq_create(&data->virtqueues[i], queue_size);
-		if (ret != 0) {
-			goto fail;
-		}
-		created_queues++;
+                ret = virtq_create(&data->virtqueues[i], queue_size);
+                if (ret != 0) {
+                        goto fail;
+                }
+                created_queues++;
 
-		ret = virtio_pci_set_virtqueue(dev, i, &data->virtqueues[i]);
-		if (ret != 0) {
-			goto fail;
-		}
+                virtq_enable_event_idx(&data->virtqueues[i], data->event_idx_enabled);
+
+                ret = virtio_pci_set_virtqueue(dev, i, &data->virtqueues[i]);
+                if (ret != 0) {
+                        goto fail;
+                }
 		activated_queues++;
 	}
 
@@ -534,9 +537,14 @@ static int virtio_pci_init_common(const struct device *dev)
 		return 1;
 	}
 
-	virtio_pci_write_driver_feature_bit(dev, VIRTIO_F_VERSION_1, 1);
+        virtio_pci_write_driver_feature_bit(dev, VIRTIO_F_VERSION_1, 1);
 
-	return 0;
+        data->event_idx_enabled = virtio_pci_read_device_feature_bit(dev, VIRTIO_RING_F_EVENT_IDX);
+        if (data->event_idx_enabled) {
+                virtio_pci_write_driver_feature_bit(dev, VIRTIO_RING_F_EVENT_IDX, 1);
+        }
+
+        return 0;
 };
 
 struct virtq *virtio_pci_get_virtqueue(const struct device *dev, uint16_t queue_idx)
