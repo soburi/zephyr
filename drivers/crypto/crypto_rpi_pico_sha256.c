@@ -69,36 +69,38 @@ static int crypto_rpi_pico_sha256_hash_begin_session(const struct device *dev, s
 	k_spinlock_key_t key;
 	int ret;
 
+	key = k_spin_lock(&data->lock);
+
 	if (data->state.locked) {
 		LOG_ERR("Invalid lock status: locked");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto end;
 	}
 
 	if (algo != CRYPTO_HASH_ALGO_SHA256) {
 		LOG_ERR("Unsupported algo: %d", algo);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto end;
 	}
 
 	if (ctx->flags & ~(crypto_rpi_pico_sha256_query_hw_caps(dev))) {
 		LOG_ERR("Unsupported flag %x", ctx->flags);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto end;
 	}
-
-	key = k_spin_lock(&data->lock);
 
 	ret = bootrom_try_acquire_lock(BOOTROM_LOCK_SHA_256);
 	if (!ret) {
 		LOG_ERR("bootrom_try_acquire_lock failed");
-		k_spin_unlock(&data->lock, key);
-		return -EBUSY;
+		ret = -EBUSY;
+		goto end;
 	}
 
 	data->state.locked = true;
-
-	k_spin_unlock(&data->lock, key);
-
 	ctx->hash_hndlr = crypto_rpi_pico_sha256_hash_handler;
 
+end:
+	k_spin_unlock(&data->lock, key);
 	return 0;
 }
 
@@ -107,14 +109,17 @@ static int crypto_rpi_pico_sha256_hash_session_free(const struct device *dev, st
 	struct crypto_rpi_pico_sha256_data *data = dev->data;
 	k_spinlock_key_t key;
 
+	key = k_spin_lock(&data->lock);
+
 	if (!data->state.locked) {
 		LOG_ERR("Invalid lock status: unlocked");
-		return -EINVAL;
+		k_spin_unlock(&data->lock, key);
+		return -EBUSY;
 	}
 
-	key = k_spin_lock(&data->lock);
 	bootrom_release_lock(BOOTROM_LOCK_SHA_256);
 	data->state.locked = false;
+
 	k_spin_unlock(&data->lock, key);
 
 	return 0;
