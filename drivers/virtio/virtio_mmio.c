@@ -26,13 +26,14 @@ LOG_MODULE_REGISTER(virtio_mmio, CONFIG_VIRTIO_LOG_LEVEL);
 #define DEV_DATA(dev) ((struct virtio_mmio_data *)(dev)->data)
 
 struct virtio_mmio_data {
-	DEVICE_MMIO_NAMED_RAM(reg_base);
+        DEVICE_MMIO_NAMED_RAM(reg_base);
 
-	struct virtq *virtqueues;
-	uint16_t virtqueue_count;
+        struct virtq *virtqueues;
+        uint16_t virtqueue_count;
+        bool event_idx_enabled;
 
-	struct k_spinlock isr_lock;
-	struct k_spinlock notify_lock;
+        struct k_spinlock isr_lock;
+        struct k_spinlock notify_lock;
 };
 
 struct virtio_mmio_config {
@@ -220,16 +221,18 @@ static int virtio_mmio_set_virtqueues(const struct device *dev, uint16_t queue_c
 		const uint16_t queue_size =
 			cb(i, virtio_mmio_read32(dev, VIRTIO_MMIO_QUEUE_SIZE_MAX), opaque);
 
-		ret = virtq_create(&data->virtqueues[i], queue_size);
-		if (ret != 0) {
-			goto fail;
-		}
-		created_queues++;
+                ret = virtq_create(&data->virtqueues[i], queue_size);
+                if (ret != 0) {
+                        goto fail;
+                }
+                created_queues++;
 
-		ret = virtio_mmio_set_virtqueue(dev, i, &data->virtqueues[i]);
-		if (ret != 0) {
-			goto fail;
-		}
+                virtq_enable_event_idx(&data->virtqueues[i], data->event_idx_enabled);
+
+                ret = virtio_mmio_set_virtqueue(dev, i, &data->virtqueues[i]);
+                if (ret != 0) {
+                        goto fail;
+                }
 		activated_queues++;
 	}
 
@@ -273,7 +276,9 @@ static DEVICE_API(virtio, virtio_mmio_driver_api) = {
 
 static int virtio_mmio_init_common(const struct device *dev)
 {
-	DEVICE_MMIO_NAMED_MAP(dev, reg_base, K_MEM_CACHE_NONE);
+        struct virtio_mmio_data *data = dev->data;
+
+        DEVICE_MMIO_NAMED_MAP(dev, reg_base, K_MEM_CACHE_NONE);
 
 	const uint32_t magic = virtio_mmio_read32(dev, VIRTIO_MMIO_MAGIC_VALUE);
 
@@ -300,12 +305,17 @@ static int virtio_mmio_init_common(const struct device *dev)
 
 	virtio_mmio_reset(dev);
 
-	virtio_mmio_write_status_bit(dev, DEVICE_STATUS_ACKNOWLEDGE);
-	virtio_mmio_write_status_bit(dev, DEVICE_STATUS_DRIVER);
+        virtio_mmio_write_status_bit(dev, DEVICE_STATUS_ACKNOWLEDGE);
+        virtio_mmio_write_status_bit(dev, DEVICE_STATUS_DRIVER);
 
-	virtio_mmio_write_driver_feature_bit(dev, VIRTIO_F_VERSION_1, true);
+        virtio_mmio_write_driver_feature_bit(dev, VIRTIO_F_VERSION_1, true);
 
-	return 0;
+        data->event_idx_enabled = virtio_mmio_read_device_feature_bit(dev, VIRTIO_RING_F_EVENT_IDX);
+        if (data->event_idx_enabled) {
+                virtio_mmio_write_driver_feature_bit(dev, VIRTIO_RING_F_EVENT_IDX, true);
+        }
+
+        return 0;
 };
 
 #define VIRTIO_MMIO_DEFINE(inst)                                                                   \
