@@ -1,0 +1,8 @@
+# Copyright (c) 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: LiteOn LTR-553 Digital Ambient Light and proximity sensor
+
+compatible: "liteon,ltr553"
+
+include: [sensor-device.yaml, i2c-device.yaml]

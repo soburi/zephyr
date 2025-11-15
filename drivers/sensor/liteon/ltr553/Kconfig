@@ -1,0 +1,11 @@
+# Copyright 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+config LTR553
+        bool "LiteOn LTR-553 ambient light and proximity sensor"
+        depends on DT_HAS_LITEON_LTR553_ENABLED
+        default y
+        select I2C
+        help
+          Enable driver for the LiteOn LTR-553 ambient light and proximity sensor.
+
