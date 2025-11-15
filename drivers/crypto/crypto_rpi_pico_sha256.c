@@ -19,7 +19,7 @@ LOG_MODULE_REGISTER(crypto_rpi_pico_sha256, CONFIG_CRYPTO_LOG_LEVEL);
 
 struct crypto_rpi_pico_sha256_data {
 	pico_sha256_state_t state;
-	struct k_spinlock lock;
+	struct k_mutex mutex;
 };
 
 static int crypto_rpi_pico_sha256_hash_handler(struct hash_ctx *ctx, struct hash_pkt *pkt,
@@ -63,18 +63,21 @@ static int crypto_rpi_pico_sha256_query_hw_caps(const struct device *dev)
 }
 
 static int crypto_rpi_pico_sha256_hash_begin_session(const struct device *dev, struct hash_ctx *ctx,
-						     enum hash_algo algo)
+	                                             enum hash_algo algo)
 {
 	struct crypto_rpi_pico_sha256_data *data = dev->data;
-	k_spinlock_key_t key;
 	int ret;
 
-	key = k_spin_lock(&data->lock);
+	ret = k_mutex_lock(&data->mutex, K_FOREVER);
+	if (ret != 0) {
+	        LOG_ERR("Failed to lock mutex: %d", ret);
+	        return ret;
+	}
 
 	if (data->state.locked) {
-		LOG_ERR("Invalid lock status: locked");
-		ret = -EINVAL;
-		goto end;
+	        LOG_DBG("Hash engine busy");
+	        ret = -EBUSY;
+	        goto end;
 	}
 
 	if (algo != CRYPTO_HASH_ALGO_SHA256) {
@@ -89,38 +92,58 @@ static int crypto_rpi_pico_sha256_hash_begin_session(const struct device *dev, s
 		goto end;
 	}
 
-	ret = bootrom_try_acquire_lock(BOOTROM_LOCK_SHA_256);
-	if (!ret) {
-		LOG_ERR("bootrom_try_acquire_lock failed");
-		ret = -EBUSY;
-		goto end;
+	if (!bootrom_try_acquire_lock(BOOTROM_LOCK_SHA_256)) {
+	        LOG_ERR("bootrom_try_acquire_lock failed");
+	        ret = -EBUSY;
+	        goto end;
 	}
 
 	data->state.locked = true;
 	ctx->hash_hndlr = crypto_rpi_pico_sha256_hash_handler;
+	ret = 0;
 
 end:
-	k_spin_unlock(&data->lock, key);
-	return 0;
+	if (ret != 0) {
+	        data->state.locked = false;
+	}
+
+	k_mutex_unlock(&data->mutex);
+
+	return ret;
 }
 
 static int crypto_rpi_pico_sha256_hash_session_free(const struct device *dev, struct hash_ctx *ctx)
 {
 	struct crypto_rpi_pico_sha256_data *data = dev->data;
-	k_spinlock_key_t key;
+	int ret;
 
-	key = k_spin_lock(&data->lock);
+	ret = k_mutex_lock(&data->mutex, K_FOREVER);
+	if (ret != 0) {
+	        LOG_ERR("Failed to lock mutex: %d", ret);
+	        return ret;
+	}
 
 	if (!data->state.locked) {
-		LOG_ERR("Invalid lock status: unlocked");
-		k_spin_unlock(&data->lock, key);
-		return -EBUSY;
+	        LOG_ERR("Invalid lock status: unlocked");
+	        ret = -EINVAL;
+	        goto end;
 	}
 
 	bootrom_release_lock(BOOTROM_LOCK_SHA_256);
 	data->state.locked = false;
+	ret = 0;
 
-	k_spin_unlock(&data->lock, key);
+end:
+	k_mutex_unlock(&data->mutex);
+
+	return ret;
+}
+
+static int crypto_rpi_pico_sha256_init(const struct device *dev)
+{
+	struct crypto_rpi_pico_sha256_data *data = dev->data;
+
+	k_mutex_init(&data->mutex);
 
 	return 0;
 }
@@ -133,8 +156,9 @@ static DEVICE_API(crypto, crypto_rpi_pico_sha256_crypto_api) = {
 
 #define CRYPTO_RPI_PICO_SHA256_INIT(idx)                                                           \
 	static struct crypto_rpi_pico_sha256_data crypto_rpi_pico_sha256_##idx##_data;             \
-	DEVICE_DT_INST_DEFINE(idx, NULL, NULL, &crypto_rpi_pico_sha256_##idx##_data, NULL,         \
-			      POST_KERNEL, CONFIG_CRYPTO_INIT_PRIORITY,                            \
-			      &crypto_rpi_pico_sha256_crypto_api);
+	DEVICE_DT_INST_DEFINE(idx, crypto_rpi_pico_sha256_init, NULL,                              \
+	                      &crypto_rpi_pico_sha256_##idx##_data, NULL,                         \
+	                      POST_KERNEL, CONFIG_CRYPTO_INIT_PRIORITY,                            \
+	                      &crypto_rpi_pico_sha256_crypto_api);
 
 DT_INST_FOREACH_STATUS_OKAY(CRYPTO_RPI_PICO_SHA256_INIT)
