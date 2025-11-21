@@ -56,11 +56,16 @@ struct gpio_rcar_data {
 
 static inline uint32_t gpio_rcar_read(const struct device *dev, uint32_t offs)
 {
-	return sys_read32(DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs);
+	uint32_t value =
+	sys_read32(DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs);
+
+	printk("gpio_rcar_read  %lx: %d\n", DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs, value);
+	return value;
 }
 
 static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint32_t value)
 {
+	printk("gpio_rcar_write %lx: %d\n", DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs, value);
 	sys_write32(value, DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs);
 }
 
