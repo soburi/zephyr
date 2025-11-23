@@ -79,16 +79,19 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
 
     uintptr_t pa;
 
+    int i;
+
     int rc = arch_page_phys_get((void *)base, &pa);
     printk("arch_page_phys_get(va=%p) -> rc=%d, pa=%p\n", (void *)base, rc, (void *)pa);
     if (wcount == 0) {
-    for (int i=0; i<0x1000; i+= 0x100) {
+    for (i=0; i<0x1000; i+= 0x100) {
 	    char msg[16];
 	    sprintf(msg, "0x%04x", i);
 	    LOG_HEXDUMP_ERR((const unsigned int*)(page+i), 0x100, msg);
     }
+    }
 
-    if ((wcount % 20) == 0) {
+    if ((wcount % 20) == 0 && wcount != 0) {
     printk("base %p:%p\n", (void*)base, (void*)page);
     //LOG_HEXDUMP_ERR((const unsigned int*)page, 0x100, "0x000");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x100), 0x100, "0x100");
@@ -112,11 +115,6 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
 	value =
 	sys_read32(DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs);
 	printk("readback: %lx %lx: %d\n", DEV_CFG(dev)->reg_base.phys_addr, DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs, value);
-	sys_write32(0x0,       page + 0x800 + 0x0c0);
-	sys_write32(0xFFFFFFF, page + 0x800 + 0x180);
-	sys_write32(0xFFFFFFF, page + 0x800 + 0x184);
-	sys_write32(0xFFFFFFF, page + 0x800 + 0x188);
-
 
     if ((wcount % 20) == 0) {
     printk("BASE %p:%p\n", (void*)base, (void*)page);
@@ -139,7 +137,7 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
     }
 
     if (wcount == 0) {
-    for (int i=0; i<0x1000; i+= 0x100) {
+    for (i=0; i<0x1000; i+= 0x100) {
 	    for (int j=0; j<0x100; j++) {
 		sys_write8(0xFF, page + i + j);
 	    }
