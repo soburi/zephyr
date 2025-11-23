@@ -1,0 +1,41 @@
+/*
+ * Copyright (c) 2025 Renesas Electronics Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <mem.h>
+#include <arm64/renesas/r8a779g0.dtsi>
+#include "sparrowhawk_rcar_v4h_r8a779g0_a76-pinctrl.dtsi"
+
+/ {
+        model = "Retronix Sparrow Hawk on R-Car V4H A76";
+        compatible = "retronix,sparrowhawk-v4h-ca76";
+
+        chosen {
+                zephyr,sram = &ram;
+                zephyr,console = &hscif1;
+                zephyr,shell-uart = &hscif1;
+        };
+
+        ram: memory@48000000 {
+                device_type = "mmio-sram";
+                reg = <0x0 0x48000000 0x0 DT_SIZE_M(512)>;
+        };
+};
+
+/* USB serial */
+&hscif0 {
+        pinctrl-0 = <&hscif0_data_tx_default &hscif0_data_rx_default>;
+        pinctrl-names = "default";
+        current-speed = <921600>;
+        status = "disabled";
+};
+
+&hscif1 {
+        pinctrl-0 = <&hscif1_data_tx_default &hscif1_data_rx_default>;
+        pinctrl-names = "default";
+        current-speed = <921600>;
+        status = "okay";
+};

@@ -1,0 +1,15 @@
+/*
+ * Copyright (c) 2025 Renesas Electronics Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include "rcar_gen4_ca76.dtsi"
+
+/ {
+	compatible = "renesas,r8a779g0";
+};
+
+&cpg {
+	compatible = "renesas,r8a779g0-cpg-mssr";
+};

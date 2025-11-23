@@ -1,0 +1,131 @@
+/*
+ * Copyright (c) 2025 Renesas Electronics Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <arm64/armv8-a.dtsi>
+#include <zephyr/dt-bindings/clock/renesas_cpg_mssr.h>
+#include <zephyr/dt-bindings/clock/r8a779g0_cpg_mssr.h>
+#include <zephyr/dt-bindings/interrupt-controller/arm-gic.h>
+
+/ {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	interrupt-parent = <&gic>;
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&a76_0>;
+				};
+				core1 {
+					cpu = <&a76_1>;
+				};
+			};
+
+			cluster1 {
+				core0 {
+					cpu = <&a76_2>;
+				};
+				core1 {
+					cpu = <&a76_3>;
+				};
+			};
+		};
+
+		a76_0: cpu@0 {
+			compatible = "arm,cortex-a76";
+			device_type = "cpu";
+			enable-method = "psci";
+			reg = <0>;
+		};
+
+		a76_1: cpu@100 {
+			compatible = "arm,cortex-a76";
+			device_type = "cpu";
+			enable-method = "psci";
+			reg = <0x100>;
+		};
+
+		a76_2: cpu@10000 {
+			compatible = "arm,cortex-a76";
+			device_type = "cpu";
+			enable-method = "psci";
+			reg = <0x10000>;
+		};
+
+		a76_3: cpu@10100 {
+			compatible = "arm,cortex-a76";
+			device_type = "cpu";
+			enable-method = "psci";
+			reg = <0x10100>;
+		};
+	};
+
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
+	};
+
+	arch_timer: timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <GIC_PPI 13 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+			     <GIC_PPI 14 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+			     <GIC_PPI 11 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+			     <GIC_PPI 10 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+		clock-frequency = <16666667>;
+	};
+
+	soc: soc {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		interrupt-parent = <&gic>;
+		ranges;
+
+		gic: interrupt-controller@f1000000 {
+			compatible = "arm,gic-v3", "arm,gic";
+			#interrupt-cells = <4>;
+			#address-cells = <0>;
+			interrupt-controller;
+			reg = <0 0xf1000000 0 0x20000>,
+			      <0 0xf1060000 0 0x110000>;
+			status = "okay";
+		};
+
+		cpg: clock-controller@e6150000 {
+			reg = <0 0xe6150000 0 0x4000>;
+			#clock-cells = <2>;
+		};
+
+		pfc: pin-controller@e6050000 {
+			compatible = "renesas,rcar-pfc";
+			reg = <0 0xe6050000 0 0x1d8>, <0 0xe6050800 0 0x1d8>,
+			      <0 0xe6058000 0 0x1d8>, <0 0xe6058800 0 0x1d8>,
+			      <0 0xe6060000 0 0x1d8>, <0 0xe6060800 0 0x1d8>,
+			      <0 0xe6061000 0 0x1d8>, <0 0xe6061800 0 0x1d8>,
+			      <0 0xe6068000 0 0x1d8>, <0 0xe6078000 0 0x0e8>;
+		};
+
+		hscif0: serial@e6540000 {
+			compatible = "renesas,rcar-hscif";
+			reg = <0 0xe6540000 0 0x60>;
+			clocks = <&cpg CPG_MOD 514>,
+			      <&cpg CPG_CORE R8A779G0_CLK_SASYNCPERD1>;
+			status = "disabled";
+		};
+
+		hscif1: serial@e6550000 {
+			compatible = "renesas,rcar-hscif";
+			reg = <0 0xe6550000 0 0x60>;
+			clocks = <&cpg CPG_MOD 515>,
+			      <&cpg CPG_CORE R8A779G0_CLK_SASYNCPERD1>;
+			status = "disabled";
+		};
+	};
+};
