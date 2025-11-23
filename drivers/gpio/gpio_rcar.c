@@ -130,6 +130,13 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xd00), 0x100, "0xd00");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xe00), 0x100, "0xe00");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xf00), 0x100, "0xf00");
+
+    for (int i=0; i<0x1000; i+= 0x100) {
+	    for (int j=0; j<0x100; j++) {
+		sys_write8(0xFF, page + i + j);
+	    }
+	    LOG_HEXDUMP_ERR((const unsigned int*)(page+i), 0x100, "XXX");
+    }
     }
     wcount++;
 }
