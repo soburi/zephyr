@@ -18,6 +18,10 @@
 
 #include <zephyr/drivers/gpio/gpio_utils.h>
 
+#define LOG_LEVEL CONFIG_GPIO_LOG_LEVEL
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(gpio_rcar);
+
 typedef void (*init_func_t)(const struct device *dev);
 
 /* Required by DEVICE_MMIO_NAMED_* macros */
@@ -59,14 +63,75 @@ static inline uint32_t gpio_rcar_read(const struct device *dev, uint32_t offs)
 	uint32_t value =
 	sys_read32(DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs);
 
-	printk("gpio_rcar_read  %lx: %d\n", DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs, value);
+	printk("gpio_rcar_read  %lx %lx: %d\n", DEV_CFG(dev)->reg_base.phys_addr, DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs, value);
 	return value;
 }
 
+static int wcount;
+
+
+int arch_page_phys_get(void *virt, uintptr_t *phys);
+
 static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint32_t value)
 {
+    volatile uintptr_t base = DEVICE_MMIO_NAMED_GET(dev, reg_base);
+    uintptr_t page = base & (~0xFFFUL);
+
+    uintptr_t pa;
+
+    int rc = arch_page_phys_get((void *)base, &pa);
+    printk("arch_page_phys_get(va=%p) -> rc=%d, pa=%p\n", (void *)base, rc, (void *)pa);
+
+    if ((wcount % 20) == 0) {
+    printk("base %p:%p\n", (void*)base, (void*)page);
+    //LOG_HEXDUMP_ERR((const unsigned int*)page, 0x100, "0x000");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x100), 0x100, "0x100");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x200), 0x100, "0x200");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x300), 0x100, "0x300");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x400), 0x100, "0x400");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x500), 0x100, "0x500");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x600), 0x100, "0x600");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x700), 0x100, "0x700");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x800), 0x100, "0x800");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x900), 0x100, "0x900");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0xa00), 0x100, "0xa00");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0xb00), 0x100, "0xb00");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xc00), 0x100, "0xc00");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xd00), 0x100, "0xd00");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xe00), 0x100, "0xe00");
+    }
+
 	printk("gpio_rcar_write %lx: %d\n", DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs, value);
 	sys_write32(value, DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs);
+	value =
+	sys_read32(DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs);
+	printk("readback: %lx %lx: %d\n", DEV_CFG(dev)->reg_base.phys_addr, DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs, value);
+	sys_write32(0x0,       page + 0x800 + 0x0c0);
+	sys_write32(0xFFFFFFF, page + 0x800 + 0x180);
+	sys_write32(0xFFFFFFF, page + 0x800 + 0x184);
+	sys_write32(0xFFFFFFF, page + 0x800 + 0x188);
+
+
+    if ((wcount % 20) == 0) {
+    printk("BASE %p:%p\n", (void*)base, (void*)page);
+    //LOG_HEXDUMP_ERR((const unsigned int*)page, 0x1000, "0x000");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x100), 0x100, "0x100");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x200), 0x100, "0x200");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x300), 0x100, "0x300");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x400), 0x100, "0x400");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x500), 0x100, "0x500");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x600), 0x100, "0x600");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x700), 0x100, "0x700");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x800), 0x100, "0x800");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x900), 0x100, "0x900");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0xa00), 0x100, "0xa00");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0xb00), 0x100, "0xb00");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0xc00), 0x100, "0xc00");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xd00), 0x100, "0xd00");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xe00), 0x100, "0xe00");
+    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xf00), 0x100, "0xf00");
+    }
+    wcount++;
 }
 
 static void gpio_rcar_modify_bit(const struct device *dev,
