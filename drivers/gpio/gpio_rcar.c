@@ -92,8 +92,8 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x500), 0x100, "0x500");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x600), 0x100, "0x600");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x700), 0x100, "0x700");
-    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x800), 0x200, "0x800");
-    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x900), 0x100, "0x900");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x800), 0x100, "0x800");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x900), 0x100, "0x900");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xa00), 0x100, "0xa00");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xb00), 0x100, "0xb00");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xc00), 0x100, "0xc00");
@@ -122,8 +122,8 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x500), 0x100, "0x500");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x600), 0x100, "0x600");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x700), 0x100, "0x700");
-    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x800), 0x200, "0x800");
-    //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x900), 0x100, "0x900");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x800), 0x100, "0x800");
+    LOG_HEXDUMP_ERR((const unsigned int*)(page+0x900), 0x100, "0x900");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xa00), 0x100, "0xa00");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xb00), 0x100, "0xb00");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xc00), 0x100, "0xc00");
