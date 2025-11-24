@@ -201,6 +201,7 @@ static void gpio_rcar_config_general_input_output_mode(
 	gpio_rcar_modify_bit(dev, IOINTSEL, gpio, false);
 
 	/* Select Input Mode or Output Mode in INOUTSEL */
+	printk("INOUTSEL - %d\n", output);
 	gpio_rcar_modify_bit(dev, INOUTSEL, gpio, output);
 
 	/* Select General Output Register to output data in OUTDTSEL */
@@ -212,6 +213,7 @@ static void gpio_rcar_config_general_input_output_mode(
 static int gpio_rcar_configure(const struct device *dev,
 			       gpio_pin_t pin, gpio_flags_t flags)
 {
+	printk("gpio_rcar_configure %lx: %d %x\n", DEV_CFG(dev)->reg_base.phys_addr, pin, flags);
 	if ((flags & GPIO_OUTPUT) && (flags & GPIO_INPUT)) {
 		/* Pin cannot be configured as input and output */
 		return -ENOTSUP;
@@ -222,8 +224,10 @@ static int gpio_rcar_configure(const struct device *dev,
 
 	if (flags & GPIO_OUTPUT) {
 		if (flags & GPIO_OUTPUT_INIT_HIGH) {
+			printk("OUTDT - true\n");
 			gpio_rcar_modify_bit(dev, OUTDT, pin, true);
 		} else if (flags & GPIO_OUTPUT_INIT_LOW) {
+			printk("OUTDT - false\n");
 			gpio_rcar_modify_bit(dev, OUTDT, pin, false);
 		}
 		gpio_rcar_config_general_input_output_mode(dev, pin, true);
