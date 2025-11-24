@@ -79,8 +79,6 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
 
     uintptr_t pa;
 
-    int i;
-
     int rc = arch_page_phys_get((void *)base, &pa);
     printk("arch_page_phys_get(va=%p) -> rc=%d, pa=%p\n", (void *)base, rc, (void *)pa);
 
@@ -136,6 +134,7 @@ static void gpio_rcar_modify_bit(const struct device *dev,
 				 uint32_t offs, int bit, bool value)
 {
 	uint32_t tmp = gpio_rcar_read(dev, offs);
+	printk("modify bit read  %08x @ %x\n", tmp, offs);
 
 	if (value) {
 		tmp |= BIT(bit);
@@ -143,7 +142,10 @@ static void gpio_rcar_modify_bit(const struct device *dev,
 		tmp &= ~BIT(bit);
 	}
 
+	printk("modify bit write %08x @ %x\n", tmp, offs);
 	gpio_rcar_write(dev, offs, tmp);
+	tmp = gpio_rcar_read(dev, offs);
+	printk("modify bit read2 %08x @ %x\n", tmp, offs);
 }
 
 static void gpio_rcar_port_isr(const struct device *dev)
@@ -167,6 +169,7 @@ static void gpio_rcar_config_general_input_output_mode(
 	uint32_t gpio,
 	bool output)
 {
+	printk("gpio_rcar_config_general_input_output_mode %d %d\n", gpio, output);
 	/* follow steps in the GPIO documentation for
 	 * "Setting General Output Mode" and
 	 * "Setting General Input Mode"
