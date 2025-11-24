@@ -82,7 +82,7 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
     int rc = arch_page_phys_get((void *)base, &pa);
     printk("arch_page_phys_get(va=%p) -> rc=%d, pa=%p\n", (void *)base, rc, (void *)pa);
 
-    if ((wcount % 20) == 0 && wcount != 0) {
+    if ((wcount % 20) == 19 && wcount != 0) {
     printk("base %p:%p\n", (void*)base, (void*)page);
     //LOG_HEXDUMP_ERR((const unsigned int*)page, 0x100, "0x000");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x100), 0x100, "0x100");
@@ -107,7 +107,7 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
 	sys_read32(DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs);
 	printk("readback: %lx %lx: %d\n", DEV_CFG(dev)->reg_base.phys_addr, DEVICE_MMIO_NAMED_GET(dev, reg_base) + offs, value);
 
-    if ((wcount % 20) == 0) {
+    if ((wcount % 20) == 19 && wcount != 0) {
     printk("BASE %p:%p\n", (void*)base, (void*)page);
     //LOG_HEXDUMP_ERR((const unsigned int*)page, 0x1000, "0x000");
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0x100), 0x100, "0x100");
@@ -216,6 +216,7 @@ static int gpio_rcar_configure(const struct device *dev,
 			printk("OUTDT - false\n");
 			gpio_rcar_modify_bit(dev, OUTDT, pin, false);
 		}
+		printk("config_general\n");
 		gpio_rcar_config_general_input_output_mode(dev, pin, true);
 	} else {
 		gpio_rcar_config_general_input_output_mode(dev, pin, false);
