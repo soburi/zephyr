@@ -83,13 +83,6 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
 
     int rc = arch_page_phys_get((void *)base, &pa);
     printk("arch_page_phys_get(va=%p) -> rc=%d, pa=%p\n", (void *)base, rc, (void *)pa);
-    if (wcount == 0) {
-    for (i=0; i<0x1000; i+= 0x100) {
-	    char msg[16];
-	    sprintf(msg, "0x%04x", i);
-	    LOG_HEXDUMP_ERR((const unsigned int*)(page+i), 0x100, msg);
-    }
-    }
 
     if ((wcount % 20) == 0 && wcount != 0) {
     printk("base %p:%p\n", (void*)base, (void*)page);
@@ -136,16 +129,6 @@ static inline void gpio_rcar_write(const struct device *dev, uint32_t offs, uint
     //LOG_HEXDUMP_ERR((const unsigned int*)(page+0xf00), 0x100, "0xf00");
     }
 
-    if (wcount == 0) {
-    for (i=0; i<0x1000; i+= 0x100) {
-	    for (int j=0; j<0x100; j++) {
-		sys_write8(0xFF, page + i + j);
-	    }
-	    char msg[16];
-	    sprintf(msg, "0x%04x", i);
-	    LOG_HEXDUMP_ERR((const unsigned int*)(page+i), 0x100, msg);
-    }
-    }
     wcount++;
 }
 
