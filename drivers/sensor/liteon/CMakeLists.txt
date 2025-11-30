@@ -3,5 +3,6 @@
 
 # zephyr-keep-sorted-start
 add_subdirectory_ifdef(CONFIG_LTR329 ltr329)
+add_subdirectory_ifdef(CONFIG_LTR_553 ltr553)
 add_subdirectory_ifdef(CONFIG_LTR_F216A ltrf216a)
 # zephyr-keep-sorted-stop

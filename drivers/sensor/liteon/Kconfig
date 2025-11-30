@@ -3,5 +3,6 @@
 
 # zephyr-keep-sorted-start
 source "drivers/sensor/liteon/ltr329/Kconfig"
+source "drivers/sensor/liteon/ltr553/Kconfig"
 source "drivers/sensor/liteon/ltrf216a/Kconfig"
 # zephyr-keep-sorted-stop
