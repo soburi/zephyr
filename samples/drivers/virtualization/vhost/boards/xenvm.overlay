@@ -7,7 +7,7 @@
 / {
 	vhost: xen-vhost-mmio {
 		compatible = "xen,vhost-mmio";
-		device-id = <4>;
+		device-id = <41>;
 		vendor-id = <0x7a707972>; /* "zphy" */
 		num-queues = <2>;
 		queue-size-max= <16>;

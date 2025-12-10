@@ -743,6 +743,12 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 	case VIRTIO_MMIO_QUEUE_READY: {
 		r->data = vhost_queue_ready(dev, atomic_get(&data->be.queue_sel));
 	} break;
+	case 0x100: {
+		r->data = 8;
+	} break;
+	case 0x104: {
+		r->data = 0;
+	} break;
 	default: {
 		r->data = -1;
 	} break;
