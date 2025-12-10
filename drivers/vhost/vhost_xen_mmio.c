@@ -358,14 +358,15 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 
 		if (chunk->map && chunk->count > 0) {
 			const size_t count = chunk->count;
+			struct mapped_pages *map_to_free = chunk->map;
 
 			chunk->releasing = true;
 			chunk->map = NULL;
 			chunk->count = 0;
 			k_spin_unlock(&vq_ctx->lock, key);
 
-			free_pages_array(chunk->map, count);
-			k_free(chunk->map);
+			free_pages_array(map_to_free, count);
+			k_free(map_to_free);
 
 			key = k_spin_lock(&vq_ctx->lock);
 			chunk->releasing = false;
@@ -444,7 +445,7 @@ static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
 
 			map_ops[map_idx].host_addr =
 				(uintptr_t)page_info->buf + (j * XEN_PAGE_SIZE);
-			map_ops[map_idx].flags = GNTMAP_host_map;
+			map_ops[map_idx].flags = GNTMAP_host_map | (bufs[i].is_write ? 0 : GNTMAP_readonly);
 			map_ops[map_idx].ref = (page_gpa & ~XEN_GRANT_ADDR_OFF) >> XEN_PAGE_SHIFT;
 			map_ops[map_idx].dom = domid;
 
