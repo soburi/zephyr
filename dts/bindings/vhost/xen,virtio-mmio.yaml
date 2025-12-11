@@ -1,7 +1,7 @@
 # Copyright (c) 2025 TOKITA Hiroshi
 # SPDX-License-Identifier: Apache-2.0
 
-description: Xen Platform Control Registers
+description: VirtIO MMIO vhost device for Xen
 
 compatible: "xen,vhost-mmio"
 
