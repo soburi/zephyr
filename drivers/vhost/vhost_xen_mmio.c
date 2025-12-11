@@ -1447,7 +1447,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	};                                                                                         \
 	static struct vhost_xen_mmio_data vhost_xen_mmio_data_##idx = {                            \
 		.vq_ctx = vhost_xen_mmio_vq_ctx_##idx,                                             \
-		.fe.base = -1,                                                                     \
+		.fe.base = UINTPTR_MAX, /* invalid/uninitialized base address */                  \
 		.ioserv_port = -1,                                                                 \
 		.fe.servid = -1,                                                                   \
 	};                                                                                         \
