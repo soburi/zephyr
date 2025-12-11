@@ -104,7 +104,7 @@ static inline int vhost_prepare_iovec(const struct device *dev, uint16_t queue_i
 /**
  * @brief Release all iovecs
  *
- * Release iovecs that prepared by host_prepare_iovec.
+ * Release iovecs that prepared by vhost_prepare_iovec.
  *
  * @param dev       VHost controller device
  * @param queue_id  Queue ID
