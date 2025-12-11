@@ -976,7 +976,7 @@ static void init_workhandler(struct k_work *work)
 
 	ret = query_virtio_backend(params, ARRAY_SIZE(params), &data->fe.domid, &data->fe.deviceid);
 	if (ret < 0) {
-		LOG_INF("%s: failed %d", __func__, ret);
+		LOG_INF("%s: Failed to query VirtIO backend: %d", __func__, ret);
 		goto retry;
 	}
 
