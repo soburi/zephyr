@@ -17,7 +17,7 @@ config VHOST_XEN_MMIO
 	help
 	  Enable VIRTIO-MMIO backend on Xen hypervisor
 
-endif # VIRTIO
+endif # VHOST
 
 module = VHOST
 module-str = VHOST
