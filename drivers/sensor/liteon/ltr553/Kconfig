@@ -1,0 +1,10 @@
+# LTR-553 sensor configuration options
+
+config LTR_553
+        bool "LiteOn LTR-553 ambient light and proximity sensor"
+        depends on DT_HAS_LITEON_LTR553_ENABLED
+        default y
+        select I2C
+        help
+          Enable driver for the LiteOn LTR-553 ambient light and proximity sensor.
+
