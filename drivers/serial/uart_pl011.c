@@ -32,6 +32,9 @@
 #include <cmsis_compiler.h>
 #endif
 
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(pl011, CONFIG_UART_LOG_LEVEL);
+
 #include "uart_pl011_registers.h"
 
 struct pl011_config {
@@ -111,24 +114,43 @@ static inline int clk_enable_arm_pl011(const struct device *dev, uint32_t clk)
 #define PM_INST_GET(n) NULL
 #endif
 
+
+void printx(const struct device *dev, const char* fmt, ...)
+{
+	const struct pl011_config *config = dev->config;
+	if (((uintptr_t)config->_mmio.phys_addr) == 0x1f00030000) {
+		va_list ap;
+
+		va_start(ap, fmt);
+
+		vprintk(fmt, ap);
+
+		va_end(ap);
+	}
+}
+
 static void pl011_enable(const struct device *dev)
 {
 	get_uart(dev)->cr |=  PL011_CR_UARTEN;
+	LOG_DBG("pl011_enable cr %s: %x", dev->name, get_uart(dev)->cr);
 }
 
 static void pl011_disable(const struct device *dev)
 {
 	get_uart(dev)->cr &= ~PL011_CR_UARTEN;
+	LOG_DBG("pl011_disable cr %s: %x", dev->name, get_uart(dev)->cr);
 }
 
 static void pl011_enable_fifo(const struct device *dev)
 {
 	get_uart(dev)->lcr_h |= PL011_LCRH_FEN;
+	LOG_DBG("pl011_enable_fifo lcr_h %s: %x", dev->name, get_uart(dev)->lcr_h);
 }
 
 static void pl011_disable_fifo(const struct device *dev)
 {
 	get_uart(dev)->lcr_h &= ~PL011_LCRH_FEN;
+	LOG_DBG("pl011_disable_fifo lcr_h %s: %x", dev->name,  get_uart(dev)->lcr_h);
 }
 
 static void pl011_set_flow_control(const struct device *dev, bool rts, bool cts)
@@ -149,6 +171,7 @@ static void pl011_set_flow_control(const struct device *dev, bool rts, bool cts)
 	}
 
 	uart->cr = cr;
+	LOG_DBG("pl011_set_flow_control cr %s: %x", dev->name,  get_uart(dev)->cr);
 }
 
 static int pl011_set_baudrate(const struct device *dev,
@@ -168,8 +191,11 @@ static int pl011_set_baudrate(const struct device *dev,
 		return -EINVAL;
 	}
 
+	LOG_DBG("pl011_set_baudrate bauddiv %s: %d", dev->name,  bauddiv);
 	uart->ibrd = bauddiv >> PL011_FBRD_WIDTH;
+	LOG_DBG("pl011_set_baudrate ibrd %s: %x", dev->name,  uart->ibrd);
 	uart->fbrd = bauddiv & ((1u << PL011_FBRD_WIDTH) - 1u);
+	LOG_DBG("pl011_set_baudrate fbrd %s: %x", dev->name,  uart->fbrd);
 
 	barrier_dmem_fence_full();
 
@@ -178,6 +204,9 @@ static int pl011_set_baudrate(const struct device *dev,
 	 * ARM DDI 0183F, Pg 3-13
 	 */
 	uart->lcr_h = uart->lcr_h;
+	LOG_DBG("pl011_set_baudrate lcr_h %s: %x", dev->name,  uart->lcr_h);
+
+	printk("set baudrate\n");
 
 	return 0;
 }
@@ -206,7 +235,9 @@ static int pl011_poll_in(const struct device *dev, unsigned char *c)
 
 	/* got a character */
 	*c = (unsigned char)uart->dr;
+	LOG_DBG("pl011_poll_in c %s: %x", dev->name,  c);
 
+	LOG_DBG("pl011_poll_in rsr %s: %x", dev->name,  uart->rsr);
 	return uart->rsr & PL011_RSR_ERROR_MASK;
 }
 
@@ -220,6 +251,7 @@ static void pl011_poll_out(const struct device *dev,
 		; /* Wait */
 	}
 
+	//LOG_DBG("pl011_poll_out c %s: %x", dev->name,  c);
 	/* Send a character */
 	uart->dr = (uint32_t)c;
 }
@@ -228,6 +260,7 @@ static int pl011_err_check(const struct device *dev)
 {
 	uint32_t rsr = get_uart(dev)->rsr;
 	int errors = 0;
+	LOG_DBG("pl011_err_check rsr %s: %x", dev->name,  get_uart(dev)->rsr);
 
 	if (rsr & PL011_RSR_ECR_OE) {
 		errors |= UART_ERROR_OVERRUN;
@@ -330,6 +363,7 @@ static int pl011_runtime_configure_internal(const struct device *dev,
 
 	/* Update settings */
 	uart->lcr_h = lcrh;
+	LOG_DBG("pl011_runtime_configure_internal lcr_h %s: %x", dev->name,  uart->lcr_h);
 
 	memcpy(&data->uart_cfg, cfg, sizeof(data->uart_cfg));
 
@@ -546,6 +580,8 @@ static int pl011_init(const struct device *dev)
 	volatile struct pl011_regs *uart;
 	int ret;
 
+	LOG_DBG("pl011_init %s: %x", dev->name,  dev);
+
 	DEVICE_MMIO_MAP(dev, K_MEM_CACHE_NONE);
 
 	/* Must be placed after DEVICE_MMIO_MAP */
@@ -564,6 +600,8 @@ static int pl011_init(const struct device *dev)
 	if (config->clock_dev) {
 		clock_control_on(config->clock_dev, config->clock_id);
 		clock_control_get_rate(config->clock_dev, config->clock_id, &data->clk_freq);
+
+		LOG_DBG("clk_req %s %d", dev->name,  data->clk_freq);
 	}
 #endif
 
@@ -601,6 +639,8 @@ static int pl011_init(const struct device *dev)
 		/* Setting transmit and receive interrupt FIFO level */
 		uart->ifls = FIELD_PREP(PL011_IFLS_TXIFLSEL_M, TXIFLSEL_1_8_FULL)
 			| FIELD_PREP(PL011_IFLS_RXIFLSEL_M, RXIFLSEL_1_2_FULL);
+
+		LOG_DBG("pl011_init ifls %s: %x", dev->name,  uart->ifls);
 
 		/* Enabling the FIFOs */
 		if (!config->fifo_disable) {

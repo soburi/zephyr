@@ -85,6 +85,9 @@ int pinctrl_rp1_configure_pin(const struct rp1_pinctrl_soc_pin *pin)
 	reg_val |= pin->input_enable ? PADS_INPUT_ENABLE : 0;
 	reg_val |= pin->output_disable ? PADS_OUTPUT_DISABLE : 0;
 
+	LOG_DBG("set pads %x %x", GPIO_CTRL(DEVICE_MMIO_NAMED_ROM_PTR(dev, pads), pin->pin_num),
+		reg_val);
+
 	sys_write32(reg_val, pads_addr);
 
 	/* Configure pin function and overrides */
@@ -116,6 +119,15 @@ int pinctrl_rp1_configure_pin(const struct rp1_pinctrl_soc_pin *pin)
 	reg_val |= (pin->irq_override << GPIO_CTRL_IRQOVER_SHIFT) & GPIO_CTRL_IRQOVER_MASK;
 
 	sys_write32(reg_val, ctrl_addr);
+
+	LOG_DBG("set gpio %x %x", GPIO_CTRL(DEVICE_MMIO_NAMED_ROM_PTR(dev, gpio), pin->pin_num),
+		reg_val);
+
+	uint32_t rb = sys_read32(pads_addr);
+	LOG_INF("PADS pin%u addr=%lx R=%08x", pin->pin_num, (unsigned long)pads_addr, rb);
+
+	uint32_t rb2 = sys_read32(ctrl_addr);
+	LOG_INF("GPIO_CTRL pin%u addr=%lx R=%08x", pin->pin_num, (unsigned long)ctrl_addr, rb2);
 
 	return 0;
 }

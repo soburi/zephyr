@@ -9,14 +9,18 @@
 int pinctrl_lookup_state(const struct pinctrl_dev_config *config, uint8_t id,
 			 const struct pinctrl_state **state)
 {
+	printk("pinctrl_lookup_state %d\n", id);
 	*state = &config->states[0];
 	while (*state < &config->states[config->state_cnt]) {
+		printk("state-id %d\n", (*state)->id);
 		if (id == (*state)->id) {
 			return 0;
 		}
 
 		(*state)++;
 	}
+
+	printk("ENOENT\n");
 
 	return -ENOENT;
 }
