@@ -1,0 +1,35 @@
+# Copyright (c) 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+title: Raspberry Pi RP1 Pin Controller
+
+description: |
+  RP1 I/O controller pinmux and pad configuration. The RP1 is the
+  peripheral controller used on the Raspberry Pi 5. Each controller bank
+  manages a group of GPIO pins and exposes the function selection and pad
+  control registers for those pins.
+
+compatible: "brcm,bcm2712-pinctrl"
+
+include: base.yaml
+
+child-binding:
+  description: |
+    Pin controller state node.
+  child-binding:
+
+    include:
+      - name: pincfg-node.yaml
+        property-allowlist:
+          - bias-disable
+          - bias-pull-down
+          - bias-pull-up
+          - input-enable
+          - input-schmitt-enable
+          - drive-strength
+          - slew-rate
+
+    properties:
+      pinmux:
+        required: true
+        type: array
