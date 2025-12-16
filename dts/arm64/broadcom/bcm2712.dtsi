@@ -84,6 +84,12 @@
 			clocks = <&clk_uart>;
 			status = "disabled";
 		};
+
+		pinctrl: pinctrl@107d504100 {
+			compatible = "brcm,bcm2712-pinctrl";
+			reg = <0x10 0x7d504100 0x200>;
+			status = "okay";
+		};
 	};
 
 	clocks {
@@ -129,9 +135,18 @@
 				#address-cells = <2>;
 				#size-cells = <1>;
 
-				gpio0: gpio@1f000d0000 {
-					compatible = "simple-bus";
-					reg = <0x1f 0xd0000 0x30000>;
+				rp1_uartclk: uartclk {
+					compatible = "fixed-clock";
+					clock-frequency = <48000000>;
+					#clock-cells = <0>;
+				};
+
+				rp1_pinctrl: pinctrl@1f000d0000 {
+					compatible = "raspberrypi,rp1-pinctrl";
+					reg = <0x1f 0xd0000 0x10000>,
+					      <0x1f 0xe0000 0x10000>,
+					      <0x1f 0xf0000 0x10000>;
+					reg-names = "gpio", "rio", "pads";
 					#address-cells = <1>;
 					#size-cells = <0>;
 
@@ -161,6 +176,17 @@
 						ngpios = <20>;
 						status = "disabled";
 					};
+				};
+
+				rp1_uart0: serial@1f00030000 {
+					compatible = "arm,pl011";
+					reg = <0x1f 0x30000  0x100>;
+					interrupts = <0 0 0 0>;
+					clocks = <&rp1_uartclk>;
+					clock-names = "uartclk";
+					pinctrl-0 = <&rp1_uart0_default>;
+					pinctrl-names = "default";
+					status = "disabled";
 				};
 			};
 		};

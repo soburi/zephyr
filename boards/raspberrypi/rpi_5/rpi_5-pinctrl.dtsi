@@ -1,0 +1,21 @@
+#include <zephyr/dt-bindings/pinctrl/rp1-pinctrl.h>
+
+&pinctrl {
+        uart10_default: uart10_default {
+                group1 {
+                        pinmux = <0>;
+		};
+	};
+};
+
+&rp1_pinctrl {
+	rp1_uart0_default: rp1_uart0_default {
+		group1 {
+			pinmux = <UART0_TX_P14>;
+		};
+		group2 {
+			pinmux = <UART0_RX_P15>;
+			input-enable;
+		};
+	};
+};
