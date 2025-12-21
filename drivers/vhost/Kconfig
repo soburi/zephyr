@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config VHOST
-	bool "support for VIRTIO"
+	bool "support for VHost"
 	help
-	  Enable options for VIRTIO
+	  Enable options for VHost
 
 if VHOST
 
@@ -16,6 +16,12 @@ config VHOST_XEN_MMIO
 	select XEN_DMOP
 	help
 	  Enable VIRTIO-MMIO backend on Xen hypervisor
+
+config VHOST_INIT_PRIORITY
+        int "VHost init priority"
+        default KERNEL_INIT_PRIORITY_DEFAULT
+        help
+          VHost driver device initialization priority.
 
 endif # VIRTIO
 

@@ -50,6 +50,7 @@ LOG_MODULE_REGISTER(xen_vhost_mmio);
 #define RETRY_BACKOFF_EXP_MAX 8
 
 #define HEX_64BIT_DIGITS 16
+#define VIRTIO_PATH_LEN  64
 
 #define LOG_LVL_Q(lvl, str, ...)                                                                   \
 	UTIL_CAT(LOG_, lvl)("%s[%u]: " str, __func__, queue_id, ##__VA_ARGS__)
@@ -78,6 +79,8 @@ struct vhost_xen_mmio_config {
 	uint32_t vendor_id;
 	uintptr_t base;
 	size_t reg_size;
+	uint8_t *config_data;
+	size_t config_data_len;
 
 	uint64_t device_features;
 };
@@ -189,21 +192,24 @@ static const char *nth_str(const char *buf, size_t len, size_t n)
 static int query_virtio_backend(const struct query_param *params, size_t param_num, domid_t *domid,
 				int *deviceid)
 {
-	char buf[65] = {0};
-	const size_t len = ARRAY_SIZE(buf) - 1;
+	char buf_domids[VIRTIO_PATH_LEN + 1] = {0};
+	char buf_vids[VIRTIO_PATH_LEN + 1] = {0};
+	char buf_val[VIRTIO_PATH_LEN + 1] = {0};
 	const char *ptr_i, *ptr_j;
-	int i, j;
+	size_t i, j;
 
-	const ssize_t len_i = xs_directory("backend/virtio", buf, len, 0);
+	const ssize_t len_domids = xs_directory("backend/virtio", buf_domids, VIRTIO_PATH_LEN, 0);
 
-	if (len_i < 0) {
+	if (len_domids < 0) {
+		LOG_DBG("query_virtio_backend len_domids=%ld", len_domids);
 		return -EIO;
 	}
-	if (len_i == 6 && strncmp(buf, "ENOENT", len) == 0) {
+	if (len_domids == 6 && strncmp(buf_domids, "ENOENT", VIRTIO_PATH_LEN) == 0) {
+		// LOG_INF("end query_virtio_backend -ENOENT");
 		return -ENOENT;
 	}
 
-	for (i = 0, ptr_i = buf; ptr_i; ptr_i = nth_str(buf, len_i, i++)) {
+	for (i = 0, ptr_i = buf_domids; ptr_i; ptr_i = nth_str(buf_domids, len_domids, i++)) {
 		char *endptr;
 
 		*domid = strtol(ptr_i, &endptr, 10);
@@ -211,15 +217,17 @@ static int query_virtio_backend(const struct query_param *params, size_t param_n
 			continue;
 		}
 
-		snprintf(buf, len, "backend/virtio/%d", *domid);
+		snprintf(buf_vids, VIRTIO_PATH_LEN, "backend/virtio/%d", *domid);
 
-		const ssize_t len_j = xs_directory(buf, buf, ARRAY_SIZE(buf), 0);
+		const ssize_t len_vids =
+			xs_directory(buf_vids, buf_vids, ARRAY_SIZE(buf_vids), 0);
 
-		if (len_j < 0 || strncmp(buf, "ENOENT", ARRAY_SIZE(buf)) == 0) {
+		if (len_vids < 0 || strncmp(buf_vids, "ENOENT", ARRAY_SIZE(buf_vids)) == 0) {
 			continue;
 		}
 
-		for (j = 0, ptr_j = buf; ptr_j; ptr_j = nth_str(buf, len_j, j++)) {
+		for (j = 0, ptr_j = buf_vids; ptr_j;
+		     ptr_j = nth_str(buf_vids, len_vids, j++)) {
 			*deviceid = strtol(ptr_j, &endptr, 10);
 			if (*endptr != '\0') {
 				continue; /* Skip invalid device ID */
@@ -228,12 +236,15 @@ static int query_virtio_backend(const struct query_param *params, size_t param_n
 			bool match = true;
 
 			for (size_t k = 0; k < param_num; k++) {
-				snprintf(buf, len, "backend/virtio/%d/%d/%s", *domid, *deviceid,
+				snprintf(buf_val, VIRTIO_PATH_LEN, "backend/virtio/%d/%d/%s", *domid, *deviceid,
 					 params[k].key);
-				const ssize_t len_k = xs_read(buf, buf, ARRAY_SIZE(buf), 0);
+				const ssize_t len_val =
+					xs_read(buf_val, buf_val, ARRAY_SIZE(buf_val), 0);
 
-				if ((len_k < 0) || (strncmp(buf, "ENOENT", ARRAY_SIZE(buf)) == 0) ||
-				    (strncmp(params[k].expected, buf, ARRAY_SIZE(buf)) != 0)) {
+				if ((len_val < 0) ||
+				    (strncmp(buf_val, "ENOENT", ARRAY_SIZE(buf_val)) == 0) ||
+				    (strncmp(params[k].expected, buf_val, ARRAY_SIZE(buf_val)) !=
+				     0)) {
 					match = false;
 					break;
 				}
@@ -250,11 +261,11 @@ static int query_virtio_backend(const struct query_param *params, size_t param_n
 
 static uintptr_t query_irq(domid_t domid, int deviceid)
 {
-	char buf[65] = {0};
-	size_t len = ARRAY_SIZE(buf) - 1;
+	char buf[VIRTIO_PATH_LEN + 1] = {0};
 	char *endptr;
+	size_t len;
 
-	snprintf(buf, len, "backend/virtio/%d/%d/irq", domid, deviceid);
+	snprintf(buf, VIRTIO_PATH_LEN, "backend/virtio/%d/%d/irq", domid, deviceid);
 
 	len = xs_read(buf, buf, ARRAY_SIZE(buf) - 1, 0);
 	if ((len < 0) || (strncmp(buf, "ENOENT", ARRAY_SIZE(buf)) == 0)) {
@@ -744,7 +755,13 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 		r->data = vhost_queue_ready(dev, atomic_get(&data->be.queue_sel));
 	} break;
 	default: {
-		r->data = -1;
+		const size_t config_offset = addr_offset - VIRTIO_MMIO_CONFIG;
+		if ((config_offset % 4) &&
+		    (config_offset < ROUND_DOWN(config->config_data_len, 4))) {
+			r->data = sys_read32((mem_addr_t)(config->config_data + config_offset));
+		} else {
+			r->data = -1;
+		}
 	} break;
 	}
 
@@ -970,13 +987,15 @@ static void init_workhandler(struct k_work *work)
 
 	ret = query_virtio_backend(params, ARRAY_SIZE(params), &data->fe.domid, &data->fe.deviceid);
 	if (ret < 0) {
-		LOG_INF("%s: failed %d", __func__, ret);
+		// LOG_INF("%s: query_virtio_backend failed %d: expected:%s", dev->name, ret,
+		// baseaddr);
 		goto retry;
 	}
 
 	data->fe.base = config->base;
 	data->fe.irq = query_irq(data->fe.domid, data->fe.deviceid);
 	if (data->fe.irq == -1) {
+		// LOG_INF("query_irq %d, %d failed", data->fe.domid, data->fe.deviceid);
 		ret = -EINVAL;
 		goto retry;
 	}
@@ -1374,7 +1393,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	const struct k_work_queue_config qcfg = {.name = "vhost-mmio-wq"};
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
-	char buf[65] = {0};
+	char buf[VIRTIO_PATH_LEN + 1] = {0};
 	int ret;
 
 	data->dev = dev;
@@ -1428,6 +1447,8 @@ static int vhost_xen_mmio_init(const struct device *dev)
 
 #define VHOST_XEN_MMIO_INST(idx)                                                                   \
 	static K_THREAD_STACK_DEFINE(workq_stack_##idx, DT_INST_PROP_OR(idx, stack_size, 4096));   \
+	uint8_t config_data##idx[] = {COND_CODE_1(DT_INST_HAS_PROP(idx, config_data),              \
+		(DT_INST_FOREACH_PROP_ELEM_SEP(idx, config_data, DT_PROP_BY_IDX, (,))), ()) };     \
 	static const struct vhost_xen_mmio_config vhost_xen_mmio_config_##idx = {                  \
 		.queue_size_max = DT_INST_PROP_OR(idx, queue_size_max, 1),                         \
 		.num_queues = DT_INST_PROP_OR(idx, num_queues, 1),                                 \
@@ -1435,6 +1456,8 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.vendor_id = DT_INST_PROP_OR(idx, vendor_id, 0),                                   \
 		.base = DT_INST_PROP(idx, base),                                                   \
 		.reg_size = XEN_PAGE_SIZE,                                                         \
+		.config_data = config_data##idx,                                                   \
+		.config_data_len = DT_INST_PROP_LEN_OR(idx, config_data, 0),                       \
 		.workq_stack = (k_thread_stack_t *)&workq_stack_##idx,                             \
 		.workq_stack_size = K_THREAD_STACK_SIZEOF(workq_stack_##idx),                      \
 		.workq_priority = DT_INST_PROP_OR(idx, priority, 0),                               \
@@ -1452,7 +1475,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.fe.servid = -1,                                                                   \
 	};                                                                                         \
 	DEVICE_DT_INST_DEFINE(idx, vhost_xen_mmio_init, NULL, &vhost_xen_mmio_data_##idx,          \
-			      &vhost_xen_mmio_config_##idx, POST_KERNEL, 100,                      \
-			      &vhost_driver_xen_mmio_api);
+			      &vhost_xen_mmio_config_##idx, POST_KERNEL,                           \
+			      CONFIG_VHOST_INIT_PRIORITY, &vhost_driver_xen_mmio_api);
 
 DT_INST_FOREACH_STATUS_OKAY(VHOST_XEN_MMIO_INST)
