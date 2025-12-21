@@ -30,6 +30,7 @@ DT_COMPAT_FOREACH_STATUS_OKAY_VARGS(xen_vhost_mmio, DECL_HANDLER, ())
 int register_handler(const struct device *dev,
 		     void (*handler)(const struct device *, uint16_t, void *))
 {
+	LOG_INF("VHost device %s registering handler...", dev->name);
 	if (!device_is_ready(dev)) {
 		LOG_ERR("VHost device %s not ready", dev->name);
 		return -ENODEV;
@@ -43,6 +44,8 @@ int register_handler(const struct device *dev,
 
 int main(void)
 {
+	LOG_INF("VHost sample...");
+
 	DT_COMPAT_FOREACH_STATUS_OKAY_VARGS(xen_vhost_mmio, REGISTER_HANDLER, ())
 
 	LOG_INF("VHost sample application started, waiting for guest connections...");

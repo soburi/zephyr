@@ -14,9 +14,30 @@
 			queue-size-max= <16>;
 			base = <0x2000000>;
 		};
+
+		gpio {
+			compatible = "xen,vhost-mmio";
+			device-id = <41>;
+			vendor-id = <0x7a707972>; /* "zphy" */
+			num-queues = <2>;
+			queue-size-max= <16>;
+			base = <0x2000200>;
+			config-data = [08 00 00 00 0F 00 00 00 00];
+		};
 	};
 
 	chosen {
 		zephyr,shell-uart = &xen_hvc;
+	};
+
+	gpio0: gpio_emul_0 {
+		compatible = "zephyr,gpio-emul";
+		gpio-controller;
+		status = "okay";
+		#gpio-cells = <2>;
+		ngpios = <8>;
+		rising-edge;
+		falling-edge;
+		high-level;
 	};
 };
