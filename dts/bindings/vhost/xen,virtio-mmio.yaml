@@ -37,3 +37,9 @@ properties:
     type: int
     description: >
       Priority for the instance-specific work_q thread.
+
+  config-data:
+    type: uint8-array
+    description: |
+     Configuration at 0x100+ in the '4.2.2 MMIO Device Register Layout' section
+     of the VIRTIO Specification.
