@@ -24,7 +24,7 @@ LOG_MODULE_REGISTER(LTR329, CONFIG_SENSOR_LOG_LEVEL);
 #define LTR329_ALS_DATA_CH1_1 0x89
 #define LTR329_ALS_DATA_CH0_0 0x8A
 #define LTR329_ALS_DATA_CH0_1 0x8B
-#define LTR329_ALS_STATUS     0x8C
+#define LTR329_ALS_PS_STATUS  0x8C
 
 /* Bit masks and shifts for ALS_CONTR register */
 #define LTR329_ALS_CONTR_MODE_MASK      BIT(0)
@@ -51,14 +51,20 @@ LOG_MODULE_REGISTER(LTR329, CONFIG_SENSOR_LOG_LEVEL);
 #define LTR329_MANUFAC_ID_IDENTIFICATION_SHIFT 0
 
 /* Bit masks and shifts for ALS_STATUS register */
-#define LTR329_ALS_STATUS_DATA_MASK        GENMASK(7, 0)
-#define LTR329_ALS_STATUS_DATA_SHIFT       0
-#define LTR329_ALS_STATUS_DATA_READY_MASK  BIT(2)
-#define LTR329_ALS_STATUS_DATA_READY_SHIFT 2
-#define LTR329_ALS_STATUS_DATA_GAIN_MASK   GENMASK(6, 4)
-#define LTR329_ALS_STATUS_DATA_GAIN_SHIFT  4
-#define LTR329_ALS_STATUS_DATA_VALID_MASK  BIT(7)
-#define LTR329_ALS_STATUS_DATA_VALID_SHIFT 7
+#define LTR329_ALS_PS_STATUS_PS_DATA_STATUS_MASK   BIT(0)
+#define LTR329_ALS_PS_STATUS_PS_DATA_STATUS_SHIFT  0
+#define LTR329_ALS_PS_STATUS_PS_INTR_STATUS_MASK   BIT(1)
+#define LTR329_ALS_PS_STATUS_PS_INTR_STATUS_SHIFT  1
+#define LTR329_ALS_PS_STATUS_ALS_DATA_STATUS_MASK  BIT(2)
+#define LTR329_ALS_PS_STATUS_ALS_DATA_STATUS_SHIFT 2
+#define LTR329_ALS_PS_STATUS_ALS_INTR_STATUS_MASK  BIT(3)
+#define LTR329_ALS_PS_STATUS_ALS_INTR_STATUS_SHIFT 3
+#define LTR329_ALS_PS_STATUS_ALS_GAIN_MASK         GENMASK(6, 4)
+#define LTR329_ALS_PS_STATUS_ALS_GAIN_SHIFT        4
+#define LTR329_ALS_PS_STATUS_ALS_DATA_VALID_MASK   BIT(7)
+#define LTR329_ALS_PS_STATUS_ALS_DATA_VALID_SHIFT  7
+
+#define LTR553_ALS_CONTR_MODE_ACTIVE 0x1
 
 /* Expected sensor IDs */
 #define LTR329_PART_ID_VALUE         0xA0
@@ -69,21 +75,21 @@ LOG_MODULE_REGISTER(LTR329, CONFIG_SENSOR_LOG_LEVEL);
 #define LTR329_WAKEUP_FROM_STANDBY_MS 10
 
 /* Macros to set and get register fields */
-#define LTR329_REG_SET(reg, field, value)				\
-	(((value) << reg##_##field##_SHIFT) & reg##_##field##_MASK)
-#define LTR329_REG_GET(reg, field, value)				\
-	(((value) & reg##_##field##_MASK) >> reg##_##field##_SHIFT)
+#define LTR329_REG_SET(reg, field, value)                                                          \
+	(((value) << LTR329_##reg##_##field##_SHIFT) & LTR329_##reg##_##field##_MASK)
+#define LTR329_REG_GET(reg, field, value)                                                          \
+	(((value) & LTR329_##reg##_##field##_MASK) >> LTR329_##reg##_##field##_SHIFT)
 
 struct ltr329_config {
 	const struct i2c_dt_spec bus;
-	uint8_t gain;
-	uint8_t integration_time;
-	uint8_t measurement_rate;
+	uint8_t als_gain;
+	uint8_t als_integration_time;
+	uint8_t als_measurement_rate;
 };
 
 struct ltr329_data {
-	uint16_t ch0;
-	uint16_t ch1;
+	uint16_t als_ch0;
+	uint16_t als_ch1;
 };
 
 static int ltr329_check_device_id(const struct i2c_dt_spec *bus)
@@ -115,12 +121,13 @@ static int ltr329_check_device_id(const struct i2c_dt_spec *bus)
 	return 0;
 }
 
-static int ltr329_init_registers(const struct i2c_dt_spec *bus, const struct ltr329_config *cfg)
+static int ltr329_init_als_registers(const struct ltr329_config *cfg)
 {
-	const uint8_t control_reg = LTR329_REG_SET(LTR329_ALS_CONTR, MODE, 1) |
-				    LTR329_REG_SET(LTR329_ALS_CONTR, GAIN, cfg->gain);
-	const uint8_t meas_reg = LTR329_REG_SET(LTR329_MEAS_RATE, REPEAT, cfg->measurement_rate) |
-				 LTR329_REG_SET(LTR329_MEAS_RATE, INT_TIME, cfg->integration_time);
+	const struct i2c_dt_spec *bus = &cfg->bus;
+	const uint8_t control_reg = LTR329_REG_SET(ALS_CONTR, MODE, LTR553_ALS_CONTR_MODE_ACTIVE) |
+				    LTR329_REG_SET(ALS_CONTR, GAIN, cfg->als_gain);
+	const uint8_t meas_reg = LTR329_REG_SET(MEAS_RATE, REPEAT, cfg->als_measurement_rate) |
+				 LTR329_REG_SET(MEAS_RATE, INT_TIME, cfg->als_integration_time);
 	uint8_t buffer;
 	int rc;
 
@@ -142,14 +149,14 @@ static int ltr329_init_registers(const struct i2c_dt_spec *bus, const struct ltr
 		LOG_ERR("Failed to read back MEAS_RATE register");
 		return rc;
 	}
-	if (LTR329_REG_GET(LTR329_MEAS_RATE, REPEAT, buffer) != cfg->measurement_rate) {
-		LOG_ERR("Measurement rate mismatch: expected %u, got %u", cfg->measurement_rate,
-			(uint8_t)LTR329_REG_GET(LTR329_MEAS_RATE, REPEAT, buffer));
+	if (LTR329_REG_GET(MEAS_RATE, REPEAT, buffer) != cfg->als_measurement_rate) {
+		LOG_ERR("Measurement rate mismatch: expected %u, got %u", cfg->als_measurement_rate,
+			(uint8_t)LTR329_REG_GET(MEAS_RATE, REPEAT, buffer));
 		return -ENODEV;
 	}
-	if (LTR329_REG_GET(LTR329_MEAS_RATE, INT_TIME, buffer) != cfg->integration_time) {
-		LOG_ERR("Integration time mismatch: expected %u, got %u", cfg->integration_time,
-			(uint8_t)LTR329_REG_GET(LTR329_MEAS_RATE, INT_TIME, buffer));
+	if (LTR329_REG_GET(MEAS_RATE, INT_TIME, buffer) != cfg->als_integration_time) {
+		LOG_ERR("Integration time mismatch: expected %u, got %u", cfg->als_integration_time,
+			(uint8_t)LTR329_REG_GET(MEAS_RATE, INT_TIME, buffer));
 		return -ENODEV;
 	}
 
@@ -175,7 +182,7 @@ static int ltr329_init(const struct device *dev)
 	}
 
 	/* Init register to enable sensor to active mode */
-	rc = ltr329_init_registers(&cfg->bus, cfg);
+	rc = ltr329_init_als_registers(cfg);
 	if (rc < 0) {
 		return rc;
 	}
@@ -188,13 +195,13 @@ static int ltr329_check_data_ready(const struct i2c_dt_spec *bus)
 	uint8_t status;
 	int rc;
 
-	rc = i2c_reg_read_byte_dt(bus, LTR329_ALS_STATUS, &status);
+	rc = i2c_reg_read_byte_dt(bus, LTR329_ALS_PS_STATUS, &status);
 	if (rc < 0) {
 		LOG_ERR("Failed to read ALS_STATUS register");
 		return rc;
 	}
 
-	if (!LTR329_REG_GET(LTR329_ALS_STATUS, DATA_READY, status)) {
+	if (!LTR329_REG_GET(ALS_PS_STATUS, ALS_DATA_STATUS, status)) {
 		LOG_WRN("Data not ready");
 		return -EBUSY;
 	}
@@ -214,8 +221,8 @@ static int ltr329_read_als_data(const struct i2c_dt_spec *bus, struct ltr329_dat
 		return rc;
 	}
 
-	data->ch1 = sys_get_le16(buff);
-	data->ch0 = sys_get_le16(buff + 2);
+	data->als_ch1 = sys_get_le16(buff);
+	data->als_ch0 = sys_get_le16(buff + 2);
 
 	return 0;
 }
@@ -285,17 +292,17 @@ static int ltr329_channel_get(const struct device *dev, enum sensor_channel chan
 		return -ENOTSUP;
 	}
 
-	if (ltr329_get_mapped_gain(cfg->gain, &gain_value) != 0) {
+	if (ltr329_get_mapped_gain(cfg->als_gain, &gain_value) != 0) {
 		LOG_ERR("Invalid gain configuration");
 		return -EINVAL;
 	}
 
-	if (ltr329_get_mapped_int_time(cfg->integration_time, &integration_time_value) != 0) {
+	if (ltr329_get_mapped_int_time(cfg->als_integration_time, &integration_time_value) != 0) {
 		LOG_ERR("Invalid integration time configuration");
 		return -EINVAL;
 	}
 
-	if ((data->ch0 == 0) && (data->ch1 == 0)) {
+	if ((data->als_ch0 == 0) && (data->als_ch1 == 0)) {
 		LOG_WRN("Both channels are zero; cannot compute ratio");
 		return -EINVAL;
 	}
@@ -303,14 +310,15 @@ static int ltr329_channel_get(const struct device *dev, enum sensor_channel chan
 	/* Calculate lux value according to the appendix A of the datasheet. */
 	uint64_t lux;
 	/* The calculation is scaled by 1000000 to avoid floating point. */
-	uint64_t scaled_ratio = (data->ch1 * UINT64_C(1000000)) / (uint64_t)(data->ch0 + data->ch1);
+	uint64_t scaled_ratio =
+		(data->als_ch1 * UINT64_C(1000000)) / (uint64_t)(data->als_ch0 + data->als_ch1);
 
 	if (scaled_ratio < UINT64_C(450000)) {
-		lux = (UINT64_C(1774300) * data->ch0 + UINT64_C(1105900) * data->ch1);
+		lux = (UINT64_C(1774300) * data->als_ch0 + UINT64_C(1105900) * data->als_ch1);
 	} else if (scaled_ratio < UINT64_C(640000)) {
-		lux = (UINT64_C(4278500) * data->ch0 - UINT64_C(1954800) * data->ch1);
+		lux = (UINT64_C(4278500) * data->als_ch0 - UINT64_C(1954800) * data->als_ch1);
 	} else if (scaled_ratio < UINT64_C(850000)) {
-		lux = (UINT64_C(592600) * data->ch0 + UINT64_C(118500) * data->ch1);
+		lux = (UINT64_C(592600) * data->als_ch0 + UINT64_C(118500) * data->als_ch1);
 	} else {
 		LOG_WRN("Invalid ratio: %llu", scaled_ratio);
 		return -EINVAL;
@@ -333,16 +341,26 @@ static DEVICE_API(sensor, ltr329_driver_api) = {
 	.channel_get = ltr329_channel_get,
 };
 
-#define DEFINE_LTR329(_num)									\
-	static struct ltr329_data ltr329_data_##_num;						\
-	static const struct ltr329_config ltr329_config_##_num = {				\
-		.bus = I2C_DT_SPEC_INST_GET(_num),						\
-		.gain = DT_INST_PROP(_num, gain),						\
-		.integration_time = DT_INST_PROP(_num, integration_time),			\
-		.measurement_rate = DT_INST_PROP(_num, measurement_rate),			\
-	};											\
-	SENSOR_DEVICE_DT_INST_DEFINE(_num, ltr329_init, NULL, &ltr329_data_##_num,		\
-				     &ltr329_config_##_num, POST_KERNEL,			\
+#define LTR329_ALS_GAIN_REG(n)                                                                     \
+	COND_CODE_1(DT_NODE_HAS_PROP(n, gain), (DT_PROP(n, gain)),                                 \
+		    (DT_ENUM_IDX_OR(n, als_gain, 0)))
+#define LTR329_ALS_INT_TIME_REG(n)                                                                 \
+	COND_CODE_1(DT_NODE_HAS_PROP(n, integration_time), (DT_PROP(n, integration_time)),         \
+		    (DT_ENUM_IDX_OR(n, als_integration_time, 0)))
+#define LTR329_ALS_MEAS_RATE_REG(n)                                                                \
+	COND_CODE_1(DT_NODE_HAS_PROP(n, measurement_rate), (DT_PROP(n, measurement_rate)),         \
+		    (DT_ENUM_IDX_OR(n, als_measurement_rate, 3)))
+
+#define DEFINE_LTR329(_num)                                                                        \
+	static struct ltr329_data ltr329_data_##_num;                                              \
+	static const struct ltr329_config ltr329_config_##_num = {                                 \
+		.bus = I2C_DT_SPEC_INST_GET(_num),                                                 \
+		.als_gain = LTR329_ALS_GAIN_REG(_num),                                             \
+		.als_integration_time = LTR329_ALS_INT_TIME_REG(_num),                             \
+		.als_measurement_rate = LTR329_ALS_MEAS_RATE_REG(_num),                            \
+	};                                                                                         \
+	SENSOR_DEVICE_DT_INST_DEFINE(_num, ltr329_init, NULL, &ltr329_data_##_num,                 \
+				     &ltr329_config_##_num, POST_KERNEL,                           \
 				     CONFIG_SENSOR_INIT_PRIORITY, &ltr329_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(DEFINE_LTR329)
