@@ -297,7 +297,9 @@ static int ltr329_channel_get(const struct device *dev, enum sensor_channel chan
 
 	if ((data->ch0 == 0) && (data->ch1 == 0)) {
 		LOG_WRN("Both channels are zero; cannot compute ratio");
-		return -EINVAL;
+		val->val1 = 0;
+		val->val2 = 0;
+		return 0;
 	}
 
 	/* Calculate lux value according to the appendix A of the datasheet. */
@@ -313,7 +315,9 @@ static int ltr329_channel_get(const struct device *dev, enum sensor_channel chan
 		lux = (UINT64_C(592600) * data->ch0 + UINT64_C(118500) * data->ch1);
 	} else {
 		LOG_WRN("Invalid ratio: %llu", scaled_ratio);
-		return -EINVAL;
+		val->val1 = 0;
+		val->val2 = 0;
+		return 0;
 	}
 
 	/* Adjust lux value for gain and integration time.
