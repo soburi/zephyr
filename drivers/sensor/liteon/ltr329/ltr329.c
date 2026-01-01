@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT liteon_ltr329
-
 #include <zephyr/device.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/drivers/i2c.h>
@@ -16,15 +14,33 @@
 LOG_MODULE_REGISTER(LTR329, CONFIG_SENSOR_LOG_LEVEL);
 
 /* Register addresses */
-#define LTR329_ALS_CONTR      0x80
-#define LTR329_MEAS_RATE      0x85
-#define LTR329_PART_ID        0x86
-#define LTR329_MANUFAC_ID     0x87
-#define LTR329_ALS_DATA_CH1_0 0x88
-#define LTR329_ALS_DATA_CH1_1 0x89
-#define LTR329_ALS_DATA_CH0_0 0x8A
-#define LTR329_ALS_DATA_CH0_1 0x8B
-#define LTR329_ALS_PS_STATUS  0x8C
+#define LTR329_ALS_CONTR         0x80
+#define LTR553_PS_CONTR          0x81
+#define LTR553_PS_LED            0x82
+#define LTR553_PS_N_PULSES       0x83
+#define LTR553_PS_MEAS_RATE      0x84
+#define LTR329_MEAS_RATE         0x85
+#define LTR329_PART_ID           0x86
+#define LTR329_MANUFAC_ID        0x87
+#define LTR329_ALS_DATA_CH1_0    0x88
+#define LTR329_ALS_DATA_CH1_1    0x89
+#define LTR329_ALS_DATA_CH0_0    0x8A
+#define LTR329_ALS_DATA_CH0_1    0x8B
+#define LTR329_ALS_PS_STATUS     0x8C
+#define LTR553_PS_DATA0          0x8D
+#define LTR553_PS_DATA1          0x8E
+#define LTR553_INTERRUPT         0x8F
+#define LTR553_PS_THRES_UP_0     0x90
+#define LTR553_PS_THRES_UP_1     0x91
+#define LTR553_PS_THRES_LOW_0    0x92
+#define LTR553_PS_THRES_LOW_1    0x93
+#define LTR553_PS_OFFSET_0       0x94
+#define LTR553_PS_OFFSET_1       0x95
+#define LTR553_ALS_THRES_UP_0    0x97
+#define LTR553_ALS_THRES_UP_1    0x98
+#define LTR553_ALS_THRES_LOW_0   0x99
+#define LTR553_ALS_THRES_LOW_1   0x9A
+#define LTR553_INTERRUPT_PERSIST 0x9E
 
 /* Bit masks and shifts for ALS_CONTR register */
 #define LTR329_ALS_CONTR_MODE_MASK      BIT(0)
@@ -39,6 +55,28 @@ LOG_MODULE_REGISTER(LTR329, CONFIG_SENSOR_LOG_LEVEL);
 #define LTR329_MEAS_RATE_REPEAT_SHIFT   0
 #define LTR329_MEAS_RATE_INT_TIME_MASK  GENMASK(5, 3)
 #define LTR329_MEAS_RATE_INT_TIME_SHIFT 3
+
+/* Bit masks and shift for PS_CONTR register */
+#define LTR553_PS_CONTR_MODE_MASK     GENMASK(1, 0)
+#define LTR553_PS_CONTR_MODE_SHIFT    0
+#define LTR553_PS_CONTR_SAT_IND_MASK  BIT(5)
+#define LTR553_PS_CONTR_SAT_IND_SHIFT 5
+
+/* Bit masks and shift for PS_LED register */
+#define LTR553_PS_LED_PULSE_FREQ_MASK  GENMASK(7, 5)
+#define LTR553_PS_LED_PULSE_FREQ_SHIFT 5
+#define LTR553_PS_LED_DUTY_CYCLE_MASK  GENMASK(4, 3)
+#define LTR553_PS_LED_DUTY_CYCLE_SHIFT 3
+#define LTR553_PS_LED_CURRENT_MASK     GENMASK(2, 0)
+#define LTR553_PS_LED_CURRENT_SHIFT    0
+
+/* Bit masks and shift for PS_N_PULSES register */
+#define LTR553_PS_N_PULSES_COUNT_MASK  GENMASK(3, 0)
+#define LTR553_PS_N_PULSES_COUNT_SHIFT 0
+
+/* Bit masks and shift for PS_MEAS_RATE register */
+#define LTR553_PS_MEAS_RATE_RATE_MASK  GENMASK(3, 0)
+#define LTR553_PS_MEAS_RATE_RATE_SHIFT 0
 
 /* Bit masks and shifts for PART_ID register */
 #define LTR329_PART_ID_REVISION_MASK  GENMASK(3, 0)
@@ -64,11 +102,30 @@ LOG_MODULE_REGISTER(LTR329, CONFIG_SENSOR_LOG_LEVEL);
 #define LTR329_ALS_PS_STATUS_ALS_DATA_VALID_MASK   BIT(7)
 #define LTR329_ALS_PS_STATUS_ALS_DATA_VALID_SHIFT  7
 
+/* Bit masks for LTR553-specific registers */
+#define LTR553_INTERRUPT_PS_MASK        BIT(0)
+#define LTR553_INTERRUPT_PS_SHIFT       0
+#define LTR553_INTERRUPT_ALS_MASK       BIT(1)
+#define LTR553_INTERRUPT_ALS_SHIFT      1
+#define LTR553_INTERRUPT_POLARITY_MASK  BIT(2)
+#define LTR553_INTERRUPT_POLARITY_SHIFT 2
+
+#define LTR553_INTERRUPT_PERSIST_ALS_MASK  GENMASK(3, 0)
+#define LTR553_INTERRUPT_PERSIST_ALS_SHIFT 0
+#define LTR553_INTERRUPT_PERSIST_PS_MASK   GENMASK(7, 4)
+#define LTR553_INTERRUPT_PERSIST_PS_SHIFT  4
+
+#define LTR553_PS_DATA_MASK 0x07FF
+#define LTR553_PS_DATA_MAX  LTR553_PS_DATA_MASK
+
 #define LTR553_ALS_CONTR_MODE_ACTIVE 0x1
+#define LTR553_PS_CONTR_MODE_ACTIVE  0x02
 
 /* Expected sensor IDs */
 #define LTR329_PART_ID_VALUE         0xA0
 #define LTR329_MANUFACTURER_ID_VALUE 0x05
+#define LTR553_PART_ID_VALUE         0x92
+#define LTR553_MANUFACTURER_ID_VALUE 0x05
 
 /* Timing definitions - refer to LTR-329ALS-01 datasheet */
 #define LTR329_INIT_STARTUP_MS        100
@@ -79,21 +136,44 @@ LOG_MODULE_REGISTER(LTR329, CONFIG_SENSOR_LOG_LEVEL);
 	(((value) << LTR329_##reg##_##field##_SHIFT) & LTR329_##reg##_##field##_MASK)
 #define LTR329_REG_GET(reg, field, value)                                                          \
 	(((value) & LTR329_##reg##_##field##_MASK) >> LTR329_##reg##_##field##_SHIFT)
+#define LTR553_REG_SET(reg, field, value)                                                          \
+	(((value) << LTR553_##reg##_##field##_SHIFT) & LTR553_##reg##_##field##_MASK)
+#define LTR553_REG_GET(reg, field, value)                                                          \
+	(((value) & LTR553_##reg##_##field##_MASK) >> LTR553_##reg##_##field##_SHIFT)
 
 struct ltr329_config {
 	const struct i2c_dt_spec bus;
+	uint8_t part_id;
 	uint8_t als_gain;
 	uint8_t als_integration_time;
 	uint8_t als_measurement_rate;
+	uint8_t ps_led_pulse_freq;
+	uint8_t ps_led_duty_cycle;
+	uint8_t ps_led_current;
+	uint8_t ps_n_pulses;
+	uint8_t ps_measurement_rate;
+	bool ps_saturation_indicator;
+	bool ps_interrupt;
+	bool als_interrupt;
+	uint8_t ps_interrupt_persist;
+	uint8_t als_interrupt_persist;
+	uint16_t ps_upper_threshold;
+	uint16_t ps_lower_threshold;
+	uint16_t ps_offset;
+	uint16_t als_upper_threshold;
+	uint16_t als_lower_threshold;
 };
 
 struct ltr329_data {
 	uint16_t als_ch0;
 	uint16_t als_ch1;
+	uint16_t ps_ch0;
+	bool proximity_state;
 };
 
-static int ltr329_check_device_id(const struct i2c_dt_spec *bus)
+static int ltr329_check_device_id(const struct ltr329_config *cfg)
 {
+	const struct i2c_dt_spec *bus = &cfg->bus;
 	uint8_t id;
 	int rc;
 
@@ -102,8 +182,9 @@ static int ltr329_check_device_id(const struct i2c_dt_spec *bus)
 		LOG_ERR("Failed to read PART_ID");
 		return rc;
 	}
-	if (id != LTR329_PART_ID_VALUE) {
-		LOG_ERR("PART_ID mismatch: expected 0x%02X, got 0x%02X", LTR329_PART_ID_VALUE, id);
+
+	if (id != cfg->part_id) {
+		LOG_ERR("PART_ID mismatch: expected 0x%02X, got 0x%02X", cfg->part_id, id);
 		return -ENODEV;
 	}
 
@@ -116,6 +197,69 @@ static int ltr329_check_device_id(const struct i2c_dt_spec *bus)
 		LOG_ERR("MANUFAC_ID mismatch: expected 0x%02X, got 0x%02X",
 			LTR329_MANUFACTURER_ID_VALUE, id);
 		return -ENODEV;
+	}
+
+	return 0;
+}
+
+static int ltr553_init_interrupt_registers(const struct ltr329_config *cfg)
+{
+	const struct i2c_dt_spec *bus = &cfg->bus;
+	const uint8_t interrupt = (cfg->ps_interrupt << LTR553_INTERRUPT_PS_SHIFT) |
+				  (cfg->als_interrupt << LTR553_INTERRUPT_ALS_SHIFT);
+	const uint8_t interrupt_persist =
+		(cfg->ps_interrupt_persist << LTR553_INTERRUPT_PERSIST_PS_SHIFT) |
+		(cfg->als_interrupt_persist << LTR553_INTERRUPT_PERSIST_ALS_SHIFT);
+	uint8_t buf[7];
+	int rc;
+
+	buf[0] = interrupt;
+	sys_put_le16(cfg->ps_upper_threshold, &buf[LTR553_PS_THRES_UP_0 - LTR553_INTERRUPT]);
+	sys_put_le16(cfg->ps_lower_threshold, &buf[LTR553_PS_THRES_LOW_0 - LTR553_INTERRUPT]);
+	sys_put_le16(cfg->ps_offset, &buf[LTR553_PS_OFFSET_0 - LTR553_INTERRUPT]);
+
+	rc = i2c_burst_write_dt(bus, LTR553_INTERRUPT, buf, 7);
+	if (rc < 0) {
+		LOG_ERR("Failed to set interrupt and PS threshold/offset: %d", rc);
+		return rc;
+	}
+
+	sys_put_le16(cfg->als_upper_threshold, &buf[0]);
+	sys_put_le16(cfg->als_lower_threshold,
+		     &buf[LTR553_ALS_THRES_LOW_0 - LTR553_ALS_THRES_UP_0]);
+
+	rc = i2c_burst_write_dt(bus, LTR553_ALS_THRES_UP_0, buf, 4);
+	if (rc < 0) {
+		LOG_ERR("Failed to set ALS thresholds: %d", rc);
+		return rc;
+	}
+
+	rc = i2c_reg_write_byte_dt(bus, LTR553_INTERRUPT_PERSIST, interrupt_persist);
+	if (rc < 0) {
+		LOG_ERR("Failed to set interrupt persistence");
+		return rc;
+	}
+
+	return 0;
+}
+
+static int ltr553_init_ps_registers(const struct ltr329_config *cfg)
+{
+	const struct i2c_dt_spec *bus = &cfg->bus;
+	const uint8_t ps_contr = LTR553_REG_SET(PS_CONTR, MODE, LTR553_PS_CONTR_MODE_ACTIVE) |
+				 LTR553_REG_SET(PS_CONTR, SAT_IND, cfg->ps_saturation_indicator);
+	const uint8_t ps_led = LTR553_REG_SET(PS_LED, PULSE_FREQ, cfg->ps_led_pulse_freq) |
+			       LTR553_REG_SET(PS_LED, DUTY_CYCLE, cfg->ps_led_duty_cycle) |
+			       LTR553_REG_SET(PS_LED, CURRENT, cfg->ps_led_current);
+	const uint8_t ps_n_pulses = LTR553_REG_SET(PS_N_PULSES, COUNT, cfg->ps_n_pulses);
+	const uint8_t ps_meas_rate = LTR553_REG_SET(PS_MEAS_RATE, RATE, cfg->ps_measurement_rate);
+	const uint8_t buf[] = {ps_contr, ps_led, ps_n_pulses, ps_meas_rate};
+	int rc;
+
+	rc = i2c_burst_write_dt(bus, LTR553_PS_CONTR, buf, sizeof(buf));
+	if (rc < 0) {
+		LOG_ERR("Failed to set PS registers");
+		return rc;
 	}
 
 	return 0;
@@ -176,7 +320,7 @@ static int ltr329_init(const struct device *dev)
 	/* Wait for sensor startup */
 	k_sleep(K_MSEC(LTR329_INIT_STARTUP_MS));
 
-	rc = ltr329_check_device_id(&cfg->bus);
+	rc = ltr329_check_device_id(cfg);
 	if (rc < 0) {
 		return rc;
 	}
@@ -187,11 +331,27 @@ static int ltr329_init(const struct device *dev)
 		return rc;
 	}
 
+	if (cfg->part_id == LTR553_PART_ID_VALUE) {
+		rc = ltr553_init_ps_registers(cfg);
+		if (rc < 0) {
+			return rc;
+		}
+
+		rc = ltr553_init_interrupt_registers(cfg);
+		if (rc < 0) {
+			return rc;
+		}
+	}
+
 	return 0;
 }
 
-static int ltr329_check_data_ready(const struct i2c_dt_spec *bus)
+static int ltr329_check_data_ready(const struct ltr329_config *cfg, enum sensor_channel chan)
 {
+	const struct i2c_dt_spec *bus = &cfg->bus;
+	const bool need_als = (chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_LIGHT);
+	const bool need_ps = (cfg->part_id == LTR553_PART_ID_VALUE) &&
+			     ((chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_PROX));
 	uint8_t status;
 	int rc;
 
@@ -201,30 +361,60 @@ static int ltr329_check_data_ready(const struct i2c_dt_spec *bus)
 		return rc;
 	}
 
-	if (!LTR329_REG_GET(ALS_PS_STATUS, ALS_DATA_STATUS, status)) {
-		LOG_WRN("Data not ready");
+	if (need_als && !LTR329_REG_GET(ALS_PS_STATUS, ALS_DATA_STATUS, status)) {
+		LOG_WRN("ALS data not ready");
+		return -EBUSY;
+	}
+
+	if (need_ps && !LTR329_REG_GET(ALS_PS_STATUS, PS_DATA_STATUS, status)) {
+		LOG_WRN("PS data not ready");
 		return -EBUSY;
 	}
 
 	return 0;
 }
 
-static int ltr329_read_als_data(const struct i2c_dt_spec *bus, struct ltr329_data *data)
+static int ltr329_read_data(const struct ltr329_config *cfg, enum sensor_channel chan,
+			    struct ltr329_data *data)
 {
+	const struct i2c_dt_spec *bus = &cfg->bus;
+	const bool need_als = (chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_LIGHT);
+	const bool need_ps = (cfg->part_id == LTR553_PART_ID_VALUE) &&
+			     ((chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_PROX));
+	const size_t read_als_ps = (LTR553_PS_DATA1 + 1) - LTR329_ALS_DATA_CH1_0;
+	const size_t read_als_only = (LTR329_ALS_DATA_CH0_1 + 1) - LTR329_ALS_DATA_CH1_0;
+	const size_t read_size =
+		(cfg->part_id == LTR553_PART_ID_VALUE) ? read_als_ps : read_als_only;
 	uint8_t reg = LTR329_ALS_DATA_CH1_0;
-	uint8_t buff[4];
+	uint8_t buff[read_als_ps];
 	int rc;
 
-	rc = i2c_write_read_dt(bus, &reg, sizeof(reg), buff, sizeof(buff));
+	rc = i2c_write_read_dt(bus, &reg, sizeof(reg), buff, read_size);
 	if (rc < 0) {
 		LOG_ERR("Failed to read ALS data registers");
 		return rc;
 	}
 
-	data->als_ch1 = sys_get_le16(buff);
-	data->als_ch0 = sys_get_le16(buff + 2);
+	if (need_als) {
+		data->als_ch1 = sys_get_le16(buff);
+		data->als_ch0 = sys_get_le16(buff + 2);
+	}
+
+	if (need_ps) {
+		data->ps_ch0 = sys_get_le16(buff + 5) & LTR553_PS_DATA_MASK;
+	}
 
 	return 0;
+}
+
+static bool ltr329_is_channel_supported(const struct ltr329_config *cfg, enum sensor_channel chan)
+{
+	if (cfg->part_id == LTR553_PART_ID_VALUE) {
+		return (chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_LIGHT) ||
+		       (chan == SENSOR_CHAN_PROX);
+	}
+
+	return (chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_LIGHT);
 }
 
 static int ltr329_sample_fetch(const struct device *dev, enum sensor_channel chan)
@@ -233,16 +423,16 @@ static int ltr329_sample_fetch(const struct device *dev, enum sensor_channel cha
 	struct ltr329_data *data = dev->data;
 	int rc;
 
-	if ((chan != SENSOR_CHAN_ALL) && (chan != SENSOR_CHAN_LIGHT)) {
+	if (!ltr329_is_channel_supported(cfg, chan)) {
 		return -ENOTSUP;
 	}
 
-	rc = ltr329_check_data_ready(&cfg->bus);
+	rc = ltr329_check_data_ready(cfg, chan);
 	if (rc < 0) {
 		return rc;
 	}
 
-	rc = ltr329_read_als_data(&cfg->bus, data);
+	rc = ltr329_read_data(cfg, chan, data);
 	if (rc < 0) {
 		return rc;
 	}
@@ -280,17 +470,12 @@ static int ltr329_get_mapped_int_time(const uint8_t reg_val, uint8_t *const outp
 	return -EINVAL;
 }
 
-static int ltr329_channel_get(const struct device *dev, enum sensor_channel chan,
-			      struct sensor_value *val)
+static int ltr329_channel_light_get(const struct device *dev, struct sensor_value *val)
 {
-	const struct ltr329_data *data = dev->data;
 	const struct ltr329_config *cfg = dev->config;
+	struct ltr329_data *data = dev->data;
 	uint8_t gain_value;
 	uint8_t integration_time_value;
-
-	if (chan != SENSOR_CHAN_LIGHT) {
-		return -ENOTSUP;
-	}
 
 	if (ltr329_get_mapped_gain(cfg->als_gain, &gain_value) != 0) {
 		LOG_ERR("Invalid gain configuration");
@@ -336,6 +521,57 @@ static int ltr329_channel_get(const struct device *dev, enum sensor_channel chan
 	return 0;
 }
 
+static int ltr329_channel_proximity_get(const struct device *dev, struct sensor_value *val)
+{
+	const struct ltr329_config *cfg = dev->config;
+	struct ltr329_data *data = dev->data;
+
+	if (cfg->part_id != LTR553_PART_ID_VALUE) {
+		return -ENOTSUP;
+	}
+
+	LOG_DBG("proximity: state=%d data: %d L-H: %d - %d", data->proximity_state,
+		data->ps_ch0, cfg->ps_lower_threshold, cfg->ps_upper_threshold);
+
+	if (data->proximity_state) {
+		if (data->ps_ch0 <= cfg->ps_lower_threshold) {
+			data->proximity_state = false;
+		}
+	} else {
+		if (data->ps_ch0 >= cfg->ps_upper_threshold) {
+			data->proximity_state = true;
+		}
+	}
+
+	val->val1 = data->proximity_state ? 1 : 0;
+	val->val2 = 0;
+
+	return 0;
+}
+
+static int ltr329_channel_get(const struct device *dev, enum sensor_channel chan,
+			      struct sensor_value *val)
+{
+	int ret = -ENOTSUP;
+
+	if (chan == SENSOR_CHAN_LIGHT || chan == SENSOR_CHAN_ALL) {
+		ret = ltr329_channel_light_get(dev, val);
+
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
+	if (chan == SENSOR_CHAN_PROX || chan == SENSOR_CHAN_ALL) {
+		ret = ltr329_channel_proximity_get(dev, val);
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
 static DEVICE_API(sensor, ltr329_driver_api) = {
 	.sample_fetch = ltr329_sample_fetch,
 	.channel_get = ltr329_channel_get,
@@ -351,16 +587,44 @@ static DEVICE_API(sensor, ltr329_driver_api) = {
 	COND_CODE_1(DT_NODE_HAS_PROP(n, measurement_rate), (DT_PROP(n, measurement_rate)),         \
 		    (DT_ENUM_IDX_OR(n, als_measurement_rate, 3)))
 
-#define DEFINE_LTR329(_num)                                                                        \
+#define DEFINE_LTRXXX(_num, partid)                                                                \
+	BUILD_ASSERT(DT_PROP_OR(_num, ps_upper_threshold, LTR553_PS_DATA_MASK) <=                  \
+		     LTR553_PS_DATA_MASK);                                                         \
+	BUILD_ASSERT(DT_PROP_OR(_num, ps_lower_threshold, 0) <= LTR553_PS_DATA_MAX);               \
+	BUILD_ASSERT(DT_PROP_OR(_num, ps_lower_threshold, 0) <=                                    \
+		     DT_PROP_OR(_num, ps_upper_threshold, LTR553_PS_DATA_MAX));                    \
+	BUILD_ASSERT(DT_PROP_OR(_num, ps_offset, 0) <= LTR553_PS_DATA_MAX);                        \
+	BUILD_ASSERT(DT_PROP_OR(_num, als_lower_threshold, 0) <=                                   \
+		     DT_PROP_OR(_num, als_upper_threshold, UINT16_MAX));                           \
 	static struct ltr329_data ltr329_data_##_num;                                              \
 	static const struct ltr329_config ltr329_config_##_num = {                                 \
-		.bus = I2C_DT_SPEC_INST_GET(_num),                                                 \
+		.bus = I2C_DT_SPEC_GET(_num),                                                      \
+		.part_id = partid,                                                                 \
 		.als_gain = LTR329_ALS_GAIN_REG(_num),                                             \
 		.als_integration_time = LTR329_ALS_INT_TIME_REG(_num),                             \
 		.als_measurement_rate = LTR329_ALS_MEAS_RATE_REG(_num),                            \
+		.ps_led_pulse_freq = DT_ENUM_IDX_OR(_num, ps_led_pulse_frequency, 3),              \
+		.ps_led_duty_cycle = DT_ENUM_IDX_OR(_num, ps_led_duty_cycle, 3),                   \
+		.ps_led_current = DT_ENUM_IDX_OR(_num, ps_led_current, 4),                         \
+		.ps_n_pulses = DT_PROP_OR(_num, ps_n_pulses, 1),                                   \
+		.ps_measurement_rate = DT_ENUM_IDX_OR(_num, ps_measurement_rate, 2),               \
+		.ps_saturation_indicator = DT_PROP_OR(_num, ps_saturation_indicator, false),       \
+		.ps_interrupt = DT_PROP_OR(_num, ps_interrupt, false),                             \
+		.als_interrupt = DT_PROP_OR(_num, als_interrupt, false),                           \
+		.ps_interrupt_persist = DT_PROP_OR(_num, ps_interrupt_persist, 0),                 \
+		.als_interrupt_persist = DT_PROP_OR(_num, als_interrupt_persist, 0),               \
+		.ps_upper_threshold = DT_PROP_OR(_num, ps_upper_threshold, LTR553_PS_DATA_MAX),    \
+		.ps_lower_threshold = DT_PROP_OR(_num, ps_lower_threshold, 0),                     \
+		.als_upper_threshold = DT_PROP_OR(_num, als_upper_threshold, UINT16_MAX),          \
+		.als_lower_threshold = DT_PROP_OR(_num, als_lower_threshold, 0),                   \
+		.ps_offset = DT_PROP_OR(_num, ps_offset, 0),                                       \
 	};                                                                                         \
-	SENSOR_DEVICE_DT_INST_DEFINE(_num, ltr329_init, NULL, &ltr329_data_##_num,                 \
-				     &ltr329_config_##_num, POST_KERNEL,                           \
-				     CONFIG_SENSOR_INIT_PRIORITY, &ltr329_driver_api);
+	SENSOR_DEVICE_DT_DEFINE(_num, ltr329_init, NULL, &ltr329_data_##_num,                      \
+				&ltr329_config_##_num, POST_KERNEL, CONFIG_SENSOR_INIT_PRIORITY,   \
+				&ltr329_driver_api);
 
-DT_INST_FOREACH_STATUS_OKAY(DEFINE_LTR329)
+#define DEFINE_LTR329(node_id) DEFINE_LTRXXX(node_id, LTR329_PART_ID_VALUE)
+#define DEFINE_LTR553(node_id) DEFINE_LTRXXX(node_id, LTR553_PART_ID_VALUE)
+
+DT_FOREACH_STATUS_OKAY(liteon_ltr329, DEFINE_LTR329)
+DT_FOREACH_STATUS_OKAY(liteon_ltr553, DEFINE_LTR553)
