@@ -71,46 +71,42 @@ struct gpio_rp1_data {
 
 static int gpio_rp1_pin_configure(const struct device *port, gpio_pin_t pin, gpio_flags_t flags)
 {
-	struct gpio_rp1_data *data = port->data;
-
 	if (flags & GPIO_SINGLE_ENDED) {
 		return -ENOTSUP;
 	}
 
 	/* Let RIO handle the input/output of GPIO */
-	sys_clear_bits(GPIO_CTRL(port, pin), GPIO_CTRL_OEOVER_MASK);
-	sys_set_bits(GPIO_CTRL(port, pin), GPIO_CTRL_OEOVER_PERI);
+	GPIO_CTRL_CLR(port, pin, GPIO_CTRL_OEOVER_MASK);
+	GPIO_CTRL_SET(port, pin, GPIO_CTRL_OEOVER_PERI);
 
-	sys_clear_bits(GPIO_CTRL(port, pin), GPIO_CTRL_OUTOVER_MASK);
-	sys_set_bits(GPIO_CTRL(port, pin), GPIO_CTRL_OUTOVER_PERI);
+	GPIO_CTRL_CLR(port, pin, GPIO_CTRL_OUTOVER_MASK);
+	GPIO_CTRL_SET(port, pin, GPIO_CTRL_OUTOVER_PERI);
 
-	sys_clear_bits(GPIO_CTRL(port, pin), GPIO_CTRL_FUNCSEL_MASK);
-	sys_set_bits(GPIO_CTRL(port, pin), GPIO_CTRL_FUNCSEL_RIO);
+	GPIO_CTRL_CLR(port, pin, GPIO_CTRL_FUNCSEL_MASK);
+	GPIO_CTRL_SET(port, pin, GPIO_CTRL_FUNCSEL_RIO);
 
 	/* Set the direction */
 	if (flags & GPIO_OUTPUT) {
-		sys_set_bit(RIO_OE_SET(port), pin);
-		sys_clear_bits(PADS_CTRL(port, pin), PADS_OUTPUT_DISABLE | PADS_INPUT_ENABLE);
+		RIO_OE_SET(port, BIT(pin));
+		PADS_CTRL_CLR(port, pin, PADS_OUTPUT_DISABLE | PADS_INPUT_ENABLE);
 
 		if (flags & GPIO_OUTPUT_INIT_HIGH) {
-			sys_set_bit(RIO_OUT_SET(port), pin);
-			sys_clear_bit(RIO_OUT_CLR(port), pin);
+			RIO_OUT_SET(port, BIT(pin));
 		} else if (flags & GPIO_OUTPUT_INIT_LOW) {
-			sys_set_bit(RIO_OUT_CLR(port), pin);
-			sys_clear_bit(RIO_OUT_SET(port), pin);
+			RIO_OUT_CLR(port, BIT(pin));
 		}
 	} else if (flags & GPIO_INPUT) {
-		sys_set_bit(RIO_OE_CLR(port), pin);
-		sys_set_bits(PADS_CTRL(port, pin), PADS_OUTPUT_DISABLE | PADS_INPUT_ENABLE);
+		RIO_OE_CLR(port, BIT(pin));
+		PADS_CTRL_SET(port, pin, PADS_OUTPUT_DISABLE | PADS_INPUT_ENABLE);
 	}
 
 	/* Set pull up/down */
-	sys_clear_bits(PADS_CTRL(port, pin), PADS_PULL_UP_ENABLE | PADS_PULL_DOWN_ENABLE);
+	PADS_CTRL_CLR(port, pin, PADS_PULL_UP_ENABLE | PADS_PULL_DOWN_ENABLE);
 
 	if (flags & GPIO_PULL_UP) {
-		sys_set_bits(PADS_CTRL(port, pin), PADS_PULL_UP_ENABLE);
+		PADS_CTRL_SET(port, pin, PADS_PULL_UP_ENABLE);
 	} else if (flags & GPIO_PULL_DOWN) {
-		sys_set_bits(PADS_CTRL(port, pin), PADS_PULL_DOWN_ENABLE);
+		PADS_CTRL_SET(port, pin, PADS_PULL_DOWN_ENABLE);
 	}
 
 	return 0;
