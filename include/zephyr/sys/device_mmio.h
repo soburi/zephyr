@@ -73,6 +73,12 @@ struct z_device_mmio_rom {
 		.size = DT_REG_SIZE_BY_NAME(node_id, name) \
 	}
 
+#define Z_DEVICE_MMIO_NAMED_ROM_INITIALIZER_WITH_OFFSET(name, node_id, offset) \
+	{ \
+		.phys_addr = DT_REG_ADDR_BY_NAME(node_id, name) + offset, \
+		.size = DT_REG_SIZE_BY_NAME(node_id, name) \
+	}
+
 /**
  * Set linear address for device MMIO access
  *
@@ -130,6 +136,11 @@ struct z_device_mmio_rom {
 #define Z_DEVICE_MMIO_NAMED_ROM_INITIALIZER(name, node_id) \
 	{ \
 		.addr = (mm_reg_t)DT_REG_ADDR_BY_NAME_U64(node_id, name) \
+	}
+
+#define Z_DEVICE_MMIO_NAMED_ROM_INITIALIZER_WITH_OFFSET(name, node_id, offset) \
+	{ \
+		.addr = (mm_reg_t)DT_REG_ADDR_BY_NAME_U64(node_id, name) + offset \
 	}
 
 #endif /* DEVICE_MMIO_IS_IN_RAM */
@@ -265,6 +276,9 @@ struct z_device_mmio_rom {
  */
 #define DEVICE_MMIO_ROM_INIT(node_id) \
 	._mmio = Z_DEVICE_MMIO_ROM_INITIALIZER(node_id)
+
+#define DEVICE_MMIO_ROM_INIT_WITH_OFFSET(node_id, offset) \
+	._mmio = Z_DEVICE_MMIO_ROM_INITIALIZER_WITH_OFFSET(node_id, offset)
 
 /**
  * @def DEVICE_MMIO_MAP(device, flags)
@@ -463,6 +477,9 @@ struct z_device_mmio_rom {
 #define DEVICE_MMIO_NAMED_ROM_INIT(name, node_id) \
 	.name = Z_DEVICE_MMIO_ROM_INITIALIZER(node_id)
 
+#define DEVICE_MMIO_NAMED_ROM_INIT_WITH_OFFSET(name, node_id, offset) \
+	.name = Z_DEVICE_MMIO_NAMED_ROM_INITIALIZER_WITH_OFFSET(node_id, offset)
+
 /**
  * @brief Initialize a named DEVICE_MMIO_NAMED_ROM member using a named DT
  *        reg property.
@@ -503,6 +520,9 @@ struct z_device_mmio_rom {
  */
 #define DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(name, node_id) \
 	.name = Z_DEVICE_MMIO_NAMED_ROM_INITIALIZER(name, node_id)
+
+#define DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME_WITH_OFFSET(name, node_id, offset) \
+	.name = Z_DEVICE_MMIO_NAMED_ROM_INITIALIZER_WITH_OFFSET(name, node_id, offset)
 
 /**
  * @brief Set up memory for a named MMIO region
