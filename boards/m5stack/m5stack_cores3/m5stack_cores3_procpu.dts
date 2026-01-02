@@ -18,6 +18,10 @@
 		light-sensor = &ltr553;
 		prox-sensor0 = &ltr553;
 	};
+
+	chosen {
+		zephyr,camera = &lcd_cam_dvp;
+	};
 };
 
 &i2c0 {
@@ -37,6 +41,38 @@
 		reg = <0x23>;
 		status = "okay";
 	};
+
+	gc0308: gc0308@21 {
+		compatible = "galaxycore,gc0308";
+		reg = <0x21>;
+		reset-gpios = <&aw9523b_gpio 8 GPIO_ACTIVE_LOW>;
+		status = "disabled";
+
+		port {
+			gc0308_ep_out: endpoint {
+				remote-endpoint-label = "dvp_ep_in";
+			};
+		};
+	};
+};
+
+&lcd_cam {
+	pinctrl-0 = <&lcd_cam_default>;
+	pinctrl-names = "default";
+
+	lcd_cam_dvp {
+		cam-clk = <20000000>;
+		data-width = <8>;
+		source = <&gc0308>;
+		vsync-filter-thres = <4>;
+		status = "disabled";
+
+		port {
+			dvp_ep_in: endpoint {
+				remote-endpoint-label = "gc0308_ep_out";
+			};
+		};
+	};
 };
 
 &regulator {
@@ -52,6 +88,11 @@
 		regulator-min-microvolt = <2700000>;
 		/* regulator-init-microvolt = <2800000>; */
 		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
 		status = "okay";
 	};
+};
+
+&dvdd {
+	regulator-boot-on;
 };
