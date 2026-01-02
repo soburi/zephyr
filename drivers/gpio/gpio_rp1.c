@@ -118,8 +118,6 @@ static int gpio_rp1_pin_configure(const struct device *port, gpio_pin_t pin, gpi
 
 static int gpio_rp1_port_get_raw(const struct device *port, gpio_port_value_t *value)
 {
-	struct gpio_rp1_data *data = port->data;
-
 	*value = sys_read32(RIO_IN(port));
 
 	return 0;
@@ -128,51 +126,29 @@ static int gpio_rp1_port_get_raw(const struct device *port, gpio_port_value_t *v
 static int gpio_rp1_port_set_masked_raw(const struct device *port, gpio_port_pins_t mask,
 					gpio_port_value_t value)
 {
-	struct gpio_rp1_data *data = port->data;
-
-	sys_clear_bits(RIO_OUT_SET(port), mask);
-	sys_set_bits(RIO_OUT_CLR(port), mask);
-
-	sys_clear_bits(RIO_OUT_CLR(port), (value & mask));
-	sys_set_bits(RIO_OUT_SET(port), (value & mask));
+	RIO_OUT_SET(port, (value & mask));
+	RIO_OUT_CLR(port, (~value & mask));
 
 	return 0;
 }
 
 static int gpio_rp1_port_set_bits_raw(const struct device *port, gpio_port_pins_t pins)
 {
-	struct gpio_rp1_data *data = port->data;
-
-	sys_clear_bits(RIO_OUT_CLR(port), pins);
-	sys_set_bits(RIO_OUT_SET(port), pins);
+	RIO_OUT_SET(port, pins);
 
 	return 0;
 }
 
 static int gpio_rp1_port_clear_bits_raw(const struct device *port, gpio_port_pins_t pins)
 {
-	struct gpio_rp1_data *data = port->data;
-
-	sys_clear_bits(RIO_OUT_SET(port), pins);
-	sys_set_bits(RIO_OUT_CLR(port), pins);
+	RIO_OUT_CLR(port, pins);
 
 	return 0;
 }
 
 static int gpio_rp1_port_toggle_bits(const struct device *port, gpio_port_pins_t pins)
 {
-	struct gpio_rp1_data *data = port->data;
-	uint32_t val;
-
-	val = sys_read32(RIO_OUT(port));
-
-	/* Low to high */
-	sys_set_bits(RIO_OUT_SET(port), val ^ pins);
-	sys_clear_bits(RIO_OUT_CLR(port), val ^ pins);
-
-	/* High to low */
-	sys_set_bits(RIO_OUT_CLR(port), val & pins);
-	sys_clear_bits(RIO_OUT_SET(port), val & pins);
+	RIO_OUT_XOR(port, pins);
 
 	return 0;
 }
