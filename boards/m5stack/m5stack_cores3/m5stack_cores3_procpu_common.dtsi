@@ -238,12 +238,23 @@
 		reset-gpios = <&aw9523b_gpio 0 GPIO_ACTIVE_LOW>;
 		swapped-x-y;
 	};
+
+	audio_codec: es7210@40 {
+		compatible = "everest,es7210";
+		reg = <0x40>;
+	};
 };
 
 &i2c1 {
 	status = "okay";
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 	pinctrl-0 = <&i2c1_default>;
+	pinctrl-names = "default";
+};
+
+&i2s1 {
+	status = "okay";
+	pinctrl-0 = <&i2s1_default>;
 	pinctrl-names = "default";
 };
 

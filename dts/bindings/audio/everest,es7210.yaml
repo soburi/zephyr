@@ -1,0 +1,16 @@
+# Copyright (c) 2025
+# SPDX-License-Identifier: Apache-2.0
+
+description: Everest Semiconductor ES7210 audio ADC
+
+compatible: "everest,es7210"
+
+include: [i2c-device.yaml]
+
+properties:
+  reg:
+    required: true
+
+  reset-gpios:
+    type: phandle-array
+    description: Optional reset GPIO for the codec.

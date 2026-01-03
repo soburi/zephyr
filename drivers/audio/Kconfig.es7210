@@ -1,0 +1,10 @@
+# Copyright (c) 2025
+# SPDX-License-Identifier: Apache-2.0
+
+config AUDIO_CODEC_ES7210
+	bool "Everest ES7210 codec support"
+	default y
+	select I2C
+	depends on DT_HAS_EVEREST_ES7210_ENABLED
+	help
+	  Enable support for the Everest ES7210 audio ADC.
