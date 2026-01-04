@@ -18,7 +18,11 @@
  * RP1 PCIe Configuration registers (from RP1 Peripherals doc)
  * Base offset from RP1 BAR0 or function base
  */
-#define RP1_PCIE_CFG_BASE   0x00000000  /* Function-specific base */
+#ifndef RP1_PCIE_CFG_BASE_OFFSET
+#define RP1_PCIE_CFG_BASE_OFFSET 0x00000000U
+#endif
+
+#define RP1_PCIE_CFG_BASE   RP1_PCIE_CFG_BASE_OFFSET  /* Function-specific base */
 
 /* MSI-X Configuration registers (Section 3.1.5) */
 #define RP1_MSIX_CFG(n)     (RP1_PCIE_CFG_BASE + 0x8c + ((n) * 4))

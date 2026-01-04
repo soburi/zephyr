@@ -845,6 +845,7 @@ static void print_summary(void)
 	printk("  CFG sweep step:    0x%x\n", CFG_SWEEP_STEP);
 	printk("  CFG access:        %s\n",
 	       rp1_trig.use_cfg ? "pcie-config" : "mmio-bar");
+	printk("  CFG base offset:   0x%x\n", RP1_PCIE_CFG_BASE_OFFSET);
 	printk("  CPU doorbell test: %s\n",
 	       RP1_ENABLE_CPU_DOORBELL_TEST ? "enabled" : "disabled");
 	if (pcie_cfg_ready) {
