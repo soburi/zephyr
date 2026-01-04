@@ -13,8 +13,10 @@
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/kernel/mm.h>
+#include <zephyr/math/ilog2.h>
 #include <zephyr/sys/atomic.h>
 #include <zephyr/sys/device_mmio.h>
+#include <zephyr/sys/sys_io.h>
 #include <zephyr/sys/printk.h>
 
 #include "gic_monitor.h"
@@ -26,7 +28,18 @@
 #define TEST_VECTOR RP1_MSIX_TEST_VECTOR
 #define CFG_BAR_SENTINEL 0xFFU
 #define RP1_BAR_MAX 6U
-#define CFG_SWEEP_STEP 0x1000U
+
+#ifndef RP1_CFG_SWEEP_STEP
+#define RP1_CFG_SWEEP_STEP 0x1000U
+#endif
+
+#define CFG_SWEEP_STEP RP1_CFG_SWEEP_STEP
+
+#ifndef RP1_ENABLE_CPU_DOORBELL_TEST
+#define RP1_ENABLE_CPU_DOORBELL_TEST 0U
+#endif
+
+#define DOORBELL_MAP_SIZE 0x1000U
 
 #define GIC_SCAN_REG_START 1U
 #define GIC_SCAN_REG_COUNT 16U
@@ -43,6 +56,17 @@
 #define GICD_PHYS DT_REG_ADDR_BY_IDX(GIC_NODE, 0)
 #define GICD_SIZE DT_REG_SIZE_BY_IDX(GIC_NODE, 0)
 
+#define PCIE_NODE DT_NODELABEL(pcie2)
+#define PCIE_CFG_PHYS DT_REG_ADDR_BY_IDX(PCIE_NODE, 0)
+#define PCIE_CFG_SIZE DT_REG_SIZE_BY_IDX(PCIE_NODE, 0)
+
+/* PCIe RC BAR1 config (from Linux pcie-brcmstb) */
+#define PCIE_MISC_RC_BAR1_CONFIG_LO           0x402c
+#define PCIE_MISC_RC_BAR1_CONFIG_HI           0x4030
+#define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP      0x40ac
+#define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_HI   0x40b0
+#define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_ACCESS_ENABLE_MASK 0x1
+
 /* Global state */
 static struct rp1_device rp1_dev;
 static struct rp1_trigger rp1_trig;
@@ -53,12 +77,20 @@ static atomic_t isr_hits;
 
 static mm_reg_t gicd_base;
 static mm_reg_t mip_base;
+static mm_reg_t msg_base;
+static mm_reg_t pcie_cfg_base;
+static uintptr_t msg_ptr;
 static bool gic_ready;
 static bool mip_ready;
+static bool msg_ready;
+static bool pcie_cfg_ready;
 static bool rp1_cfg_ready;
 static bool rp1_bars_mapped;
 static bool msix_configured;
 static bool isr_installed;
+static bool cpu_doorbell_tested;
+static bool cpu_doorbell_mip_hit;
+static bool cpu_doorbell_gic_hit;
 static uint32_t rp1_cfg_bar_idx = 0xffffffffU;
 static uint32_t rp1_cfg_offset;
 static uint32_t gic_pend_before[GIC_SCAN_REG_COUNT];
@@ -80,6 +112,36 @@ static bool map_mmio(uintptr_t phys, size_t size, mm_reg_t *virt_out)
 
 	device_map(virt_out, phys, size, K_MEM_CACHE_NONE);
 	return true;
+}
+
+static inline uint32_t lower_32_bits(uint64_t val)
+{
+	return (uint32_t)(val & 0xffffffffULL);
+}
+
+static inline uint32_t upper_32_bits(uint64_t val)
+{
+	return (uint32_t)((val >> 32) & 0xffffffffULL);
+}
+
+static uint32_t encode_ibar_size(uint64_t size)
+{
+	uint32_t tmp;
+	uint32_t size_upper = (uint32_t)(size >> 32);
+
+	if (size_upper > 0U) {
+		tmp = ilog2(size_upper) + 32U;
+	} else {
+		tmp = ilog2(size);
+	}
+
+	if (tmp >= 12U && tmp <= 15U) {
+		return (tmp - 12U) + 0x1cU;
+	} else if (tmp >= 16U && tmp <= 36U) {
+		return tmp - 15U;
+	}
+
+	return 0U;
 }
 
 static void gic_snapshot_pending(uint32_t *buf)
@@ -139,6 +201,58 @@ static void rp1_msi_isr(const void *arg)
 	atomic_inc(&isr_hits);
 }
 
+struct rp1_inv_ctx {
+	uint32_t count;
+};
+
+static bool rp1_inv_cb(pcie_bdf_t bdf, pcie_id_t id, void *cb_data)
+{
+	struct rp1_inv_ctx *ctx = cb_data;
+
+	if (PCIE_ID_TO_VEND(id) != RP1_VENDOR_ID) {
+		return true;
+	}
+
+	uint32_t class_rev = pcie_conf_read(bdf, PCIE_CONF_CLASSREV);
+	uint8_t base = PCIE_CONF_CLASSREV_CLASS(class_rev);
+	uint8_t sub = PCIE_CONF_CLASSREV_SUBCLASS(class_rev);
+	uint8_t prog = PCIE_CONF_CLASSREV_PROGIF(class_rev);
+
+	printk("  BDF 0x%08x (bus %u dev %u fn %u): VID/DID 0x%08x ",
+	       bdf, PCIE_BDF_TO_BUS(bdf), PCIE_BDF_TO_DEV(bdf),
+	       PCIE_BDF_TO_FUNC(bdf), id);
+	printk("CLASS %02x/%02x/%02x\n", base, sub, prog);
+
+	for (uint32_t bar = 0; bar < RP1_BAR_MAX; bar++) {
+		struct pcie_bar mbar;
+
+		if (pcie_get_mbar(bdf, bar, &mbar)) {
+			printk("    BAR%u: phys 0x%llx, size 0x%zx\n",
+			       bar, (unsigned long long)mbar.phys_addr, mbar.size);
+		}
+	}
+
+	ctx->count++;
+	return true;
+}
+
+static void test_step_1_pcie_inventory(void)
+{
+	struct rp1_inv_ctx ctx = { 0 };
+	struct pcie_scan_opt opt = {
+		.bus = 0,
+		.cb = rp1_inv_cb,
+		.cb_data = &ctx,
+		.flags = PCIE_SCAN_RECURSIVE | PCIE_SCAN_CB_ALL,
+	};
+
+	print_banner("STEP 1: PCIe Inventory (RP1 Functions)");
+
+	if (pcie_scan(&opt) < 0 || ctx.count == 0U) {
+		printk("No RP1 functions found in PCIe scan\n");
+	}
+}
+
 static void test_step_0_map_gic(void)
 {
 	print_banner("STEP 0: Map GIC Distributor");
@@ -159,7 +273,7 @@ static void test_step_0_map_gic(void)
 
 static void test_step_1_find_rp1(void)
 {
-	print_banner("STEP 1: Find RP1 PCIe Device");
+	print_banner("STEP 2: Find RP1 PCIe Device");
 
 	if (!rp1_find_device(&rp1_dev)) {
 		printk("FAILED: RP1 device not found\n");
@@ -175,7 +289,7 @@ static void test_step_1_find_rp1(void)
 
 static void test_step_2_find_msix(void)
 {
-	print_banner("STEP 2: Find MSI-X Capability");
+	print_banner("STEP 3: Find MSI-X Capability");
 
 	if (!rp1_find_msix_cap(&rp1_dev)) {
 		printk("FAILED: MSI-X capability not found\n");
@@ -189,7 +303,7 @@ static void test_step_2_find_msix(void)
 
 static void test_step_3_map_bars(void)
 {
-	print_banner("STEP 3: Map RP1 BARs (Full Scan)");
+	print_banner("STEP 4: Map RP1 BARs (Full Scan)");
 
 	rp1_bars_mapped = false;
 	for (uint32_t i = 0; i < RP1_BAR_MAX; i++) {
@@ -219,7 +333,7 @@ static void test_step_3_map_bars(void)
 
 static void test_step_4_bind_msix_table(void)
 {
-	print_banner("STEP 4: Bind MSI-X Table BAR");
+	print_banner("STEP 5: Bind MSI-X Table BAR");
 
 	if (!rp1_bars_mapped ||
 	    rp1_dev.msix_table_bar >= RP1_BAR_MAX ||
@@ -242,7 +356,7 @@ static void test_step_4_bind_msix_table(void)
 
 static void test_step_5_map_rp1_cfg_bar(void)
 {
-	print_banner("STEP 5: Map RP1 Config BAR");
+	print_banner("STEP 6: Map RP1 Config BAR");
 
 	if (!rp1_bars_mapped) {
 		printk("FAILED: BARs not mapped\n");
@@ -270,7 +384,7 @@ static void test_step_5_map_rp1_cfg_bar(void)
 
 static void test_step_5_enable_msix(void)
 {
-	print_banner("STEP 6: Enable MSI-X");
+	print_banner("STEP 7: Enable MSI-X");
 
 	rp1_enable_msix(&rp1_dev);
 	printk("SUCCESS: MSI-X enabled\n");
@@ -278,7 +392,7 @@ static void test_step_5_enable_msix(void)
 
 static void test_step_6_setup_table(void)
 {
-	print_banner("STEP 7: Setup MSI-X Table Entry");
+	print_banner("STEP 8: Setup MSI-X Table Entry");
 
 	if (RP1_MIP_MSG_ADDR == 0U) {
 		printk("WARNING: MIP msg_addr is not configured\n");
@@ -309,7 +423,7 @@ static void test_step_6_setup_table(void)
 
 static void test_step_7_init_mip(void)
 {
-	print_banner("STEP 8: Map and Initialize MIP");
+	print_banner("STEP 9: Map and Initialize MIP");
 
 	if (RP1_MIP_BASE_ADDR == 0U) {
 		printk("WARNING: MIP base address is not configured\n");
@@ -327,6 +441,47 @@ static void test_step_7_init_mip(void)
 	mip_ready = true;
 	mip_init((uintptr_t)mip_base);
 	printk("MIP initialization complete\n");
+}
+
+static void test_step_8_configure_msi_bar(void)
+{
+	print_banner("STEP 10: Configure PCIe MSI BAR1");
+
+	if (RP1_MIP_MSG_ADDR == 0U || RP1_MIP_BASE_ADDR == 0U) {
+		printk("Skipping MSI BAR config (msg_addr/base not set)\n");
+		return;
+	}
+
+	if (!pcie_cfg_ready) {
+		if (!map_mmio(PCIE_CFG_PHYS, PCIE_CFG_SIZE, &pcie_cfg_base)) {
+			printk("FAILED: Could not map PCIe RC config regs\n");
+			return;
+		}
+		pcie_cfg_ready = true;
+	}
+
+	uint32_t size_bits = encode_ibar_size(0x1000U);
+	uint32_t bar1_lo = lower_32_bits(RP1_MIP_MSG_ADDR) | size_bits;
+	uint32_t bar1_hi = upper_32_bits(RP1_MIP_MSG_ADDR);
+	uint32_t remap_lo = lower_32_bits(RP1_MIP_BASE_ADDR) |
+		PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_ACCESS_ENABLE_MASK;
+	uint32_t remap_hi = upper_32_bits(RP1_MIP_BASE_ADDR);
+
+	printk("Programming RC_BAR1 for MSI doorbell:\n");
+	printk("  MSI addr:  0x%llx\n", (unsigned long long)RP1_MIP_MSG_ADDR);
+	printk("  MIP base:  0x%llx\n", (unsigned long long)RP1_MIP_BASE_ADDR);
+
+	sys_write32(bar1_lo, pcie_cfg_base + PCIE_MISC_RC_BAR1_CONFIG_LO);
+	sys_write32(bar1_hi, pcie_cfg_base + PCIE_MISC_RC_BAR1_CONFIG_HI);
+	sys_write32(remap_lo, pcie_cfg_base + PCIE_MISC_UBUS_BAR1_CONFIG_REMAP);
+	sys_write32(remap_hi, pcie_cfg_base + PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_HI);
+
+	printk("RC_BAR1 LO/HI: 0x%08x / 0x%08x\n",
+	       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR1_CONFIG_LO),
+	       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR1_CONFIG_HI));
+	printk("UBUS REMAP LO/HI: 0x%08x / 0x%08x\n",
+	       sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR1_CONFIG_REMAP),
+	       sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_HI));
 }
 
 static void maybe_install_isr(void)
@@ -348,7 +503,7 @@ static void maybe_install_isr(void)
 
 static void test_step_8_baseline_scan(void)
 {
-	print_banner("STEP 9: Baseline Scan (Before Trigger)");
+	print_banner("STEP 11: Baseline Scan (Before Trigger)");
 
 	if (gic_ready && RP1_MIP_MSI_BASE_INTID && RP1_MIP_MSI_NUM_SPIS) {
 		uint32_t start = RP1_MIP_MSI_BASE_INTID;
@@ -357,10 +512,6 @@ static void test_step_8_baseline_scan(void)
 		gic_scan_pending(&gic_mon, start, end);
 	} else {
 		printk("Skipping GIC scan (base/count not configured)\n");
-	}
-
-	if (gic_ready) {
-		gic_snapshot_pending(gic_pend_before);
 	}
 
 	if (mip_ready) {
@@ -377,6 +528,102 @@ static void test_step_8_baseline_scan(void)
 	} else {
 		printk("Skipping RP1 INTSTAT (config BAR not mapped)\n");
 	}
+}
+
+static bool map_msg_doorbell(void)
+{
+	if (msg_ready) {
+		return true;
+	}
+
+	if (RP1_MIP_MSG_ADDR == 0U) {
+		return false;
+	}
+
+	uint64_t phys_base = RP1_MIP_MSG_ADDR & ~(uint64_t)(DOORBELL_MAP_SIZE - 1U);
+	uint64_t offset = RP1_MIP_MSG_ADDR & (DOORBELL_MAP_SIZE - 1U);
+
+	if (!map_mmio((uintptr_t)phys_base, DOORBELL_MAP_SIZE, &msg_base)) {
+		return false;
+	}
+
+	msg_ptr = (uintptr_t)msg_base + (uintptr_t)offset;
+	msg_ready = true;
+
+	printk("MSI doorbell mapped: phys 0x%llx + 0x%llx\n",
+	       (unsigned long long)phys_base,
+	       (unsigned long long)offset);
+	return true;
+}
+
+static void test_step_11_cpu_doorbell(void)
+{
+	print_banner("STEP 12: CPU MSI Doorbell Test");
+
+#if !RP1_ENABLE_CPU_DOORBELL_TEST
+	printk("Skipping CPU doorbell test (RP1_ENABLE_CPU_DOORBELL_TEST=0)\n");
+	return;
+#else
+	cpu_doorbell_tested = true;
+	cpu_doorbell_mip_hit = false;
+	cpu_doorbell_gic_hit = false;
+
+	if (!mip_ready) {
+		printk("Skipping CPU doorbell test (MIP not mapped)\n");
+		return;
+	}
+
+	if (!map_msg_doorbell()) {
+		printk("Skipping CPU doorbell test (msg_addr not mapped)\n");
+		return;
+	}
+
+	uint32_t test_vec = RP1_MIP_MSI_OFFSET + TEST_VECTOR;
+	uint32_t msg_data = test_vec;
+	uint32_t hits_before = atomic_get(&isr_hits);
+	struct mip_state before;
+	struct mip_state after;
+	uint32_t pend_before[GIC_SCAN_REG_COUNT] = { 0 };
+	uint32_t pend_after[GIC_SCAN_REG_COUNT] = { 0 };
+
+	if (gic_ready) {
+		gic_snapshot_pending(pend_before);
+	}
+	mip_read_status((uintptr_t)mip_base, &before);
+
+	printk("Writing MSI doorbell: addr 0x%llx data 0x%x\n",
+	       (unsigned long long)RP1_MIP_MSG_ADDR, msg_data);
+	sys_write32(msg_data, msg_ptr);
+	k_msleep(10);
+
+	mip_read_status((uintptr_t)mip_base, &after);
+	cpu_doorbell_mip_hit =
+		(!mip_vector_is_set(&before, test_vec)) &&
+		mip_vector_is_set(&after, test_vec);
+
+	if (gic_ready) {
+		gic_snapshot_pending(pend_after);
+		printk("GIC pending diff (doorbell):\n");
+		gic_dump_pending_diff(pend_before, pend_after);
+	}
+
+#if HAVE_TEST_INTID
+	if (gic_ready && gic_is_intid_pending(&gic_mon, TEST_INTID)) {
+		cpu_doorbell_gic_hit = true;
+	}
+#endif
+
+	if (atomic_get(&isr_hits) != hits_before) {
+		cpu_doorbell_gic_hit = true;
+	}
+
+	printk("MIP status after doorbell:\n");
+	mip_dump_state(&after);
+
+	if (cpu_doorbell_mip_hit) {
+		mip_clear_vector((uintptr_t)mip_base, test_vec);
+	}
+#endif
 }
 
 static bool sweep_cfg_bases(void)
@@ -435,17 +682,24 @@ static bool sweep_cfg_bases(void)
 
 static void test_step_9_trigger(void)
 {
-	print_banner("STEP 10: Trigger Interrupt");
+	print_banner("STEP 13: Trigger Interrupt");
 
 	if (!msix_configured) {
 		printk("Skipping trigger (MSI-X table not configured)\n");
 		return;
 	}
 
-	sweep_cfg_bases();
+	if (gic_ready) {
+		gic_snapshot_pending(gic_pend_before);
+	}
+
+	bool sweep_hit = sweep_cfg_bases();
 	if (!rp1_cfg_ready) {
 		printk("Skipping trigger (RP1 config base not found)\n");
 		return;
+	}
+	if (!sweep_hit) {
+		printk("No sweep hit; using configured RP1 cfg base\n");
 	}
 	printk("Using RP1 cfg BAR%u + 0x%x\n", rp1_cfg_bar_idx, rp1_cfg_offset);
 
@@ -465,7 +719,7 @@ static void test_step_9_trigger(void)
 
 static void test_step_10_verify(void)
 {
-	print_banner("STEP 11: Verify Interrupt Path");
+	print_banner("STEP 14: Verify Interrupt Path");
 
 	if (rp1_cfg_ready) {
 		printk("1. RP1 INTSTAT:\n");
@@ -514,6 +768,12 @@ static void test_step_10_verify(void)
 		gic_ok = true;
 	}
 
+	if (cpu_doorbell_tested) {
+		printk("  CPU doorbell: MIP %s, GIC %s\n",
+		       cpu_doorbell_mip_hit ? "hit" : "miss",
+		       cpu_doorbell_gic_hit ? "hit" : "miss");
+	}
+
 	if (gic_ok) {
 		printk("  SUCCESS: Interrupt reached GIC (INTID %u)\n", TEST_INTID);
 		printk("  Path OK: RP1 -> MSI-X -> MIP -> GIC\n");
@@ -525,6 +785,14 @@ static void test_step_10_verify(void)
 		printk("  Check: MSI-X table, msg_addr, MIP base\n");
 	}
 
+	if (cpu_doorbell_tested) {
+		if (cpu_doorbell_mip_hit && !mip_hit) {
+			printk("  Hint: MIP/GIC path works; RP1 trigger path is likely wrong\n");
+		} else if (!cpu_doorbell_mip_hit) {
+			printk("  Hint: Doorbell did not reach MIP; MSI BAR mapping or msg_addr/MIP base may be wrong\n");
+		}
+	}
+
 	if (isr_installed) {
 		printk("ISR hits: %ld\n", (long)atomic_get(&isr_hits));
 	}
@@ -532,7 +800,7 @@ static void test_step_10_verify(void)
 
 static void test_step_11_cleanup(void)
 {
-	print_banner("STEP 12: Cleanup");
+	print_banner("STEP 15: Cleanup");
 
 	if (rp1_cfg_ready) {
 		printk("Clearing MSI-X TEST bit...\n");
@@ -562,6 +830,17 @@ static void print_summary(void)
 	       ((RP1_CFG_BAR_INDEX == CFG_BAR_SENTINEL) ?
 		rp1_dev.msix_table_bar : RP1_CFG_BAR_INDEX));
 	printk("  RP1 cfg offset:    0x%x\n", rp1_cfg_offset);
+	printk("  CFG sweep step:    0x%x\n", CFG_SWEEP_STEP);
+	printk("  CPU doorbell test: %s\n",
+	       RP1_ENABLE_CPU_DOORBELL_TEST ? "enabled" : "disabled");
+	if (pcie_cfg_ready) {
+		printk("  RC_BAR1 LO/HI:     0x%08x / 0x%08x\n",
+		       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR1_CONFIG_LO),
+		       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR1_CONFIG_HI));
+		printk("  UBUS BAR1 LO/HI:   0x%08x / 0x%08x\n",
+		       sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR1_CONFIG_REMAP),
+		       sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_HI));
+	}
 
 	printk("\nMIP:\n");
 	printk("  Base address:      0x%llx\n",
@@ -616,12 +895,17 @@ int main(void)
 	printk("This sample will:\n");
 	printk("  1. Enumerate RP1 on PCIe\n");
 	printk("  2. Configure MSI-X and MIP\n");
-	printk("  3. Trigger a test interrupt\n");
-	printk("  4. Verify MIP and GIC state\n\n");
+	printk("  3. Configure PCIe MSI BAR (RC_BAR1)\n");
+	printk("  4. (Optional) Ping MIP via CPU doorbell\n");
+	printk("  5. Trigger a test interrupt\n");
+	printk("  6. Verify MIP and GIC state\n\n");
 
 	k_msleep(500);
 
 	test_step_0_map_gic();
+	k_msleep(200);
+
+	test_step_1_pcie_inventory();
 	k_msleep(200);
 
 	test_step_1_find_rp1();
@@ -655,7 +939,13 @@ int main(void)
 
 	maybe_install_isr();
 
+	test_step_8_configure_msi_bar();
+	k_msleep(200);
+
 	test_step_8_baseline_scan();
+	k_msleep(200);
+
+	test_step_11_cpu_doorbell();
 	k_msleep(200);
 
 	test_step_9_trigger();

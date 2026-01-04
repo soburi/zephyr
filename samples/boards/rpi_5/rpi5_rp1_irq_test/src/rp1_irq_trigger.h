@@ -88,8 +88,8 @@ static inline void rp1_trigger_msix_test(struct rp1_trigger *trig, uint32_t vect
 	uint32_t cfg = sys_read32(msix_cfg);
 	printk("  Current MSIX_CFG[%u]: 0x%08x\n", vector, cfg);
 	
-	/* Set ENABLE and TEST bits */
-	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST);
+	/* Set ENABLE, TEST, and IACK_EN for clean edge delivery */
+	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST | RP1_MSIX_CFG_IACK_EN);
 	sys_write32(cfg, msix_cfg);
 	
 	printk("  New MSIX_CFG[%u]: 0x%08x\n", vector,
@@ -109,7 +109,7 @@ static inline void rp1_trigger_msix_test_quiet(struct rp1_trigger *trig, uint32_
 	uintptr_t msix_cfg = trig->rp1_base + RP1_MSIX_CFG(vector);
 	uint32_t cfg = sys_read32(msix_cfg);
 
-	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST);
+	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST | RP1_MSIX_CFG_IACK_EN);
 	sys_write32(cfg, msix_cfg);
 }
 

@@ -14,6 +14,8 @@ Edit ``samples/rpi5_rp1_irq_test/src/rp1_irq_test_config.h`` and set:
 - ``RP1_MIP_MSI_BASE_INTID``: GIC INTID base for the MIP SPI range
 - ``RP1_MIP_MSI_NUM_SPIS``: Number of SPI lines exposed by MIP
 - ``RP1_MIP_MSI_OFFSET``: Optional MSI data offset (usually 0)
+- ``RP1_CFG_SWEEP_STEP``: BAR sweep stride when locating RP1 config block
+- ``RP1_ENABLE_CPU_DOORBELL_TEST``: Enable CPU MSI doorbell sanity test
 - ``RP1_CFG_BAR_INDEX``: BAR index for MSIX_CFG/INTSTAT
   (use 0xFF to reuse the MSI-X table BAR)
 
