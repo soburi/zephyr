@@ -358,6 +358,13 @@ static void test_step_5_map_rp1_cfg_bar(void)
 {
 	print_banner("STEP 6: Map RP1 Config BAR");
 
+#if RP1_CFG_USE_PCIE_CFG
+	rp1_cfg_ready = rp1_trigger_init_cfg(&rp1_trig, rp1_dev.bdf);
+	rp1_cfg_bar_idx = CFG_BAR_SENTINEL;
+	rp1_cfg_offset = 0U;
+	printk("SUCCESS: RP1 config uses PCIe config space\n");
+	return;
+#else
 	if (!rp1_bars_mapped) {
 		printk("FAILED: BARs not mapped\n");
 		rp1_cfg_ready = false;
@@ -380,6 +387,7 @@ static void test_step_5_map_rp1_cfg_bar(void)
 	rp1_cfg_bar_idx = bar_idx;
 	rp1_cfg_offset = 0U;
 	printk("SUCCESS: RP1 config BAR%u mapped (offset 0x0)\n", bar_idx);
+#endif
 }
 
 static void test_step_5_enable_msix(void)
@@ -632,6 +640,10 @@ static bool sweep_cfg_bases(void)
 		return false;
 	}
 
+	if (rp1_trig.use_cfg) {
+		return false;
+	}
+
 	uint32_t test_vec = RP1_MIP_MSI_OFFSET + TEST_VECTOR;
 	uintptr_t saved_base = rp1_trig.rp1_base;
 	bool saved_init = rp1_trig.initialized;
@@ -831,6 +843,8 @@ static void print_summary(void)
 		rp1_dev.msix_table_bar : RP1_CFG_BAR_INDEX));
 	printk("  RP1 cfg offset:    0x%x\n", rp1_cfg_offset);
 	printk("  CFG sweep step:    0x%x\n", CFG_SWEEP_STEP);
+	printk("  CFG access:        %s\n",
+	       rp1_trig.use_cfg ? "pcie-config" : "mmio-bar");
 	printk("  CPU doorbell test: %s\n",
 	       RP1_ENABLE_CPU_DOORBELL_TEST ? "enabled" : "disabled");
 	if (pcie_cfg_ready) {

@@ -11,6 +11,7 @@
 #define RP1_IRQ_TRIGGER_H
 
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/pcie/pcie.h>
 #include <zephyr/sys/sys_io.h>
 
 /*
@@ -46,6 +47,8 @@
 
 struct rp1_trigger {
 	uintptr_t rp1_base;  /* RP1 MMIO base (from BAR, mapped) */
+	pcie_bdf_t bdf;
+	bool use_cfg;
 	bool initialized;
 };
 
@@ -60,11 +63,45 @@ static inline bool rp1_trigger_init(struct rp1_trigger *trig, uintptr_t rp1_base
 	}
 	
 	trig->rp1_base = rp1_base;
+	trig->use_cfg = false;
 	trig->initialized = true;
 	
 	printk("RP1 trigger initialized with base 0x%llx\n",
 	       (unsigned long long)rp1_base);
 	return true;
+}
+
+/**
+ * @brief Initialize RP1 trigger using PCIe config space
+ */
+static inline bool rp1_trigger_init_cfg(struct rp1_trigger *trig, pcie_bdf_t bdf)
+{
+	trig->bdf = bdf;
+	trig->use_cfg = true;
+	trig->initialized = true;
+
+	printk("RP1 trigger initialized with PCIe config access (BDF 0x%08x)\n", bdf);
+	return true;
+}
+
+static inline uint32_t rp1_cfg_read(const struct rp1_trigger *trig, uint32_t off)
+{
+	if (trig->use_cfg) {
+		return pcie_conf_read(trig->bdf, off / 4U);
+	}
+
+	return sys_read32(trig->rp1_base + off);
+}
+
+static inline void rp1_cfg_write(const struct rp1_trigger *trig,
+				 uint32_t off, uint32_t val)
+{
+	if (trig->use_cfg) {
+		pcie_conf_write(trig->bdf, off / 4U, val);
+		return;
+	}
+
+	sys_write32(val, trig->rp1_base + off);
 }
 
 /**
@@ -80,20 +117,18 @@ static inline void rp1_trigger_msix_test(struct rp1_trigger *trig, uint32_t vect
 		return;
 	}
 	
-	uintptr_t msix_cfg = trig->rp1_base + RP1_MSIX_CFG(vector);
-	
 	printk("\n>>> Triggering RP1 interrupt via MSI-X TEST (vector %u) <<<\n", vector);
 	
 	/* Read current config */
-	uint32_t cfg = sys_read32(msix_cfg);
+	uint32_t cfg = rp1_cfg_read(trig, RP1_MSIX_CFG(vector));
 	printk("  Current MSIX_CFG[%u]: 0x%08x\n", vector, cfg);
 	
 	/* Set ENABLE, TEST, and IACK_EN for clean edge delivery */
 	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST | RP1_MSIX_CFG_IACK_EN);
-	sys_write32(cfg, msix_cfg);
+	rp1_cfg_write(trig, RP1_MSIX_CFG(vector), cfg);
 	
 	printk("  New MSIX_CFG[%u]: 0x%08x\n", vector,
-	       sys_read32(msix_cfg));
+	       rp1_cfg_read(trig, RP1_MSIX_CFG(vector)));
 	printk(">>> Interrupt should now be triggered <<<\n\n");
 }
 
@@ -106,11 +141,10 @@ static inline void rp1_trigger_msix_test_quiet(struct rp1_trigger *trig, uint32_
 		return;
 	}
 
-	uintptr_t msix_cfg = trig->rp1_base + RP1_MSIX_CFG(vector);
-	uint32_t cfg = sys_read32(msix_cfg);
+	uint32_t cfg = rp1_cfg_read(trig, RP1_MSIX_CFG(vector));
 
 	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST | RP1_MSIX_CFG_IACK_EN);
-	sys_write32(cfg, msix_cfg);
+	rp1_cfg_write(trig, RP1_MSIX_CFG(vector), cfg);
 }
 
 /**
@@ -122,10 +156,9 @@ static inline void rp1_clear_msix_test(struct rp1_trigger *trig, uint32_t vector
 		return;
 	}
 	
-	uintptr_t msix_cfg = trig->rp1_base + RP1_MSIX_CFG(vector);
-	uint32_t cfg = sys_read32(msix_cfg);
+	uint32_t cfg = rp1_cfg_read(trig, RP1_MSIX_CFG(vector));
 	cfg &= ~RP1_MSIX_CFG_TEST;
-	sys_write32(cfg, msix_cfg);
+	rp1_cfg_write(trig, RP1_MSIX_CFG(vector), cfg);
 	
 	printk("Cleared MSI-X TEST bit for vector %u\n", vector);
 }
@@ -139,11 +172,10 @@ static inline void rp1_clear_msix_test_quiet(struct rp1_trigger *trig, uint32_t 
 		return;
 	}
 
-	uintptr_t msix_cfg = trig->rp1_base + RP1_MSIX_CFG(vector);
-	uint32_t cfg = sys_read32(msix_cfg);
+	uint32_t cfg = rp1_cfg_read(trig, RP1_MSIX_CFG(vector));
 
 	cfg &= ~RP1_MSIX_CFG_TEST;
-	sys_write32(cfg, msix_cfg);
+	rp1_cfg_write(trig, RP1_MSIX_CFG(vector), cfg);
 }
 
 /**
@@ -155,8 +187,8 @@ static inline void rp1_read_intstatus(struct rp1_trigger *trig)
 		return;
 	}
 	
-	uint32_t sl = sys_read32(trig->rp1_base + RP1_PCIE_INTSTATL);
-	uint32_t sh = sys_read32(trig->rp1_base + RP1_PCIE_INTSTATH);
+	uint32_t sl = rp1_cfg_read(trig, RP1_PCIE_INTSTATL);
+	uint32_t sh = rp1_cfg_read(trig, RP1_PCIE_INTSTATH);
 	
 	printk("\n=== RP1 PCIe INTSTAT ===\n");
 	printk("  INTSTATL [31:0]:  0x%08x\n", sl);
@@ -189,6 +221,11 @@ static inline void rp1_trigger_gpio_force(struct rp1_trigger *trig,
 					  uint32_t gpio)
 {
 	if (!trig->initialized) {
+		return;
+	}
+
+	if (trig->use_cfg) {
+		printk("GPIO force requires MMIO base, not PCIe config access\n");
 		return;
 	}
 	

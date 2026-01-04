@@ -43,4 +43,10 @@
  */
 #define RP1_CFG_BAR_INDEX      0xFFU
 
+/*
+ * Use PCIe config space for MSIX_CFG/INTSTAT access instead of MMIO BAR.
+ * This is recommended for RP1 MSI-X test registers.
+ */
+#define RP1_CFG_USE_PCIE_CFG   1U
+
 #endif /* RP1_IRQ_TEST_CONFIG_H */

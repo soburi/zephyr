@@ -18,6 +18,7 @@ Edit ``samples/rpi5_rp1_irq_test/src/rp1_irq_test_config.h`` and set:
 - ``RP1_ENABLE_CPU_DOORBELL_TEST``: Enable CPU MSI doorbell sanity test
 - ``RP1_CFG_BAR_INDEX``: BAR index for MSIX_CFG/INTSTAT
   (use 0xFF to reuse the MSI-X table BAR)
+- ``RP1_CFG_USE_PCIE_CFG``: Use PCIe config space for MSIX_CFG/INTSTAT (recommended)
 
 Build
 -----
