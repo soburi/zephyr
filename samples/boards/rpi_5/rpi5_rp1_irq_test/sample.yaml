@@ -1,0 +1,13 @@
+sample:
+  name: rpi5 rp1 irq test
+  description: Verify RP1 MSI-X -> MIP -> GIC interrupt path on RPi5
+common:
+  tags: rpi5 rp1 pcie interrupt
+  platform_allow:
+    - rpi_5
+  integration_platforms:
+    - rpi_5
+  harness: console
+tests:
+  sample.board.rpi5.rp1_irq_test:
+    tags: rpi5 rp1 pcie
