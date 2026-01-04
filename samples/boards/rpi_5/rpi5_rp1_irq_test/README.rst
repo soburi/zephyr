@@ -16,6 +16,7 @@ Edit ``samples/boards/rpi_5/rpi5_rp1_irq_test/src/rp1_irq_test_config.h`` and se
 - ``RP1_MIP_MSI_OFFSET``: Optional MSI data offset (usually 0)
 - ``RP1_CFG_SWEEP_STEP``: BAR sweep stride when locating RP1 config block
 - ``RP1_ENABLE_CPU_DOORBELL_TEST``: Enable CPU MSI doorbell sanity test
+- ``RP1_ENABLE_MIP_RAISE_TEST``: Enable MIP self-raise sanity test
 - ``RP1_CFG_BAR_INDEX``: BAR index for MSIX_CFG/INTSTAT
   (use 0xFF to reuse the MSI-X table BAR)
 - ``RP1_CFG_BAR_PHYS_ADDR``: Optional forced MMIO address for the config BAR

@@ -35,7 +35,13 @@
  * Optional CPU-generated MSI doorbell test to validate MIP -> GIC path.
  * Disable if the doorbell address is not CPU-accessible on your setup.
  */
-#define RP1_ENABLE_CPU_DOORBELL_TEST 1U
+#define RP1_ENABLE_CPU_DOORBELL_TEST 0U
+
+/*
+ * Optional MIP self-raise test (writes MIP_INT_RAISED).
+ * This is a best-effort sanity check; some revisions may treat it as read-only.
+ */
+#define RP1_ENABLE_MIP_RAISE_TEST 1U
 
 /*
  * BAR index that exposes the RP1 PCIe config block (MSIX_CFG/INTSTAT).

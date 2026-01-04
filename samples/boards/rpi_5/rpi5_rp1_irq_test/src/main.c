@@ -39,6 +39,10 @@
 #define RP1_ENABLE_CPU_DOORBELL_TEST 0U
 #endif
 
+#ifndef RP1_ENABLE_MIP_RAISE_TEST
+#define RP1_ENABLE_MIP_RAISE_TEST 0U
+#endif
+
 #ifndef RP1_CFG_BAR_PHYS_ADDR
 #define RP1_CFG_BAR_PHYS_ADDR 0ULL
 #endif
@@ -71,8 +75,11 @@
 /* PCIe RC BAR1 config (from Linux pcie-brcmstb) */
 #define PCIE_MISC_RC_BAR1_CONFIG_LO           0x402c
 #define PCIE_MISC_RC_BAR1_CONFIG_HI           0x4030
+#define PCIE_MISC_RC_BAR2_CONFIG_LO           0x4034
+#define PCIE_MISC_RC_BAR2_CONFIG_HI           0x4038
 #define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP      0x40ac
 #define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_HI   0x40b0
+#define PCIE_MISC_UBUS_BAR2_CONFIG_REMAP      0x40b4
 #define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_ACCESS_ENABLE_MASK 0x1
 
 /* Global state */
@@ -499,6 +506,13 @@ static void test_step_8_configure_msi_bar(void)
 		pcie_cfg_ready = true;
 	}
 
+	printk("RC_BAR2 current config:\n");
+	printk("  LO/HI: 0x%08x / 0x%08x\n",
+	       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_LO),
+	       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_HI));
+	printk("  UBUS BAR2: 0x%08x\n",
+	       sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR2_CONFIG_REMAP));
+
 	uint32_t size_bits = encode_ibar_size(0x1000U);
 	uint32_t bar1_lo = lower_32_bits(RP1_MIP_MSG_ADDR) | size_bits;
 	uint32_t bar1_hi = upper_32_bits(RP1_MIP_MSG_ADDR);
@@ -569,6 +583,61 @@ static void test_step_8_baseline_scan(void)
 	}
 }
 
+static void test_step_9_mip_raise(void)
+{
+	print_banner("STEP 12: MIP Self-Raise Test");
+
+#if !RP1_ENABLE_MIP_RAISE_TEST
+	printk("Skipping MIP self-raise test (RP1_ENABLE_MIP_RAISE_TEST=0)\n");
+	return;
+#endif
+
+	if (!mip_ready) {
+		printk("Skipping MIP self-raise test (MIP not mapped)\n");
+		return;
+	}
+
+	maybe_install_isr();
+
+	if (gic_ready) {
+		gic_snapshot_pending(gic_pend_before);
+	}
+
+	printk("Raising MIP vector %u via INT_RAISED...\n", TEST_VECTOR);
+	mip_raise_vector((uintptr_t)mip_base, TEST_VECTOR);
+	k_msleep(5);
+
+	mip_read_status((uintptr_t)mip_base, &mip_state);
+	mip_dump_state(&mip_state);
+
+	if (gic_ready) {
+		gic_snapshot_pending(gic_pend_after);
+		printk("GIC pending diff (MIP raise):\n");
+		gic_dump_pending_diff(gic_pend_before, gic_pend_after);
+	}
+
+	mip_clear_vector((uintptr_t)mip_base, TEST_VECTOR);
+
+	if (gic_ready) {
+		gic_snapshot_pending(gic_pend_before);
+	}
+
+	printk("Raising MIP vector %u via SETL (0x08)...\n", TEST_VECTOR);
+	mip_set_vector_undoc((uintptr_t)mip_base, TEST_VECTOR);
+	k_msleep(5);
+
+	mip_read_status((uintptr_t)mip_base, &mip_state);
+	mip_dump_state(&mip_state);
+
+	if (gic_ready) {
+		gic_snapshot_pending(gic_pend_after);
+		printk("GIC pending diff (MIP setl):\n");
+		gic_dump_pending_diff(gic_pend_before, gic_pend_after);
+	}
+
+	mip_clear_vector((uintptr_t)mip_base, TEST_VECTOR);
+}
+
 static bool map_msg_doorbell(void)
 {
 	if (msg_ready) {
@@ -597,7 +666,7 @@ static bool map_msg_doorbell(void)
 
 static void test_step_11_cpu_doorbell(void)
 {
-	print_banner("STEP 12: CPU MSI Doorbell Test");
+	print_banner("STEP 13: CPU MSI Doorbell Test");
 
 #if !RP1_ENABLE_CPU_DOORBELL_TEST
 	printk("Skipping CPU doorbell test (RP1_ENABLE_CPU_DOORBELL_TEST=0)\n");
@@ -725,7 +794,7 @@ static bool sweep_cfg_bases(void)
 
 static void test_step_9_trigger(void)
 {
-	print_banner("STEP 13: Trigger Interrupt");
+	print_banner("STEP 14: Trigger Interrupt");
 
 	if (!msix_configured) {
 		printk("Skipping trigger (MSI-X table not configured)\n");
@@ -762,7 +831,7 @@ static void test_step_9_trigger(void)
 
 static void test_step_10_verify(void)
 {
-	print_banner("STEP 14: Verify Interrupt Path");
+	print_banner("STEP 15: Verify Interrupt Path");
 
 	if (rp1_cfg_ready) {
 		printk("1. RP1 INTSTAT:\n");
@@ -843,7 +912,7 @@ static void test_step_10_verify(void)
 
 static void test_step_11_cleanup(void)
 {
-	print_banner("STEP 15: Cleanup");
+	print_banner("STEP 16: Cleanup");
 
 	if (rp1_cfg_ready) {
 		printk("Clearing MSI-X TEST bit...\n");
@@ -942,7 +1011,7 @@ int main(void)
 	printk("  1. Enumerate RP1 on PCIe\n");
 	printk("  2. Configure MSI-X and MIP\n");
 	printk("  3. Configure PCIe MSI BAR (RC_BAR1)\n");
-	printk("  4. (Optional) Ping MIP via CPU doorbell\n");
+	printk("  4. (Optional) Self-raise MIP / ping MIP via CPU doorbell\n");
 	printk("  5. Trigger a test interrupt\n");
 	printk("  6. Verify MIP and GIC state\n\n");
 
@@ -989,6 +1058,9 @@ int main(void)
 	k_msleep(200);
 
 	test_step_8_baseline_scan();
+	k_msleep(200);
+
+	test_step_9_mip_raise();
 	k_msleep(200);
 
 	test_step_11_cpu_doorbell();

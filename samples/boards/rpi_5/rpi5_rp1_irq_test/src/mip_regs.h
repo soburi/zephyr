@@ -19,6 +19,9 @@
  * MIP register offsets (from Linux driver)
  */
 #define MIP_INT_RAISED        0x00
+#define MIP_INT_RAISEH        0x04
+#define MIP_INT_SETL          0x08
+#define MIP_INT_SETH          0x0c
 #define MIP_INT_CLEAREDL      0x10
 #define MIP_INT_CLEAREDH      0x14
 #define MIP_INT_CFGL_HOST     0x20
@@ -42,6 +45,8 @@ struct mip_state {
 	uint32_t statush;
 	uint32_t maskl;
 	uint32_t maskh;
+	uint32_t raisedl;
+	uint32_t raisedh;
 };
 
 /**
@@ -56,6 +61,8 @@ static inline void mip_read_status(uintptr_t mip_base, struct mip_state *state)
 	state->statush = regs[MIP_INT_STATUSH_HOST / 4];
 	state->maskl = regs[MIP_INT_MASKL_HOST / 4];
 	state->maskh = regs[MIP_INT_MASKH_HOST / 4];
+	state->raisedl = regs[MIP_INT_RAISED / 4];
+	state->raisedh = regs[MIP_INT_RAISEH / 4];
 }
 
 /**
@@ -69,6 +76,8 @@ static inline void mip_dump_state(const struct mip_state *state)
 	printk("  STATUS_H: 0x%08x\n", state->statush);
 	printk("  MASK_L:   0x%08x\n", state->maskl);
 	printk("  MASK_H:   0x%08x\n", state->maskh);
+	printk("  RAISED_L: 0x%08x\n", state->raisedl);
+	printk("  RAISED_H: 0x%08x\n", state->raisedh);
 	
 	/* Show which bits are set in status */
 	if (state->statusl || state->statush) {
@@ -114,6 +123,31 @@ static inline void mip_init(uintptr_t mip_base)
 	regs[MIP_INT_CFGH_HOST / 4] = 0xffffffff;
 	
 	printk("MIP initialized\n");
+}
+
+/**
+ * @brief Raise a MIP vector (best-effort; may be read-only on some revisions)
+ */
+static inline void mip_raise_vector(uintptr_t mip_base, uint32_t vector)
+{
+	volatile uint32_t *regs = (volatile uint32_t *)mip_base;
+
+	if (vector < 32U) {
+		regs[MIP_INT_RAISED / 4] = BIT(vector);
+	} else if (vector < 64U) {
+		regs[MIP_INT_RAISEH / 4] = BIT(vector - 32U);
+	}
+}
+
+static inline void mip_set_vector_undoc(uintptr_t mip_base, uint32_t vector)
+{
+	volatile uint32_t *regs = (volatile uint32_t *)mip_base;
+
+	if (vector < 32U) {
+		regs[MIP_INT_SETL / 4] = BIT(vector);
+	} else if (vector < 64U) {
+		regs[MIP_INT_SETH / 4] = BIT(vector - 32U);
+	}
 }
 
 /**
