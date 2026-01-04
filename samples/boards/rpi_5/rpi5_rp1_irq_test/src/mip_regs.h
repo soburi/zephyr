@@ -2,7 +2,7 @@
  * MIP (MSI-X Interrupt Peripheral) Register Access for BCM2712
  *
  * Based on Linux kernel driver:
- * https://lore.kernel.org/all/20240909230043.22762-4-andrea.porta@suse.com/
+ * https://raw.githubusercontent.com/raspberrypi/linux/rpi-6.6.y/drivers/irqchip/irq-bcm2712-mip.c
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,14 +18,17 @@
 /*
  * MIP register offsets (from Linux driver)
  */
-#define MIP_INT_STATUSL_HOST  0x00
-#define MIP_INT_STATUSH_HOST  0x04
-#define MIP_INT_MASKL_HOST    0x08
-#define MIP_INT_MASKH_HOST    0x0c
-#define MIP_INT_CLEARL        0x10
-#define MIP_INT_CLEARH        0x14
-#define MIP_INT_CFGL_HOST     0x18
-#define MIP_INT_CFGH_HOST     0x1c
+#define MIP_INT_RAISED        0x00
+#define MIP_INT_CLEAREDL      0x10
+#define MIP_INT_CLEAREDH      0x14
+#define MIP_INT_CFGL_HOST     0x20
+#define MIP_INT_CFGH_HOST     0x30
+#define MIP_INT_MASKL_HOST    0x40
+#define MIP_INT_MASKH_HOST    0x50
+#define MIP_INT_MASKL_VPU     0x60
+#define MIP_INT_MASKH_VPU     0x70
+#define MIP_INT_STATUSL_HOST  0x80
+#define MIP_INT_STATUSH_HOST  0x90
 
 #define MIP_MSI_BASE_INTID  RP1_MIP_MSI_BASE_INTID
 #define MIP_MSI_NUM_SPIS    RP1_MIP_MSI_NUM_SPIS
@@ -97,12 +100,14 @@ static inline void mip_init(uintptr_t mip_base)
 	       (unsigned long long)mip_base);
 	
 	/* Clear all status */
-	regs[MIP_INT_CLEARL / 4] = 0xffffffff;
-	regs[MIP_INT_CLEARH / 4] = 0xffffffff;
+	regs[MIP_INT_CLEAREDL / 4] = 0xffffffff;
+	regs[MIP_INT_CLEAREDH / 4] = 0xffffffff;
 	
-	/* Unmask all (0 = unmasked in Linux driver) */
+	/* Host unmasked, VPU masked */
 	regs[MIP_INT_MASKL_HOST / 4] = 0x00000000;
 	regs[MIP_INT_MASKH_HOST / 4] = 0x00000000;
+	regs[MIP_INT_MASKL_VPU / 4] = 0xffffffff;
+	regs[MIP_INT_MASKH_VPU / 4] = 0xffffffff;
 	
 	/* Configure all as edge-triggered (all 1s in Linux) */
 	regs[MIP_INT_CFGL_HOST / 4] = 0xffffffff;
@@ -119,9 +124,9 @@ static inline void mip_clear_vector(uintptr_t mip_base, uint32_t vector)
 	volatile uint32_t *regs = (volatile uint32_t *)mip_base;
 	
 	if (vector < 32) {
-		regs[MIP_INT_CLEARL / 4] = BIT(vector);
+		regs[MIP_INT_CLEAREDL / 4] = BIT(vector);
 	} else if (vector < 64) {
-		regs[MIP_INT_CLEARH / 4] = BIT(vector - 32);
+		regs[MIP_INT_CLEAREDH / 4] = BIT(vector - 32);
 	}
 }
 

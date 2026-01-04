@@ -98,6 +98,22 @@ static inline void rp1_trigger_msix_test(struct rp1_trigger *trig, uint32_t vect
 }
 
 /**
+ * @brief Trigger MSI-X TEST bit without console output (for sweeps)
+ */
+static inline void rp1_trigger_msix_test_quiet(struct rp1_trigger *trig, uint32_t vector)
+{
+	if (!trig->initialized) {
+		return;
+	}
+
+	uintptr_t msix_cfg = trig->rp1_base + RP1_MSIX_CFG(vector);
+	uint32_t cfg = sys_read32(msix_cfg);
+
+	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST);
+	sys_write32(cfg, msix_cfg);
+}
+
+/**
  * @brief Clear MSI-X TEST bit
  */
 static inline void rp1_clear_msix_test(struct rp1_trigger *trig, uint32_t vector)
@@ -112,6 +128,22 @@ static inline void rp1_clear_msix_test(struct rp1_trigger *trig, uint32_t vector
 	sys_write32(cfg, msix_cfg);
 	
 	printk("Cleared MSI-X TEST bit for vector %u\n", vector);
+}
+
+/**
+ * @brief Clear MSI-X TEST bit without console output (for sweeps)
+ */
+static inline void rp1_clear_msix_test_quiet(struct rp1_trigger *trig, uint32_t vector)
+{
+	if (!trig->initialized) {
+		return;
+	}
+
+	uintptr_t msix_cfg = trig->rp1_base + RP1_MSIX_CFG(vector);
+	uint32_t cfg = sys_read32(msix_cfg);
+
+	cfg &= ~RP1_MSIX_CFG_TEST;
+	sys_write32(cfg, msix_cfg);
 }
 
 /**

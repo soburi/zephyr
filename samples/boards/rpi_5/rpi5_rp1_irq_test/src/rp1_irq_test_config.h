@@ -15,7 +15,7 @@
 #define RP1_MIP_REG_SIZE       0x00c0U
 
 /* MSI-X message (doorbell) address expected by MIP */
-#define RP1_MIP_MSG_ADDR       0x000000ff_fffff000ULL
+#define RP1_MIP_MSG_ADDR       0x000000fffffff000ULL
 
 /* MIP output SPI range (GIC INTID base + count) */
 #define RP1_MIP_MSI_BASE_INTID 0x80U
