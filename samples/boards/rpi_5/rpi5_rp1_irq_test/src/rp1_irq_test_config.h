@@ -41,7 +41,15 @@
  * BAR index that exposes the RP1 PCIe config block (MSIX_CFG/INTSTAT).
  * Use 0xFF to reuse the MSI-X table BAR.
  */
-#define RP1_CFG_BAR_INDEX      0xFFU
+#define RP1_CFG_BAR_INDEX      0x02U
+
+/*
+ * Optional forced BAR mapping for the RP1 PCIe config block.
+ * Use when pcie_get_mbar() fails due to BAR sizing writes being rejected.
+ * Set to 0 to disable.
+ */
+#define RP1_CFG_BAR_PHYS_ADDR  0x0000001f00400000ULL
+#define RP1_CFG_BAR_SIZE       0x00010000U
 
 /*
  * Use PCIe config space for MSIX_CFG/INTSTAT access instead of MMIO BAR.
@@ -53,6 +61,6 @@
  * Base offset within the RP1 PCIe BAR for the endpoint config block.
  * MSI-X table occupies BAR0+0x0, so start past it (e.g. 0x400).
  */
-#define RP1_PCIE_CFG_BASE_OFFSET 0x400U
+#define RP1_PCIE_CFG_BASE_OFFSET 0x000U
 
 #endif /* RP1_IRQ_TEST_CONFIG_H */

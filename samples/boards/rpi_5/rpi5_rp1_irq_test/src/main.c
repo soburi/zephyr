@@ -39,6 +39,14 @@
 #define RP1_ENABLE_CPU_DOORBELL_TEST 0U
 #endif
 
+#ifndef RP1_CFG_BAR_PHYS_ADDR
+#define RP1_CFG_BAR_PHYS_ADDR 0ULL
+#endif
+
+#ifndef RP1_CFG_BAR_SIZE
+#define RP1_CFG_BAR_SIZE 0U
+#endif
+
 #define DOORBELL_MAP_SIZE 0x1000U
 
 #define GIC_SCAN_REG_START 1U
@@ -329,6 +337,29 @@ static void test_step_3_map_bars(void)
 	if (!rp1_bars_mapped) {
 		printk("WARNING: No BARs mapped\n");
 	}
+
+#if !RP1_CFG_USE_PCIE_CFG
+	if (RP1_CFG_BAR_INDEX != CFG_BAR_SENTINEL &&
+	    RP1_CFG_BAR_INDEX < RP1_BAR_MAX &&
+	    !rp1_bars[RP1_CFG_BAR_INDEX].mapped &&
+	    RP1_CFG_BAR_PHYS_ADDR != 0ULL &&
+	    RP1_CFG_BAR_SIZE != 0U) {
+		struct rp1_bar_map *map = &rp1_bars[RP1_CFG_BAR_INDEX];
+
+		map->bar.phys_addr = (uintptr_t)RP1_CFG_BAR_PHYS_ADDR;
+		map->bar.size = RP1_CFG_BAR_SIZE;
+		device_map(&map->vaddr, map->bar.phys_addr, map->bar.size,
+			   K_MEM_CACHE_NONE);
+		map->mapped = true;
+		rp1_bars_mapped = true;
+
+		printk("  BAR%u: FORCE phys 0x%llx, size 0x%zx, virt 0x%llx\n",
+		       RP1_CFG_BAR_INDEX,
+		       (unsigned long long)map->bar.phys_addr,
+		       map->bar.size,
+		       (unsigned long long)map->vaddr);
+	}
+#endif
 }
 
 static void test_step_4_bind_msix_table(void)
