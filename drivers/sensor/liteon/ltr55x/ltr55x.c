@@ -46,17 +46,29 @@ static int ltr55x_init_interrupt_registers(const struct device *dev)
 {
 	const struct ltr55x_config *cfg = dev->config;
 	const struct i2c_dt_spec *bus = &cfg->bus;
+	const uint8_t interrupt = (cfg->ps_interrupt << LTR55X_INTERRUPT_PS_SHIFT) |
+				  (cfg->als_interrupt << LTR55X_INTERRUPT_ALS_SHIFT);
+	const uint8_t interrupt_persist =
+		(cfg->ps_interrupt_persist << LTR55X_INTERRUPT_PERSIST_PS_SHIFT) |
+		(cfg->als_interrupt_persist << LTR55X_INTERRUPT_PERSIST_ALS_SHIFT);
 	struct ltr55x_data *data = dev->data;
-	uint8_t buf[6];
+	uint8_t buf[7];
 	int rc;
 
-	sys_put_le16(data->ps_upper_threshold, &buf[0]);
-	sys_put_le16(data->ps_lower_threshold, &buf[2]);
-	sys_put_be16(data->ps_offset, &buf[4]);
+	buf[0] = interrupt;
+	sys_put_le16(data->ps_upper_threshold, &buf[1]);
+	sys_put_le16(data->ps_lower_threshold, &buf[3]);
+	sys_put_le16(data->ps_offset, &buf[5]);
 
-	rc = i2c_burst_write_dt(bus, LTR55X_PS_THRES_UP_0, buf, 6);
+	rc = i2c_burst_write_dt(bus, LTR55X_INTERRUPT, buf, 7);
 	if (rc < 0) {
-		LOG_ERR("Failed to set PS threshold/offset: %d", rc);
+		LOG_ERR("Failed to set interrupt: %d", rc);
+		return rc;
+	}
+
+	rc = i2c_reg_write_byte_dt(bus, LTR55X_INTERRUPT_PERSIST, interrupt_persist);
+	if (rc < 0) {
+		LOG_ERR("Failed to set interrupt persistence: %d", rc);
 		return rc;
 	}
 
@@ -165,6 +177,15 @@ static int ltr55x_init(const struct device *dev)
 		return rc;
 	}
 
+#ifdef CONFIG_LTR55X_TRIGGER
+	if ((cfg->part_id == LTR55X_PART_ID_VALUE) && (cfg->int_gpio.port != NULL)) {
+		rc = ltr55x_trigger_init(dev);
+		if (rc < 0) {
+			return rc;
+		}
+	}
+#endif
+
 	return 0;
 }
 
@@ -196,8 +217,8 @@ static int ltr55x_check_data_ready(const struct ltr55x_config *cfg, enum sensor_
 	return 0;
 }
 
-static int ltr55x_read_data(const struct ltr55x_config *cfg, enum sensor_channel chan,
-			    struct ltr55x_data *data)
+int ltr55x_read_data(const struct ltr55x_config *cfg, enum sensor_channel chan,
+		     struct ltr55x_data *data)
 {
 	const struct i2c_dt_spec *bus = &cfg->bus;
 	const bool need_als = (chan == SENSOR_CHAN_ALL) || (chan == SENSOR_CHAN_LIGHT);
@@ -402,6 +423,10 @@ static int ltr55x_channel_get(const struct device *dev, enum sensor_channel chan
 static DEVICE_API(sensor, ltr55x_driver_api) = {
 	.sample_fetch = ltr55x_sample_fetch,
 	.channel_get = ltr55x_channel_get,
+#ifdef CONFIG_LTR55X_TRIGGER
+	.attr_set = ltr55x_attr_set,
+	.trigger_set = ltr55x_trigger_set,
+#endif
 };
 
 #define LTR55X_ALS_GAIN_REG(n)                                                                     \
@@ -418,10 +443,14 @@ static DEVICE_API(sensor, ltr55x_driver_api) = {
 	BUILD_ASSERT(DT_PROP_OR(node_id, ps_offset, 0) <= LTR55X_PS_DATA_MAX);                     \
 	BUILD_ASSERT(DT_PROP_OR(node_id, ps_upper_threshold, LTR55X_PS_DATA_MASK) <=               \
 		     LTR55X_PS_DATA_MASK);                                                         \
+	BUILD_ASSERT(DT_PROP_OR(node_id, als_lower_threshold, 0) <=                                \
+		     DT_PROP_OR(node_id, als_upper_threshold, UINT16_MAX));                        \
 	BUILD_ASSERT(DT_PROP_OR(node_id, ps_lower_threshold, 0) <= LTR55X_PS_DATA_MAX);            \
 	BUILD_ASSERT(DT_PROP_OR(node_id, ps_lower_threshold, 0) <=                                 \
 		     DT_PROP_OR(node_id, ps_upper_threshold, LTR55X_PS_DATA_MAX));                 \
 	static struct ltr55x_data ltr55x_data_##node_id = {                                        \
+		.als_upper_threshold = DT_PROP_OR(node_id, als_upper_threshold, UINT16_MAX),       \
+		.als_lower_threshold = DT_PROP_OR(node_id, als_lower_threshold, 0),                \
 		.ps_offset = DT_PROP_OR(node_id, ps_offset, 0),                                    \
 		.ps_upper_threshold = DT_PROP_OR(node_id, ps_upper_threshold, LTR55X_PS_DATA_MAX), \
 		.ps_lower_threshold = DT_PROP_OR(node_id, ps_lower_threshold, 0),                  \
@@ -439,6 +468,14 @@ static DEVICE_API(sensor, ltr55x_driver_api) = {
 		.ps_measurement_rate = UTIL_CAT(LTR55X_PS_MEASUREMENT_RATE_VALUE_,                 \
 						DT_PROP_OR(node_id, ps_measurement_rate, 100)),    \
 		.ps_saturation_indicator = DT_PROP_OR(node_id, ps_saturation_indicator, false),    \
+		.als_interrupt = DT_PROP_OR(node_id, als_interrupt, false),                        \
+		.als_interrupt_persist = DT_PROP_OR(node_id, als_interrupt_persist, 0),            \
+		.ps_saturation_indicator = DT_PROP_OR(node_id, ps_saturation_indicator, false),    \
+		.ps_interrupt = DT_PROP_OR(node_id, ps_interrupt, false),                          \
+		.ps_interrupt_persist = DT_PROP_OR(node_id, ps_interrupt_persist, 0),              \
+		IF_ENABLED(CONFIG_LTR55X_TRIGGER,                                                  \
+			   (.int_gpio = GPIO_DT_SPEC_GET_OR(node_id, int_gpios, {0}),)             \
+		)                                                                                  \
 	};                                                                                         \
 	SENSOR_DEVICE_DT_DEFINE(node_id, ltr55x_init, NULL, &ltr55x_data_##node_id,                \
 				&ltr55x_config_##node_id, POST_KERNEL,                             \
