@@ -11,16 +11,16 @@
 #define RP1_IRQ_TEST_CONFIG_H
 
 /* MIP (MSI-X Interrupt Peripheral) register window */
-#define RP1_MIP_BASE_ADDR      0x0ULL
-#define RP1_MIP_REG_SIZE       0x1000U
+#define RP1_MIP_BASE_ADDR      0x1000130000ULL
+#define RP1_MIP_REG_SIZE       0x00c0U
 
 /* MSI-X message (doorbell) address expected by MIP */
-#define RP1_MIP_MSG_ADDR       0x0ULL
+#define RP1_MIP_MSG_ADDR       0x000000ff_fffff000ULL
 
 /* MIP output SPI range (GIC INTID base + count) */
-#define RP1_MIP_MSI_BASE_INTID 0U
-#define RP1_MIP_MSI_NUM_SPIS   64U
-#define RP1_MIP_MSI_OFFSET     0U
+#define RP1_MIP_MSI_BASE_INTID 0x80U
+#define RP1_MIP_MSI_NUM_SPIS   0x40U
+#define RP1_MIP_MSI_OFFSET     0x00U
 
 /* MSI-X vector used for the test */
 #define RP1_MSIX_TEST_VECTOR   0U
