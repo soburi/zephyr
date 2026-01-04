@@ -144,22 +144,61 @@ struct ltr55x_config {
 	uint8_t als_gain;
 	uint8_t als_integration_time;
 	uint8_t als_measurement_rate;
+	bool als_interrupt;
+	uint8_t als_interrupt_persist;
 	uint8_t ps_led_pulse_freq;
 	uint8_t ps_led_duty_cycle;
 	uint8_t ps_led_current;
 	uint8_t ps_n_pulses;
 	uint8_t ps_measurement_rate;
 	bool ps_saturation_indicator;
+	bool ps_interrupt;
+	uint8_t ps_interrupt_persist;
+#ifdef CONFIG_LTR55X_TRIGGER
+	const struct gpio_dt_spec int_gpio;
+#endif
 };
 
 struct ltr55x_data {
 	uint16_t als_ch0;
 	uint16_t als_ch1;
+	uint16_t als_upper_threshold;
+	uint16_t als_lower_threshold;
 	uint16_t ps_ch0;
 	uint16_t ps_offset;
 	uint16_t ps_upper_threshold;
 	uint16_t ps_lower_threshold;
 	bool proximity_state;
+
+#ifdef CONFIG_LTR55X_TRIGGER
+	const struct device *dev;
+	struct gpio_callback gpio_cb;
+	sensor_trigger_handler_t als_handler;
+	const struct sensor_trigger *als_trigger;
+	sensor_trigger_handler_t ps_handler;
+	const struct sensor_trigger *ps_trigger;
+#ifdef CONFIG_LTR55X_TRIGGER_OWN_THREAD
+	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_LTR55X_THREAD_STACK_SIZE);
+	struct k_thread thread;
+	struct k_sem trig_sem;
+#endif
+#ifdef CONFIG_LTR55X_TRIGGER_GLOBAL_THREAD
+	struct k_work work;
+#endif
+#endif
 };
+
+int ltr55x_read_data(const struct ltr55x_config *cfg, enum sensor_channel chan,
+		     struct ltr55x_data *data);
+
+#ifdef CONFIG_LTR55X_TRIGGER
+int ltr55x_trigger_init(const struct device *dev);
+
+int ltr55x_attr_set(const struct device *dev, enum sensor_channel chan, enum sensor_attribute attr,
+		    const struct sensor_value *val);
+
+int ltr55x_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
+		       sensor_trigger_handler_t handler);
+#endif
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_LITEON_LTR55X_LTR55X_H_ */

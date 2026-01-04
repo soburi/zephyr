@@ -79,3 +79,34 @@ properties:
     enum: [50, 70, 100, 200, 500, 1000, 2000, -1, 10]
     description: |
       PS Measurement Repeat Rate is the interval between PS_DATA updates.
+
+  ps-interrupt:
+    type: boolean
+    description: |
+      Enable proximity interrupt output. When enabled, the interrupt is
+      generated if PS data crosses the configured thresholds.
+
+  ps-interrupt-persist:
+    type: int
+    enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    description: |
+      Number of consecutive proximity measurements outside the threshold
+      range before asserting the interrupt.
+
+  als-interrupt:
+    type: boolean
+    description: |
+      Enable ALS interrupt output. When enabled, the interrupt is
+      generated if ALS data crosses the configured thresholds.
+
+  als-interrupt-persist:
+    type: int
+    enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    description: |
+      Number of consecutive ALS measurements outside the threshold range
+      before asserting the interrupt.
+
+  int-gpios:
+    type: phandle-array
+    description: |
+      This property specifies the connection for INT.
