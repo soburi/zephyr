@@ -15,26 +15,49 @@
 #include <zephyr/sys/sys_io.h>
 
 /*
- * RP1 PCIe Configuration registers (from RP1 Peripherals doc)
- * Base offset from RP1 BAR0 or function base
+ * RP1 PCIe configuration registers (APBS block)
+ * Base offset from RP1 BAR (typically BAR1) for the PCIe APBS window.
  */
 #ifndef RP1_PCIE_CFG_BASE_OFFSET
 #define RP1_PCIE_CFG_BASE_OFFSET 0x00000000U
 #endif
 
-#define RP1_PCIE_CFG_BASE   RP1_PCIE_CFG_BASE_OFFSET  /* Function-specific base */
+#ifndef RP1_CFG_USE_PCIE_CFG
+#define RP1_CFG_USE_PCIE_CFG 0U
+#endif
 
-/* MSI-X Configuration registers (Section 3.1.5) */
+#ifndef RP1_PCIE_APBS_BASE
+#define RP1_PCIE_APBS_BASE 0x00108000U
+#endif
+
+#ifndef RP1_PCIE_REG_SET_OFFSET
+#define RP1_PCIE_REG_SET_OFFSET 0x00000800U
+#endif
+
+#ifndef RP1_PCIE_REG_CLR_OFFSET
+#define RP1_PCIE_REG_CLR_OFFSET 0x00000c00U
+#endif
+
+#ifndef RP1_USE_APBS_SETCLR
+#define RP1_USE_APBS_SETCLR 1U
+#endif
+
+#if RP1_CFG_USE_PCIE_CFG
+#define RP1_PCIE_CFG_BASE   0x00000000U
 #define RP1_MSIX_CFG(n)     (RP1_PCIE_CFG_BASE + 0x8c + ((n) * 4))
+#define RP1_PCIE_INTSTATL   (RP1_PCIE_CFG_BASE + 0x0050)
+#define RP1_PCIE_INTSTATH   (RP1_PCIE_CFG_BASE + 0x0054)
+#else
+#define RP1_PCIE_CFG_BASE   (RP1_PCIE_APBS_BASE + RP1_PCIE_CFG_BASE_OFFSET)
+#define RP1_MSIX_CFG(n)     (RP1_PCIE_CFG_BASE + 0x8 + ((n) * 4))
+#define RP1_PCIE_INTSTATL   (RP1_PCIE_CFG_BASE + 0x0050)
+#define RP1_PCIE_INTSTATH   (RP1_PCIE_CFG_BASE + 0x0054)
+#endif
 
 /* MSI-X CFG bits */
 #define RP1_MSIX_CFG_ENABLE  BIT(0)
 #define RP1_MSIX_CFG_TEST    BIT(8)   /* Software test bit - ORed with interrupt source */
 #define RP1_MSIX_CFG_IACK_EN BIT(16)  /* IACK enable */
-
-/* PCIe Interrupt Status/Control (Section 3.1.4) */
-#define RP1_PCIE_INTSTATL   0x0050  /* Interrupt status [31:0] */
-#define RP1_PCIE_INTSTATH   0x0054  /* Interrupt status [63:32] */
 
 /*
  * GPIO Interrupt registers (Section 5.3.4)
@@ -44,10 +67,20 @@
 #define RP1_IO_BANK1_BASE   0xe0000
 #define RP1_IO_BANK2_BASE   0xf0000
 
+#ifndef RP1_GPIO_PCIE_INTE_OFFSET
+#define RP1_GPIO_PCIE_INTE_OFFSET 0x128U
+#endif
+#ifndef RP1_GPIO_PCIE_INTF_OFFSET
+#define RP1_GPIO_PCIE_INTF_OFFSET 0x12cU
+#endif
+#ifndef RP1_GPIO_PCIE_INTS_OFFSET
+#define RP1_GPIO_PCIE_INTS_OFFSET 0x130U
+#endif
+
 /* Per-bank interrupt registers for PCIe (host) direction */
-#define RP1_GPIO_PROC1_INTE(bank, n)  ((bank) + 0x128 + ((n) * 0x30))  /* Enable */
-#define RP1_GPIO_PROC1_INTF(bank, n)  ((bank) + 0x12c + ((n) * 0x30))  /* Force */
-#define RP1_GPIO_PROC1_INTS(bank, n)  ((bank) + 0x130 + ((n) * 0x30))  /* Status */
+#define RP1_GPIO_PCIE_INTE(bank, n)  ((bank) + RP1_GPIO_PCIE_INTE_OFFSET + ((n) * 0x30))
+#define RP1_GPIO_PCIE_INTF(bank, n)  ((bank) + RP1_GPIO_PCIE_INTF_OFFSET + ((n) * 0x30))
+#define RP1_GPIO_PCIE_INTS(bank, n)  ((bank) + RP1_GPIO_PCIE_INTS_OFFSET + ((n) * 0x30))
 
 struct rp1_trigger {
 	uintptr_t rp1_base;  /* RP1 MMIO base (from BAR, mapped) */
@@ -108,6 +141,40 @@ static inline void rp1_cfg_write(const struct rp1_trigger *trig,
 	sys_write32(val, trig->rp1_base + off);
 }
 
+static inline void rp1_cfg_set(const struct rp1_trigger *trig,
+			       uint32_t off, uint32_t mask)
+{
+	if (trig->use_cfg) {
+		uint32_t val = rp1_cfg_read(trig, off);
+		rp1_cfg_write(trig, off, val | mask);
+		return;
+	}
+
+#if RP1_USE_APBS_SETCLR
+	sys_write32(mask, trig->rp1_base + off + RP1_PCIE_REG_SET_OFFSET);
+#else
+	uint32_t val = rp1_cfg_read(trig, off);
+	sys_write32(val | mask, trig->rp1_base + off);
+#endif
+}
+
+static inline void rp1_cfg_clear(const struct rp1_trigger *trig,
+				 uint32_t off, uint32_t mask)
+{
+	if (trig->use_cfg) {
+		uint32_t val = rp1_cfg_read(trig, off);
+		rp1_cfg_write(trig, off, val & ~mask);
+		return;
+	}
+
+#if RP1_USE_APBS_SETCLR
+	sys_write32(mask, trig->rp1_base + off + RP1_PCIE_REG_CLR_OFFSET);
+#else
+	uint32_t val = rp1_cfg_read(trig, off);
+	sys_write32(val & ~mask, trig->rp1_base + off);
+#endif
+}
+
 /**
  * @brief Trigger interrupt via MSI-X TEST bit
  * 
@@ -128,8 +195,8 @@ static inline void rp1_trigger_msix_test(struct rp1_trigger *trig, uint32_t vect
 	printk("  Current MSIX_CFG[%u]: 0x%08x\n", vector, cfg);
 	
 	/* Set ENABLE, TEST, and IACK_EN for clean edge delivery */
-	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST | RP1_MSIX_CFG_IACK_EN);
-	rp1_cfg_write(trig, RP1_MSIX_CFG(vector), cfg);
+	rp1_cfg_set(trig, RP1_MSIX_CFG(vector),
+		    RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST | RP1_MSIX_CFG_IACK_EN);
 	
 	printk("  New MSIX_CFG[%u]: 0x%08x\n", vector,
 	       rp1_cfg_read(trig, RP1_MSIX_CFG(vector)));
@@ -145,10 +212,8 @@ static inline void rp1_trigger_msix_test_quiet(struct rp1_trigger *trig, uint32_
 		return;
 	}
 
-	uint32_t cfg = rp1_cfg_read(trig, RP1_MSIX_CFG(vector));
-
-	cfg |= (RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST | RP1_MSIX_CFG_IACK_EN);
-	rp1_cfg_write(trig, RP1_MSIX_CFG(vector), cfg);
+	rp1_cfg_set(trig, RP1_MSIX_CFG(vector),
+		    RP1_MSIX_CFG_ENABLE | RP1_MSIX_CFG_TEST | RP1_MSIX_CFG_IACK_EN);
 }
 
 /**
@@ -160,9 +225,7 @@ static inline void rp1_clear_msix_test(struct rp1_trigger *trig, uint32_t vector
 		return;
 	}
 	
-	uint32_t cfg = rp1_cfg_read(trig, RP1_MSIX_CFG(vector));
-	cfg &= ~RP1_MSIX_CFG_TEST;
-	rp1_cfg_write(trig, RP1_MSIX_CFG(vector), cfg);
+	rp1_cfg_clear(trig, RP1_MSIX_CFG(vector), RP1_MSIX_CFG_TEST);
 	
 	printk("Cleared MSI-X TEST bit for vector %u\n", vector);
 }
@@ -176,10 +239,7 @@ static inline void rp1_clear_msix_test_quiet(struct rp1_trigger *trig, uint32_t 
 		return;
 	}
 
-	uint32_t cfg = rp1_cfg_read(trig, RP1_MSIX_CFG(vector));
-
-	cfg &= ~RP1_MSIX_CFG_TEST;
-	rp1_cfg_write(trig, RP1_MSIX_CFG(vector), cfg);
+	rp1_cfg_clear(trig, RP1_MSIX_CFG(vector), RP1_MSIX_CFG_TEST);
 }
 
 /**
@@ -251,12 +311,23 @@ static inline void rp1_trigger_gpio_force(struct rp1_trigger *trig,
 	
 	uint32_t reg = gpio / 8;  /* 4 interrupts per register */
 	uint32_t shift = (gpio % 8) * 4;
+	uint32_t mask = (0xfU << shift);
 	
+	uintptr_t inte = trig->rp1_base +
+		RP1_GPIO_PCIE_INTE(bank_base, reg);
 	uintptr_t intf = trig->rp1_base +
-		RP1_GPIO_PROC1_INTF(bank_base, reg);
+		RP1_GPIO_PCIE_INTF(bank_base, reg);
+	uintptr_t ints = trig->rp1_base +
+		RP1_GPIO_PCIE_INTS(bank_base, reg);
 	
 	printk("Forcing GPIO interrupt: bank %u, gpio %u\n", bank, gpio);
-	sys_write32((0xf << shift), intf);  /* Force all edge types */
+	uint32_t before = sys_read32(ints);
+	sys_write32(sys_read32(inte) | mask, inte);
+	sys_write32(mask, intf);  /* Force all edge types */
+	uint32_t after = sys_read32(ints);
+
+	printk("  PCIE_INTS before: 0x%08x\n", before);
+	printk("  PCIE_INTS after:  0x%08x\n", after);
 }
 
 #endif /* RP1_IRQ_TRIGGER_H */

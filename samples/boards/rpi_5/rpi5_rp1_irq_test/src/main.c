@@ -51,6 +51,18 @@
 #define RP1_CFG_BAR_SIZE 0U
 #endif
 
+#ifndef RP1_ENABLE_BAR_PROGRAM
+#define RP1_ENABLE_BAR_PROGRAM 0U
+#endif
+
+#ifndef RP1_BAR1_PHYS_ADDR
+#define RP1_BAR1_PHYS_ADDR 0ULL
+#endif
+
+#ifndef RP1_BAR1_SIZE
+#define RP1_BAR1_SIZE 0U
+#endif
+
 #define DOORBELL_MAP_SIZE 0x1000U
 
 #define GIC_SCAN_REG_START 1U
@@ -111,6 +123,80 @@ static uint32_t rp1_cfg_offset;
 static uint32_t gic_pend_before[GIC_SCAN_REG_COUNT];
 static uint32_t gic_pend_after[GIC_SCAN_REG_COUNT];
 
+static uint64_t decode_ibar_size(uint32_t bar_lo)
+{
+	uint32_t code = bar_lo & 0x1fU;
+
+	if (code >= 0x1cU) {
+		return 1ULL << (12U + (code - 0x1cU));
+	}
+	if (code >= 1U) {
+		return 1ULL << (15U + code);
+	}
+	return 0ULL;
+}
+
+static bool get_rc_bar2_window(uint64_t *offset, uint64_t *size)
+{
+	uint32_t lo;
+	uint32_t hi;
+	uint64_t sz;
+
+	if (!pcie_cfg_ready) {
+		if (!map_mmio(PCIE_CFG_PHYS, PCIE_CFG_SIZE, &pcie_cfg_base)) {
+			return false;
+		}
+		pcie_cfg_ready = true;
+	}
+
+	lo = sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_LO);
+	hi = sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_HI);
+	sz = decode_ibar_size(lo);
+
+	if (sz == 0ULL) {
+		return false;
+	}
+
+	*offset = ((uint64_t)hi << 32) | (lo & ~0x1fU);
+	*size = sz;
+	return true;
+}
+
+static void program_rp1_bar32(pcie_bdf_t bdf, uint32_t bar_idx,
+			      uint64_t cpu_addr, uint64_t size)
+{
+	uint64_t offset;
+	uint64_t window_size;
+	uint64_t bus_addr;
+	uint32_t reg = PCIE_CONF_BAR0 + bar_idx;
+
+	if (cpu_addr == 0ULL || size == 0ULL) {
+		return;
+	}
+
+	if (!get_rc_bar2_window(&offset, &window_size)) {
+		printk("  BAR%u: RC_BAR2 window unavailable\n", bar_idx);
+		return;
+	}
+
+	if (cpu_addr < offset || (cpu_addr + size) > (offset + window_size)) {
+		printk("  BAR%u: CPU addr 0x%llx outside RC_BAR2 window\n",
+		       bar_idx, (unsigned long long)cpu_addr);
+		return;
+	}
+
+	bus_addr = cpu_addr - offset;
+	if (bus_addr > 0xffffffffULL) {
+		printk("  BAR%u: bus addr 0x%llx exceeds 32-bit\n",
+		       bar_idx, (unsigned long long)bus_addr);
+		return;
+	}
+
+	pcie_conf_write(bdf, reg, (uint32_t)bus_addr);
+	printk("  BAR%u programmed: bus 0x%08x (cpu 0x%llx)\n",
+	       bar_idx, (uint32_t)bus_addr, (unsigned long long)cpu_addr);
+}
+
 static void print_banner(const char *title)
 {
 	printk("\n");
@@ -119,7 +205,7 @@ static void print_banner(const char *title)
 	printk("========================================\n");
 }
 
-static bool map_mmio(uintptr_t phys, size_t size, mm_reg_t *virt_out)
+int map_mmio(uintptr_t phys, size_t size, mm_reg_t *virt_out)
 {
 	if (phys == 0U || size == 0U) {
 		return false;
@@ -220,15 +306,37 @@ struct rp1_inv_ctx {
 	uint32_t count;
 };
 
+static void rp1_dump_raw_bars(pcie_bdf_t bdf)
+{
+	for (uint32_t bar = 0; bar < RP1_BAR_MAX; bar++) {
+		uint32_t raw = pcie_conf_read(bdf, PCIE_CONF_BAR0 + bar);
+
+		printk("    BAR%u raw: 0x%08x\n", bar, raw);
+
+		if (PCIE_CONF_BAR_MEM(raw) && PCIE_CONF_BAR_64(raw)) {
+			uint32_t raw_hi = pcie_conf_read(bdf, PCIE_CONF_BAR0 + bar + 1U);
+			uint64_t raw_addr = ((uint64_t)raw_hi << 32) |
+					    (raw & 0xfffffff0U);
+
+			printk("    BAR%u raw: 0x%08x\n", bar + 1U, raw_hi);
+			printk("    BAR%u..%u addr: 0x%016llx\n",
+			       bar, bar + 1U, (unsigned long long)raw_addr);
+			bar++;
+		}
+	}
+}
+
 static bool rp1_inv_cb(pcie_bdf_t bdf, pcie_id_t id, void *cb_data)
 {
 	struct rp1_inv_ctx *ctx = cb_data;
 
-	if (PCIE_ID_TO_VEND(id) != RP1_VENDOR_ID) {
+	if (PCIE_ID_TO_VEND(id) != RP1_VENDOR_ID ||
+	    PCIE_ID_TO_DEV(id) != RP1_DEVICE_ID) {
 		return true;
 	}
 
 	uint32_t class_rev = pcie_conf_read(bdf, PCIE_CONF_CLASSREV);
+	uint32_t type = pcie_conf_read(bdf, PCIE_CONF_TYPE);
 	uint8_t base = PCIE_CONF_CLASSREV_CLASS(class_rev);
 	uint8_t sub = PCIE_CONF_CLASSREV_SUBCLASS(class_rev);
 	uint8_t prog = PCIE_CONF_CLASSREV_PROGIF(class_rev);
@@ -236,7 +344,10 @@ static bool rp1_inv_cb(pcie_bdf_t bdf, pcie_id_t id, void *cb_data)
 	printk("  BDF 0x%08x (bus %u dev %u fn %u): VID/DID 0x%08x ",
 	       bdf, PCIE_BDF_TO_BUS(bdf), PCIE_BDF_TO_DEV(bdf),
 	       PCIE_BDF_TO_FUNC(bdf), id);
-	printk("CLASS %02x/%02x/%02x\n", base, sub, prog);
+	printk("CLASS %02x/%02x/%02x TYPE 0x%02x\n",
+	       base, sub, prog, PCIE_CONF_TYPE_GET(type));
+
+	rp1_dump_raw_bars(bdf);
 
 	for (uint32_t bar = 0; bar < RP1_BAR_MAX; bar++) {
 		struct pcie_bar mbar;
@@ -300,6 +411,72 @@ static void test_step_1_find_rp1(void)
 	}
 
 	printk("SUCCESS: RP1 found at BDF 0x%08x\n", rp1_dev.bdf);
+}
+
+static void test_step_1b_program_rp1_bars(void)
+{
+	print_banner("STEP 2b: Program RP1 BARs (if needed)");
+
+	if (!rp1_dev.found) {
+		printk("Skipping BAR programming (RP1 not found)\n");
+		return;
+	}
+
+	if (!RP1_ENABLE_BAR_PROGRAM) {
+		printk("Skipping BAR programming (RP1_ENABLE_BAR_PROGRAM=0)\n");
+		return;
+	}
+
+	uint64_t rc_offset;
+	uint64_t rc_size;
+	if (get_rc_bar2_window(&rc_offset, &rc_size)) {
+		printk("RC_BAR2 window: base 0x%llx, size 0x%llx\n",
+		       (unsigned long long)rc_offset,
+		       (unsigned long long)rc_size);
+	} else {
+		printk("RC_BAR2 window unavailable; cannot program BARs\n");
+		return;
+	}
+
+	uint32_t bar1_raw = pcie_conf_read(rp1_dev.bdf, PCIE_CONF_BAR0 + 1U);
+	uint32_t bar2_raw = pcie_conf_read(rp1_dev.bdf, PCIE_CONF_BAR0 + 2U);
+
+	printk("  BAR1 raw: 0x%08x\n", bar1_raw);
+	printk("  BAR2 raw: 0x%08x\n", bar2_raw);
+
+	if (bar1_raw == 0xffffffffU) {
+		printk("  BAR1 read returned 0xffffffff; skipping\n");
+	} else if (bar1_raw == 0U) {
+		if (RP1_BAR1_PHYS_ADDR == 0ULL || RP1_BAR1_SIZE == 0U) {
+			printk("  BAR1 config missing; skipping\n");
+		} else {
+			program_rp1_bar32(rp1_dev.bdf, 1U,
+					  RP1_BAR1_PHYS_ADDR, RP1_BAR1_SIZE);
+		}
+	} else {
+		printk("  BAR1 already assigned; skipping\n");
+	}
+
+	if (bar2_raw == 0xffffffffU) {
+		printk("  BAR2 read returned 0xffffffff; skipping\n");
+	} else if (bar2_raw == 0U) {
+		if (RP1_CFG_BAR_INDEX != 2U) {
+			printk("  BAR2 not required; skipping\n");
+		} else if (RP1_CFG_BAR_PHYS_ADDR == 0ULL || RP1_CFG_BAR_SIZE == 0U) {
+			printk("  BAR2 config missing; skipping\n");
+		} else {
+			program_rp1_bar32(rp1_dev.bdf, 2U,
+					  RP1_CFG_BAR_PHYS_ADDR,
+					  RP1_CFG_BAR_SIZE);
+		}
+	} else {
+		printk("  BAR2 already assigned; skipping\n");
+	}
+
+	bar1_raw = pcie_conf_read(rp1_dev.bdf, PCIE_CONF_BAR0 + 1U);
+	bar2_raw = pcie_conf_read(rp1_dev.bdf, PCIE_CONF_BAR0 + 2U);
+	printk("  BAR1 now: 0x%08x\n", bar1_raw);
+	printk("  BAR2 now: 0x%08x\n", bar2_raw);
 }
 
 static void test_step_2_find_msix(void)
@@ -493,11 +670,6 @@ static void test_step_8_configure_msi_bar(void)
 {
 	print_banner("STEP 10: Configure PCIe MSI BAR1");
 
-	if (RP1_MIP_MSG_ADDR == 0U || RP1_MIP_BASE_ADDR == 0U) {
-		printk("Skipping MSI BAR config (msg_addr/base not set)\n");
-		return;
-	}
-
 	if (!pcie_cfg_ready) {
 		if (!map_mmio(PCIE_CFG_PHYS, PCIE_CFG_SIZE, &pcie_cfg_base)) {
 			printk("FAILED: Could not map PCIe RC config regs\n");
@@ -512,6 +684,16 @@ static void test_step_8_configure_msi_bar(void)
 	       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_HI));
 	printk("  UBUS BAR2: 0x%08x\n",
 	       sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR2_CONFIG_REMAP));
+
+	if (!RP1_ENABLE_RC_BAR1_PROGRAM) {
+		printk("Skipping MSI BAR config (RP1_ENABLE_RC_BAR1_PROGRAM=0)\n");
+		return;
+	}
+
+	if (RP1_MIP_MSG_ADDR == 0U || RP1_MIP_BASE_ADDR == 0U) {
+		printk("Skipping MSI BAR config (msg_addr/base not set)\n");
+		return;
+	}
 
 	uint32_t size_bits = encode_ibar_size(0x1000U);
 	uint32_t bar1_lo = lower_32_bits(RP1_MIP_MSG_ADDR) | size_bits;
@@ -580,6 +762,54 @@ static void test_step_8_baseline_scan(void)
 		rp1_read_intstatus(&rp1_trig);
 	} else {
 		printk("Skipping RP1 INTSTAT (config BAR not mapped)\n");
+	}
+}
+
+static void test_step_9_gpio_force(void)
+{
+	print_banner("STEP 12b: RP1 GPIO FORCE Test");
+
+#if !RP1_ENABLE_GPIO_FORCE_TEST
+	printk("Skipping GPIO force test (RP1_ENABLE_GPIO_FORCE_TEST=0)\n");
+	return;
+#endif
+
+	if (!rp1_cfg_ready) {
+		printk("Skipping GPIO force test (RP1 config not ready)\n");
+		return;
+	}
+
+	if (rp1_trig.use_cfg) {
+		printk("Skipping GPIO force test (MMIO base required)\n");
+		return;
+	}
+
+	maybe_install_isr();
+
+	if (gic_ready) {
+		gic_snapshot_pending(gic_pend_before);
+	}
+
+	rp1_trigger_gpio_force(&rp1_trig, RP1_GPIO_FORCE_BANK,
+			       RP1_GPIO_FORCE_PIN);
+	k_msleep(10);
+
+	if (rp1_cfg_ready) {
+		printk("Reading RP1 INTSTAT (after GPIO force)...\n");
+		rp1_read_intstatus(&rp1_trig);
+	}
+
+	if (mip_ready) {
+		struct mip_state after;
+		printk("MIP status after GPIO force:\n");
+		mip_read_status((uintptr_t)mip_base, &after);
+		mip_dump_state(&after);
+	}
+
+	if (gic_ready) {
+		gic_snapshot_pending(gic_pend_after);
+		printk("GIC pending diff (GPIO force):\n");
+		gic_dump_pending_diff(gic_pend_before, gic_pend_after);
 	}
 }
 
@@ -741,6 +971,14 @@ static bool sweep_cfg_bases(void)
 	}
 
 	if (rp1_trig.use_cfg) {
+		return false;
+	}
+
+	if (RP1_CFG_BAR_INDEX != CFG_BAR_SENTINEL) {
+		return false;
+	}
+
+	if (CFG_SWEEP_STEP == 0U) {
 		return false;
 	}
 
@@ -1031,6 +1269,9 @@ int main(void)
 		return -1;
 	}
 
+	test_step_1b_program_rp1_bars();
+	k_msleep(200);
+
 	test_step_2_find_msix();
 	k_msleep(200);
 
@@ -1058,6 +1299,9 @@ int main(void)
 	k_msleep(200);
 
 	test_step_8_baseline_scan();
+	k_msleep(200);
+
+	test_step_9_gpio_force();
 	k_msleep(200);
 
 	test_step_9_mip_raise();
