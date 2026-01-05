@@ -17,6 +17,22 @@
 /* MSI-X message (doorbell) address expected by MIP */
 #define RP1_MIP_MSG_ADDR       0x000000fffffff000ULL
 
+/*
+ * CPU-accessible alias of the MSI doorbell window.
+ *
+ * Firmware DT commonly describes MIP with two reg entries:
+ *   - MIP registers:    0x1000130000 (size 0xc0)
+ *   - PCIe MSI window:  0xff_ffff_f000 (size 0x1000)
+ *
+ * RP1 MSI-X must use the PCIe MSI window address (RP1_MIP_MSG_ADDR).
+ * But a CPU-side devmem-style "doorbell" write should target the CPU-visible
+ * alias (usually MIP base + 0), not the PCIe address, otherwise the write can
+ * hit nothing (or the wrong thing) and you will not see MIP/GIC activity.
+ */
+#ifndef RP1_MIP_MSG_ADDR_CPU
+#define RP1_MIP_MSG_ADDR_CPU   0x1000130000ULL
+#endif
+
 /* MIP output SPI range (GIC INTID base + count) */
 #define RP1_MIP_MSI_BASE_INTID 0x80U
 #define RP1_MIP_MSI_NUM_SPIS   0x40U

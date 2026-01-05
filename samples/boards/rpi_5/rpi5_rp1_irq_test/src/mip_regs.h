@@ -18,12 +18,11 @@
 /*
  * MIP register offsets (from Linux driver)
  */
-#define MIP_INT_RAISED        0x00
-#define MIP_INT_RAISEH        0x04
-#define MIP_INT_SETL          0x08
-#define MIP_INT_SETH          0x0c
-#define MIP_INT_CLEAREDL      0x10
-#define MIP_INT_CLEAREDH      0x14
+#define MIP_INT_RAISE        0x00
+//#define MIP_INT_SETL          0x08
+//#define MIP_INT_SETH          0x0c
+#define MIP_INT_CLEARED      0x10
+//#define MIP_INT_CLEAREDH      0x14
 #define MIP_INT_CFGL_HOST     0x20
 #define MIP_INT_CFGH_HOST     0x30
 #define MIP_INT_MASKL_HOST    0x40
@@ -32,6 +31,8 @@
 #define MIP_INT_MASKH_VPU     0x70
 #define MIP_INT_STATUSL_HOST  0x80
 #define MIP_INT_STATUSH_HOST  0x90
+#define MIP_INT_STATUSL_VPU   0xa0
+#define MIP_INT_STATUSH_VPU   0xb0
 
 #define MIP_MSI_BASE_INTID  RP1_MIP_MSI_BASE_INTID
 #define MIP_MSI_NUM_SPIS    RP1_MIP_MSI_NUM_SPIS
@@ -45,8 +46,7 @@ struct mip_state {
 	uint32_t statush;
 	uint32_t maskl;
 	uint32_t maskh;
-	uint32_t raisedl;
-	uint32_t raisedh;
+	uint32_t raise;
 };
 
 static inline void mip_dump_raw(uintptr_t mip_base, size_t bytes)
@@ -83,8 +83,7 @@ static inline void mip_read_status(uintptr_t mip_base, struct mip_state *state)
 	state->statush = regs[MIP_INT_STATUSH_HOST / 4];
 	state->maskl = regs[MIP_INT_MASKL_HOST / 4];
 	state->maskh = regs[MIP_INT_MASKH_HOST / 4];
-	state->raisedl = regs[MIP_INT_RAISED / 4];
-	state->raisedh = regs[MIP_INT_RAISEH / 4];
+	state->raise = regs[MIP_INT_RAISE / 4];
 }
 
 /**
@@ -98,8 +97,7 @@ static inline void mip_dump_state(const struct mip_state *state)
 	printk("  STATUS_H: 0x%08x\n", state->statush);
 	printk("  MASK_L:   0x%08x\n", state->maskl);
 	printk("  MASK_H:   0x%08x\n", state->maskh);
-	printk("  RAISED_L: 0x%08x\n", state->raisedl);
-	printk("  RAISED_H: 0x%08x\n", state->raisedh);
+	printk("  RAISED: 0x%08x\n", state->raise);
 	
 	/* Show which bits are set in status */
 	if (state->statusl || state->statush) {
@@ -131,8 +129,8 @@ static inline void mip_init(uintptr_t mip_base)
 	       (unsigned long long)mip_base);
 	
 	/* Clear all status */
-	regs[MIP_INT_CLEAREDL / 4] = 0xffffffff;
-	regs[MIP_INT_CLEAREDH / 4] = 0xffffffff;
+	regs[MIP_INT_CLEARED / 4] = 0xffffffff;
+	//regs[MIP_INT_CLEAREDH / 4] = 0xffffffff;
 	
 	/* Host unmasked, VPU masked */
 	regs[MIP_INT_MASKL_HOST / 4] = 0x00000000;
@@ -155,12 +153,10 @@ static inline void mip_raise_vector(uintptr_t mip_base, uint32_t vector)
 	volatile uint32_t *regs = (volatile uint32_t *)mip_base;
 
 	if (vector < 32U) {
-		regs[MIP_INT_RAISED / 4] = BIT(vector);
-	} else if (vector < 64U) {
-		regs[MIP_INT_RAISEH / 4] = BIT(vector - 32U);
+		regs[MIP_INT_RAISE / 4] = BIT(vector);
 	}
 }
-
+/*
 static inline void mip_set_vector_undoc(uintptr_t mip_base, uint32_t vector)
 {
 	volatile uint32_t *regs = (volatile uint32_t *)mip_base;
@@ -171,7 +167,7 @@ static inline void mip_set_vector_undoc(uintptr_t mip_base, uint32_t vector)
 		regs[MIP_INT_SETH / 4] = BIT(vector - 32U);
 	}
 }
-
+*/
 /**
  * @brief Clear specific MIP vector
  */
@@ -180,9 +176,7 @@ static inline void mip_clear_vector(uintptr_t mip_base, uint32_t vector)
 	volatile uint32_t *regs = (volatile uint32_t *)mip_base;
 	
 	if (vector < 32) {
-		regs[MIP_INT_CLEAREDL / 4] = BIT(vector);
-	} else if (vector < 64) {
-		regs[MIP_INT_CLEAREDH / 4] = BIT(vector - 32);
+		regs[MIP_INT_CLEARED / 4] = BIT(vector);
 	}
 }
 

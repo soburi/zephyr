@@ -897,9 +897,9 @@ static void test_step_9_mip_raise(void)
 		gic_snapshot_pending(gic_pend_before);
 	}
 
-	printk("Raising MIP vector %u via INT_SET...\n", TEST_VECTOR);
-	mip_set_vector_undoc((uintptr_t)mip_base, TEST_VECTOR);
-	k_msleep(5);
+	//printk("Raising MIP vector %u via INT_SET...\n", TEST_VECTOR);
+	//mip_set_vector_undoc((uintptr_t)mip_base, TEST_VECTOR);
+	//k_msleep(5);
 
 	mip_read_status((uintptr_t)mip_base, &mip_state);
 	mip_dump_state(&mip_state);
@@ -923,8 +923,8 @@ static bool map_msg_doorbell(void)
 		return false;
 	}
 
-	uint64_t phys_base = RP1_MIP_MSG_ADDR & ~(uint64_t)(DOORBELL_MAP_SIZE - 1U);
-	uint64_t offset = RP1_MIP_MSG_ADDR & (DOORBELL_MAP_SIZE - 1U);
+	uint64_t phys_base = RP1_MIP_BASE_ADDR & ~(uint64_t)(DOORBELL_MAP_SIZE - 1U);
+	uint64_t offset = RP1_MIP_BASE_ADDR & (DOORBELL_MAP_SIZE - 1U);
 
 	if (!map_mmio((uintptr_t)phys_base, DOORBELL_MAP_SIZE, &msg_base)) {
 		return false;
@@ -975,7 +975,7 @@ static void test_step_11_cpu_doorbell(void)
 	mip_read_status((uintptr_t)mip_base, &before);
 
 	printk("Writing MSI doorbell: addr 0x%llx data 0x%x\n",
-	       (unsigned long long)RP1_MIP_MSG_ADDR, msg_data);
+	       (unsigned long long)RP1_MIP_BASE_ADDR, msg_data);
 	sys_write32(msg_data, msg_ptr);
 	k_msleep(10);
 
