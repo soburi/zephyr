@@ -17,6 +17,8 @@ Edit ``samples/boards/rpi_5/rpi5_rp1_irq_test/src/rp1_irq_test_config.h`` and se
 - ``RP1_CFG_SWEEP_STEP``: BAR sweep stride when locating RP1 config block
 - ``RP1_ENABLE_CPU_DOORBELL_TEST``: Enable CPU MSI doorbell sanity test
 - ``RP1_ENABLE_MIP_RAISE_TEST``: Enable MIP self-raise sanity test
+- ``RP1_ENABLE_MIP_RAW_DUMP``: Dump raw MIP registers for offset verification
+- ``RP1_MIP_RAW_DUMP_BYTES``: Byte length to dump (default 0x80)
 - ``RP1_ENABLE_GPIO_FORCE_TEST``: Enable RP1 GPIO PCIe force test
 - ``RP1_GPIO_FORCE_BANK``: GPIO bank index for force test (0..2)
 - ``RP1_GPIO_FORCE_PIN``: GPIO number within the bank

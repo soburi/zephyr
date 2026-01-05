@@ -666,6 +666,23 @@ static void test_step_7_init_mip(void)
 	printk("MIP initialization complete\n");
 }
 
+static void test_step_7b_mip_raw_dump(void)
+{
+#if !RP1_ENABLE_MIP_RAW_DUMP
+	ARG_UNUSED(mip_base);
+	return;
+#endif
+
+	print_banner("STEP 9b: MIP Raw Dump");
+
+	if (!mip_ready) {
+		printk("Skipping MIP raw dump (MIP not mapped)\n");
+		return;
+	}
+
+	mip_dump_raw((uintptr_t)mip_base, RP1_MIP_RAW_DUMP_BYTES);
+}
+
 static void test_step_8_configure_msi_bar(void)
 {
 	print_banner("STEP 10: Configure PCIe MSI BAR1");
@@ -815,7 +832,7 @@ static void test_step_9_gpio_force(void)
 
 static void test_step_9_mip_raise(void)
 {
-	print_banner("STEP 12: MIP Self-Raise Test");
+	print_banner("STEP 12: MIP INT_SET/CLR Test");
 
 #if !RP1_ENABLE_MIP_RAISE_TEST
 	printk("Skipping MIP self-raise test (RP1_ENABLE_MIP_RAISE_TEST=0)\n");
@@ -833,26 +850,7 @@ static void test_step_9_mip_raise(void)
 		gic_snapshot_pending(gic_pend_before);
 	}
 
-	printk("Raising MIP vector %u via INT_RAISED...\n", TEST_VECTOR);
-	mip_raise_vector((uintptr_t)mip_base, TEST_VECTOR);
-	k_msleep(5);
-
-	mip_read_status((uintptr_t)mip_base, &mip_state);
-	mip_dump_state(&mip_state);
-
-	if (gic_ready) {
-		gic_snapshot_pending(gic_pend_after);
-		printk("GIC pending diff (MIP raise):\n");
-		gic_dump_pending_diff(gic_pend_before, gic_pend_after);
-	}
-
-	mip_clear_vector((uintptr_t)mip_base, TEST_VECTOR);
-
-	if (gic_ready) {
-		gic_snapshot_pending(gic_pend_before);
-	}
-
-	printk("Raising MIP vector %u via SETL (0x08)...\n", TEST_VECTOR);
+	printk("Raising MIP vector %u via INT_SET...\n", TEST_VECTOR);
 	mip_set_vector_undoc((uintptr_t)mip_base, TEST_VECTOR);
 	k_msleep(5);
 
@@ -861,7 +859,7 @@ static void test_step_9_mip_raise(void)
 
 	if (gic_ready) {
 		gic_snapshot_pending(gic_pend_after);
-		printk("GIC pending diff (MIP setl):\n");
+		printk("GIC pending diff (MIP set):\n");
 		gic_dump_pending_diff(gic_pend_before, gic_pend_after);
 	}
 
@@ -1291,6 +1289,9 @@ int main(void)
 	k_msleep(200);
 
 	test_step_7_init_mip();
+	k_msleep(200);
+
+	test_step_7b_mip_raw_dump();
 	k_msleep(200);
 
 	maybe_install_isr();

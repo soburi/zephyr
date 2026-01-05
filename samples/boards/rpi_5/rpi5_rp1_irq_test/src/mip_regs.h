@@ -49,6 +49,28 @@ struct mip_state {
 	uint32_t raisedh;
 };
 
+static inline void mip_dump_raw(uintptr_t mip_base, size_t bytes)
+{
+	if (bytes == 0U) {
+		return;
+	}
+
+	printk("\n=== MIP Raw Dump (0x00..0x%02x) ===\n",
+	       (unsigned int)(bytes - sizeof(uint32_t)));
+
+	for (size_t off = 0U; off < bytes; off += 16U) {
+		uint32_t v0 = sys_read32(mip_base + off + 0U);
+		uint32_t v1 = sys_read32(mip_base + off + 4U);
+		uint32_t v2 = sys_read32(mip_base + off + 8U);
+		uint32_t v3 = sys_read32(mip_base + off + 12U);
+
+		printk("  0x%02x: %08x %08x %08x %08x\n",
+		       (unsigned int)off, v0, v1, v2, v3);
+	}
+
+	printk("=== End MIP Raw Dump ===\n\n");
+}
+
 /**
  * @brief Read MIP status registers
  */

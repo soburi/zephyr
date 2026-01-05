@@ -43,6 +43,10 @@
  */
 #define RP1_ENABLE_MIP_RAISE_TEST 1U
 
+/* Dump raw MIP registers for offset verification */
+#define RP1_ENABLE_MIP_RAW_DUMP 1U
+#define RP1_MIP_RAW_DUMP_BYTES  0x80U
+
 /*
  * Optional RP1 GPIO PCIe interrupt force test.
  * This uses the PCIe host INTE/INTF/INTS registers in IO_BANK.
