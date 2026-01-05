@@ -39,6 +39,11 @@
 #define RP1_ENABLE_CPU_DOORBELL_TEST 0U
 #endif
 
+
+#ifndef RP1_ENABLE_MSG_ADDR_WRITE_TEST
+#define RP1_ENABLE_MSG_ADDR_WRITE_TEST 1U
+#endif
+
 #ifndef RP1_ENABLE_MIP_RAISE_TEST
 #define RP1_ENABLE_MIP_RAISE_TEST 0U
 #endif
@@ -64,6 +69,13 @@
 #endif
 
 #define DOORBELL_MAP_SIZE 0x1000U
+
+
+#if defined(RP1_MIP_MSG_ADDR_CPU) && (RP1_MIP_MSG_ADDR_CPU != 0ULL)
+#define DOORBELL_CPU_ADDR RP1_MIP_MSG_ADDR_CPU
+#else
+#define DOORBELL_CPU_ADDR RP1_MIP_MSG_ADDR
+#endif
 
 #define GIC_SCAN_REG_START 1U
 #define GIC_SCAN_REG_COUNT 16U
@@ -919,12 +931,13 @@ static bool map_msg_doorbell(void)
 		return true;
 	}
 
-	if (RP1_MIP_MSG_ADDR == 0U) {
+	//if (RP1_MIP_MSG_ADDR == 0U) {
+	if (DOORBELL_CPU_ADDR == 0U) {
 		return false;
 	}
 
-	uint64_t phys_base = RP1_MIP_BASE_ADDR & ~(uint64_t)(DOORBELL_MAP_SIZE - 1U);
-	uint64_t offset = RP1_MIP_BASE_ADDR & (DOORBELL_MAP_SIZE - 1U);
+	uint64_t phys_base = DOORBELL_CPU_ADDR & ~(uint64_t)(DOORBELL_MAP_SIZE - 1U);
+	uint64_t offset = DOORBELL_CPU_ADDR & (DOORBELL_MAP_SIZE - 1U);
 
 	if (!map_mmio((uintptr_t)phys_base, DOORBELL_MAP_SIZE, &msg_base)) {
 		return false;
@@ -933,12 +946,74 @@ static bool map_msg_doorbell(void)
 	msg_ptr = (uintptr_t)msg_base + (uintptr_t)offset;
 	msg_ready = true;
 
-	printk("MSI doorbell mapped: phys 0x%llx + 0x%llx\n",
+	printk("MSI doorbell mapped: phys 0x%llx + 0x%llx (addr 0x%llx)\n",
 	       (unsigned long long)phys_base,
-	       (unsigned long long)offset);
+	       (unsigned long long)offset,
+	       (unsigned long long)DOORBELL_CPU_ADDR);
 	return true;
 }
 
+static void test_step_11b_msg_addr_write(void)
+{
+        print_banner("STEP 13b: Direct MSG_ADDR Write Test");
+
+#if !RP1_ENABLE_MSG_ADDR_WRITE_TEST
+        printk("Skipping MSG_ADDR write test (RP1_ENABLE_MSG_ADDR_WRITE_TEST=0)\n");
+        return;
+#else
+        if (!mip_ready) {
+                printk("Skipping MSG_ADDR write test (MIP not mapped)\n");
+                return;
+        }
+
+        if (!map_msg_doorbell()) {
+                printk("Skipping MSG_ADDR write test (doorbell not mapped)\n");
+                return;
+        }
+
+        maybe_install_isr();
+
+        uint32_t patterns[] = {
+                (uint32_t)(RP1_MIP_MSI_OFFSET + TEST_VECTOR),
+                (uint32_t)(TEST_VECTOR),
+                0x00000000U,
+                0x00000001U,
+        };
+
+        for (size_t i = 0; i < ARRAY_SIZE(patterns); i++) {
+                uint32_t data = patterns[i];
+                struct mip_state after;
+
+                printk("Doorbell write[%u]: addr 0x%llx data 0x%08x\n",
+                       (unsigned)i,
+                       (unsigned long long)DOORBELL_CPU_ADDR,
+                       data);
+
+                if (gic_ready) {
+                        gic_snapshot_pending(gic_pend_before);
+                }
+
+                sys_write32(data, msg_ptr);
+                k_msleep(10);
+
+                mip_read_status((uintptr_t)mip_base, &after);
+                printk("MIP status after write[%u]:\n", (unsigned)i);
+                mip_dump_state(&after);
+
+                if (gic_ready) {
+                        gic_snapshot_pending(gic_pend_after);
+                        printk("GIC pending diff (msg_addr write[%u]):\n", (unsigned)i);
+                        gic_dump_pending_diff(gic_pend_before, gic_pend_after);
+                }
+
+                uint32_t test_vec = RP1_MIP_MSI_OFFSET + TEST_VECTOR;
+                if (test_vec < 64U && mip_vector_is_set(&after, test_vec)) {
+                        mip_clear_vector((uintptr_t)mip_base, test_vec);
+                }
+                k_msleep(5);
+        }
+#endif
+}
 static void test_step_11_cpu_doorbell(void)
 {
 	print_banner("STEP 13: CPU MSI Doorbell Test");
@@ -975,7 +1050,7 @@ static void test_step_11_cpu_doorbell(void)
 	mip_read_status((uintptr_t)mip_base, &before);
 
 	printk("Writing MSI doorbell: addr 0x%llx data 0x%x\n",
-	       (unsigned long long)RP1_MIP_BASE_ADDR, msg_data);
+	       (unsigned long long)DOORBELL_CPU_ADDR, msg_data);
 	sys_write32(msg_data, msg_ptr);
 	k_msleep(10);
 
@@ -1294,7 +1369,7 @@ int main(void)
 	printk("  1. Enumerate RP1 on PCIe\n");
 	printk("  2. Configure MSI-X and MIP\n");
 	printk("  3. Configure PCIe MSI BAR (RC_BAR1)\n");
-	printk("  4. (Optional) Self-raise MIP / ping MIP via CPU doorbell\n");
+	printk("  4. (Optional) Ping doorbell via CPU or direct MSG_ADDR write\n");
 	printk("  5. Trigger a test interrupt\n");
 	printk("  6. Verify MIP and GIC state\n\n");
 
@@ -1355,7 +1430,8 @@ int main(void)
 	test_step_9_mip_raise();
 	k_msleep(200);
 
-	test_step_11_cpu_doorbell();
+	//test_step_11_cpu_doorbell();
+	test_step_11b_msg_addr_write();
 	k_msleep(200);
 
 	test_step_9_trigger();

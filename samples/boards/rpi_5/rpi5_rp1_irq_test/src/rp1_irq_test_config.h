@@ -67,12 +67,9 @@
  * Optional RP1 GPIO PCIe interrupt force test.
  * This uses the PCIe host INTE/INTF/INTS registers in IO_BANK.
  */
-#define RP1_ENABLE_GPIO_FORCE_TEST 0U
+#define RP1_ENABLE_GPIO_FORCE_TEST 1U
 #define RP1_GPIO_FORCE_BANK        0U
 #define RP1_GPIO_FORCE_PIN         0U
-
-/* Program PCIe RC_BAR1/UBUS remap for MSI doorbell (CPU test only) */
-#define RP1_ENABLE_RC_BAR1_PROGRAM 0U
 
 /*
  * BAR index that exposes the RP1 PCIe config block (MSIX_CFG/INTSTAT).
@@ -129,14 +126,5 @@
  * to RP1_MIP_MSG_ADDR reach the MIP block at RP1_MIP_BASE_ADDR.
  */
 #define RP1_ENABLE_RC_BAR1_PROGRAM 1U
-
-/*
- * Optional: force an RP1 GPIO interrupt source.
- *
- * Keep disabled until you know the bank/pin you want to poke.
- */
-#define RP1_ENABLE_GPIO_FORCE_TEST 0U
-#define RP1_GPIO_FORCE_BANK 0U
-#define RP1_GPIO_FORCE_PIN 0U
 
 #endif /* RP1_IRQ_TEST_CONFIG_H */
