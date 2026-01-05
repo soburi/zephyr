@@ -39,6 +39,31 @@
 #define RP1_ENABLE_CPU_DOORBELL_TEST 0U
 #endif
 
+#ifndef RP1_EXPECT_RC_BAR1_LO
+#define RP1_EXPECT_RC_BAR1_LO 0xffffffffU
+#endif
+#ifndef RP1_EXPECT_RC_BAR1_HI
+#define RP1_EXPECT_RC_BAR1_HI 0xffffffffU
+#endif
+#ifndef RP1_EXPECT_UBUS_BAR1_LO
+#define RP1_EXPECT_UBUS_BAR1_LO 0xffffffffU
+#endif
+#ifndef RP1_EXPECT_UBUS_BAR1_HI
+#define RP1_EXPECT_UBUS_BAR1_HI 0xffffffffU
+#endif
+#ifndef RP1_EXPECT_RC_BAR2_LO
+#define RP1_EXPECT_RC_BAR2_LO 0xffffffffU
+#endif
+#ifndef RP1_EXPECT_RC_BAR2_HI
+#define RP1_EXPECT_RC_BAR2_HI 0xffffffffU
+#endif
+#ifndef RP1_EXPECT_UBUS_BAR2_LO
+#define RP1_EXPECT_UBUS_BAR2_LO 0xffffffffU
+#endif
+#ifndef RP1_EXPECT_UBUS_BAR2_HI
+#define RP1_EXPECT_UBUS_BAR2_HI 0xffffffffU
+#endif
+
 
 #ifndef RP1_ENABLE_MSG_ADDR_WRITE_TEST
 #define RP1_ENABLE_MSG_ADDR_WRITE_TEST 1U
@@ -104,6 +129,7 @@
 #define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP      0x40ac
 #define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_HI   0x40b0
 #define PCIE_MISC_UBUS_BAR2_CONFIG_REMAP      0x40b4
+#define PCIE_MISC_UBUS_BAR2_CONFIG_REMAP_HI   0x40b8
 #define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_ACCESS_ENABLE_MASK 0x1
 
 /* Global state */
@@ -754,12 +780,62 @@ static void test_step_8_configure_msi_bar(void)
 		pcie_cfg_ready = true;
 	}
 
+	uint32_t rc_bar1_lo = sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR1_CONFIG_LO);
+	uint32_t rc_bar1_hi = sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR1_CONFIG_HI);
+	uint32_t ubus1_lo = sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR1_CONFIG_REMAP);
+	uint32_t ubus1_hi = sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_HI);
+	uint32_t rc_bar2_lo = sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_LO);
+	uint32_t rc_bar2_hi = sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_HI);
+	uint32_t ubus2_lo = sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR2_CONFIG_REMAP);
+	uint32_t ubus2_hi = sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR2_CONFIG_REMAP_HI);
+
+	printk("RC_BAR1 current config:\n");
+	printk("  LO/HI: 0x%08x / 0x%08x\n", rc_bar1_lo, rc_bar1_hi);
+	printk("  UBUS BAR1: 0x%08x / 0x%08x\n", ubus1_lo, ubus1_hi);
 	printk("RC_BAR2 current config:\n");
-	printk("  LO/HI: 0x%08x / 0x%08x\n",
-	       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_LO),
-	       sys_read32(pcie_cfg_base + PCIE_MISC_RC_BAR2_CONFIG_HI));
-	printk("  UBUS BAR2: 0x%08x\n",
-	       sys_read32(pcie_cfg_base + PCIE_MISC_UBUS_BAR2_CONFIG_REMAP));
+	printk("  LO/HI: 0x%08x / 0x%08x\n", rc_bar2_lo, rc_bar2_hi);
+	printk("  UBUS BAR2: 0x%08x / 0x%08x\n", ubus2_lo, ubus2_hi);
+
+	if (RP1_EXPECT_RC_BAR1_LO != 0xffffffffU &&
+	    rc_bar1_lo != RP1_EXPECT_RC_BAR1_LO) {
+		printk("WARN: RC_BAR1 LO mismatch (0x%08x expected 0x%08x)\n",
+		       rc_bar1_lo, RP1_EXPECT_RC_BAR1_LO);
+	}
+	if (RP1_EXPECT_RC_BAR1_HI != 0xffffffffU &&
+	    rc_bar1_hi != RP1_EXPECT_RC_BAR1_HI) {
+		printk("WARN: RC_BAR1 HI mismatch (0x%08x expected 0x%08x)\n",
+		       rc_bar1_hi, RP1_EXPECT_RC_BAR1_HI);
+	}
+	if (RP1_EXPECT_UBUS_BAR1_LO != 0xffffffffU &&
+	    ubus1_lo != RP1_EXPECT_UBUS_BAR1_LO) {
+		printk("WARN: UBUS BAR1 LO mismatch (0x%08x expected 0x%08x)\n",
+		       ubus1_lo, RP1_EXPECT_UBUS_BAR1_LO);
+	}
+	if (RP1_EXPECT_UBUS_BAR1_HI != 0xffffffffU &&
+	    ubus1_hi != RP1_EXPECT_UBUS_BAR1_HI) {
+		printk("WARN: UBUS BAR1 HI mismatch (0x%08x expected 0x%08x)\n",
+		       ubus1_hi, RP1_EXPECT_UBUS_BAR1_HI);
+	}
+	if (RP1_EXPECT_RC_BAR2_LO != 0xffffffffU &&
+	    rc_bar2_lo != RP1_EXPECT_RC_BAR2_LO) {
+		printk("WARN: RC_BAR2 LO mismatch (0x%08x expected 0x%08x)\n",
+		       rc_bar2_lo, RP1_EXPECT_RC_BAR2_LO);
+	}
+	if (RP1_EXPECT_RC_BAR2_HI != 0xffffffffU &&
+	    rc_bar2_hi != RP1_EXPECT_RC_BAR2_HI) {
+		printk("WARN: RC_BAR2 HI mismatch (0x%08x expected 0x%08x)\n",
+		       rc_bar2_hi, RP1_EXPECT_RC_BAR2_HI);
+	}
+	if (RP1_EXPECT_UBUS_BAR2_LO != 0xffffffffU &&
+	    ubus2_lo != RP1_EXPECT_UBUS_BAR2_LO) {
+		printk("WARN: UBUS BAR2 LO mismatch (0x%08x expected 0x%08x)\n",
+		       ubus2_lo, RP1_EXPECT_UBUS_BAR2_LO);
+	}
+	if (RP1_EXPECT_UBUS_BAR2_HI != 0xffffffffU &&
+	    ubus2_hi != RP1_EXPECT_UBUS_BAR2_HI) {
+		printk("WARN: UBUS BAR2 HI mismatch (0x%08x expected 0x%08x)\n",
+		       ubus2_hi, RP1_EXPECT_UBUS_BAR2_HI);
+	}
 
 	if (!RP1_ENABLE_RC_BAR1_PROGRAM) {
 		printk("Skipping MSI BAR config (RP1_ENABLE_RC_BAR1_PROGRAM=0)\n");

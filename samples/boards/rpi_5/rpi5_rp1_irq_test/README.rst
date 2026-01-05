@@ -23,6 +23,14 @@ Edit ``samples/boards/rpi_5/rpi5_rp1_irq_test/src/rp1_irq_test_config.h`` and se
 - ``RP1_GPIO_FORCE_BANK``: GPIO bank index for force test (0..2)
 - ``RP1_GPIO_FORCE_PIN``: GPIO number within the bank
 - ``RP1_ENABLE_RC_BAR1_PROGRAM``: Program RC_BAR1/UBUS remap for CPU doorbell test
+- ``RP1_EXPECT_RC_BAR1_LO``: Expected RC_BAR1 LO register value for comparison
+- ``RP1_EXPECT_RC_BAR1_HI``: Expected RC_BAR1 HI register value for comparison
+- ``RP1_EXPECT_UBUS_BAR1_LO``: Expected UBUS BAR1 LO register value
+- ``RP1_EXPECT_UBUS_BAR1_HI``: Expected UBUS BAR1 HI register value
+- ``RP1_EXPECT_RC_BAR2_LO``: Expected RC_BAR2 LO register value
+- ``RP1_EXPECT_RC_BAR2_HI``: Expected RC_BAR2 HI register value
+- ``RP1_EXPECT_UBUS_BAR2_LO``: Expected UBUS BAR2 LO register value
+- ``RP1_EXPECT_UBUS_BAR2_HI``: Expected UBUS BAR2 HI register value
 - ``RP1_CFG_BAR_INDEX``: BAR index for MSIX_CFG/INTSTAT
   (use 0xFF to reuse the MSI-X table BAR)
 - ``RP1_CFG_BAR_PHYS_ADDR``: Optional forced MMIO address for the config BAR

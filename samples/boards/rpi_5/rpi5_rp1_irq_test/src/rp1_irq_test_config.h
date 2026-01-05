@@ -125,6 +125,16 @@
  * When enabled, main.c programs RC_BAR1 and UBUS BAR1 remap so that MSI writes
  * to RP1_MIP_MSG_ADDR reach the MIP block at RP1_MIP_BASE_ADDR.
  */
-#define RP1_ENABLE_RC_BAR1_PROGRAM 1U
+#define RP1_ENABLE_RC_BAR1_PROGRAM 0U
+
+/* Optional expected PCIe RC/UBUS register values for comparison */
+#define RP1_EXPECT_RC_BAR1_LO    0xffffffffU
+#define RP1_EXPECT_RC_BAR1_HI    0xffffffffU
+#define RP1_EXPECT_UBUS_BAR1_LO  0xffffffffU
+#define RP1_EXPECT_UBUS_BAR1_HI  0xffffffffU
+#define RP1_EXPECT_RC_BAR2_LO    0xffffffffU
+#define RP1_EXPECT_RC_BAR2_HI    0xffffffffU
+#define RP1_EXPECT_UBUS_BAR2_LO  0xffffffffU
+#define RP1_EXPECT_UBUS_BAR2_HI  0xffffffffU
 
 #endif /* RP1_IRQ_TEST_CONFIG_H */
