@@ -114,6 +114,7 @@ static bool pcie_cfg_ready;
 static bool rp1_cfg_ready;
 static bool rp1_bars_mapped;
 static bool msix_configured;
+static bool msix_cap_forced;
 static bool isr_installed;
 static bool cpu_doorbell_tested;
 static bool cpu_doorbell_mip_hit;
@@ -122,6 +123,23 @@ static uint32_t rp1_cfg_bar_idx = 0xffffffffU;
 static uint32_t rp1_cfg_offset;
 static uint32_t gic_pend_before[GIC_SCAN_REG_COUNT];
 static uint32_t gic_pend_after[GIC_SCAN_REG_COUNT];
+
+static void dump_msix_entry(uintptr_t table_base, uint32_t table_off,
+                            uint32_t vector)
+{
+        /* MSI-X entry is 16 bytes: addr_lo, addr_hi, data, ctrl */
+        uintptr_t ent = table_base + (uintptr_t)table_off + (uintptr_t)vector * 16U;
+        uint32_t addr_lo = sys_read32(ent + 0U);
+        uint32_t addr_hi = sys_read32(ent + 4U);
+        uint32_t data    = sys_read32(ent + 8U);
+        uint32_t ctrl    = sys_read32(ent + 12U);
+
+        printk("MSI-X[%u] entry:\n", vector);
+        printk("  msg_addr: 0x%08x%08x\n", addr_hi, addr_lo);
+        printk("  msg_data: 0x%08x\n", data);
+        printk("  vector_ctrl: 0x%08x (%s)\n", ctrl,
+               (ctrl & 0x1U) ? "masked" : "unmasked");
+}
 
 static uint64_t decode_ibar_size(uint32_t bar_lo)
 {
@@ -483,14 +501,27 @@ static void test_step_2_find_msix(void)
 {
 	print_banner("STEP 3: Find MSI-X Capability");
 
+	msix_cap_forced = false;
+
 	if (!rp1_find_msix_cap(&rp1_dev)) {
 		printk("FAILED: MSI-X capability not found\n");
 		printk("  This is unexpected - RP1 should have MSI-X\n");
 		return;
+		/*
+		 * On some early Zephyr PCIe stacks, capability walking can
+		 * fail even though config reads are otherwise fine. RP1's
+		 * MSI-X cap is known to be at 0xB0, with table in BAR0.
+		 */
+		printk("WARNING: MSI-X capability scan failed; using RP1 defaults\n");
+		rp1_dev.msix_count = 61U;
+		rp1_dev.msix_table_bar = 0U;
+		rp1_dev.msix_table_offset = 0U;
+		msix_cap_forced = true;
 	}
 
-	printk("SUCCESS: MSI-X capability found\n");
-	printk("  Vectors available: %u\n", rp1_dev.msix_count);
+	printk("MSI-X vectors available: %u\n", rp1_dev.msix_count);
+
+	print_banner("STEP 3: Find MSI-X Capability");
 }
 
 static void test_step_3_map_bars(void)
@@ -609,8 +640,21 @@ static void test_step_5_enable_msix(void)
 {
 	print_banner("STEP 7: Enable MSI-X");
 
-	rp1_enable_msix(&rp1_dev);
-	printk("SUCCESS: MSI-X enabled\n");
+	if (!msix_cap_forced) {
+		rp1_enable_msix(&rp1_dev);
+		printk("SUCCESS: MSI-X enabled (cap-walk)\n");
+		return;
+	}
+
+	/* Fallback: enable MSI-X directly at the known cap offset 0xB0 */
+	uint32_t cap = pcie_conf_read(rp1_dev.bdf, 0xB0U);
+	if ((cap & 0xffU) != 0x11U) {
+		printk("WARNING: unexpected cap id @0xB0: 0x%02x\n", cap & 0xffU);
+	}
+	cap |= BIT(31);   /* MSI-X Enable (msgctrl bit 15) */
+	cap &= ~BIT(30);  /* MSI-X Function Mask = 0 */
+	pcie_conf_write(rp1_dev.bdf, 0xB0U, cap);
+	printk("SUCCESS: MSI-X enabled (forced @0xB0)\n");
 }
 
 static void test_step_6_setup_table(void)
@@ -638,6 +682,9 @@ static void test_step_6_setup_table(void)
 				 RP1_MIP_MSG_ADDR, msg_data)) {
 		printk("SUCCESS: MSI-X table configured\n");
 		msix_configured = true;
+
+		dump_msix_entry((uintptr_t)rp1_dev.msix_table_addr,
+				rp1_dev.msix_table_offset, TEST_VECTOR);
 	} else {
 		printk("FAILED: MSI-X table setup\n");
 		msix_configured = false;

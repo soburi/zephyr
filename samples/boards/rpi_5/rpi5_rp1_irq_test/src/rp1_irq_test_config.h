@@ -76,7 +76,7 @@
  * Optional BAR programming for RP1 (when firmware has not assigned BAR1/2).
  * Set RP1_ENABLE_BAR_PROGRAM to 0 to skip.
  */
-#define RP1_ENABLE_BAR_PROGRAM 1U
+#define RP1_ENABLE_BAR_PROGRAM 0U
 #define RP1_BAR1_PHYS_ADDR     0x0000001f00000000ULL
 #define RP1_BAR1_SIZE          0x00400000U
 
@@ -105,5 +105,22 @@
 #define RP1_GPIO_PCIE_INTE_OFFSET 0x128U
 #define RP1_GPIO_PCIE_INTF_OFFSET 0x12cU
 #define RP1_GPIO_PCIE_INTS_OFFSET 0x130U
+
+/*
+ * Root Complex inbound mapping for MSI doorbell.
+ *
+ * When enabled, main.c programs RC_BAR1 and UBUS BAR1 remap so that MSI writes
+ * to RP1_MIP_MSG_ADDR reach the MIP block at RP1_MIP_BASE_ADDR.
+ */
+#define RP1_ENABLE_RC_BAR1_PROGRAM 1U
+
+/*
+ * Optional: force an RP1 GPIO interrupt source.
+ *
+ * Keep disabled until you know the bank/pin you want to poke.
+ */
+#define RP1_ENABLE_GPIO_FORCE_TEST 0U
+#define RP1_GPIO_FORCE_BANK 0U
+#define RP1_GPIO_FORCE_PIN 0U
 
 #endif /* RP1_IRQ_TEST_CONFIG_H */
