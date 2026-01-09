@@ -10,7 +10,12 @@
 #include <zephyr/drivers/gpio/gpio_utils.h>
 #include <zephyr/irq.h>
 
+#ifdef CONFIG_DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED
+#include "gpio_rp1_hal.h"
+#else
 #include "gpio_rpi_pico_hal.h"
+#endif
+
 
 #if GPIO_RPI_HI_AVAILABLE
 #define PORT_NO(port) ((((struct gpio_rpi_config *)port->config)->high_dev != NULL) ? 0 : 1)
@@ -389,4 +394,5 @@ static int gpio_rpi_bank_init(const struct device *dev)
 		     "raspberrypi,pico-gpio node must have reg=0 child node.");                    \
 	GPIO_RPI_COMMON_INIT(node_id)
 
+DT_FOREACH_STATUS_OKAY(raspberrypi_rp1_gpio, GPIO_RPI_COMMON_INIT)
 DT_FOREACH_STATUS_OKAY(raspberrypi_pico_gpio_port, GPIO_RPI_PICO_INIT)
