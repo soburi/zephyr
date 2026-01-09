@@ -14,13 +14,6 @@
 #include <hardware/regs/intctrl.h>
 #include <hardware/structs/iobank0.h>
 
-#define REGNAME_SIO_RIO              sio
-#define ADDR_IS_ZERO(node_id, x)     (DT_REG_ADDR(node_id) == 0) |
-#define ADDR_IS_NON_ZERO(node_id, x) (DT_REG_ADDR(node_id) != 0) |
-#define GPIO_RPI_LO_AVAILABLE                                                                      \
-	(DT_FOREACH_STATUS_OKAY_VARGS(raspberrypi_pico_gpio_port, ADDR_IS_ZERO) 0)
-#define GPIO_RPI_HI_AVAILABLE                                                                      \
-	(DT_FOREACH_STATUS_OKAY_VARGS(raspberrypi_pico_gpio_port, ADDR_IS_NON_ZERO) 0)
 #define GPIO_RPI_PINS_PER_PORT 32
 #define ALL_EVENTS                                                                                 \
 	(GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE | GPIO_IRQ_LEVEL_LOW | GPIO_IRQ_LEVEL_HIGH)

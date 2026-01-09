@@ -9,7 +9,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/gpio/gpio_utils.h>
 #include <zephyr/irq.h>
-
 #include "gpio_rpi_pico.h"
 
 #if GPIO_RPI_HI_AVAILABLE
@@ -304,6 +303,9 @@ static int gpio_rpi_bank_init(const struct device *dev)
 	if (config->bank_config_func != NULL) {
 		config->bank_config_func();
 	}
+	if (config->mmio_map_func != NULL) {
+		config->mmio_map_func();
+	}
 
 	return 0;
 }
@@ -324,6 +326,12 @@ static int gpio_rpi_bank_init(const struct device *dev)
 #define GPIO_RPI_INIT_HIGH_DEV(node_id)
 #endif
 
+#define MMIO_INIT(node_id, prop, idx)                                                              \
+	DEVICE_MMIO_NAMED_ROM_INIT_BY_NAME(DT_STRING_UNQUOTED_BY_IDX(node_id, prop, idx), node_id),
+
+#define XMMIO_MAP(node_id, prop, idx, dev)                                                         \
+	DEVICE_MMIO_NAMED_MAP(dev, DT_STRING_UNQUOTED_BY_IDX(node_id, prop, idx), K_MEM_CACHE_NONE);
+
 #define GPIO_RPI_COMMON_INIT(node_id)                                                              \
 	IF_ENABLED(IS_GPIO_RPI_LO_NODE(node_id), (                                                 \
 		static void bank_##node_id##_config_func(void)                                     \
@@ -334,6 +342,13 @@ static int gpio_rpi_bank_init(const struct device *dev)
 			irq_enable(DT_IRQN(DT_PARENT(node_id)));                                   \
 		}                                                                                  \
 	))                                                                                         \
+	IF_ENABLED(DT_NODE_HAS_PROP(DT_PARENT(node_id), reg_names), (                              \
+		static void gpio_rpi_mmio_map_##node_id(void)                                      \
+		{                                                                                  \
+			const struct device *dev = DEVICE_DT_GET(node_id);                         \
+			DT_FOREACH_PROP_ELEM_VARGS(DT_PARENT(node_id), reg_names, XMMIO_MAP, dev)  \
+		}                                                                                  \
+	))                                                                                         \
 	static const struct gpio_rpi_config gpio_rpi_##node_id##_config = {                        \
 		.common = {                                                                        \
 			.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_NODE(node_id),                 \
@@ -341,6 +356,10 @@ static int gpio_rpi_bank_init(const struct device *dev)
 		.ngpios = DT_PROP(node_id, ngpios),                                                \
 		IF_ENABLED(IS_GPIO_RPI_LO_NODE(node_id), (                                         \
 			.bank_config_func = bank_##node_id##_config_func,                          \
+		))                                                                                 \
+		IF_ENABLED(DT_NODE_HAS_PROP(DT_PARENT(node_id), reg_names), (                      \
+			DT_FOREACH_PROP_ELEM(DT_PARENT(node_id), reg_names, MMIO_INIT)             \
+			.mmio_map_func = gpio_rpi_mmio_map_##node_id,                              \
 		))                                                                                 \
 		GPIO_RPI_INIT_HIGH_DEV(node_id)                                                    \
 	};                                                                                         \
@@ -358,4 +377,5 @@ static int gpio_rpi_bank_init(const struct device *dev)
 		     "raspberrypi,pico-gpio node must have reg=0 child node.");                    \
 	GPIO_RPI_COMMON_INIT(node_id)
 
+DT_FOREACH_STATUS_OKAY(raspberrypi_rp1_gpio, GPIO_RPI_COMMON_INIT)
 DT_FOREACH_STATUS_OKAY(raspberrypi_pico_gpio_port, GPIO_RPI_PICO_INIT)
