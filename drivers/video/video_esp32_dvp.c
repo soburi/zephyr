@@ -601,7 +601,7 @@ static void video_esp32_cam_ctrl_init(const struct device *dev)
 	cam_ll_enable_stop_signal(data->hal.hw, true);
 
 	/* Default byte order setting (may be overridden by negotiated format). */
-	cam_ll_swap_dma_data_byte_order(data->hal.hw, cfg->invert_byte_order);
+	//cam_ll_swap_dma_data_byte_order(data->hal.hw, cfg->invert_byte_order);
 
 	cam_ll_reverse_dma_data_bit_order(data->hal.hw, cfg->invert_bit_order);
 	cam_ll_enable_invert_pclk(data->hal.hw, cfg->invert_pclk);
