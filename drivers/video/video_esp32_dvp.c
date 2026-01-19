@@ -119,6 +119,8 @@ void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t
 		return;
 	}
 
+	data->active_vbuf->timestamp = k_uptime_get_32();
+
 	k_fifo_put(&data->fifo_out, data->active_vbuf);
 	VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(VIDEO_BUF_DONE)
 	data->active_vbuf = k_fifo_get(&data->fifo_in, K_NO_WAIT);
