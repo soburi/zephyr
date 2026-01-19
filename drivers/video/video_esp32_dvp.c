@@ -676,9 +676,6 @@ int video_esp32_set_selection(const struct device *dev, struct video_selection *
 	int ret;
 
 	ret = video_set_selection(cfg->source_dev, sel);
-	if (ret == -ENOSYS || ret == -ENOTSUP) {
-		return ret;
-	}
 	if (ret < 0) {
 		LOG_ERR("Failed to set selection on source device");
 		return ret;
