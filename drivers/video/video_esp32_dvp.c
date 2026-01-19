@@ -598,10 +598,15 @@ static void video_esp32_cam_ctrl_init(const struct device *dev)
 	cam_hal_init(&data->hal, &hal_cfg);
 
 	/* Avoid data corruption on FIFO/DMA backpressure (e.g. slow consumers). */
-	//cam_ll_enable_stop_signal(data->hal.hw, true);
+	/* TODO: Evaluate enabling cam_ll_enable_stop_signal(data->hal.hw, true)
+	 * when FIFO/DMA backpressure handling is fully validated for all use cases.
+	 */
 
 	/* Default byte order setting (may be overridden by negotiated format). */
-	//cam_ll_swap_dma_data_byte_order(data->hal.hw, cfg->invert_byte_order);
+	/* TODO: Add configuration support to control DMA byte order using
+	 * cam_ll_swap_dma_data_byte_order(data->hal.hw, cfg->invert_byte_order)
+	 * if and when byte swapping is required.
+	 */
 
 	cam_ll_reverse_dma_data_bit_order(data->hal.hw, cfg->invert_bit_order);
 	cam_ll_enable_invert_pclk(data->hal.hw, cfg->invert_pclk);
