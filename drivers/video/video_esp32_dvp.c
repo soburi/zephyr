@@ -114,13 +114,15 @@ void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t
 		return;
 	}
 
+	data->last_rx_done_ms = k_uptime_get_32();
+
 	if (data->active_vbuf == NULL) {
 		VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(VIDEO_BUF_ERROR)
 		LOG_ERR("No video buffer available. Enque some buffers first.");
 		return;
 	}
 
-	data->active_vbuf->timestamp = k_uptime_get_32();
+	data->active_vbuf->timestamp = data->last_rx_done_ms;
 
 	k_fifo_put(&data->fifo_out, data->active_vbuf);
 	VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(VIDEO_BUF_DONE)
