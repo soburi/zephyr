@@ -225,8 +225,8 @@ static bool app_display_supports_pixfmt(const struct display_capabilities *const
 	case VIDEO_PIX_FMT_RGB565X:
 		return (dcaps->current_pixel_format == PIXEL_FORMAT_RGB_565) ||
 		       (dcaps->current_pixel_format == PIXEL_FORMAT_BGR_565) ||
-		       (dcaps->supported_pixel_formats & (PIXEL_FORMAT_RGB_565 |
-							  PIXEL_FORMAT_BGR_565));
+		       (dcaps->supported_pixel_formats & PIXEL_FORMAT_RGB_565) ||
+		       (dcaps->supported_pixel_formats & PIXEL_FORMAT_BGR_565);
 	case VIDEO_PIX_FMT_XRGB32:
 	case VIDEO_PIX_FMT_ARGB32:
 		return (dcaps->current_pixel_format == PIXEL_FORMAT_ARGB_8888) ||
