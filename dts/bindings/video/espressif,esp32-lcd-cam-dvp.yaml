@@ -46,3 +46,11 @@ properties:
   cam-clk:
     type: int
     description: camera clock frequency
+
+  vsync-filter-thres:
+    type: int
+    description: |
+      VSYNC filter threshold value (0-7). Set to a non-zero value to enable
+      VSYNC filtering and suppress spurious VSYNC pulses that can cause early
+      EOF and partial/corrupted frames.
+    enum: [0, 1, 2, 3, 4, 5, 6, 7]
