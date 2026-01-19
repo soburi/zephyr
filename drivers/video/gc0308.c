@@ -449,7 +449,6 @@ static int gc0308_init(const struct device *dev)
 		return ret;
 	}
 
-	data->fmt = fmt;
 	return 0;
 }
 
