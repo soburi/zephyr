@@ -71,7 +71,6 @@ struct video_esp32_data {
 	cam_hal_context_t hal;
 	const struct video_esp32_config *config;
 	struct video_format video_format;
-	bool video_format_valid;
 	struct video_buffer *active_vbuf;
 	bool is_streaming;
 	bool capture_paused;
@@ -80,8 +79,6 @@ struct video_esp32_data {
 	uint32_t last_recovery_log_ms;
 	struct k_work_delayable watchdog_work;
 	struct k_spinlock lock;
-	/* Copy of source caps with optional augmented formats (e.g. RGB565X). */
-	struct video_format_cap format_caps_buf[16];
 	struct k_fifo fifo_in;
 	struct k_fifo fifo_out;
 	struct dma_block_config dma_blocks[CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM];
@@ -93,20 +90,6 @@ struct video_esp32_data {
 static void video_esp32_watchdog_handler(struct k_work *work);
 static void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t channel,
 				    int status);
-
-static void video_esp32_apply_byte_swap(const struct device *dev, uint32_t pixelformat)
-{
-	const struct video_esp32_config *cfg = dev->config;
-	struct video_esp32_data *data = dev->data;
-	bool swap = cfg->invert_byte_order;
-
-	/* RGB565X is RGB565 with swapped byte order. */
-	if (pixelformat == VIDEO_PIX_FMT_RGB565X) {
-		swap = !swap;
-	}
-
-	cam_ll_swap_dma_data_byte_order(data->hal.hw, swap);
-}
 
 static void video_esp32_invalidate_ext_dcache(void *addr, size_t size)
 {
@@ -247,8 +230,8 @@ static int video_esp32_reload_dma(struct video_esp32_data *data)
 	return 0;
 }
 
-static void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t channel,
-				    int status)
+void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t channel,
+			     int status)
 {
 	struct video_esp32_data *data = user_data;
 
@@ -473,79 +456,22 @@ static int video_esp32_set_stream(const struct device *dev, bool enable, enum vi
 static int video_esp32_get_caps(const struct device *dev, struct video_caps *caps)
 {
 	const struct video_esp32_config *config = dev->config;
-	struct video_esp32_data *data = dev->data;
-	const struct video_format_cap *src_caps;
-	bool has_rgb565x = false;
-	size_t out = 0;
 
 	/* Two buffers are needed to perform transfers */
 	caps->min_vbuf_count = 2;
 
 	/* Forward the message to the source device */
-	int ret = video_get_caps(config->source_dev, caps);
-	if (ret < 0) {
-		return ret;
-	}
-
-	src_caps = caps->format_caps;
-	if (src_caps == NULL) {
-		return 0;
-	}
-
-	for (size_t i = 0; src_caps[i].pixelformat != 0; i++) {
-		if (src_caps[i].pixelformat == VIDEO_PIX_FMT_RGB565X) {
-			has_rgb565x = true;
-			break;
-		}
-	}
-
-	for (size_t i = 0; src_caps[i].pixelformat != 0; i++) {
-		if (out + 1 >= ARRAY_SIZE(data->format_caps_buf)) {
-			break;
-		}
-
-		data->format_caps_buf[out++] = src_caps[i];
-
-		if (!has_rgb565x && src_caps[i].pixelformat == VIDEO_PIX_FMT_RGB565) {
-			if (out + 1 >= ARRAY_SIZE(data->format_caps_buf)) {
-				break;
-			}
-			data->format_caps_buf[out] = src_caps[i];
-			data->format_caps_buf[out].pixelformat = VIDEO_PIX_FMT_RGB565X;
-			out++;
-		}
-	}
-
-	if (out < ARRAY_SIZE(data->format_caps_buf)) {
-		data->format_caps_buf[out] = (struct video_format_cap){0};
-	} else {
-		data->format_caps_buf[ARRAY_SIZE(data->format_caps_buf) - 1] =
-			(struct video_format_cap){0};
-	}
-
-	caps->format_caps = data->format_caps_buf;
-	return 0;
+	return video_get_caps(config->source_dev, caps);
 }
 
 static int video_esp32_get_fmt(const struct device *dev, struct video_format *fmt)
 {
 	const struct video_esp32_config *cfg = dev->config;
-	struct video_esp32_data *data = dev->data;
 	int ret = 0;
 
 	LOG_DBG("Get format");
 
-	if (data->video_format_valid) {
-		*fmt = data->video_format;
-	} else {
-		ret = video_get_format(cfg->source_dev, fmt);
-		if (ret < 0) {
-			LOG_ERR("Failed to get format from source");
-			return ret;
-		}
-		data->video_format = *fmt;
-		data->video_format_valid = true;
-	}
+	ret = video_get_format(cfg->source_dev, fmt);
 	if (ret < 0) {
 		LOG_ERR("Failed to get format from source");
 		return ret;
@@ -564,18 +490,8 @@ static int video_esp32_set_fmt(const struct device *dev, struct video_format *fm
 	const struct video_esp32_config *cfg = dev->config;
 	struct video_esp32_data *data = dev->data;
 	int ret;
-	struct video_format src_fmt = *fmt;
 
-	if (fmt->pixelformat == VIDEO_PIX_FMT_RGB565X) {
-		/*
-		 * Source devices typically expose RGB565 (little endian). For
-		 * RGB565X, request RGB565 from the source and use the LCD_CAM
-		 * byte swap to provide big-endian RGB565 to the application.
-		 */
-		src_fmt.pixelformat = VIDEO_PIX_FMT_RGB565;
-	}
-
-	ret = video_set_format(cfg->source_dev, &src_fmt);
+	ret = video_set_format(cfg->source_dev, fmt);
 	if (ret < 0) {
 		return ret;
 	}
@@ -586,8 +502,6 @@ static int video_esp32_set_fmt(const struct device *dev, struct video_format *fm
 	}
 
 	data->video_format = *fmt;
-	data->video_format_valid = true;
-	video_esp32_apply_byte_swap(dev, fmt->pixelformat);
 
 	return 0;
 }
@@ -741,7 +655,6 @@ static int video_esp32_init(const struct device *dev)
 	k_fifo_init(&data->fifo_in);
 	k_fifo_init(&data->fifo_out);
 	data->config = cfg;
-	data->video_format_valid = false;
 	data->dma_block_count = 0U;
 	data->last_rx_done_ms = k_uptime_get_32();
 	data->last_recovery_log_ms = 0U;
