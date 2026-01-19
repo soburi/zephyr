@@ -49,6 +49,7 @@ struct video_esp32_config {
 	uint32_t cam_clk;
 	uint8_t rx_dma_channel;
 	uint8_t data_width;
+	uint8_t vsync_filter_thres;
 	uint8_t invert_de;
 	uint8_t invert_byte_order;
 	uint8_t invert_bit_order;
@@ -372,6 +373,14 @@ static void video_esp32_cam_ctrl_init(const struct device *dev)
 	cam_ll_enable_invert_de(data->hal.hw, cfg->invert_de);
 	cam_ll_enable_invert_vsync(data->hal.hw, cfg->invert_vsync);
 	cam_ll_enable_invert_hsync(data->hal.hw, cfg->invert_hsync);
+
+	if (cfg->vsync_filter_thres > 0U) {
+		cam_ll_enable_vsync_filter(data->hal.hw, true);
+		cam_ll_set_vsync_filter_thres(data->hal.hw, cfg->vsync_filter_thres);
+	} else {
+		cam_ll_enable_vsync_filter(data->hal.hw, false);
+		cam_ll_set_vsync_filter_thres(data->hal.hw, 0);
+	}
 }
 
 static int video_esp32_set_frmival(const struct device *dev, struct video_frmival *frmival)
@@ -474,6 +483,7 @@ static const struct video_esp32_config esp32_config = {
 	.dma_dev = DEVICE_DT_GET_OR_NULL(DT_DMAS_CTLR_BY_NAME(DT_INST_PARENT(0), rx)),
 	.rx_dma_channel = DT_DMAS_CELL_BY_NAME(DT_INST_PARENT(0), rx, channel),
 	.data_width = DT_INST_PROP_OR(0, data_width, 8),
+	.vsync_filter_thres = DT_INST_PROP_OR(0, vsync_filter_thres, 0),
 	.invert_bit_order = DT_INST_PROP(0, invert_bit_order),
 	.invert_byte_order = DT_INST_PROP(0, invert_byte_order),
 	.invert_pclk = DT_INST_PROP(0, invert_pclk),
