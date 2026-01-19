@@ -17,15 +17,24 @@
 #include <zephyr/kernel.h>
 #include <hal/cam_hal.h>
 #include <hal/cam_ll.h>
+#include <hal/dma_types.h>
+#include <hal/mmu_hal.h>
+#include <hal/cache_hal.h>
+#include <hal/cache_types.h>
 
 #include <zephyr/logging/log.h>
+#include <zephyr/cache.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/spinlock.h>
 
 #include "video_device.h"
 
 LOG_MODULE_REGISTER(video_esp32_lcd_cam, CONFIG_VIDEO_LOG_LEVEL);
 
-#define VIDEO_ESP32_DMA_BUFFER_MAX_SIZE 4095
+#define VIDEO_ESP32_DMA_BUFFER_MAX_SIZE DMA_DESCRIPTOR_BUFFER_MAX_SIZE_4B_ALIGNED
 #define VIDEO_ESP32_VSYNC_MASK          0x04
+#define VIDEO_ESP32_WATCHDOG_PERIOD_MS  500U
+#define VIDEO_ESP32_STALL_TIMEOUT_MS    2000U
 
 #ifdef CONFIG_POLL
 #define VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(result)                                               \
@@ -62,8 +71,17 @@ struct video_esp32_data {
 	cam_hal_context_t hal;
 	const struct video_esp32_config *config;
 	struct video_format video_format;
+	bool video_format_valid;
 	struct video_buffer *active_vbuf;
 	bool is_streaming;
+	bool capture_paused;
+	uint8_t dma_block_count;
+	uint32_t last_rx_done_ms;
+	uint32_t last_recovery_log_ms;
+	struct k_work_delayable watchdog_work;
+	struct k_spinlock lock;
+	/* Copy of source caps with optional augmented formats (e.g. RGB565X). */
+	struct video_format_cap format_caps_buf[16];
 	struct k_fifo fifo_in;
 	struct k_fifo fifo_out;
 	struct dma_block_config dma_blocks[CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM];
@@ -71,6 +89,134 @@ struct video_esp32_data {
 	struct k_poll_signal *signal_out;
 #endif
 };
+
+static void video_esp32_watchdog_handler(struct k_work *work);
+static void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t channel,
+				    int status);
+
+static void video_esp32_apply_byte_swap(const struct device *dev, uint32_t pixelformat)
+{
+	const struct video_esp32_config *cfg = dev->config;
+	struct video_esp32_data *data = dev->data;
+	bool swap = cfg->invert_byte_order;
+
+	/* RGB565X is RGB565 with swapped byte order. */
+	if (pixelformat == VIDEO_PIX_FMT_RGB565X) {
+		swap = !swap;
+	}
+
+	cam_ll_swap_dma_data_byte_order(data->hal.hw, swap);
+}
+
+static void video_esp32_invalidate_ext_dcache(void *addr, size_t size)
+{
+#if defined(CONFIG_ESP_SPIRAM)
+	if (size == 0U) {
+		return;
+	}
+
+	uint32_t line_size = cache_hal_get_cache_line_size(CACHE_TYPE_DATA);
+	if (line_size == 0U) {
+		line_size = 32U;
+	}
+
+	uintptr_t start = (uintptr_t)addr;
+	uintptr_t end = start + size;
+	uintptr_t aligned_start = ROUND_DOWN(start, line_size);
+	uintptr_t aligned_end = ROUND_UP(end, line_size);
+	size_t aligned_size = aligned_end - aligned_start;
+
+	if (!mmu_hal_check_valid_ext_vaddr_region(0, (uint32_t)aligned_start, aligned_size,
+						  MMU_VADDR_DATA)) {
+		return;
+	}
+
+	/*
+	 * Invalidate in chunks to avoid very long critical sections while
+	 * invalidating large PSRAM buffers (full frame buffers).
+	 */
+	const size_t chunk_max = 4U * 1024U;
+	uintptr_t cur = aligned_start;
+	size_t remaining = aligned_size;
+
+	while (remaining > 0U) {
+		size_t chunk = MIN(remaining, chunk_max);
+
+		cache_hal_invalidate_addr((uint32_t)cur, chunk);
+		cur += chunk;
+		remaining -= chunk;
+	}
+#else
+	ARG_UNUSED(addr);
+	ARG_UNUSED(size);
+#endif
+}
+
+static int video_esp32_dma_configure(struct video_esp32_data *data)
+{
+	const struct video_esp32_config *cfg = data->config;
+	struct dma_config dma_cfg = {0};
+
+	if (data->dma_block_count == 0U) {
+		return -EINVAL;
+	}
+
+	dma_cfg.channel_direction = PERIPHERAL_TO_MEMORY;
+	dma_cfg.dma_callback = video_esp32_dma_rx_done;
+	dma_cfg.user_data = data;
+	dma_cfg.dma_slot = SOC_GDMA_TRIG_PERIPH_CAM0;
+	dma_cfg.source_burst_length = 4;
+	dma_cfg.dest_burst_length = 4;
+	dma_cfg.complete_callback_en = 1;
+	dma_cfg.block_count = data->dma_block_count;
+	dma_cfg.head_block = &data->dma_blocks[0];
+
+	return dma_config(cfg->dma_dev, cfg->rx_dma_channel, &dma_cfg);
+}
+
+static int video_esp32_prepare_dma_blocks(struct video_esp32_data *data)
+{
+	uint32_t buffer_size;
+
+	if (data->active_vbuf == NULL) {
+		return -EINVAL;
+	}
+
+	buffer_size = data->active_vbuf->bytesused;
+	memset(data->dma_blocks, 0, sizeof(data->dma_blocks));
+	for (int i = 0; i < CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM; ++i) {
+		struct dma_block_config *blk = &data->dma_blocks[i];
+
+		blk->dest_address =
+			(uint32_t)data->active_vbuf->buffer + (i * VIDEO_ESP32_DMA_BUFFER_MAX_SIZE);
+		if (buffer_size < VIDEO_ESP32_DMA_BUFFER_MAX_SIZE) {
+			blk->block_size = buffer_size;
+			blk->next_block = NULL;
+			data->dma_block_count = i + 1;
+			return 0;
+		}
+		blk->block_size = VIDEO_ESP32_DMA_BUFFER_MAX_SIZE;
+		if (i == (CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM - 1)) {
+			return -ENOBUFS;
+		}
+		blk->next_block = &data->dma_blocks[i + 1];
+		buffer_size -= VIDEO_ESP32_DMA_BUFFER_MAX_SIZE;
+	}
+
+	return -EINVAL;
+}
+
+static void video_esp32_update_dma_block_addresses(struct video_esp32_data *data)
+{
+	if (data->active_vbuf == NULL || data->dma_block_count == 0U) {
+		return;
+	}
+
+	for (uint8_t i = 0; i < data->dma_block_count; i++) {
+		data->dma_blocks[i].dest_address =
+			(uint32_t)data->active_vbuf->buffer + (i * VIDEO_ESP32_DMA_BUFFER_MAX_SIZE);
+	}
+}
 
 static int video_esp32_reload_dma(struct video_esp32_data *data)
 {
@@ -81,6 +227,9 @@ static int video_esp32_reload_dma(struct video_esp32_data *data)
 		LOG_ERR("No video buffer available. Enqueue some buffers first.");
 		return -EAGAIN;
 	}
+
+	/* Keep descriptor destination addresses in sync with the active buffer. */
+	video_esp32_update_dma_block_addresses(data);
 
 	ret = dma_reload(cfg->dma_dev, cfg->rx_dma_channel, 0, (uint32_t)data->active_vbuf->buffer,
 			 data->active_vbuf->bytesused);
@@ -98,8 +247,8 @@ static int video_esp32_reload_dma(struct video_esp32_data *data)
 	return 0;
 }
 
-void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t channel,
-			     int status)
+static void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t channel,
+				    int status)
 {
 	struct video_esp32_data *data = user_data;
 
@@ -111,10 +260,14 @@ void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t
 	if (status != DMA_STATUS_COMPLETE) {
 		VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(VIDEO_BUF_ERROR)
 		LOG_ERR("DMA error: %d", status);
+		/* Trigger recovery in thread context. */
+		k_work_schedule(&data->watchdog_work, K_NO_WAIT);
 		return;
 	}
 
+	k_spinlock_key_t key = k_spin_lock(&data->lock);
 	data->last_rx_done_ms = k_uptime_get_32();
+	k_spin_unlock(&data->lock, key);
 
 	if (data->active_vbuf == NULL) {
 		VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(VIDEO_BUF_ERROR)
@@ -124,16 +277,110 @@ void video_esp32_dma_rx_done(const struct device *dev, void *user_data, uint32_t
 
 	data->active_vbuf->timestamp = data->last_rx_done_ms;
 
+#if defined(CONFIG_CACHE_MANAGEMENT)
+	{
+		void *buf = data->active_vbuf->buffer;
+
+#if defined(CONFIG_CACHE_CAN_SAY_MEM_COHERENCE)
+		if (!sys_cache_is_mem_coherent(buf)) {
+			sys_cache_data_invd_range(buf, data->active_vbuf->bytesused);
+		}
+#else
+		sys_cache_data_invd_range(buf, data->active_vbuf->bytesused);
+#endif
+	}
+#endif
+
 	k_fifo_put(&data->fifo_out, data->active_vbuf);
 	VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(VIDEO_BUF_DONE)
 	data->active_vbuf = k_fifo_get(&data->fifo_in, K_NO_WAIT);
 
 	if (data->active_vbuf == NULL) {
-		LOG_WRN("Frame dropped. No buffer available");
-		VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(VIDEO_BUF_ERROR)
+		LOG_DBG("Capture paused. No buffer available");
+		/*
+		 * Stop CAM when no buffers are available. Otherwise the peripheral keeps
+		 * sampling and its FIFO can overflow while DMA is idle, which can
+		 * manifest as vertical drift or color corruption when capture resumes.
+		 */
+		cam_hal_stop_streaming(&data->hal);
+		data->capture_paused = true;
 		return;
 	}
-	video_esp32_reload_dma(data);
+	if (video_esp32_reload_dma(data) != 0) {
+		/*
+		 * DMA reload/start can fail transiently. Pause capture and put the
+		 * buffer back so the application can recover by enqueuing again.
+		 */
+		cam_hal_stop_streaming(&data->hal);
+		data->capture_paused = true;
+		k_fifo_put(&data->fifo_in, data->active_vbuf);
+		data->active_vbuf = NULL;
+		VIDEO_ESP32_RAISE_OUT_SIG_IF_ENABLED(VIDEO_BUF_ERROR)
+	}
+}
+
+static void video_esp32_watchdog_handler(struct k_work *work)
+{
+	struct video_esp32_data *data =
+		CONTAINER_OF(work, struct video_esp32_data, watchdog_work.work);
+	const struct video_esp32_config *cfg = data->config;
+	uint32_t now_ms = k_uptime_get_32();
+	bool should_recover = false;
+	uint32_t last_rx_ms;
+
+	/*
+	 * The watchdog is meant to recover from a stuck DMA/capture path where
+	 * frames stop arriving while the application still runs.
+	 */
+	k_spinlock_key_t key = k_spin_lock(&data->lock);
+	last_rx_ms = data->last_rx_done_ms;
+	if (data->is_streaming && (now_ms - last_rx_ms) > VIDEO_ESP32_STALL_TIMEOUT_MS &&
+	    !(data->capture_paused && (data->active_vbuf == NULL))) {
+		should_recover = true;
+	}
+	k_spin_unlock(&data->lock, key);
+
+	if (should_recover) {
+		(void)dma_stop(cfg->dma_dev, cfg->rx_dma_channel);
+		cam_hal_stop_streaming(&data->hal);
+
+		key = k_spin_lock(&data->lock);
+		if (data->active_vbuf == NULL) {
+			data->active_vbuf = k_fifo_get(&data->fifo_in, K_NO_WAIT);
+		}
+		k_spin_unlock(&data->lock, key);
+
+		if (data->active_vbuf != NULL) {
+			int ret;
+
+			ret = video_esp32_prepare_dma_blocks(data);
+			if (ret == 0) {
+				ret = video_esp32_dma_configure(data);
+			}
+			if (ret == 0) {
+				ret = video_esp32_reload_dma(data);
+			}
+			if (ret == 0) {
+				cam_hal_start_streaming(&data->hal);
+
+				key = k_spin_lock(&data->lock);
+				data->capture_paused = false;
+				data->last_rx_done_ms = now_ms;
+				k_spin_unlock(&data->lock, key);
+
+				if ((now_ms - data->last_recovery_log_ms) > 5000U) {
+					LOG_WRN("Capture stalled, recovered (no frame for %u ms)",
+						now_ms - last_rx_ms);
+					data->last_recovery_log_ms = now_ms;
+				}
+			}
+		}
+	}
+
+	/* Keep running while streaming to allow future recovery attempts. */
+	if (data->is_streaming) {
+		k_work_schedule(&data->watchdog_work, K_MSEC(VIDEO_ESP32_WATCHDOG_PERIOD_MS));
+	}
 }
 
 static int video_esp32_set_stream(const struct device *dev, bool enable, enum video_buf_type type)
@@ -141,9 +388,6 @@ static int video_esp32_set_stream(const struct device *dev, bool enable, enum vi
 	const struct video_esp32_config *cfg = dev->config;
 	struct video_esp32_data *data = dev->data;
 	struct dma_status dma_status = {0};
-	struct dma_config dma_cfg = {0};
-	struct dma_block_config *dma_block_iter = data->dma_blocks;
-	uint32_t buffer_size = 0;
 	int error = 0;
 
 	if (!enable) {
@@ -154,6 +398,8 @@ static int video_esp32_set_stream(const struct device *dev, bool enable, enum vi
 		}
 
 		data->is_streaming = false;
+		data->capture_paused = false;
+		(void)k_work_cancel_delayable(&data->watchdog_work);
 		error = dma_stop(cfg->dma_dev, cfg->rx_dma_channel);
 		if (error) {
 			LOG_ERR("Unable to stop DMA (%d)", error);
@@ -188,38 +434,19 @@ static int video_esp32_set_stream(const struct device *dev, bool enable, enum vi
 		LOG_ERR("No enqueued video buffers available.");
 		return -EAGAIN;
 	}
+	data->capture_paused = false;
 
-	buffer_size = data->active_vbuf->bytesused;
-	memset(data->dma_blocks, 0, sizeof(data->dma_blocks));
-	for (int i = 0; i < CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM; ++i) {
-		dma_block_iter->dest_address =
-			(uint32_t)data->active_vbuf->buffer + (i * VIDEO_ESP32_DMA_BUFFER_MAX_SIZE);
-		if (buffer_size < VIDEO_ESP32_DMA_BUFFER_MAX_SIZE) {
-			dma_block_iter->block_size = buffer_size;
-			dma_block_iter->next_block = NULL;
-			dma_cfg.block_count = i + 1;
-			break;
-		}
-		dma_block_iter->block_size = VIDEO_ESP32_DMA_BUFFER_MAX_SIZE;
-		dma_block_iter->next_block = dma_block_iter + 1;
-		dma_block_iter++;
-		buffer_size -= VIDEO_ESP32_DMA_BUFFER_MAX_SIZE;
-	}
-
-	if (dma_block_iter->next_block) {
+	error = video_esp32_prepare_dma_blocks(data);
+	if (error == -ENOBUFS) {
 		LOG_ERR("Not enough descriptors available. Increase "
 			"CONFIG_DMA_ESP32_MAX_DESCRIPTOR_NUM");
 		return -ENOBUFS;
 	}
+	if (error) {
+		return error;
+	}
 
-	dma_cfg.channel_direction = PERIPHERAL_TO_MEMORY;
-	dma_cfg.dma_callback = video_esp32_dma_rx_done;
-	dma_cfg.user_data = data;
-	dma_cfg.dma_slot = SOC_GDMA_TRIG_PERIPH_CAM0;
-	dma_cfg.complete_callback_en = 1;
-	dma_cfg.head_block = &data->dma_blocks[0];
-
-	error = dma_config(cfg->dma_dev, cfg->rx_dma_channel, &dma_cfg);
+	error = video_esp32_dma_configure(data);
 	if (error) {
 		LOG_ERR("Unable to configure DMA (%d)", error);
 		return error;
@@ -237,6 +464,8 @@ static int video_esp32_set_stream(const struct device *dev, bool enable, enum vi
 		return -EIO;
 	}
 	data->is_streaming = true;
+	data->last_rx_done_ms = k_uptime_get_32();
+	k_work_schedule(&data->watchdog_work, K_MSEC(VIDEO_ESP32_WATCHDOG_PERIOD_MS));
 
 	return 0;
 }
@@ -244,22 +473,79 @@ static int video_esp32_set_stream(const struct device *dev, bool enable, enum vi
 static int video_esp32_get_caps(const struct device *dev, struct video_caps *caps)
 {
 	const struct video_esp32_config *config = dev->config;
+	struct video_esp32_data *data = dev->data;
+	const struct video_format_cap *src_caps;
+	bool has_rgb565x = false;
+	size_t out = 0;
 
 	/* Two buffers are needed to perform transfers */
 	caps->min_vbuf_count = 2;
 
 	/* Forward the message to the source device */
-	return video_get_caps(config->source_dev, caps);
+	int ret = video_get_caps(config->source_dev, caps);
+	if (ret < 0) {
+		return ret;
+	}
+
+	src_caps = caps->format_caps;
+	if (src_caps == NULL) {
+		return 0;
+	}
+
+	for (size_t i = 0; src_caps[i].pixelformat != 0; i++) {
+		if (src_caps[i].pixelformat == VIDEO_PIX_FMT_RGB565X) {
+			has_rgb565x = true;
+			break;
+		}
+	}
+
+	for (size_t i = 0; src_caps[i].pixelformat != 0; i++) {
+		if (out + 1 >= ARRAY_SIZE(data->format_caps_buf)) {
+			break;
+		}
+
+		data->format_caps_buf[out++] = src_caps[i];
+
+		if (!has_rgb565x && src_caps[i].pixelformat == VIDEO_PIX_FMT_RGB565) {
+			if (out + 1 >= ARRAY_SIZE(data->format_caps_buf)) {
+				break;
+			}
+			data->format_caps_buf[out] = src_caps[i];
+			data->format_caps_buf[out].pixelformat = VIDEO_PIX_FMT_RGB565X;
+			out++;
+		}
+	}
+
+	if (out < ARRAY_SIZE(data->format_caps_buf)) {
+		data->format_caps_buf[out] = (struct video_format_cap){0};
+	} else {
+		data->format_caps_buf[ARRAY_SIZE(data->format_caps_buf) - 1] =
+			(struct video_format_cap){0};
+	}
+
+	caps->format_caps = data->format_caps_buf;
+	return 0;
 }
 
 static int video_esp32_get_fmt(const struct device *dev, struct video_format *fmt)
 {
 	const struct video_esp32_config *cfg = dev->config;
+	struct video_esp32_data *data = dev->data;
 	int ret = 0;
 
 	LOG_DBG("Get format");
 
-	ret = video_get_format(cfg->source_dev, fmt);
+	if (data->video_format_valid) {
+		*fmt = data->video_format;
+	} else {
+		ret = video_get_format(cfg->source_dev, fmt);
+		if (ret < 0) {
+			LOG_ERR("Failed to get format from source");
+			return ret;
+		}
+		data->video_format = *fmt;
+		data->video_format_valid = true;
+	}
 	if (ret < 0) {
 		LOG_ERR("Failed to get format from source");
 		return ret;
@@ -278,8 +564,18 @@ static int video_esp32_set_fmt(const struct device *dev, struct video_format *fm
 	const struct video_esp32_config *cfg = dev->config;
 	struct video_esp32_data *data = dev->data;
 	int ret;
+	struct video_format src_fmt = *fmt;
 
-	ret = video_set_format(cfg->source_dev, fmt);
+	if (fmt->pixelformat == VIDEO_PIX_FMT_RGB565X) {
+		/*
+		 * Source devices typically expose RGB565 (little endian). For
+		 * RGB565X, request RGB565 from the source and use the LCD_CAM
+		 * byte swap to provide big-endian RGB565 to the application.
+		 */
+		src_fmt.pixelformat = VIDEO_PIX_FMT_RGB565;
+	}
+
+	ret = video_set_format(cfg->source_dev, &src_fmt);
 	if (ret < 0) {
 		return ret;
 	}
@@ -290,6 +586,8 @@ static int video_esp32_set_fmt(const struct device *dev, struct video_format *fm
 	}
 
 	data->video_format = *fmt;
+	data->video_format_valid = true;
+	video_esp32_apply_byte_swap(dev, fmt->pixelformat);
 
 	return 0;
 }
@@ -297,9 +595,23 @@ static int video_esp32_set_fmt(const struct device *dev, struct video_format *fm
 static int video_esp32_enqueue(const struct device *dev, struct video_buffer *vbuf)
 {
 	struct video_esp32_data *data = dev->data;
+	int ret;
 
 	vbuf->bytesused = data->video_format.pitch * data->video_format.height;
 	vbuf->line_offset = 0;
+
+	if (data->is_streaming && data->active_vbuf == NULL) {
+		data->active_vbuf = vbuf;
+		ret = video_esp32_reload_dma(data);
+		if (ret == 0) {
+			if (data->capture_paused) {
+				cam_hal_start_streaming(&data->hal);
+				data->capture_paused = false;
+			}
+			return 0;
+		}
+		data->active_vbuf = NULL;
+	}
 
 	k_fifo_put(&data->fifo_in, vbuf);
 
@@ -316,6 +628,8 @@ static int video_esp32_dequeue(const struct device *dev, struct video_buffer **v
 	if (*vbuf == NULL) {
 		return -EAGAIN;
 	}
+
+	video_esp32_invalidate_ext_dcache((*vbuf)->buffer, (*vbuf)->bytesused);
 
 	return 0;
 }
@@ -369,6 +683,12 @@ static void video_esp32_cam_ctrl_init(const struct device *dev)
 
 	cam_hal_init(&data->hal, &hal_cfg);
 
+	/* Avoid data corruption on FIFO/DMA backpressure (e.g. slow consumers). */
+	cam_ll_enable_stop_signal(data->hal.hw, true);
+
+	/* Default byte order setting (may be overridden by negotiated format). */
+	cam_ll_swap_dma_data_byte_order(data->hal.hw, cfg->invert_byte_order);
+
 	cam_ll_reverse_dma_data_bit_order(data->hal.hw, cfg->invert_bit_order);
 	cam_ll_enable_invert_pclk(data->hal.hw, cfg->invert_pclk);
 	cam_ll_set_input_data_width(data->hal.hw, cfg->data_width);
@@ -421,6 +741,11 @@ static int video_esp32_init(const struct device *dev)
 	k_fifo_init(&data->fifo_in);
 	k_fifo_init(&data->fifo_out);
 	data->config = cfg;
+	data->video_format_valid = false;
+	data->dma_block_count = 0U;
+	data->last_rx_done_ms = k_uptime_get_32();
+	data->last_recovery_log_ms = 0U;
+	k_work_init_delayable(&data->watchdog_work, video_esp32_watchdog_handler);
 	video_esp32_cam_ctrl_init(dev);
 
 	if (!device_is_ready(cfg->dma_dev)) {
@@ -438,6 +763,9 @@ int video_esp32_set_selection(const struct device *dev, struct video_selection *
 	int ret;
 
 	ret = video_set_selection(cfg->source_dev, sel);
+	if (ret == -ENOSYS || ret == -ENOTSUP) {
+		return ret;
+	}
 	if (ret < 0) {
 		LOG_ERR("Failed to set selection on source device");
 		return ret;
