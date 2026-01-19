@@ -43,11 +43,25 @@ static inline int app_setup_display(const struct device *const display_dev, cons
 	/* Set display pixel format to match the one in use by the camera */
 	switch (pixfmt) {
 	case VIDEO_PIX_FMT_RGB565:
-		if (capabilities.current_pixel_format != PIXEL_FORMAT_RGB_565) {
-			ret = display_set_pixel_format(display_dev, PIXEL_FORMAT_RGB_565);
+	case VIDEO_PIX_FMT_RGB565X:
+		/*
+		 * Prefer keeping the display's current 16bpp order (RGB/BGR) to
+		 * match board/panel wiring expectations.
+		 */
+		enum display_pixel_format desired_pf;
+
+		if (capabilities.current_pixel_format == PIXEL_FORMAT_BGR_565) {
+			desired_pf = PIXEL_FORMAT_BGR_565;
+		} else {
+			desired_pf = PIXEL_FORMAT_RGB_565;
+		}
+
+		if (capabilities.current_pixel_format != desired_pf) {
+			ret = display_set_pixel_format(display_dev, desired_pf);
 		}
 		break;
 	case VIDEO_PIX_FMT_XRGB32:
+	case VIDEO_PIX_FMT_ARGB32:
 		if (capabilities.current_pixel_format != PIXEL_FORMAT_ARGB_8888) {
 			ret = display_set_pixel_format(display_dev, PIXEL_FORMAT_ARGB_8888);
 		}
@@ -190,6 +204,106 @@ static int app_query_video_info(const struct device *const video_dev,
 	}
 
 	return 0;
+}
+
+static bool app_caps_support_pixfmt(const struct video_caps *const caps, uint32_t pixfmt)
+{
+	for (int i = 0; caps->format_caps[i].pixelformat; i++) {
+		if (caps->format_caps[i].pixelformat == pixfmt) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static bool app_display_supports_pixfmt(const struct display_capabilities *const dcaps,
+					uint32_t pixfmt)
+{
+	switch (pixfmt) {
+	case VIDEO_PIX_FMT_RGB565:
+	case VIDEO_PIX_FMT_RGB565X:
+		return (dcaps->current_pixel_format == PIXEL_FORMAT_RGB_565) ||
+		       (dcaps->current_pixel_format == PIXEL_FORMAT_BGR_565) ||
+		       (dcaps->supported_pixel_formats & (PIXEL_FORMAT_RGB_565 |
+							  PIXEL_FORMAT_BGR_565));
+	case VIDEO_PIX_FMT_XRGB32:
+	case VIDEO_PIX_FMT_ARGB32:
+		return (dcaps->current_pixel_format == PIXEL_FORMAT_ARGB_8888) ||
+		       (dcaps->supported_pixel_formats & PIXEL_FORMAT_ARGB_8888);
+	default:
+		return false;
+	}
+}
+
+static void app_sync_pixfmt_with_display(const struct device *const display_dev,
+					 const struct video_caps *const caps,
+					 struct video_format *const fmt)
+{
+	struct display_capabilities dcaps;
+	uint32_t preferred_fmt = fmt->pixelformat;
+
+	if (display_dev == NULL || !device_is_ready(display_dev)) {
+		return;
+	}
+
+	display_get_capabilities(display_dev, &dcaps);
+
+	if (strcmp(CONFIG_VIDEO_PIXEL_FORMAT, "") != 0) {
+		preferred_fmt = VIDEO_FOURCC_FROM_STR(CONFIG_VIDEO_PIXEL_FORMAT);
+		if (app_caps_support_pixfmt(caps, preferred_fmt) &&
+		    app_display_supports_pixfmt(&dcaps, preferred_fmt)) {
+			fmt->pixelformat = preferred_fmt;
+			return;
+		}
+		LOG_WRN("Configured pixel format not supported by display/camera, falling back");
+	}
+
+	if (dcaps.current_pixel_format == PIXEL_FORMAT_RGB_565 ||
+	    dcaps.current_pixel_format == PIXEL_FORMAT_BGR_565) {
+		if (app_caps_support_pixfmt(caps, VIDEO_PIX_FMT_RGB565)) {
+			fmt->pixelformat = VIDEO_PIX_FMT_RGB565;
+			return;
+		}
+		if (app_caps_support_pixfmt(caps, VIDEO_PIX_FMT_RGB565X)) {
+			fmt->pixelformat = VIDEO_PIX_FMT_RGB565X;
+			return;
+		}
+	}
+
+	if (dcaps.current_pixel_format == PIXEL_FORMAT_ARGB_8888) {
+		if (app_caps_support_pixfmt(caps, VIDEO_PIX_FMT_XRGB32)) {
+			fmt->pixelformat = VIDEO_PIX_FMT_XRGB32;
+			return;
+		}
+		if (app_caps_support_pixfmt(caps, VIDEO_PIX_FMT_ARGB32)) {
+			fmt->pixelformat = VIDEO_PIX_FMT_ARGB32;
+			return;
+		}
+	}
+
+	if ((dcaps.supported_pixel_formats & PIXEL_FORMAT_RGB_565) ||
+	    (dcaps.supported_pixel_formats & PIXEL_FORMAT_BGR_565)) {
+		if (app_caps_support_pixfmt(caps, VIDEO_PIX_FMT_RGB565)) {
+			fmt->pixelformat = VIDEO_PIX_FMT_RGB565;
+			return;
+		}
+		if (app_caps_support_pixfmt(caps, VIDEO_PIX_FMT_RGB565X)) {
+			fmt->pixelformat = VIDEO_PIX_FMT_RGB565X;
+			return;
+		}
+	}
+
+	if (dcaps.supported_pixel_formats & PIXEL_FORMAT_ARGB_8888) {
+		if (app_caps_support_pixfmt(caps, VIDEO_PIX_FMT_XRGB32)) {
+			fmt->pixelformat = VIDEO_PIX_FMT_XRGB32;
+			return;
+		}
+		if (app_caps_support_pixfmt(caps, VIDEO_PIX_FMT_ARGB32)) {
+			fmt->pixelformat = VIDEO_PIX_FMT_ARGB32;
+			return;
+		}
+	}
 }
 
 static int app_setup_video_format(const struct device *const video_dev,
@@ -356,6 +470,10 @@ int main(void)
 	ret = app_query_video_info(video_dev, &caps, &fmt);
 	if (ret < 0) {
 		goto err;
+	}
+
+	if (DT_HAS_CHOSEN(zephyr_display)) {
+		app_sync_pixfmt_with_display(display_dev, &caps, &fmt);
 	}
 
 	ret = app_setup_video_selection(video_dev, &fmt);
