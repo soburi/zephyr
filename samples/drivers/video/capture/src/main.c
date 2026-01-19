@@ -402,8 +402,11 @@ int main(void)
 
 	vbuf->type = VIDEO_BUF_TYPE_OUTPUT;
 	while (1) {
-		ret = video_dequeue(video_dev, &vbuf, K_FOREVER);
-		if (ret < 0) {
+		ret = video_dequeue(video_dev, &vbuf, K_SECONDS(1));
+		if (ret == -EAGAIN) {
+			LOG_WRN("No frame for %u ms", k_uptime_get_32() - last_ts);
+			continue;
+		} else if (ret < 0) {
 			LOG_ERR("Unable to dequeue video buf");
 			goto err;
 		}
