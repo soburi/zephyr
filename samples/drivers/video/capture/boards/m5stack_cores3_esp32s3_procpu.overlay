@@ -1,0 +1,11 @@
+&lcd_cam_dvp {
+	status = "okay";
+};
+
+&gc0308 {
+	status = "okay";
+};
+
+&dma {
+	status = "okay";
+};
