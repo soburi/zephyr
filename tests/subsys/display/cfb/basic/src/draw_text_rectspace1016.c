@@ -107,6 +107,22 @@ ZTEST(draw_text_rectspace1016, test_draw_text_at_11_17)
 	zassert_true(verify_image_and_bg(11, 17, rectspace1016, 10, 16, 0));
 }
 
+ZTEST(draw_text_rectspace1016, test_draw_text_missing_glyph_at_0_0)
+{
+	zassert_ok(cfb_draw_text(dev, "~", 0, 0));
+	zassert_ok(cfb_framebuffer_finalize(dev));
+
+	zassert_true(verify_image_and_bg(0, 0, rectspace1016, 10, 16, 0));
+}
+
+ZTEST(draw_text_rectspace1016, test_draw_text_missing_glyph_at_9_15)
+{
+	zassert_ok(cfb_draw_text(dev, "~", 9, 15));
+	zassert_ok(cfb_framebuffer_finalize(dev));
+
+	zassert_true(verify_image_and_bg(9, 15, rectspace1016, 10, 16, 0));
+}
+
 /*
  * with kerning
  */
@@ -153,6 +169,15 @@ ZTEST(draw_text_rectspace1016, test_draw_text_at_11_17_kerning_3)
 	zassert_ok(cfb_framebuffer_finalize(dev));
 
 	zassert_true(verify_image_and_bg(11, 17, kerning_3_2rectspace1016, 23, 16, 0));
+}
+
+ZTEST(draw_text_rectspace1016, test_draw_text_missing_glyph_at_0_0_kerning_3)
+{
+	cfb_set_kerning(dev, 3);
+	zassert_ok(cfb_draw_text(dev, "~~", 0, 0));
+	zassert_ok(cfb_framebuffer_finalize(dev));
+
+	zassert_true(verify_image_and_bg(0, 0, kerning_3_2rectspace1016, 23, 16, 0));
 }
 
 ZTEST(draw_text_rectspace1016, test_draw_text_kerning_3_within_right_border)

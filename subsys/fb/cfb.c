@@ -67,20 +67,74 @@ struct char_framebuffer {
 
 static struct char_framebuffer char_fb;
 
-static inline uint8_t *get_glyph_ptr(const struct cfb_font *fptr, uint8_t c)
+static inline const uint8_t *get_glyph_ptr(const struct cfb_font *fptr, uint8_t c)
 {
 	if (c < fptr->first_char || c > fptr->last_char) {
 		return NULL;
 	}
 
-	return (uint8_t *)fptr->data +
+	return (const uint8_t *)fptr->data +
 	       (c - fptr->first_char) *
 	       (fptr->width * fptr->height / 8U);
 }
 
-static inline uint8_t get_glyph_byte(uint8_t *glyph_ptr, const struct cfb_font *fptr,
+static inline bool is_tofu_border_pixel(const struct cfb_font *fptr, uint8_t px, uint8_t py)
+{
+	if (px >= fptr->width || py >= fptr->height) {
+		return false;
+	}
+
+	uint8_t stroke = MAX(MIN(fptr->width, fptr->height) / 10U, 1U);
+	const uint8_t max_stroke_x = (fptr->width > 1U) ? (fptr->width - 1U) / 2U : 1U;
+	const uint8_t max_stroke_y = (fptr->height > 1U) ? (fptr->height - 1U) / 2U : 1U;
+
+	stroke = MIN(stroke, MIN(max_stroke_x, max_stroke_y));
+
+	return (px < stroke) || (px >= (fptr->width - stroke)) ||
+	       (py < stroke) || (py >= (fptr->height - stroke));
+}
+
+static inline uint8_t get_tofu_glyph_byte(const struct cfb_font *fptr, uint8_t x, uint8_t y,
+					  bool vtiled)
+{
+	const bool font_is_msbfirst = ((fptr->caps & CFB_FONT_MSB_FIRST) != 0);
+	uint8_t byte = 0;
+
+	if (fptr->caps & CFB_FONT_MONO_VPACKED) {
+		const uint16_t tile = vtiled ? y : (y / 8U);
+		const uint16_t base_y = tile * 8U;
+
+		for (uint8_t bit = 0U; bit < 8U; bit++) {
+			const uint16_t py = base_y + bit;
+
+			if (py >= fptr->height) {
+				break;
+			}
+
+			if (is_tofu_border_pixel(fptr, x, (uint8_t)py)) {
+				byte |= font_is_msbfirst ? BIT(7U - bit) : BIT(bit);
+			}
+		}
+	} else if (fptr->caps & CFB_FONT_MONO_HPACKED) {
+		if (is_tofu_border_pixel(fptr, x, y)) {
+			const uint8_t bit = y % 8U;
+
+			byte |= font_is_msbfirst ? BIT(7U - bit) : BIT(bit);
+		}
+	} else {
+		LOG_WRN("Unknown font type");
+	}
+
+	return byte;
+}
+
+static inline uint8_t get_glyph_byte(const uint8_t *glyph_ptr, const struct cfb_font *fptr,
 				     uint8_t x, uint8_t y, bool vtiled)
 {
+	if (!glyph_ptr) {
+		return get_tofu_glyph_byte(fptr, x, y, vtiled);
+	}
+
 	if (fptr->caps & CFB_FONT_MONO_VPACKED) {
 		if (vtiled) {
 			return glyph_ptr[x * (fptr->height / 8U) + y];
@@ -104,19 +158,10 @@ static uint8_t draw_char_vtmono(const struct char_framebuffer *fb,
 				bool draw_bg)
 {
 	const struct cfb_font *fptr = &(fb->fonts[fb->font_idx]);
+	const uint8_t *glyph_ptr = get_glyph_ptr(fptr, c);
 	const bool font_is_msbfirst = ((fptr->caps & CFB_FONT_MSB_FIRST) != 0);
 	const bool need_reverse =
 		(((fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0) != font_is_msbfirst);
-	uint8_t *glyph_ptr;
-
-	if (c < fptr->first_char || c > fptr->last_char) {
-		c = ' ';
-	}
-
-	glyph_ptr = get_glyph_ptr(fptr, c);
-	if (!glyph_ptr) {
-		return 0;
-	}
 
 	for (size_t g_x = 0; g_x < fptr->width; g_x++) {
 		const int16_t fb_x = x + g_x;
@@ -227,18 +272,9 @@ static uint8_t draw_char_htmono(const struct char_framebuffer *fb,
 				bool draw_bg)
 {
 	const struct cfb_font *fptr = &(fb->fonts[fb->font_idx]);
+	const uint8_t *glyph_ptr = get_glyph_ptr(fptr, c);
 	const bool font_is_msbfirst = (fptr->caps & CFB_FONT_MSB_FIRST) != 0;
 	const bool display_is_msbfirst = (fb->screen_info & SCREEN_INFO_MONO_MSB_FIRST) != 0;
-	uint8_t *glyph_ptr;
-
-	if (c < fptr->first_char || c > fptr->last_char) {
-		c = ' ';
-	}
-
-	glyph_ptr = get_glyph_ptr(fptr, c);
-	if (!glyph_ptr) {
-		return 0;
-	}
 
 	for (size_t g_y = 0; g_y < fptr->height; g_y++) {
 		const int16_t fb_y = y + g_y;

@@ -30,6 +30,10 @@ manifest:
   # Please add items below based on alphabetical order
   # zephyr-keep-sorted-start re(^\s+\- name:)
   projects:
+    - name: ArduinoCore-Zephyr
+      path: modules/lib/ArduinoCore-Zephyr
+      revision: pull/154/head
+      url: https://github.com/zephyrproject-rtos/ArduinoCore-zephyr
     - name: acpica
       revision: 8d24867bc9c9d81c81eeac59391cda59333affd4
       path: modules/lib/acpica

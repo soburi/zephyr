@@ -107,6 +107,14 @@ ZTEST(print_rectspace1016, test_print_at_11_17)
 	zassert_true(verify_image_and_bg(11, 17, rectspace1016, 10, 16, 0));
 }
 
+ZTEST(print_rectspace1016, test_print_missing_glyph_at_0_0)
+{
+	zassert_ok(cfb_print(dev, "~", 0, 0));
+	zassert_ok(cfb_framebuffer_finalize(dev));
+
+	zassert_true(verify_image_and_bg(0, 0, rectspace1016, 10, 16, 0));
+}
+
 /*
  * kerning
  */
