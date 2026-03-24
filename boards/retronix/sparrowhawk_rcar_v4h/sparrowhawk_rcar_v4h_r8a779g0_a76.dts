@@ -1,0 +1,67 @@
+/*
+ * Copyright (c) 2025 Renesas Electronics Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ */
+
+/dts-v1/;
+#include <arm64/renesas/rcar_gen4_v4h_ca76.dtsi>
+#include "sparrowhawk_rcar_v4h_r8a779g0_r52-pinctrl.dtsi" // reuse
+
+/ {
+	model = "Retronix Sparrow Hawk on R-Car V4H";
+	compatible = "retronix,sparrowhawk-v4h-ca76";
+
+	chosen {
+		zephyr,sram = &ram0;
+		zephyr,console = &hscif1;
+		zephyr,shell-uart = &hscif1;
+		zephyr,canbus = &canfd;
+	};
+
+	ram0: memory@40000000 {
+		device_type = "mmio-sram";
+		reg = <0x0 0x40000000 0x0 DT_SIZE_M(256)>;
+	};
+};
+
+/* USB serial */
+&hscif0 {
+	pinctrl-0 = <&hscif0_data_tx_default &hscif0_data_rx_default>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+&hscif1 {
+	pinctrl-0 = <&hscif1_data_tx_default &hscif1_data_rx_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&can_clk {
+	clock-frequency = <40000000>;
+};
+
+&canfd {
+	pinctrl-0 = <&canfd3_data_a_tx_default &canfd3_data_a_rx_default
+		     &canfd4_data_a_tx_default &canfd4_data_a_rx_default
+                     &can_clk_pin>;
+	pinctrl-names = "default";
+	status = "okay";
+
+clocks = <&cpg CPG_MOD 328>,              /* fck: module clock */
+         <&cpg CPG_CORE R8A779G0_CLK_CANFD>, /* canfdφ (clkc) */
+         <&can_clk>,                      /* CAN_CLK external */
+         <&cpg CPG_CORE R8A779G0_CLK_SASYNCPERD1>, /* clk_ram */
+         <&cpg CPG_CORE R8A779G0_CLK_SASYNCPERD2>; /* pclk */
+clock-names = "fck", "canfd", "can_clk", "clk_ram", "pclk";
+
+	channel3 {
+		status = "okay";
+	};
+
+	channel4 {
+		status = "okay";
+	};
+};
