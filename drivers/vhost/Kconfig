@@ -1,0 +1,30 @@
+# Copyright (c) 2025 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+config VHOST
+	bool "support for VHost"
+	help
+	  Enable options for VHost
+
+if VHOST
+
+config VHOST_XEN_MMIO
+	bool "support for MMIO-based VIRTIO backend on Xen hypervisor"
+	default y
+	depends on DT_HAS_XEN_VHOST_MMIO_ENABLED
+	select XEN_STORE_CLI
+	select XEN_DMOP
+	help
+	  Enable VIRTIO-MMIO backend on Xen hypervisor
+
+config VHOST_INIT_PRIORITY
+        int "VHost init priority"
+        default KERNEL_INIT_PRIORITY_DEFAULT
+        help
+          VHost driver device initialization priority.
+
+endif # VIRTIO
+
+module = VHOST
+module-str = VHOST
+source "subsys/logging/Kconfig.template.log_config"
