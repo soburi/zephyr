@@ -61,6 +61,12 @@ LOG_MODULE_REGISTER(xen_vhost_mmio);
 
 #define META_PAGES_INDEX(cfg) (cfg->queue_size_max)
 
+#define INVALID_EVTCHN_PORT      ((evtchn_port_t)-1)
+#define INVALID_IOSERVID         ((ioservid_t)-1)
+#define INVALID_VIRTIO_DEVICE_ID UINT32_MAX
+#define INVALID_VIRTIO_IRQ       UINT32_MAX
+#define INVALID_MMIO_BASE        ((uintptr_t)-1)
+
 enum virtq_parts {
 	VIRTQ_DESC = 0,
 	VIRTQ_AVAIL,
@@ -115,6 +121,7 @@ struct virtq_context {
 	struct mapped_pages_chunk *pages_chunks;
 	struct virtq_callback queue_notify_cb;
 	atomic_t queue_size;
+	atomic_t queue_notify_pending;
 	atomic_t queue_ready_notified;
 	uint64_t virtq_parts_gpa[NUM_OF_VIRTQ_PARTS];
 	struct k_spinlock lock;
@@ -133,6 +140,7 @@ struct vhost_xen_mmio_data {
 	evtchn_port_t xs_port;
 	evtchn_port_t ioserv_port;
 	struct shared_iopage *shared_iopage;
+	size_t shared_iopage_size;
 	uint32_t vcpus;
 
 	struct {
@@ -152,7 +160,6 @@ struct vhost_xen_mmio_data {
 		atomic_t queue_sel;
 	} be;
 
-	atomic_t notify_queue_id; /**< Temporary variable to pass to workq */
 	struct virtq_callback queue_ready_cb;
 	struct virtq_context *vq_ctx;
 };
@@ -161,6 +168,32 @@ struct query_param {
 	const char *key;
 	const char *expected;
 };
+
+static size_t vhost_xen_mmio_pages_required(uint64_t gpa, size_t len)
+{
+	const size_t page_offset = gpa & (XEN_PAGE_SIZE - 1);
+
+	if (len == 0) {
+		return 0;
+	}
+
+	return DIV_ROUND_UP(page_offset + len, XEN_PAGE_SIZE);
+}
+
+static void vhost_xen_mmio_reset_frontend_state(struct vhost_xen_mmio_data *data)
+{
+	data->xs_port = INVALID_EVTCHN_PORT;
+	data->ioserv_port = INVALID_EVTCHN_PORT;
+	data->shared_iopage = NULL;
+	data->shared_iopage_size = 0;
+	data->vcpus = 0;
+
+	data->fe.servid = INVALID_IOSERVID;
+	data->fe.domid = DOMID_INVALID;
+	data->fe.deviceid = INVALID_VIRTIO_DEVICE_ID;
+	data->fe.irq = INVALID_VIRTIO_IRQ;
+	data->fe.base = INVALID_MMIO_BASE;
+}
 
 /**
  * Get the nth string from a null-separated string buffer
@@ -263,7 +296,7 @@ static uintptr_t query_irq(domid_t domid, int deviceid)
 {
 	char buf[VIRTIO_PATH_LEN + 1] = {0};
 	char *endptr;
-	size_t len;
+	ssize_t len;
 
 	snprintf(buf, VIRTIO_PATH_LEN, "backend/virtio/%d/%d/irq", domid, deviceid);
 
@@ -279,6 +312,57 @@ static uintptr_t query_irq(domid_t domid, int deviceid)
 	}
 
 	return irq_val;
+}
+
+static void vhost_xen_mmio_cleanup_init_resources(const struct device *dev)
+{
+	const struct vhost_xen_mmio_config *config = dev->config;
+	struct vhost_xen_mmio_data *data = dev->data;
+	int ret;
+
+	if (data->ioserv_port != INVALID_EVTCHN_PORT) {
+		ret = mask_event_channel(data->ioserv_port);
+		if (ret < 0) {
+			LOG_WRN("mask_event_channel(%d) failed: %d", data->ioserv_port, ret);
+		}
+
+		ret = unbind_event_channel(data->ioserv_port);
+		if (ret < 0) {
+			LOG_WRN("unbind_event_channel(%d) failed: %d", data->ioserv_port, ret);
+		}
+
+		ret = evtchn_close(data->ioserv_port);
+		if (ret < 0) {
+			LOG_WRN("evtchn_close(%d) failed: %d", data->ioserv_port, ret);
+		}
+	}
+
+	if (data->shared_iopage != NULL) {
+		device_unmap((mm_reg_t)data->shared_iopage, data->shared_iopage_size);
+	}
+
+	if (data->fe.servid != INVALID_IOSERVID && data->fe.domid != DOMID_INVALID) {
+		ret = dmop_set_ioreq_server_state(data->fe.domid, data->fe.servid, 0);
+		if (ret < 0) {
+			LOG_WRN("dmop_set_ioreq_server_state disable failed: %d", ret);
+		}
+
+		if (data->fe.base != INVALID_MMIO_BASE) {
+			ret = dmop_unmap_io_range_from_ioreq_server(
+				data->fe.domid, data->fe.servid, XEN_DMOP_IO_RANGE_MEMORY,
+				data->fe.base, data->fe.base + config->reg_size - 1);
+			if (ret < 0) {
+				LOG_WRN("dmop_unmap_io_range_from_ioreq_server failed: %d", ret);
+			}
+		}
+
+		ret = dmop_destroy_ioreq_server(data->fe.domid, data->fe.servid);
+		if (ret < 0) {
+			LOG_WRN("dmop_destroy_ioreq_server failed: %d", ret);
+		}
+	}
+
+	vhost_xen_mmio_reset_frontend_state(data);
 }
 
 static int unmap_pages(struct mapped_pages *pages)
@@ -368,6 +452,7 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 		key = wait_for_chunk_ready(vq_ctx, chunk, key);
 
 		if (chunk->map && chunk->count > 0) {
+			struct mapped_pages *maps = chunk->map;
 			const size_t count = chunk->count;
 
 			chunk->releasing = true;
@@ -375,20 +460,26 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 			chunk->count = 0;
 			k_spin_unlock(&vq_ctx->lock, key);
 
-			free_pages_array(chunk->map, count);
-			k_free(chunk->map);
+			free_pages_array(maps, count);
+			k_free(maps);
 
 			key = k_spin_lock(&vq_ctx->lock);
 			chunk->releasing = false;
 		} else {
+			chunk->map = NULL;
 			chunk->count = 0;
 		}
 	}
 
 	vq_ctx->queue_notify_cb.cb = NULL;
 	vq_ctx->queue_notify_cb.data = NULL;
+	atomic_set(&vq_ctx->queue_notify_pending, 0);
 
 	k_spin_unlock(&vq_ctx->lock, key);
+
+	for (size_t i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
+		vq_ctx->virtq_parts_gpa[i] = 0;
+	}
 
 	atomic_set(&vq_ctx->queue_size, 0);
 	atomic_set(&vq_ctx->queue_ready_notified, 0);
@@ -400,7 +491,7 @@ static void setup_unmap_info(struct mapped_pages *pages, const struct vhost_buf 
 	size_t map_idx = 0;
 
 	for (size_t i = 0; i < bufs_len; i++) {
-		const size_t num_pages = (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
+		const size_t num_pages = vhost_xen_mmio_pages_required(bufs[i].gpa, bufs[i].len);
 		struct mapped_pages *page_info = &pages[i];
 
 		for (size_t j = 0; j < num_pages; j++) {
@@ -429,7 +520,11 @@ static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
 	int ret = 0;
 
 	for (size_t i = 0; i < bufs_len; i++) {
-		total_map_ops += (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
+		total_map_ops += vhost_xen_mmio_pages_required(bufs[i].gpa, bufs[i].len);
+	}
+
+	if (total_map_ops == 0) {
+		return 0;
 	}
 
 	struct gnttab_map_grant_ref *map_ops =
@@ -441,7 +536,7 @@ static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
 	}
 
 	for (size_t i = 0; i < bufs_len; i++) {
-		const size_t num_pages = (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
+		const size_t num_pages = vhost_xen_mmio_pages_required(bufs[i].gpa, bufs[i].len);
 		struct mapped_pages *page_info = &pages[i];
 
 		for (size_t j = 0; j < num_pages; j++) {
@@ -473,7 +568,7 @@ static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
 	/* Check mapping results */
 	map_idx = 0;
 	for (size_t i = 0; i < bufs_len; i++) {
-		const size_t num_pages = (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
+		const size_t num_pages = vhost_xen_mmio_pages_required(bufs[i].gpa, bufs[i].len);
 
 		for (size_t j = 0; j < num_pages; j++) {
 			const struct gnttab_map_grant_ref *op = &map_ops[map_idx];
@@ -535,7 +630,7 @@ static int init_pages_chunks(const struct device *dev, uint16_t queue_id, uint16
 	}
 
 	for (size_t i = 0; i < bufs_len; i++) {
-		const size_t num_pages = (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
+		const size_t num_pages = vhost_xen_mmio_pages_required(bufs[i].gpa, bufs[i].len);
 		struct mapped_pages *page_info = &chunk->map[i];
 
 		/* Allocate or reuse buffer for this range */
@@ -638,9 +733,7 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 	const size_t queue_size = atomic_get(&data->vq_ctx[queue_id].queue_size);
-	const size_t num_pages[] = {DIV_ROUND_UP(16 * queue_size, XEN_PAGE_SIZE),
-				    DIV_ROUND_UP(2 * queue_size + 6, XEN_PAGE_SIZE),
-				    DIV_ROUND_UP(8 * queue_size + 6, XEN_PAGE_SIZE)};
+	const size_t ring_lens[] = {16 * queue_size, 2 * queue_size + 6, 8 * queue_size + 6};
 	int ret = 0;
 
 	struct vhost_buf meta_bufs[NUM_OF_VIRTQ_PARTS];
@@ -650,12 +743,13 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 
 	for (size_t i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
 		meta_bufs[i].gpa = vq_ctx->virtq_parts_gpa[i];
-		meta_bufs[i].len = num_pages[i] * XEN_PAGE_SIZE;
+		meta_bufs[i].len = ring_lens[i];
 		meta_bufs[i].is_write = true;
-		total_pages += num_pages[i];
+		total_pages += vhost_xen_mmio_pages_required(meta_bufs[i].gpa, meta_bufs[i].len);
 
 		LOG_DBG_Q("Meta range[%zu]: gpa=0x%" PRIx64 " len=%zu pages=%zu", i,
-			  meta_bufs[i].gpa, meta_bufs[i].len, num_pages[i]);
+			  meta_bufs[i].gpa, meta_bufs[i].len,
+			  vhost_xen_mmio_pages_required(meta_bufs[i].gpa, meta_bufs[i].len));
 	}
 
 	ret = init_pages_chunks(dev, queue_id, META_PAGES_INDEX(config), meta_bufs,
@@ -756,8 +850,9 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 	} break;
 	default: {
 		const size_t config_offset = addr_offset - VIRTIO_MMIO_CONFIG;
-		if ((config_offset % 4) &&
-		    (config_offset < ROUND_DOWN(config->config_data_len, 4))) {
+
+		if ((config_offset % sizeof(uint32_t)) == 0 &&
+		    (config_offset + sizeof(uint32_t) <= config->config_data_len)) {
 			r->data = sys_read32((mem_addr_t)(config->config_data + config_offset));
 		} else {
 			r->data = -1;
@@ -841,8 +936,8 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 	} break;
 	case VIRTIO_MMIO_QUEUE_NOTIFY: {
 		if (r->data < config->num_queues) {
-			atomic_set(&data->notify_queue_id, r->data);
-			k_work_schedule_for_queue(&data->workq, &data->isr_work, K_NO_WAIT);
+			atomic_set(&data->vq_ctx[r->data].queue_notify_pending, 1);
+			k_work_reschedule_for_queue(&data->workq, &data->isr_work, K_NO_WAIT);
 		}
 	} break;
 	case VIRTIO_MMIO_QUEUE_SIZE: {
@@ -864,9 +959,14 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 		const uint16_t queue_sel = atomic_get(&data->be.queue_sel);
 		const uint16_t queue_id = queue_sel;
 
+		if (queue_sel >= config->num_queues) {
+			LOG_WRN("Ignoring queue ready update for invalid queue %u", queue_sel);
+			break;
+		}
+
 		if (r->data == 0) {
 			reset_queue(dev, queue_id);
-		} else if (r->data && (queue_sel < config->num_queues)) {
+		} else if (r->data) {
 			int err = setup_queue(dev, queue_id);
 
 			if (err < 0) {
@@ -926,13 +1026,30 @@ static void isr_workhandler(struct k_work *work)
 		CONTAINER_OF(delayable, struct vhost_xen_mmio_data, isr_work);
 	const struct device *dev = data->dev;
 	const struct vhost_xen_mmio_config *config = dev->config;
+	bool needs_reschedule = false;
 
-	const uint16_t queue_id = atomic_get(&data->notify_queue_id);
-	const struct virtq_context *vq_ctx =
-		(queue_id < config->num_queues) ? &data->vq_ctx[queue_id] : NULL;
+	for (size_t queue_id = 0; queue_id < config->num_queues; queue_id++) {
+		struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+		struct virtq_callback cb;
+		k_spinlock_key_t key;
+		bool pending;
 
-	if (vq_ctx && vq_ctx->queue_notify_cb.cb) {
-		vq_ctx->queue_notify_cb.cb(dev, queue_id, vq_ctx->queue_notify_cb.data);
+		key = k_spin_lock(&vq_ctx->lock);
+		pending = atomic_cas(&vq_ctx->queue_notify_pending, 1, 0);
+		cb = vq_ctx->queue_notify_cb;
+		k_spin_unlock(&vq_ctx->lock, key);
+
+		if (pending && cb.cb) {
+			cb.cb(dev, queue_id, cb.data);
+		}
+
+		if (atomic_get(&vq_ctx->queue_notify_pending) != 0) {
+			needs_reschedule = true;
+		}
+	}
+
+	if (needs_reschedule) {
+		k_work_reschedule_for_queue(&data->workq, &data->isr_work, K_NO_WAIT);
 	}
 }
 
@@ -1015,7 +1132,8 @@ static void init_workhandler(struct k_work *work)
 		goto retry;
 	}
 
-	ret = dmop_map_io_range_to_ioreq_server(data->fe.domid, data->fe.servid, 1, data->fe.base,
+	ret = dmop_map_io_range_to_ioreq_server(data->fe.domid, data->fe.servid,
+						XEN_DMOP_IO_RANGE_MEMORY, data->fe.base,
 						data->fe.base + config->reg_size - 1);
 	if (ret < 0) {
 		LOG_ERR("dmop_map_io_range_to_ioreq_server err=%d", ret);
@@ -1030,7 +1148,13 @@ static void init_workhandler(struct k_work *work)
 	}
 
 	device_map(&va, (gfn << XEN_PAGE_SHIFT), (n_frms << XEN_PAGE_SHIFT), K_MEM_CACHE_NONE);
+	if (va == 0U) {
+		LOG_ERR("device_map failed for shared iopage");
+		ret = -EIO;
+		goto retry;
+	}
 	data->shared_iopage = (void *)va;
+	data->shared_iopage_size = (size_t)n_frms << XEN_PAGE_SHIFT;
 
 	ret = dmop_set_ioreq_server_state(data->fe.domid, data->fe.servid, 1);
 	if (ret) {
@@ -1051,8 +1175,17 @@ static void init_workhandler(struct k_work *work)
 	}
 	data->ioserv_port = ret;
 
-	bind_event_channel(data->ioserv_port, ioreq_server_cb, (void *)dev);
-	unmask_event_channel(data->ioserv_port);
+	ret = bind_event_channel(data->ioserv_port, ioreq_server_cb, (void *)dev);
+	if (ret < 0) {
+		LOG_ERR("bind_event_channel err=%d", ret);
+		goto retry;
+	}
+
+	ret = unmask_event_channel(data->ioserv_port);
+	if (ret < 0) {
+		LOG_ERR("unmask_event_channel err=%d", ret);
+		goto retry;
+	}
 
 	LOG_INF("%s: backend ready base=%zx fe.domid=%d irq=%d vcpus=%d shared_iopage=%p "
 		"ioserv_port=%d",
@@ -1067,6 +1200,7 @@ retry:
 	if (ret < 0) {
 		const uint32_t retry_count = MIN(RETRY_BACKOFF_EXP_MAX, atomic_inc(&data->retry));
 
+		vhost_xen_mmio_cleanup_init_resources(dev);
 		reset_device(dev);
 		k_work_schedule_for_queue(&data->workq, &data->init_work,
 					  K_MSEC(RETRY_DELAY_BASE_MS * (1 << retry_count)));
@@ -1079,13 +1213,16 @@ static bool vhost_xen_mmio_virtq_is_ready(const struct device *dev, uint16_t que
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	const struct vhost_xen_mmio_data *data = dev->data;
-	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	const size_t queue_size = atomic_get(&vq_ctx->queue_size);
+	const struct virtq_context *vq_ctx;
+	size_t queue_size;
 
 	if (queue_id >= config->num_queues) {
 		LOG_ERR_Q("Invalid queue ID");
 		return false;
 	}
+
+	vq_ctx = &data->vq_ctx[queue_id];
+	queue_size = atomic_get(&vq_ctx->queue_size);
 
 	if (queue_size == 0) {
 		return false;
@@ -1119,12 +1256,14 @@ static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	const struct vhost_xen_mmio_data *data = dev->data;
-	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	const struct virtq_context *vq_ctx;
 
 	if (queue_id >= config->num_queues) {
 		LOG_ERR_Q("Invalid queue ID");
 		return -EINVAL;
 	}
+
+	vq_ctx = &data->vq_ctx[queue_id];
 
 	if (!vhost_xen_mmio_virtq_is_ready(dev, queue_id)) {
 		LOG_ERR_Q("not ready");
@@ -1202,17 +1341,19 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	const size_t queue_size = atomic_get(&vq_ctx->queue_size);
+	struct virtq_context *vq_ctx;
+	size_t queue_size;
 	int ret = 0;
 
-	k_spinlock_key_t key = k_spin_lock(&vq_ctx->lock);
-
 	if (queue_id >= config->num_queues) {
-		LOG_ERR_Q("Invalid queue ID");
-		k_spin_unlock(&vq_ctx->lock, key);
+		LOG_ERR("%s[%u]: Invalid queue ID", __func__, queue_id);
 		return -EINVAL;
 	}
+
+	vq_ctx = &data->vq_ctx[queue_id];
+	queue_size = atomic_get(&vq_ctx->queue_size);
+
+	k_spinlock_key_t key = k_spin_lock(&vq_ctx->lock);
 
 	if (head >= queue_size) {
 		LOG_ERR_Q("Invalid head: head=%u >= queue_size=%zu", head, queue_size);
@@ -1264,16 +1405,19 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	const size_t queue_size = atomic_get(&vq_ctx->queue_size);
+	struct virtq_context *vq_ctx;
+	size_t queue_size;
 	size_t total_pages = 0;
 	int ret = 0;
 
 	if (queue_id >= config->num_queues) {
-		LOG_ERR_Q("Invalid queue ID");
+		LOG_ERR("%s[%u]: Invalid queue ID", __func__, queue_id);
 		ret = -EINVAL;
 		goto end;
 	}
+
+	vq_ctx = &data->vq_ctx[queue_id];
+	queue_size = atomic_get(&vq_ctx->queue_size);
 
 	if (head >= queue_size) {
 		LOG_ERR_Q("Invalid head: head=%u >= queue_size=%zu", head, queue_size);
@@ -1282,16 +1426,13 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	}
 
 	for (size_t i = 0; i < bufs_count; i++) {
-		const uint64_t start_page = bufs[i].gpa >> XEN_PAGE_SHIFT;
-		const uint64_t end_page = (bufs[i].gpa + bufs[i].len - 1) >> XEN_PAGE_SHIFT;
-
 		if (!(bufs[i].gpa & XEN_GRANT_ADDR_OFF)) {
 			LOG_ERR_Q("addr missing grant marker: 0x%" PRIx64, bufs[i].gpa);
 			ret = -EINVAL;
 			goto end;
 		}
 
-		total_pages += end_page - start_page + 1;
+		total_pages += vhost_xen_mmio_pages_required(bufs[i].gpa, bufs[i].len);
 	}
 
 	if (total_pages == 0) {
@@ -1357,12 +1498,14 @@ static int vhost_xen_mmio_register_virtq_notify_cb(const struct device *dev, uin
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	struct virtq_context *vq_ctx;
 
 	if (queue_id >= config->num_queues) {
-		LOG_ERR_Q("Invalid queue ID");
+		LOG_ERR("%s[%u]: Invalid queue ID", __func__, queue_id);
 		return -EINVAL;
 	}
+
+	vq_ctx = &data->vq_ctx[queue_id];
 
 	k_spinlock_key_t key = k_spin_lock(&vq_ctx->lock);
 
@@ -1403,7 +1546,12 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	atomic_set(&data->be.status, 0);
 	atomic_set(&data->be.queue_sel, 0);
 	atomic_set(&data->be.irq_status, 0);
-	atomic_set(&data->notify_queue_id, 0);
+	vhost_xen_mmio_reset_frontend_state(data);
+
+	for (size_t i = 0; i < config->num_queues; i++) {
+		atomic_set(&data->vq_ctx[i].queue_notify_pending, 0);
+		atomic_set(&data->vq_ctx[i].queue_ready_notified, 0);
+	}
 
 	if (!xen_event_initialized) {
 		xen_event_initialized = 1;
@@ -1470,9 +1618,13 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	};                                                                                         \
 	static struct vhost_xen_mmio_data vhost_xen_mmio_data_##idx = {                            \
 		.vq_ctx = vhost_xen_mmio_vq_ctx_##idx,                                             \
-		.fe.base = -1,                                                                     \
-		.ioserv_port = -1,                                                                 \
-		.fe.servid = -1,                                                                   \
+		.xs_port = INVALID_EVTCHN_PORT,                                                    \
+		.ioserv_port = INVALID_EVTCHN_PORT,                                                \
+		.fe.base = INVALID_MMIO_BASE,                                                      \
+		.fe.servid = INVALID_IOSERVID,                                                     \
+		.fe.domid = DOMID_INVALID,                                                         \
+		.fe.deviceid = INVALID_VIRTIO_DEVICE_ID,                                           \
+		.fe.irq = INVALID_VIRTIO_IRQ,                                                      \
 	};                                                                                         \
 	DEVICE_DT_INST_DEFINE(idx, vhost_xen_mmio_init, NULL, &vhost_xen_mmio_data_##idx,          \
 			      &vhost_xen_mmio_config_##idx, POST_KERNEL,                           \
