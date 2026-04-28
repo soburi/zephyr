@@ -311,7 +311,9 @@ static int ltr55x_channel_light_get(const struct device *dev, struct sensor_valu
 
 	if ((data->als_ch0 == 0) && (data->als_ch1 == 0)) {
 		LOG_WRN("Both channels are zero; cannot compute ratio");
-		return -EINVAL;
+		val->val1 = 0;
+		val->val2 = 0;
+		return 0;
 	}
 
 	/* Calculate lux value according to the appendix A of the datasheet. */
@@ -328,7 +330,9 @@ static int ltr55x_channel_light_get(const struct device *dev, struct sensor_valu
 		lux = (UINT64_C(592600) * data->als_ch0 + UINT64_C(118500) * data->als_ch1);
 	} else {
 		LOG_WRN("Invalid ratio: %llu", scaled_ratio);
-		return -EINVAL;
+		val->val1 = 0;
+		val->val2 = 0;
+		return 0;
 	}
 
 	/* Adjust lux value for gain and integration time.
