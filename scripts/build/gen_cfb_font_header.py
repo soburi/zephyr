@@ -33,11 +33,11 @@ def generate_element(image, charcode):
     if args.hpack:
         for row in range(0, height):
             packed = []
-            for octet in range(0, int(width / 8)):
+            for octet in range(0, int((width + 7) / 8)):
                 value = ""
                 for bit in range(0, 8):
                     col = octet * 8 + bit
-                    if pixels[col, row]:
+                    if col >= width or pixels[col, row]:
                         value = value + "0"
                     else:
                         value = value + "1"
@@ -90,7 +90,7 @@ def extract_font_glyphs():
 
     # Round the packed length up to pack into bytes.
     if args.hpack:
-        width = 8 * int((fw_max + 7) / 8)
+        width = fw_max
         height = fh_max + args.y_offset
     else:
         width = fw_max
@@ -189,7 +189,7 @@ static const uint8_t cfb_font_{name:s}_{width:d}{height:d}[{elem:d}][{b:.0f}] = 
             width=args.width,
             height=args.height,
             elem=args.last - args.first + 1,
-            b=args.width / 8 * args.height,
+            b=((args.width + 7) // 8 if args.hpack else args.width / 8) * args.height,
         )
     )
 

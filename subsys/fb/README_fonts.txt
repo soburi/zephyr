@@ -17,3 +17,15 @@ ${ZEPHYR_BASE}/scripts/build/gen_cfb_font_header.py \
   -i DroidSansMono.ttf \
   -x 20 -y 32 -s 30 --center-x --y-offset -3 \
   -o cfbv_2032
+${ZEPHYR_BASE}/scripts/build/gen_cfb_font_header.py \
+  -i DroidSansMono.ttf \
+  -x 10 -y 16 -s 14 --center-x --hpack \
+  -o cfbh_1016
+${ZEPHYR_BASE}/scripts/build/gen_cfb_font_header.py \
+  -i DroidSansMono.ttf \
+  -x 15 -y 24 -s 22 --center-x --y-offset -2 --hpack \
+  -o cfbh_1524
+${ZEPHYR_BASE}/scripts/build/gen_cfb_font_header.py \
+  -i DroidSansMono.ttf \
+  -x 20 -y 32 -s 30 --center-x --y-offset -3 --hpack \
+  -o cfbh_2032
