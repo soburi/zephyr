@@ -56,7 +56,7 @@
  */
 
 #define GPIOPORT_DEVICE_IS_ACTIVE(port)					\
-	DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio##port))
+	DT_NODE_HAS_COMPAT_STATUS(DT_NODELABEL(gpio##port), st_stm32_gpio, okay)
 #define GET_GPIOPORT_DEVICE_OR_NULL(port)				\
 	DEVICE_DT_GET_OR_NULL(DT_NODELABEL(gpio##port))
 
@@ -335,7 +335,8 @@ __maybe_unused static int stm32_gpioport_init(const struct device *dev)
 			 STM32_PORT##__SUFFIX)
 
 #define GPIO_PORT_DEVICE_INIT_STM32_IF_OKAY(__suffix, __SUFFIX)			\
-	IF_ENABLED(DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio##__suffix)),	\
+	IF_ENABLED(DT_NODE_HAS_COMPAT_STATUS(DT_NODELABEL(gpio##__suffix),	\
+					     st_stm32_gpio, okay),		\
 		   (GPIO_PORT_DEVICE_INIT_STM32(__suffix, __SUFFIX)))
 
 #define DEVICE_INIT_IF_OKAY(idx, __suffix)				\
