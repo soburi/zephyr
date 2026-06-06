@@ -17,10 +17,16 @@ LOG_MODULE_REGISTER(vhost_vringh, CONFIG_VHOST_LOG_LEVEL);
 static int vringh_init(struct vringh *vrh, uint64_t features, uint16_t num, bool weak_barriers,
 		       struct virtq_desc *desc, struct virtq_avail *avail, struct virtq_used *used)
 {
-	ARG_UNUSED(features);
-
 	if (!vrh || !desc || !avail || !used || num == 0U || !IS_POWER_OF_TWO(num)) {
 		return -EINVAL;
+	}
+
+	if ((features & BIT_ULL(VIRTIO_RING_F_EVENT_IDX)) != 0U) {
+		return -ENOTSUP;
+	}
+
+	if ((features & BIT_ULL(VIRTIO_RING_F_INDIRECT_DESC)) != 0U) {
+		return -ENOTSUP;
 	}
 
 	memset(vrh, 0, sizeof(*vrh));
@@ -30,7 +36,6 @@ static int vringh_init(struct vringh *vrh, uint64_t features, uint16_t num, bool
 	vrh->last_avail_idx = 0;
 	vrh->last_used_idx = 0;
 	vrh->completed = 0;
-
 	vrh->vring.num = num;
 	vrh->vring.desc = desc;
 	vrh->vring.avail = avail;
