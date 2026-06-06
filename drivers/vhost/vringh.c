@@ -344,6 +344,13 @@ int vringh_abandon(struct vringh *vrh, uint32_t num)
 		const uint16_t head = sys_le16_to_cpu(vr->avail->ring[slot]);
 		int ret;
 
+		if (head >= vr->num) {
+			LOG_ERR("Invalid descriptor head: %u >= %u", head, vr->num);
+			vhost_set_device_status(vrh->dev, DEVICE_STATUS_FAILED);
+			rc = -EINVAL;
+			continue;
+		}
+
 		ret = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
 		if (ret < 0) {
 			LOG_ERR("vhost_release_iovec failed: %d", ret);
