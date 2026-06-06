@@ -396,7 +396,7 @@ int vringh_need_notify(struct vringh *vrh)
 
 void vringh_notify(struct vringh *vrh)
 {
-	if ((vrh == NULL) || (vrh->dev == NULL)) {
+	if ((vrh == NULL) || (vrh->dev == NULL) || (vrh->vring.avail == NULL)) {
 		return;
 	}
 
