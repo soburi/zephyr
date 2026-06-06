@@ -166,11 +166,11 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
  * @warning Do not call multiple times for the same descriptor
  *
  * @code{.c}
- * // After processing a descriptor chain
+ * /* After processing a descriptor chain */
  * uint32_t bytes_written = generate_response(&wiov);
  * int ret = vringh_complete(&vrh, head, bytes_written);
  * if (ret == 0) {
- *     // Check if guest notification needed
+ *     /* Check if guest notification needed */
  *     if (vringh_need_notify(&vrh) > 0) {
  *         vringh_notify(&vrh);
  *     }
