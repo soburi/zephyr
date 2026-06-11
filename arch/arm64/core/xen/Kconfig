@@ -17,8 +17,18 @@ config XEN
 config XEN_DOM0
 	bool "Zephyr as Xen Domain 0"
 	depends on XEN
+	select XEN_TOOLS
 	help
 	  Built binary will be used as Xen privileged domain (Domain 0).
+
+config XEN_TOOLS
+	bool "Use the privileged Xen tools interface"
+	depends on XEN
+	help
+	  Build against the Xen tools interface (__XEN_TOOLS__). This exposes
+	  hypercall interfaces that require toolstack privileges, such as
+	  dm_op and XENMEM_acquire_resource. Enable this for domains that act
+	  as device model or driver domains but are not Domain 0.
 
 config XEN_DOM0LESS
 	bool "Zephyr for Xen Dom0less setup"
