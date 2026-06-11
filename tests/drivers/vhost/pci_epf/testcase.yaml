@@ -1,0 +1,10 @@
+tests:
+  drivers.vhost.pci_epf:
+    tags:
+      - drivers
+      - vhost
+    platform_allow:
+      - native_sim
+      - qemu_cortex_a53
+    integration_platforms:
+      - native_sim

@@ -68,6 +68,57 @@ config VHOST_XEN_MMIO_VCPUS_MAX
 
 endif # VHOST_XEN_MMIO
 
+config VHOST_PCI_EPF
+	bool "VIRTIO legacy PCI backend over a PCI endpoint function"
+	default y
+	depends on DT_HAS_ZEPHYR_VHOST_PCI_EPF_ENABLED
+	depends on !BIG_ENDIAN
+	select PCI_EPF
+	help
+	  Expose a VHost backend as a legacy (transitional) virtio-pci
+	  function through the PCI Endpoint Function framework. A host
+	  connected to the endpoint port enumerates a virtio-pci device
+	  whose virtqueues are served by this Zephyr device.
+
+	  The legacy register interface is emulated in a memory-backed
+	  BAR that is polled for changes; virtqueue rings and buffers in
+	  host memory are accessed through the endpoint controller's
+	  outbound windows. MSI-X support in the endpoint controller is
+	  required for host interrupt delivery.
+
+if VHOST_PCI_EPF
+
+config VHOST_PCI_EPF_POLL_PERIOD_US
+	int "Register poll period in microseconds"
+	default 500
+	range 10 1000000
+	help
+	  Period at which the BAR register block is polled for host
+	  writes. Host register writes do not generate events on the
+	  endpoint, so this value bounds the latency of queue
+	  notifications and configuration changes.
+
+config VHOST_PCI_EPF_INFLIGHT_CHAINS_MAX
+	int "Maximum number of in-flight descriptor chains per queue"
+	default 16
+	range 1 1024
+	help
+	  Number of descriptor chains per queue that can be mapped
+	  concurrently (between vhost_prepare_iovec() and
+	  vhost_release_iovec()). The mapping bookkeeping is allocated
+	  statically from a memory slab sized by this value.
+
+config VHOST_PCI_EPF_INIT_PRIORITY
+	int "Init priority"
+	default 99
+	help
+	  Device initialization priority. Must be higher (later) than the
+	  initialization priority of the PCI endpoint controller driver,
+	  because the endpoint function can only bind to an already
+	  registered controller.
+
+endif # VHOST_PCI_EPF
+
 endif # VHOST
 
 module = VHOST

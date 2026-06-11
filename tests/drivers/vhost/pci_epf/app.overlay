@@ -1,0 +1,18 @@
+/*
+ * Copyright (c) 2026 TOKITA Hiroshi
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	vhost_epf: vhost-pci-epf {
+		compatible = "zephyr,vhost-pci-epf";
+		epc-name = "FAKE_EPC";
+		num-queues = <2>;
+		queue-size-max = <4>;
+		device-id = <4>;
+		pci-device-id = <0x1005>;
+		device-features = <0x30>;
+		config-data = [aa bb cc dd];
+	};
+};

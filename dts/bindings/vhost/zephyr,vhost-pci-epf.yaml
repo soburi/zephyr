@@ -1,0 +1,95 @@
+# Copyright (c) 2026 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  VIRTIO backend (VHost) exposed as a legacy (transitional) virtio-pci
+  function through the PCI Endpoint Function framework.
+
+  A host (root complex) connected to the endpoint port enumerates a
+  legacy virtio-pci device whose virtqueues are served by this Zephyr
+  device through the VHost API. The legacy register interface is used
+  because it lives entirely in BAR0; the modern interface would require
+  vendor-specific capabilities in the configuration space, which
+  endpoint controller hardware generally cannot provide.
+
+  One of "epc" or "epc-name" must be provided to select the PCI
+  endpoint controller the function is bound to.
+
+compatible: "zephyr,vhost-pci-epf"
+
+include: base.yaml
+
+properties:
+  epc:
+    type: phandle
+    description: |
+      PCI endpoint controller (EPC) device the function binds to.
+
+  epc-name:
+    type: string
+    description: |
+      Device name of the PCI endpoint controller the function binds to.
+      Used when the EPC is not described in the devicetree. Ignored if
+      "epc" is present.
+
+  num-queues:
+    type: int
+    required: true
+    description: |
+      Number of virtqueues exposed by this device instance.
+
+  queue-size-max:
+    type: int
+    required: true
+    description: |
+      Number of entries in each virtqueue. Must be a power of two. The
+      legacy virtio-pci interface does not negotiate the queue size, so
+      drivers use exactly this size.
+
+  device-id:
+    type: int
+    required: true
+    description: |
+      Virtio device ID value, as defined by the VIRTIO Specification,
+      identifying the type of device implemented by this instance. It is
+      reported in the PCI subsystem device ID register, as required by
+      the legacy interface.
+
+  pci-device-id:
+    type: int
+    required: true
+    description: |
+      PCI device ID of the function. Transitional virtio-pci devices use
+      0x1000 to 0x103f (for example 0x1000 for network, 0x1001 for
+      block, 0x1005 for entropy).
+
+  vendor-id:
+    type: int
+    default: 0x1af4
+    description: |
+      PCI vendor ID of the function. Defaults to the virtio vendor ID
+      (Red Hat, 0x1af4).
+
+  device-features:
+    type: int
+    default: 0
+    description: |
+      Device feature bits offered to the driver. The legacy interface
+      carries only feature bits 0-31, so transport feature bits such as
+      VIRTIO_F_VERSION_1 cannot be offered.
+
+  config-data:
+    type: uint8-array
+    description: |
+      Device-specific configuration space content, placed after the
+      legacy virtio header in BAR0.
+
+  stack-size:
+    type: int
+    description: |
+      Stack size (in bytes) for the instance-specific work_q thread.
+
+  priority:
+    type: int
+    description: |
+      Priority for the instance-specific work_q thread.
