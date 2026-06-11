@@ -1,0 +1,20 @@
+# Copyright (c) 2026 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+config PCI_EPF
+	bool "PCI Endpoint Function framework"
+	help
+	  Enable the PCI Endpoint Function (EPF) framework. The framework
+	  splits endpoint support into endpoint controller (EPC) drivers,
+	  which program the endpoint hardware, and endpoint function (EPF)
+	  drivers, which implement the behavior of a PCI function (its
+	  configuration header, BARs and interrupts). The design follows
+	  the Linux/NuttX PCI endpoint framework.
+
+if PCI_EPF
+
+module = PCI_EPF
+module-str = pci_epf
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # PCI_EPF

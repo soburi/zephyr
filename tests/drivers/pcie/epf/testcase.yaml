@@ -1,0 +1,10 @@
+tests:
+  drivers.pcie.epf.api:
+    tags:
+      - drivers
+      - pcie
+    platform_allow:
+      - native_sim
+      - qemu_cortex_a53
+    integration_platforms:
+      - native_sim
