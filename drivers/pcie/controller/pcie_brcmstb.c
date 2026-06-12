@@ -149,6 +149,7 @@ LOG_MODULE_REGISTER(pcie_brcmstb, LOG_LEVEL_ERR);
 #define SET_ADDR_OFFSET 0x1f
 
 #define DMA_RANGES_IDX 2
+#define MIP_RANGES_IDX 3
 
 #define PCIE_ECAM_BDF_SHIFT 12
 
@@ -521,6 +522,29 @@ static int pcie_brcmstb_setup(const struct device *dev)
 	tmp &= ~PCIE_MISC_RC_BAR3_CONFIG_LO_SIZE_MASK;
 	sys_write32(tmp, data->cfg_addr + PCIE_MISC_RC_BAR3_CONFIG_LO);
 
+	/*
+	 * Inbound window for the MIP MSI-X target: MSI writes from the
+	 * endpoint are forwarded to the MIP, which raises GIC SPIs.
+	 */
+	if (config->common->ranges_count > MIP_RANGES_IDX) {
+		uint64_t mip_pci_addr = config->common->ranges[MIP_RANGES_IDX].pcie_bus_addr;
+		uint64_t mip_cpu_addr = config->common->ranges[MIP_RANGES_IDX].host_map_addr;
+		uint64_t mip_size = config->common->ranges[MIP_RANGES_IDX].map_length;
+
+		tmp = lower_32_bits(mip_pci_addr);
+		tmp &= ~PCIE_MISC_RC_BAR_CONFIG_LO_SIZE_MASK;
+		tmp |= encode_ibar_size(mip_size);
+		sys_write32(tmp, data->cfg_addr + PCIE_MISC_RC_BAR4_CONFIG_LO);
+		sys_write32(upper_32_bits(mip_pci_addr),
+			    data->cfg_addr + PCIE_MISC_RC_BAR4_CONFIG_HI);
+
+		tmp = lower_32_bits(mip_cpu_addr) & PCIE_MISC_UBUS_BAR_CONFIG_REMAP_LO_MASK;
+		tmp |= PCIE_MISC_UBUS_BAR_CONFIG_REMAP_ENABLE;
+		sys_write32(tmp, data->cfg_addr + PCIE_MISC_UBUS_BAR4_CONFIG_REMAP_LO);
+		sys_write32(upper_32_bits(mip_cpu_addr) & PCIE_MISC_UBUS_BAR_CONFIG_REMAP_HI_MASK,
+			    data->cfg_addr + PCIE_MISC_UBUS_BAR4_CONFIG_REMAP_HI);
+	}
+
 	/* Set gen to 2 */
 	tmp16 = sys_read16(data->cfg_addr + BRCM_PCIE_CAP_REGS + PCI_EXP_LNKCTL2);
 	tmp = sys_read32(data->cfg_addr + BRCM_PCIE_CAP_REGS + PCI_EXP_LNKCAP);
@@ -595,9 +619,9 @@ static int pcie_brcmstb_init(const struct device *dev)
 							  PCI_BASE_ADDRESS_0 + 0x4 * (i - 1));
 	}
 
-	/* Enable resources */
+	/* Enable resources and bus-mastering so the endpoint can issue MSI writes */
 	tmp = sys_read32(data->cfg_addr + PCIE_EXT_CFG_DATA + PCI_COMMAND);
-	tmp |= PCI_COMMAND_MEMORY;
+	tmp |= (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
 	sys_write32(tmp, data->cfg_addr + PCIE_EXT_CFG_DATA + PCI_COMMAND);
 	k_busy_wait(500000);
 
