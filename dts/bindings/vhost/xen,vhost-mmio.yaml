@@ -41,6 +41,14 @@ properties:
       Virtio vendor ID value reported by the device. A value of 0 selects the
       implementation-defined or Xen-provided default vendor ID.
 
+  domid:
+    type: int
+    description: |
+      Frontend domain ID this instance serves. When set, the backend only
+      matches frontends in that domain, allowing multiple frontend domains
+      to use the same MMIO base address. When absent, the first frontend
+      whose base address matches is used, regardless of domain.
+
   stack-size:
     type: int
     description: |

@@ -118,6 +118,9 @@ struct virtq_context {
 	struct k_spinlock lock;
 };
 
+/* Value of fe_domid when no `domid` devicetree property is set: match any domain */
+#define FE_DOMID_ANY UINT32_MAX
+
 struct vhost_xen_mmio_config {
 	k_thread_stack_t *workq_stack;
 	size_t workq_stack_size;
@@ -127,8 +130,9 @@ struct vhost_xen_mmio_config {
 
 	uint16_t num_queues;
 	uint16_t queue_size_max;
-	uint8_t device_id;
+	uint32_t device_id;
 	uint32_t vendor_id;
+	uint32_t fe_domid;
 	uintptr_t base;
 	size_t reg_size;
 	const uint8_t *config_data;
@@ -794,8 +798,8 @@ static bool match_backend_params(domid_t domid, uint32_t deviceid, const struct 
  * Find a VIRTIO frontend matching @a params by scanning
  * backend/virtio/<domid>/<deviceid> in XenStore.
  */
-static int query_virtio_backend(const struct query_param *params, size_t param_num, domid_t *domid,
-				uint32_t *deviceid)
+static int query_virtio_backend(const struct query_param *params, size_t param_num,
+				uint32_t domid_filter, domid_t *domid, uint32_t *deviceid)
 {
 	char doms[XS_VALUE_LEN];
 	char devs[XS_VALUE_LEN];
@@ -811,6 +815,10 @@ static int query_virtio_backend(const struct query_param *params, size_t param_n
 		uint32_t dom;
 
 		if (parse_id(nth_str(doms, doms_len, i), &dom) < 0) {
+			continue;
+		}
+
+		if (domid_filter != FE_DOMID_ANY && dom != domid_filter) {
 			continue;
 		}
 
@@ -946,7 +954,9 @@ static void init_workhandler(struct k_work *work)
 	/*
 	 * The frontend is matched by comparing the "base" property in
 	 * XenStore against this instance's base address. If multiple
-	 * frontends use the same base address, they cannot be told apart.
+	 * frontends use the same base address, they cannot be told apart
+	 * unless the instance is pinned to a domain with the `domid`
+	 * devicetree property.
 	 */
 	snprintf(baseaddr, sizeof(baseaddr), "0x%lx", config->base);
 
@@ -955,7 +965,8 @@ static void init_workhandler(struct k_work *work)
 		.expected = baseaddr,
 	}};
 
-	ret = query_virtio_backend(params, ARRAY_SIZE(params), &data->fe.domid, &data->fe.deviceid);
+	ret = query_virtio_backend(params, ARRAY_SIZE(params), config->fe_domid, &data->fe.domid,
+				   &data->fe.deviceid);
 	if (ret < 0) {
 		LOG_DBG("no matching frontend yet: %d", ret);
 		goto retry;
@@ -1362,6 +1373,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.num_queues = Q_NUM(idx),                                                          \
 		.device_id = DT_INST_PROP(idx, device_id),                                         \
 		.vendor_id = DT_INST_PROP_OR(idx, vendor_id, 0),                                   \
+		.fe_domid = DT_INST_PROP_OR(idx, domid, FE_DOMID_ANY),                             \
 		.base = DT_INST_PROP(idx, base),                                                   \
 		.reg_size = XEN_PAGE_SIZE,                                                         \
 		.config_data = config_data##idx,                                                   \

@@ -33,4 +33,51 @@ config HEAP_MEM_POOL_ADD_SIZE_VIRTIO
 	help
 	  Set the size of the heap memory pool for VIRTIO.
 
+config VIRTIO_ZENOH
+	bool "VIRTIO Zenoh device driver"
+	default y
+	depends on DT_HAS_VIRTIO_DEVICE32769_ENABLED
+	help
+	  Driver for the experimental virtio-zenoh device (device ID 32769).
+	  Provides a frame-oriented inter-VM IPC channel intended to carry
+	  Zenoh transport messages.
+
+if VIRTIO_ZENOH
+
+config VIRTIO_ZENOH_BUF_SIZE
+	int "Frame buffer size in bytes"
+	default 2048
+	help
+	  Size of each receive and transmit frame buffer. Bounds the
+	  effective MTU of the link.
+
+config VIRTIO_ZENOH_RX_BUF_COUNT
+	int "Number of receive buffers"
+	default 4
+	help
+	  Number of receive buffers kept posted on the rx virtqueue.
+
+config VIRTIO_ZENOH_TX_BUF_COUNT
+	int "Number of transmit buffers"
+	default 4
+	help
+	  Number of transmit buffers. Bounds the number of frames that can
+	  be in flight on the tx virtqueue.
+
+config VIRTIO_ZENOH_QUEUE_SIZE
+	int "Requested virtqueue size"
+	default 8
+	help
+	  Requested size for the rx and tx virtqueues. Must be a power of
+	  two; the actual size is limited by the device maximum.
+
+config VIRTIO_ZENOH_INIT_PRIORITY
+	int "Init priority"
+	default 60
+	help
+	  Device driver initialization priority. Must be greater than the
+	  initialization priority of the underlying VIRTIO transport.
+
+endif # VIRTIO_ZENOH
+
 endif # VIRTIO

@@ -38,3 +38,12 @@
 		zephyr,random-mac-address;
 	};
 };
+
+&virtio_mmio3 {
+	status = "okay";
+
+	virtio_zenoh: virtio-zenoh {
+		compatible = "virtio,device32769";
+		status = "okay";
+	};
+};
