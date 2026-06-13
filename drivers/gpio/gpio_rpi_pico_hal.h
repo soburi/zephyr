@@ -133,4 +133,10 @@ static inline bool gpio_has_pending_irq()
 	return 0;
 }
 
+/* The Pico delivers its bank interrupt directly; no extra routing setup */
+static inline int gpio_rpi_hal_irq_setup(void)
+{
+	return 0;
+}
+
 #endif /* ZEPHYR_DRIVERS_GPIO_GPIO_HAL_RPI_PICO_HAL_H_ */

@@ -17,6 +17,15 @@ properties:
   reg:
     required: true
 
+  msi-parent:
+    type: phandle
+    description: |
+      MSI controller (BCM2712 MIP) that receives the RP1 IO bank
+      MSI-X messages. On the Raspberry Pi 5 the bank interrupts reach
+      the host as PCIe MSI-X messages translated into GIC SPIs. The
+      interrupts SPI number must equal the MIP's brcm,msi-base-spi
+      plus the bank's MSI-X vector number.
+
 child-binding:
   description: |
     Pin controller state node.

@@ -336,6 +336,7 @@ static int gpio_rpi_bank_init(const struct device *dev)
 	IF_ENABLED(IS_GPIO_RPI_LO_NODE(node_id), (                                                 \
 		static void bank_##node_id##_config_func(void)                                     \
 		{                                                                                  \
+			gpio_rpi_hal_irq_setup();                                                  \
 			IRQ_CONNECT(DT_IRQN(DT_PARENT(node_id)),                                   \
 				    DT_IRQ(DT_PARENT(node_id), priority),                          \
 				    gpio_rpi_isr, DEVICE_DT_GET(node_id), 0);                      \

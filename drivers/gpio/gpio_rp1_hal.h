@@ -12,6 +12,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/gpio/gpio_rp1.h>
 #include <zephyr/drivers/gpio/gpio_utils.h>
+#include <zephyr/drivers/interrupt_controller/gic.h>
+#include <zephyr/drivers/pcie/controller.h>
 #include <zephyr/irq.h>
 
 #include "gpio_rpi_pico.h"
@@ -25,10 +27,14 @@
 #define GPIO_CTRL_ADDR(port, n)   (GPIO_STATUS_ADDR(port, n) + 0x4)
 #define PADS_CTRL_ADDR(port, n)   (DEVICE_MMIO_NAMED_GET(port, pads) + 0x4 * (n))
 
-#define GPIO_INTR_ADDR(port) (DEVICE_MMIO_NAMED_GET(port, gpio) + 0x100)
-#define GPIO_INTE_ADDR(port) (DEVICE_MMIO_NAMED_GET(port, gpio) + 0x104)
-#define GPIO_INTF_ADDR(port) (DEVICE_MMIO_NAMED_GET(port, gpio) + 0x108)
-#define GPIO_INTS_ADDR(port) (DEVICE_MMIO_NAMED_GET(port, gpio) + 0x10c)
+/*
+ * Interrupt summary registers of the PCIE destination, which is the
+ * one wired towards the host on the Raspberry Pi 5. The registers at
+ * 0x100-0x118 are the raw INTR and the PROC0/PROC1 destinations.
+ */
+#define GPIO_INTE_ADDR(port) (DEVICE_MMIO_NAMED_GET(port, gpio) + 0x11c)
+#define GPIO_INTF_ADDR(port) (DEVICE_MMIO_NAMED_GET(port, gpio) + 0x120)
+#define GPIO_INTS_ADDR(port) (DEVICE_MMIO_NAMED_GET(port, gpio) + 0x124)
 #define RIO_OUT_ADDR(port)   (DEVICE_MMIO_NAMED_GET(port, rio) + 0x0)
 #define RIO_OE_ADDR(port)    (DEVICE_MMIO_NAMED_GET(port, rio) + 0x4)
 #define RIO_IN_ADDR(port)    (DEVICE_MMIO_NAMED_GET(port, rio) + 0x8)
@@ -44,11 +50,6 @@
 #define PADS_CTRL_SET(port, n, val) sys_write32(val, PADS_CTRL_ADDR(port, n) + RP1_ATOMIC_SET_OFF)
 #define PADS_CTRL_CLR(port, n, val) sys_write32(val, PADS_CTRL_ADDR(port, n) + RP1_ATOMIC_CLR_OFF)
 
-#define GPIO_INTR(port)          sys_read32(GPIO_INTR_ADDR(port))
-#define GPIO_INTR_RAW(port, val) sys_write32(val, GPIO_INTR_ADDR(port) + RP1_ATOMIC_RAW_OFF)
-#define GPIO_INTR_XOR(port, val) sys_write32(val, GPIO_INTR_ADDR(port) + RP1_ATOMIC_XOR_OFF)
-#define GPIO_INTR_SET(port, val) sys_write32(val, GPIO_INTR_ADDR(port) + RP1_ATOMIC_SET_OFF)
-#define GPIO_INTR_CLR(port, val) sys_write32(val, GPIO_INTR_ADDR(port) + RP1_ATOMIC_CLR_OFF)
 #define GPIO_INTE(port)          sys_read32(GPIO_INTE_ADDR(port))
 #define GPIO_INTE_RAW(port, val) sys_write32(val, GPIO_INTE_ADDR(port) + RP1_ATOMIC_RAW_OFF)
 #define GPIO_INTE_XOR(port, val) sys_write32(val, GPIO_INTE_ADDR(port) + RP1_ATOMIC_XOR_OFF)
@@ -95,6 +96,59 @@ typedef unsigned int uint;
 static const struct device *rp1_port0 =
 	DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(raspberrypi_rp1_gpio));
 
+/*
+ * The RP1 IO bank interrupts reach the host as PCIe MSI-X messages. The
+ * bank interrupt is wired to a fixed MSI-X vector, whose message is
+ * delivered to the BCM2712 MIP and converted into a GIC SPI. The setup
+ * below programs that vector and enables the capability on the endpoint.
+ *
+ * The MSI-X glue lives in the RP1 PCIE APB block, which uses the same
+ * atomic SET/CLR aliasing as the IO banks but at +0x800/+0xc00. Bank 0
+ * is hardwired to MSI-X vector 0, which is the only bank wired for
+ * interrupts here.
+ */
+#define RP1_GPIO_MSIX_VECTOR 0
+
+#define RP1_PCIE_SET_OFFSET       0x800
+#define RP1_PCIE_MSIX_CFG(base, v) ((base) + 0x8 + 0x4 * (v))
+#define RP1_PCIE_MSIX_CFG_IACK_EN 0x8
+#define RP1_PCIE_MSIX_CFG_IACK    0x4
+#define RP1_PCIE_MSIX_CFG_ENABLE  0x1
+
+/*
+ * Fixed CPU-physical addresses of the RP1 PCIE APB block (BAR1 + 0x108000)
+ * and the MSI-X table (BAR0). These are constant for the RP1 behind the
+ * BCM2712 root complex, whose BARs are assigned by the brcmstb PCIe driver.
+ */
+#define RP1_PCIE_APBS_PHYS  0x1f00108000UL
+#define RP1_MSIX_TABLE_PHYS 0x1f00410000UL
+#define RP1_PCIE_APBS_SIZE  0x1000
+#define RP1_MSIX_TABLE_SIZE 0x4000
+
+/* PCI MSI-X capability layout */
+#define PCIE_MSIX_CAP_ID        0x11U
+#define PCIE_MSIX_MCR_EN        0x80000000U
+#define PCIE_MSIX_MCR_FMASK     0x40000000U
+#define PCIE_MSIX_TR_BIR_MASK   0x7U
+#define PCIE_MSIX_ENTRY_SIZE    16
+#define PCIE_MSIX_ENTRY_ADDR_LO 0x0
+#define PCIE_MSIX_ENTRY_ADDR_HI 0x4
+#define PCIE_MSIX_ENTRY_DATA    0x8
+#define PCIE_MSIX_ENTRY_VECTOR  0xc
+
+#define RP1_GPIO_NODE     DT_COMPAT_GET_ANY_STATUS_OKAY(raspberrypi_rp1_gpio)
+#define RP1_PINCTRL_NODE  DT_PARENT(RP1_GPIO_NODE)
+#define RP1_MSI_PARENT    DT_PHANDLE(RP1_PINCTRL_NODE, msi_parent)
+
+/* The MSI data is the offset of the bank's GIC SPI from the MIP's SPI base */
+#define RP1_GPIO_MSIX_MSG_ADDR DT_REG_ADDR_BY_IDX(RP1_MSI_PARENT, 1)
+#define RP1_GPIO_MSIX_MSG_DATA                                                                      \
+	(DT_IRQN(RP1_PINCTRL_NODE) - GIC_SPI_INT_BASE -                                             \
+	 DT_PROP(RP1_MSI_PARENT, brcm_msi_base_spi))
+
+/* Mapped base of the PCIE APB block, retained for IACK on each interrupt */
+static mm_reg_t rp1_msix_apb_base;
+
 static inline bool gpio_is_pulled_up(uint pin)
 {
 	return (PADS_CTRL(rp1_port0, pin) & GPIO_PADS_PULL_UP_ENABLE_MASK) != 0;
@@ -107,7 +161,7 @@ static inline bool gpio_is_pulled_down(uint pin)
 
 static inline uint32_t gpio_get_irq_event_mask(uint pin)
 {
-	if (GPIO_INTR(rp1_port0) & BIT(pin)) {
+	if (GPIO_INTS(rp1_port0) & BIT(pin)) {
 		uint32_t ctrl = GPIO_CTRL(rp1_port0, pin);
 		uint32_t events = 0;
 
@@ -133,7 +187,19 @@ static inline uint32_t gpio_get_irq_event_mask(uint pin)
 static inline void gpio_acknowledge_irq(uint pin, uint32_t event_mask)
 {
 	(void)event_mask;
-	GPIO_INTR_RAW(rp1_port0, BIT(pin));
+	/* Clear the latched edge events */
+	GPIO_CTRL_SET(rp1_port0, pin, GPIO_CTRL_IRQRESET_MASK);
+
+	/*
+	 * Acknowledge the MSI-X vector. The bank interrupt is level-triggered,
+	 * so this re-sends the (edge) MSI if the bank is still asserting once
+	 * the source has been serviced.
+	 */
+	if (rp1_msix_apb_base != 0) {
+		sys_write32(RP1_PCIE_MSIX_CFG_IACK,
+			    RP1_PCIE_MSIX_CFG(rp1_msix_apb_base + RP1_PCIE_SET_OFFSET,
+					      RP1_GPIO_MSIX_VECTOR));
+	}
 }
 
 static inline void gpio_set_mask_n(uint n, uint32_t mask)
@@ -230,13 +296,13 @@ static inline int gpio_set_irq_enabled(uint pin, uint32_t events, bool value)
 	}
 
 	if (value) {
-		GPIO_INTR_RAW(rp1_port0, BIT(pin));
-		GPIO_INTE_SET(rp1_port0, BIT(pin));
+		GPIO_CTRL_SET(rp1_port0, pin, GPIO_CTRL_IRQRESET_MASK);
 		GPIO_CTRL_SET(rp1_port0, pin, ctrl_events);
+		GPIO_INTE_SET(rp1_port0, BIT(pin));
 	} else {
-		GPIO_INTR_RAW(rp1_port0, BIT(pin));
 		GPIO_INTE_CLR(rp1_port0, BIT(pin));
 		GPIO_CTRL_CLR(rp1_port0, pin, GPIO_CTRL_IRQMASK_ALL);
+		GPIO_CTRL_SET(rp1_port0, pin, GPIO_CTRL_IRQRESET_MASK);
 	}
 
 	return 0;
@@ -297,6 +363,79 @@ static inline void gpio_set_input_enabled_output_disabled(uint pin, bool ie, boo
 static inline bool gpio_has_pending_irq()
 {
 	return !!GPIO_INTS(rp1_port0);
+}
+
+/*
+ * Route the bank 0 interrupt to the host: program the RP1 MSI-X table
+ * entry of the bank's vector with the message that makes the MIP raise
+ * the bank's GIC SPI, enable the capability on the endpoint, and enable
+ * the vector. Called once, from the bank 0 init, after the PCIe root
+ * complex has assigned the RP1 endpoint's BARs.
+ */
+static inline int gpio_rpi_hal_irq_setup(void)
+{
+	const struct device *pcie = DEVICE_DT_GET(DT_GPARENT(RP1_PINCTRL_NODE));
+	mm_reg_t table_base;
+	mem_addr_t entry;
+	unsigned int ptr;
+	uint32_t reg;
+
+	if (!device_is_ready(pcie)) {
+		return -ENODEV;
+	}
+
+	device_map(&rp1_msix_apb_base, RP1_PCIE_APBS_PHYS, RP1_PCIE_APBS_SIZE, K_MEM_CACHE_NONE);
+	device_map(&table_base, RP1_MSIX_TABLE_PHYS, RP1_MSIX_TABLE_SIZE, K_MEM_CACHE_NONE);
+
+	/*
+	 * Find the MSI-X capability of the RP1 endpoint. BDF 0 is used since
+	 * the controller reaches the single endpoint behind the root complex
+	 * through the EXT_CFG window with index 0, the same way its init
+	 * assigns the endpoint BARs.
+	 */
+	reg = pcie_ctrl_conf_read(pcie, 0, PCIE_CONF_CAPPTR);
+	ptr = PCIE_CONF_CAPPTR_FIRST(reg);
+	while (ptr != 0) {
+		reg = pcie_ctrl_conf_read(pcie, 0, ptr);
+		if (PCIE_CONF_CAP_ID(reg) == PCIE_MSIX_CAP_ID) {
+			break;
+		}
+		ptr = PCIE_CONF_CAP_NEXT(reg);
+	}
+
+	if (ptr == 0) {
+		return -ENOTSUP;
+	}
+
+	/* The MSI-X table must live in BAR0, which is what is mapped here */
+	reg = pcie_ctrl_conf_read(pcie, 0, ptr + 1);
+	if ((reg & PCIE_MSIX_TR_BIR_MASK) != 0) {
+		return -ENOTSUP;
+	}
+
+	entry = table_base + (reg & ~PCIE_MSIX_TR_BIR_MASK) +
+		RP1_GPIO_MSIX_VECTOR * PCIE_MSIX_ENTRY_SIZE;
+	sys_write32((uint32_t)RP1_GPIO_MSIX_MSG_ADDR, entry + PCIE_MSIX_ENTRY_ADDR_LO);
+	sys_write32((uint32_t)((uint64_t)RP1_GPIO_MSIX_MSG_ADDR >> 32),
+		    entry + PCIE_MSIX_ENTRY_ADDR_HI);
+	sys_write32(RP1_GPIO_MSIX_MSG_DATA, entry + PCIE_MSIX_ENTRY_DATA);
+	sys_write32(0, entry + PCIE_MSIX_ENTRY_VECTOR);
+
+	/* Enable the MSI-X capability and clear the function mask */
+	reg = pcie_ctrl_conf_read(pcie, 0, ptr);
+	reg |= PCIE_MSIX_MCR_EN;
+	reg &= ~PCIE_MSIX_MCR_FMASK;
+	pcie_ctrl_conf_write(pcie, 0, ptr, reg);
+
+	/*
+	 * Enable the vector with the IACK mechanism, which re-sends the MSI
+	 * on acknowledge while the (level-triggered) bank is still pending.
+	 */
+	sys_write32(RP1_PCIE_MSIX_CFG_ENABLE | RP1_PCIE_MSIX_CFG_IACK_EN,
+		    RP1_PCIE_MSIX_CFG(rp1_msix_apb_base + RP1_PCIE_SET_OFFSET,
+				      RP1_GPIO_MSIX_VECTOR));
+
+	return 0;
 }
 
 #endif /* ZEPHYR_DRIVERS_GPIO_GPIO_RP1_HAL_H_ */
