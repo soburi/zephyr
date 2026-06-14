@@ -156,6 +156,7 @@
 					reg = <0x1f 0xd0000 0x128>,
 					      <0x1f 0xf0004 0x70>;
 					reg-names = "gpio", "pads";
+					msi-parent = <&mip0>;
 					#address-cells = <2>;
 					#size-cells = <1>;
 					status = "okay";
