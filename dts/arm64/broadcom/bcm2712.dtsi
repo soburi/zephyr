@@ -148,6 +148,7 @@
 			ranges = <0x02000000 0x0 0x0 0x1f 0x0 0x00 0xfffffffc>,
 				 <0x43000000 0x4 0x0 0x1c 0x0 0x03 0x00000000>,
 				 <0x02000000 0x0 0x0 0x1f 0x0 0x00 0x00400000>;
+			msi-parent = <&mip0>;
 			status = "okay";
 
 			rp1 {
@@ -173,6 +174,7 @@
 					      <0x1f 0xe8000 0x300c>;
 					reg-names = "gpio0", "pads0", "gpio1", "pads1", "gpio2", "pads2",
 						    "rio0", "rio1", "rio2";
+					interrupts = <GIC_SPI 128 IRQ_TYPE_EDGE IRQ_DEFAULT_PRIORITY>;
 					#address-cells = <1>;
 					#size-cells = <0>;
 					status = "okay";
