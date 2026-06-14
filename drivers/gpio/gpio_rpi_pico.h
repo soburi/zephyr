@@ -15,7 +15,7 @@
 #define ADDR_IS_ZERO(node_id, x)     (DT_REG_ADDR(node_id) == 0) |
 #define ADDR_IS_NON_ZERO(node_id, x) (DT_REG_ADDR(node_id) != 0) |
 
-#if DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED
+#if CONFIG_DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED
 /*
  * Each RP1 GPIO bank is described by its own node with dedicated gpio/rio/pads
  * register regions, so there is no low/high port pairing like on the Pico SoC.
@@ -32,7 +32,7 @@
 
 #define HAS_REG(node_id, regname) DT_REG_HAS_NAME(node_id, regname) ||
 
-#define GPIO_RPI_ANY_HAS_REG_NAME(reg_name)                                                        \
+#define GPIO_RPI_ANY_GPIO_HAS_REG_NAME(reg_name)                                                   \
 	(DT_FOREACH_STATUS_OKAY_VARGS(raspberrypi_rp1_gpio, HAS_REG, reg_name)                     \
 		 DT_FOREACH_STATUS_OKAY_VARGS(raspberrypi_pico_gpio_port, HAS_REG, reg_name) 0)
 
@@ -44,16 +44,16 @@ struct gpio_rpi_config {
 	void (*bank_config_func)(void);
 	void (*mmio_map_func)(void);
 	uint8_t ngpios;
-#if GPIO_RPI_ANY_HAS_REG_NAME(gpio)
+#if CONFIG_DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED || GPIO_RPI_ANY_GPIO_HAS_REG_NAME(gpio)
 	DEVICE_MMIO_NAMED_ROM(gpio);
 #endif
-#if GPIO_RPI_ANY_HAS_REG_NAME(sio)
+#if GPIO_RPI_ANY_GPIO_HAS_REG_NAME(sio)
 	DEVICE_MMIO_NAMED_ROM(sio);
 #endif
-#if GPIO_RPI_ANY_HAS_REG_NAME(rio)
+#if CONFIG_DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED || GPIO_RPI_ANY_GPIO_HAS_REG_NAME(rio)
 	DEVICE_MMIO_NAMED_ROM(rio);
 #endif
-#if GPIO_RPI_ANY_HAS_REG_NAME(pads)
+#if CONFIG_DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED || GPIO_RPI_ANY_GPIO_HAS_REG_NAME(pads)
 	DEVICE_MMIO_NAMED_ROM(pads);
 #endif
 #if GPIO_RPI_HI_AVAILABLE
@@ -66,16 +66,16 @@ struct gpio_rpi_data {
 	sys_slist_t callbacks;
 	uint32_t single_ended_mask;
 	uint32_t open_drain_mask;
-#if GPIO_RPI_ANY_HAS_REG_NAME(gpio)
+#if CONFIG_DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED || GPIO_RPI_ANY_GPIO_HAS_REG_NAME(gpio)
 	DEVICE_MMIO_NAMED_RAM(gpio);
 #endif
-#if GPIO_RPI_ANY_HAS_REG_NAME(sio)
+#if GPIO_RPI_ANY_GPIO_HAS_REG_NAME(sio)
 	DEVICE_MMIO_NAMED_RAM(sio);
 #endif
-#if GPIO_RPI_ANY_HAS_REG_NAME(rio)
+#if CONFIG_DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED || GPIO_RPI_ANY_GPIO_HAS_REG_NAME(rio)
 	DEVICE_MMIO_NAMED_RAM(rio);
 #endif
-#if GPIO_RPI_ANY_HAS_REG_NAME(pads)
+#if CONFIG_DT_HAS_RASPBERRYPI_RP1_GPIO_ENABLED || GPIO_RPI_ANY_GPIO_HAS_REG_NAME(pads)
 	DEVICE_MMIO_NAMED_RAM(pads);
 #endif
 };

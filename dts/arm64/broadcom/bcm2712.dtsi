@@ -148,6 +148,7 @@
 			ranges = <0x02000000 0x0 0x0 0x1f 0x0 0x00 0xfffffffc>,
 				 <0x43000000 0x4 0x0 0x1c 0x0 0x03 0x00000000>,
 				 <0x02000000 0x0 0x0 0x1f 0x0 0x00 0x00400000>;
+			msi-parent = <&mip0>;
 			status = "okay";
 
 			rp1 {
@@ -162,44 +163,43 @@
 
 				rp1_pinctrl: pinctrl@1f000d0000 {
 					compatible = "raspberrypi,rp1-pinctrl";
-					reg = <0x1f 0xd0000 0x128>,
-					      <0x1f 0xf0004 0x70>;
-					reg-names = "gpio", "pads";
-					msi-parent = <&mip0>;
-					#address-cells = <2>;
-					#size-cells = <1>;
+					reg = <0x1f 0xd0000 0x3124>,
+					      <0x1f 0xf0004 0x3070>,
+					      <0x1f 0xd4000 0x3124>,
+					      <0x1f 0xf4004 0x3018>,
+					      <0x1f 0xd8000 0x3124>,
+					      <0x1f 0xf8004 0x3050>,
+					      <0x1f 0xe0000 0x300c>,
+					      <0x1f 0xe4000 0x300c>,
+					      <0x1f 0xe8000 0x300c>;
+					reg-names = "gpio0", "pads0", "gpio1", "pads1", "gpio2", "pads2",
+						    "rio0", "rio1", "rio2";
+					interrupts = <GIC_SPI 128 IRQ_TYPE_EDGE IRQ_DEFAULT_PRIORITY>;
+					#address-cells = <1>;
+					#size-cells = <0>;
 					status = "okay";
 
-					gpio0_0: gpio@1f000d0000 {
+					gpio0_0: gpio@0 {
 						compatible = "raspberrypi,rp1-gpio";
-						reg = <0x1f 0xd0000 0xe0>,
-						      <0x1f 0xe0000 0x300c>,
-						      <0x1f 0xf0004 0x70>;
-						reg-names = "gpio", "rio", "pads";
+						reg = <0>;
 						#gpio-cells = <2>;
 						gpio-controller;
 						ngpios = <28>;
 						status = "disabled";
 					};
 
-					gpio0_1: gpio@1f000d4000 {
+					gpio0_1: gpio@1 {
 						compatible = "raspberrypi,rp1-gpio";
-						reg = <0x1f 0xd4000 0x30>,
-						      <0x1f 0xe4000 0x300c>,
-						      <0x1f 0xf4004 0x18>;
-						reg-names = "gpio", "rio", "pads";
+						reg = <1>;
 						#gpio-cells = <2>;
 						gpio-controller;
 						ngpios = <6>;
 						status = "disabled";
 					};
 
-					gpio0_2: gpio@1f000d8000 {
+					gpio0_2: gpio@2 {
 						compatible = "raspberrypi,rp1-gpio";
-						reg = <0x1f 0xd8000 0xa0>,
-						      <0x1f 0xe8000 0x300c>,
-						      <0x1f 0xf8004 0x50>;
-						reg-names = "gpio", "rio", "pads";
+						reg = <2>;
 						#gpio-cells = <2>;
 						gpio-controller;
 						ngpios = <20>;
