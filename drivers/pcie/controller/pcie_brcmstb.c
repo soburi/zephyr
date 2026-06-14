@@ -34,6 +34,7 @@ LOG_MODULE_REGISTER(pcie_brcmstb, LOG_LEVEL_ERR);
 
 #define PCIE_MISC_RC_BAR1_CONFIG_LO           0x402c
 #define PCIE_MISC_RC_BAR1_CONFIG_LO_SIZE_MASK 0x1f
+#define PCIE_MISC_RC_BAR1_CONFIG_HI           0x4030
 
 #define PCIE_MISC_RC_BAR2_CONFIG_LO           0x4034
 #define PCIE_MISC_RC_BAR2_CONFIG_LO_SIZE_MASK 0x1f
@@ -50,8 +51,12 @@ LOG_MODULE_REGISTER(pcie_brcmstb, LOG_LEVEL_ERR);
 #define PCIE_MISC_UBUS_BAR_CONFIG_REMAP_LO_MASK 0xfffff000
 #define PCIE_MISC_UBUS_BAR_CONFIG_REMAP_HI_MASK 0xff
 
+#define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_LO 0x40ac
+#define PCIE_MISC_UBUS_BAR1_CONFIG_REMAP_HI 0x40b0
+
 #define PCIE_MISC_UBUS_BAR2_CONFIG_REMAP                    0x40b4
 #define PCIE_MISC_UBUS_BAR2_CONFIG_REMAP_ACCESS_ENABLE_MASK 0x1
+#define PCIE_MISC_UBUS_BAR2_CONFIG_REMAP_HI                 0x40b8
 
 #define PCIE_MISC_UBUS_BAR4_CONFIG_REMAP_LO 0x410c
 #define PCIE_MISC_UBUS_BAR4_CONFIG_REMAP_HI 0x4110
@@ -163,6 +168,9 @@ struct pcie_brcmstb_config {
 		uintptr_t addr;
 		size_t size;
 	} regs[BAR_MAX];
+	uintptr_t mip_pci_addr;
+	uintptr_t mip_cpu_addr;
+	size_t mip_size;
 };
 
 enum pcie_region_type {
@@ -521,6 +529,26 @@ static int pcie_brcmstb_setup(const struct device *dev)
 	tmp &= ~PCIE_MISC_RC_BAR3_CONFIG_LO_SIZE_MASK;
 	sys_write32(tmp, data->cfg_addr + PCIE_MISC_RC_BAR3_CONFIG_LO);
 
+	/*
+	 * Inbound window for the MIP MSI-X target: MSI writes from the
+	 * endpoint are forwarded to the MIP, which raises GIC SPIs.
+	 */
+	if (config->mip_size != 0) {
+		tmp = lower_32_bits(config->mip_pci_addr);
+		tmp &= ~PCIE_MISC_RC_BAR_CONFIG_LO_SIZE_MASK;
+		tmp |= encode_ibar_size(config->mip_size);
+		sys_write32(tmp, data->cfg_addr + PCIE_MISC_RC_BAR4_CONFIG_LO);
+		sys_write32(upper_32_bits(config->mip_pci_addr),
+			    data->cfg_addr + PCIE_MISC_RC_BAR4_CONFIG_HI);
+
+		tmp = lower_32_bits(config->mip_cpu_addr) & PCIE_MISC_UBUS_BAR_CONFIG_REMAP_LO_MASK;
+		tmp |= PCIE_MISC_UBUS_BAR_CONFIG_REMAP_ENABLE;
+		sys_write32(tmp, data->cfg_addr + PCIE_MISC_UBUS_BAR4_CONFIG_REMAP_LO);
+		sys_write32(upper_32_bits(config->mip_cpu_addr) &
+				    PCIE_MISC_UBUS_BAR_CONFIG_REMAP_HI_MASK,
+			    data->cfg_addr + PCIE_MISC_UBUS_BAR4_CONFIG_REMAP_HI);
+	}
+
 	/* Set gen to 2 */
 	tmp16 = sys_read16(data->cfg_addr + BRCM_PCIE_CAP_REGS + PCI_EXP_LNKCTL2);
 	tmp = sys_read32(data->cfg_addr + BRCM_PCIE_CAP_REGS + PCI_EXP_LNKCAP);
@@ -595,14 +623,22 @@ static int pcie_brcmstb_init(const struct device *dev)
 							  PCI_BASE_ADDRESS_0 + 0x4 * (i - 1));
 	}
 
-	/* Enable resources */
+	/* Enable resources and bus-mastering so the endpoint can issue MSI writes */
 	tmp = sys_read32(data->cfg_addr + PCIE_EXT_CFG_DATA + PCI_COMMAND);
-	tmp |= PCI_COMMAND_MEMORY;
+	tmp |= (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
 	sys_write32(tmp, data->cfg_addr + PCIE_EXT_CFG_DATA + PCI_COMMAND);
 	k_busy_wait(500000);
 
 	return 0;
 }
+
+#define PCIE_BRCMSTB_MIP_PHANDLE(n) DT_INST_PHANDLE(n, msi_parent)
+#define PCIE_BRCMSTB_MIP_INIT(n)                                                                   \
+	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, msi_parent),                                        \
+		    (.mip_pci_addr = DT_REG_ADDR_BY_IDX(PCIE_BRCMSTB_MIP_PHANDLE(n), 1),          \
+		     .mip_cpu_addr = DT_REG_ADDR_BY_IDX(PCIE_BRCMSTB_MIP_PHANDLE(n), 0),          \
+		     .mip_size = DT_REG_SIZE_BY_IDX(PCIE_BRCMSTB_MIP_PHANDLE(n), 1),),            \
+		    ())
 
 #define PCIE_BRCMSTB_INIT(n)                                                                       \
 	static struct pcie_brcmstb_data pcie_brcmstb_data_##n = {};                                \
@@ -626,6 +662,7 @@ static int pcie_brcmstb_init(const struct device *dev)
 				{DT_REG_ADDR_BY_IDX(DT_DRV_INST(n), 2),                            \
 				 DT_REG_SIZE_BY_IDX(DT_DRV_INST(n), 2)},                           \
 			},                                                                         \
+		PCIE_BRCMSTB_MIP_INIT(n)                                                          \
 	};                                                                                         \
                                                                                                    \
 	DEVICE_DT_INST_DEFINE(n, pcie_brcmstb_init, NULL, &pcie_brcmstb_data_##n,                  \
