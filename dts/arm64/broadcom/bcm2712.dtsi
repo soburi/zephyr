@@ -52,6 +52,15 @@
 			status = "okay";
 		};
 
+		mip0: msi-controller@1000130000 {
+			compatible = "brcm,bcm2712-mip";
+			reg = <0x10 0x130000 0xc0>,
+			      <0xff 0xfffff000 0x1000>;
+			msi-controller;
+			brcm,msi-base-spi = <128>;
+			status = "okay";
+		};
+
 		rng: rng@107d208000 {
 			compatible = "brcm,iproc-rng200";
 			reg = <0x10 0x7d208000 0x28>;
