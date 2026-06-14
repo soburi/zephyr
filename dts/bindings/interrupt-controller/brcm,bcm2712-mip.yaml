@@ -1,0 +1,36 @@
+# Copyright (c) 2026 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Broadcom BCM2712 MSI-X Interrupt Peripheral (MIP).
+
+  The MIP converts inbound PCIe MSI/MSI-X memory writes into GIC SPI
+  interrupts. An MSI write of data value N to the MIP target address
+  raises the GIC SPI number (brcm,msi-base-spi + N).
+
+  The first reg entry is the MIP control register block in the SoC
+  address space. The second reg entry is the PCIe-bus-visible address
+  that PCIe endpoints must target with their MSI/MSI-X messages; the
+  PCIe root complex must map this bus address onto the MIP control
+  block with an inbound window.
+
+compatible: "brcm,bcm2712-mip"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  msi-controller:
+    type: boolean
+    description: Identifies the node as an MSI controller.
+
+  brcm,msi-base-spi:
+    type: int
+    required: true
+    description: First GIC SPI number that the MIP raises.
+
+  brcm,msi-num-spis:
+    type: int
+    description: Number of GIC SPIs allocated to this MIP.

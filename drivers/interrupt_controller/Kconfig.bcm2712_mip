@@ -1,0 +1,10 @@
+# Copyright (c) 2026 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+config INTC_BCM2712_MIP
+	bool "Broadcom BCM2712 MSI-X Interrupt Peripheral (MIP)"
+	default y
+	depends on DT_HAS_BRCM_BCM2712_MIP_ENABLED
+	help
+	  Enable support for the BCM2712 MSI-X Interrupt Peripheral, which
+	  converts inbound PCIe MSI/MSI-X writes into GIC SPI interrupts.
