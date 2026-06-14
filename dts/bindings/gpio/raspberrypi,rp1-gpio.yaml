@@ -10,6 +10,9 @@ include: [gpio-controller.yaml, base.yaml]
 properties:
   reg:
     required: true
+    description: |
+      GPIO bank index. The bank's register spaces are provided by the parent
+      raspberrypi,rp1-pinctrl node as gpioN, rioN, and padsN named regions.
 
   "#gpio-cells":
     const: 2
