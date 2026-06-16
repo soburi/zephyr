@@ -6,6 +6,7 @@ config DMA_IPROC_PAX
 	prompt "Broadcom PAX(PCIE<->AXI) DMA driver"
 	default y
 	depends on DT_HAS_BRCM_IPROC_PAX_DMA_V1_ENABLED
+	depends on PCIE_ENDPOINT
 	depends on PCIE_EP_IPROC
 
 config DMA_IPROC_PAX_V2
@@ -13,7 +14,8 @@ config DMA_IPROC_PAX_V2
 	prompt "Broadcom PAX(PCIE<->AXI) DMA driver version 2"
 	default y
 	depends on DT_HAS_BRCM_IPROC_PAX_DMA_V2_ENABLED
-	depends on PCIE_EP_IPROC_V2
+	depends on PCIE_ENDPOINT
+	depends on PCIE_EP_IPROC
 
 config DMA_IPROC_PAX_V2_INIT_PRIORITY
 	int "Broadcom PAX v2 initialization priority"

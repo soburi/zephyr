@@ -14,3 +14,8 @@ properties:
       Register space for the memory mapped PAX(PCIe to AXI bridge) registers,
       It includes registers to access EP configuration space
       and to map Host PCIe address to PCIe Outbound memory.
+
+  brcm,iproc-pcie-ep-v2:
+    type: boolean
+    description: |
+      Indicates Version-2 of iProc PCIe EP controller.

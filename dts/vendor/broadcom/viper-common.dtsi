@@ -52,6 +52,7 @@
 				    "map_highmem";
 			dmas = <&pl330 0>, <&pl330 1>;
 			dma-names = "txdma", "rxdma";
+			brcm,iproc-pcie-ep-v2;
 		};
 
 		paxdma: paxdma@4e100800 {
