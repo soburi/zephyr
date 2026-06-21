@@ -1,0 +1,15 @@
+/*
+ * Copyright 2026
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+&pcie3x2_ep {
+	status = "okay";
+	rockchip,external-refclk;
+	rockchip,configure-m0-pins;
+	vendor-id = <0x1d87>;
+	device-id = <0x3568>;
+	class-revision = <0x05800001>;
+	subsystem-vendor-id = <0x1d87>;
+	subsystem-id = <0x0001>;
+};

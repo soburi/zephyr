@@ -1,0 +1,13 @@
+sample:
+  name: PCIe endpoint BAR mailbox
+  description: Expose a BAR0 mailbox from a PCIe endpoint
+tests:
+  sample.drivers.pcie_endpoint:
+    build_only: true
+    platform_allow:
+      - roc_rk3568_pc
+    integration_platforms:
+      - roc_rk3568_pc
+    tags:
+      - drivers
+      - pcie

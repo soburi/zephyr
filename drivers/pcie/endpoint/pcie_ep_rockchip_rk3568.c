@@ -46,6 +46,7 @@ LOG_MODULE_REGISTER(pcie_ep_rk3568, CONFIG_PCIE_EP_LOG_LEVEL);
 #define RK3568_PCIE_CFG_BAR0             0x0010
 #define RK3568_PCIE_CFG_SUBSYSTEM_ID     0x002c
 #define RK3568_PCIE_MSI_CAP              0x0050
+#define RK3568_PCIE_DEVICE_CAP           0x0074
 #define RK3568_PCIE_MSIX_CAP             0x00b0
 #define RK3568_PCIE_MSIX_TABLE           0x00b4
 #define RK3568_PCIE_MSIX_PBA             0x00b8
@@ -62,6 +63,7 @@ LOG_MODULE_REGISTER(pcie_ep_rk3568, CONFIG_PCIE_EP_LOG_LEVEL);
 #define RK3568_PCIE_MSI_MMC           GENMASK(19, 17)
 #define RK3568_PCIE_MSI_MME           GENMASK(22, 20)
 #define RK3568_PCIE_MSI_PVM_CAPABLE   BIT(24)
+#define RK3568_PCIE_FLR_CAPABLE        BIT(28)
 #define RK3568_PCIE_MSIX_TABLE_SIZE   GENMASK(26, 16)
 #define RK3568_PCIE_MSIX_ENABLE       BIT(31)
 #define RK3568_PCIE_MSIX_BIR          GENMASK(2, 0)
@@ -127,6 +129,17 @@ LOG_MODULE_REGISTER(pcie_ep_rk3568, CONFIG_PCIE_EP_LOG_LEVEL);
 
 #define RK3568_PCIE_PLL_LOCK_TIMEOUT_US 100000
 #define RK3568_PCIE_DMA_TIMEOUT_US      1000000
+#define RK3568_PCIE_BIU_IDLE_TIMEOUT_US 100000
+#define RK3568_PCIE_LINK_TIMEOUT_MS     1000
+
+/*
+ * RK3568 TRM Part 1, chapter 7: PCIe belongs to PD_PIPE/BIU_PIPE.
+ * Part 2 calls this operation "PCIe NIU idle" in the hot-reset flow.
+ */
+#define RK3568_PMU_BUS_IDLE_SFTCON0 0x0050
+#define RK3568_PMU_BUS_IDLE_ACK     0x0060
+#define RK3568_PMU_BUS_IDLE_ST      0x0068
+#define RK3568_PMU_BIU_PIPE         BIT(11)
 
 /* RK3568 TRM Part 2, chapter 18: PCIe embedded DMA registers. */
 #define RK3568_PCIE_DMA_BASE          0x380000
@@ -160,6 +173,8 @@ struct rk3568_pcie_ep_config {
 	size_t pipe_grf_size;
 	uintptr_t phy_grf_addr;
 	size_t phy_grf_size;
+	uintptr_t pmu_addr;
+	size_t pmu_size;
 	uint8_t num_ob_windows;
 	bool external_refclk;
 	bool configure_m0_pins;
@@ -182,6 +197,7 @@ struct rk3568_pcie_ep_data {
 	mm_reg_t sys_grf_addr;
 	mm_reg_t pipe_grf_addr;
 	mm_reg_t phy_grf_addr;
+	mm_reg_t pmu_addr;
 	uint16_t ob_in_use;
 	uint64_t ob_target[RK3568_PCIE_ATU_MAX_REGIONS];
 	uint64_t ob_region_size[RK3568_PCIE_ATU_MAX_REGIONS];
@@ -191,6 +207,7 @@ struct rk3568_pcie_ep_data {
 	void *reset_cb_arg[PCIE_RESET_MAX];
 	struct k_work hot_reset_work;
 	struct k_mutex dma_lock;
+	atomic_t reset_in_progress;
 };
 
 static inline void rk3568_pcie_hiword_update(uintptr_t addr, uint32_t mask, uint32_t value)
@@ -377,6 +394,10 @@ static int rk3568_pcie_raise_irq(const struct device *dev, enum pci_ep_irq_type 
 	k_spinlock_key_t key;
 	int ret = 0;
 
+	if (atomic_get(&data->reset_in_progress) != 0) {
+		return -EBUSY;
+	}
+
 	key = k_spin_lock(&data->lock);
 	switch (irq_type) {
 	case PCIE_EP_IRQ_LEGACY:
@@ -562,6 +583,14 @@ static int rk3568_pcie_register_reset_cb(const struct device *dev, enum pcie_res
 	if (reset >= PCIE_RESET_MAX) {
 		return -EINVAL;
 	}
+	if (reset != PCIE_PERST_INB) {
+		/*
+		 * The published RK3568 TRMs expose an early-warning interrupt
+		 * for in-band hot/link-down reset, but no software-visible
+		 * PERST# or FLR event.
+		 */
+		return -ENOTSUP;
+	}
 
 	key = k_spin_lock(&data->lock);
 	data->reset_cb[reset] = cb;
@@ -591,6 +620,9 @@ static int rk3568_pcie_dma_xfer(const struct device *dev, uint64_t mapped_addr,
 	    mapped_addr < data->map_addr || mapped_addr >= data->map_addr + cfg->map_size) {
 		return -EINVAL;
 	}
+	if (atomic_get(&data->reset_in_progress) != 0) {
+		return -EBUSY;
+	}
 
 	aperture_offset = mapped_addr - data->map_addr;
 	index = aperture_offset / window_size;
@@ -614,6 +646,10 @@ static int rk3568_pcie_dma_xfer(const struct device *dev, uint64_t mapped_addr,
 	}
 
 	k_mutex_lock(&data->dma_lock, K_FOREVER);
+	if (atomic_get(&data->reset_in_progress) != 0) {
+		k_mutex_unlock(&data->dma_lock);
+		return -EBUSY;
+	}
 
 	/*
 	 * Non-linked-list channel zero transfer from the TRM programming
@@ -644,23 +680,76 @@ static int rk3568_pcie_dma_xfer(const struct device *dev, uint64_t mapped_addr,
 	return ret;
 }
 
+static int rk3568_pcie_wait_for_biu_idle(const struct rk3568_pcie_ep_data *data)
+{
+	for (uint32_t timeout = 0; timeout < RK3568_PCIE_BIU_IDLE_TIMEOUT_US; timeout++) {
+		uint32_t ack = sys_read32(data->pmu_addr + RK3568_PMU_BUS_IDLE_ACK);
+		uint32_t idle = sys_read32(data->pmu_addr + RK3568_PMU_BUS_IDLE_ST);
+
+		if ((ack & RK3568_PMU_BIU_PIPE) != 0U && (idle & RK3568_PMU_BIU_PIPE) != 0U) {
+			return 0;
+		}
+		k_busy_wait(1);
+	}
+
+	return -ETIMEDOUT;
+}
+
+static int rk3568_pcie_wait_for_link(const struct device *dev)
+{
+	for (uint32_t timeout = 0; timeout < RK3568_PCIE_LINK_TIMEOUT_MS; timeout++) {
+		if (rk3568_pcie_link_up(dev)) {
+			return 0;
+		}
+		k_sleep(K_MSEC(1));
+	}
+
+	return -ETIMEDOUT;
+}
+
 static void rk3568_pcie_hot_reset_work(struct k_work *work)
 {
 	struct rk3568_pcie_ep_data *data =
 		CONTAINER_OF(work, struct rk3568_pcie_ep_data, hot_reset_work);
 	const struct device *dev = data->dev;
+	int ret;
 
 	/*
-	 * The TRM asks software to stop LTSSM before granting the delayed
-	 * reset, then restart training. The documented PCIe_USB_GRF NIU-idle
-	 * register is absent from the Part 1 USB_GRF register map, so no
-	 * undocumented write is made here.
+	 * The early-warning ISR has already stopped LTSSM and rejected new
+	 * DMA. Wait for any transfer that was already active, then idle the
+	 * complete BIU_PIPE before granting the delayed reset.
 	 */
-	(void)rk3568_pcie_stop(dev);
+	k_mutex_lock(&data->dma_lock, K_FOREVER);
+	rk3568_pcie_hiword_update(data->pmu_addr + RK3568_PMU_BUS_IDLE_SFTCON0,
+				  RK3568_PMU_BIU_PIPE, RK3568_PMU_BIU_PIPE);
+	ret = rk3568_pcie_wait_for_biu_idle(data);
+	if (ret != 0) {
+		LOG_ERR("BIU_PIPE did not enter idle; PCIe link remains stopped");
+		goto out_release_biu;
+	}
+
+	if (data->reset_cb[PCIE_PERST_INB] != NULL) {
+		data->reset_cb[PCIE_PERST_INB](data->reset_cb_arg[PCIE_PERST_INB]);
+	}
+
 	rk3568_pcie_hiword_update(data->pipe_grf_addr + RK3568_PIPE_GRF_PIPE_CON0,
 				  RK3568_PIPE_GRF_PCIE30X2_LINK_RST_GRT,
 				  RK3568_PIPE_GRF_PCIE30X2_LINK_RST_GRT);
 	(void)rk3568_pcie_start(dev);
+	ret = rk3568_pcie_wait_for_link(dev);
+	if (ret != 0) {
+		LOG_ERR("PCIe link did not recover after hot reset");
+		(void)rk3568_pcie_stop(dev);
+	} else {
+		rk3568_pcie_hiword_update(data->pipe_grf_addr + RK3568_PIPE_GRF_PIPE_CON0,
+					  RK3568_PIPE_GRF_PCIE30X2_LINK_RST_GRT, 0);
+	}
+
+out_release_biu:
+	rk3568_pcie_hiword_update(data->pmu_addr + RK3568_PMU_BUS_IDLE_SFTCON0,
+				  RK3568_PMU_BIU_PIPE, 0);
+	k_mutex_unlock(&data->dma_lock);
+	atomic_clear(&data->reset_in_progress);
 }
 
 static void rk3568_pcie_isr(const struct device *dev)
@@ -678,13 +767,19 @@ static void rk3568_pcie_isr(const struct device *dev)
 	sys_write32(status, data->client_addr + RK3568_PCIE_CLIENT_INTR_STATUS_MISC);
 
 	if ((status & RK3568_PCIE_CLIENT_LINK_REQ_RST_INT) != 0U) {
-		if (data->reset_cb[PCIE_PERST_INB] != NULL) {
-			data->reset_cb[PCIE_PERST_INB](data->reset_cb_arg[PCIE_PERST_INB]);
+		if (atomic_cas(&data->reset_in_progress, 0, 1)) {
+			/*
+			 * Stop LTSSM immediately on the early warning. The
+			 * deferred worker can then wait for DMA and BIU idle.
+			 */
+			(void)rk3568_pcie_stop(dev);
+			k_work_submit(&data->hot_reset_work);
 		}
-		k_work_submit(&data->hot_reset_work);
 	} else if ((status & RK3568_PCIE_CLIENT_DLL_LINK_INT) != 0U && rk3568_pcie_link_up(dev)) {
-		rk3568_pcie_hiword_update(data->pipe_grf_addr + RK3568_PIPE_GRF_PIPE_CON0,
-					  RK3568_PIPE_GRF_PCIE30X2_LINK_RST_GRT, 0);
+		if (atomic_get(&data->reset_in_progress) == 0) {
+			rk3568_pcie_hiword_update(data->pipe_grf_addr + RK3568_PIPE_GRF_PIPE_CON0,
+						  RK3568_PIPE_GRF_PCIE30X2_LINK_RST_GRT, 0);
+		}
 	}
 }
 
@@ -711,11 +806,13 @@ static int rk3568_pcie_ep_init(const struct device *dev)
 	device_map(&data->sys_grf_addr, cfg->sys_grf_addr, cfg->sys_grf_size, K_MEM_CACHE_NONE);
 	device_map(&data->pipe_grf_addr, cfg->pipe_grf_addr, cfg->pipe_grf_size, K_MEM_CACHE_NONE);
 	device_map(&data->phy_grf_addr, cfg->phy_grf_addr, cfg->phy_grf_size, K_MEM_CACHE_NONE);
+	device_map(&data->pmu_addr, cfg->pmu_addr, cfg->pmu_size, K_MEM_CACHE_NONE);
 
 	data->dev = dev;
 	data->ob_in_use = 0;
 	data->ib_in_use = 0;
 	data->bar_64 = 0;
+	atomic_clear(&data->reset_in_progress);
 	k_work_init(&data->hot_reset_work, rk3568_pcie_hot_reset_work);
 	k_mutex_init(&data->dma_lock);
 
@@ -802,6 +899,15 @@ static int rk3568_pcie_ep_init(const struct device *dev)
 		rk3568_pcie_conf_write(dev, RK3568_PCIE_CFG_SUBSYSTEM_ID, value);
 	}
 
+	/*
+	 * FLR cannot be inferred from link state because the link remains
+	 * active. Do not advertise FLR until a documented application event
+	 * exists to quiesce DMA and reset function state.
+	 */
+	value = sys_read32(data->dbi_addr + RK3568_PCIE_DEVICE_CAP);
+	value &= ~RK3568_PCIE_FLR_CAPABLE;
+	rk3568_pcie_conf_write(dev, RK3568_PCIE_DEVICE_CAP, value);
+
 	/* Advertise all interrupt vectors implemented by the client logic. */
 	value = sys_read32(data->dbi_addr + RK3568_PCIE_MSI_CAP);
 	value &= ~RK3568_PCIE_MSI_MMC;
@@ -879,6 +985,8 @@ static DEVICE_API(pcie_ep, rk3568_pcie_ep_api) = {
 		.pipe_grf_size = DT_INST_REG_SIZE_BY_NAME(inst, pipe_grf),                         \
 		.phy_grf_addr = DT_INST_REG_ADDR_BY_NAME(inst, phy_grf),                           \
 		.phy_grf_size = DT_INST_REG_SIZE_BY_NAME(inst, phy_grf),                           \
+		.pmu_addr = DT_INST_REG_ADDR_BY_NAME(inst, pmu),                                   \
+		.pmu_size = DT_INST_REG_SIZE_BY_NAME(inst, pmu),                                   \
 		.num_ob_windows = DT_INST_PROP(inst, num_ob_windows),                              \
 		.external_refclk = DT_INST_PROP(inst, rockchip_external_refclk),                   \
 		.configure_m0_pins = DT_INST_PROP(inst, rockchip_configure_m0_pins),               \

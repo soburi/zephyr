@@ -7,6 +7,15 @@ description: |
   The register ranges include the controller, CRU and PCIe 3.0 x2 PHY
   resources needed by the endpoint initialization sequence.
 
+  Hot-reset handling temporarily idles BIU_PIPE. This interconnect is
+  shared with other PD_PIPE clients, including USB 3, SATA, and XPCS.
+  A system using those clients concurrently must coordinate BIU_PIPE
+  ownership outside this driver.
+
+  The published RK3568 TRMs do not expose software-visible PERST# or
+  Function Level Reset events. The driver therefore supports reset
+  notification for in-band hot reset only and does not advertise FLR.
+
 compatible: "rockchip,rk3568-pcie-ep"
 
 include: base.yaml
@@ -19,7 +28,8 @@ properties:
     required: true
     description: |
       Must contain "dbi", "client", "map", "cru", "pmu_grf",
-      "sys_grf", "pipe_grf", and "phy_grf".
+      "sys_grf", "pipe_grf", "phy_grf", and "pmu". The PMU range
+      provides the BIU_PIPE idle handshake required before hot reset.
 
   rockchip,configure-m0-pins:
     type: boolean
