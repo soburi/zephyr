@@ -45,6 +45,10 @@ LOG_MODULE_REGISTER(pcie_ep_rk3568, CONFIG_PCIE_EP_LOG_LEVEL);
 #define RK3568_PCIE_CFG_CLASS_REVISION   0x0008
 #define RK3568_PCIE_CFG_BAR0             0x0010
 #define RK3568_PCIE_CFG_SUBSYSTEM_ID     0x002c
+#define RK3568_PCIE_MSI_CAP              0x0050
+#define RK3568_PCIE_MSIX_CAP             0x00b0
+#define RK3568_PCIE_MSIX_TABLE           0x00b4
+#define RK3568_PCIE_MSIX_PBA             0x00b8
 #define RK3568_PCIE_MISC_CONTROL_1       0x08bc
 #define RK3568_PCIE_DBI_RO_WR_EN         BIT(0)
 #define RK3568_PCIE_MSIX_DOORBELL        0x0948
@@ -53,6 +57,16 @@ LOG_MODULE_REGISTER(pcie_ep_rk3568, CONFIG_PCIE_EP_LOG_LEVEL);
 #define RK3568_PCIE_BAR_IO_SPACE    BIT(0)
 #define RK3568_PCIE_BAR_MEM_TYPE_64 BIT(2)
 #define RK3568_PCIE_BAR_PREFETCH    BIT(3)
+
+#define RK3568_PCIE_MSI_ENABLE        BIT(16)
+#define RK3568_PCIE_MSI_MMC           GENMASK(19, 17)
+#define RK3568_PCIE_MSI_MME           GENMASK(22, 20)
+#define RK3568_PCIE_MSI_PVM_CAPABLE   BIT(24)
+#define RK3568_PCIE_MSIX_TABLE_SIZE   GENMASK(26, 16)
+#define RK3568_PCIE_MSIX_ENABLE       BIT(31)
+#define RK3568_PCIE_MSIX_BIR          GENMASK(2, 0)
+#define RK3568_PCIE_MSIX_TABLE_OFFSET 0x0000
+#define RK3568_PCIE_MSIX_PBA_OFFSET   0x0400
 
 /* Unrolled iATU register space starts at core offset 0x300000. */
 #define RK3568_PCIE_ATU_BASE          0x300000
@@ -96,16 +110,38 @@ LOG_MODULE_REGISTER(pcie_ep_rk3568, CONFIG_PCIE_EP_LOG_LEVEL);
 #define RK3568_PMU_GRF_PCIE_PERST_M0  GENMASK(11, 8)
 #define RK3568_PMU_GRF_MUX_PCIE       3
 
+#define RK3568_SYS_GRF_IOFUNC_SEL5        0x0314
+#define RK3568_SYS_GRF_PCIE30X2_IOMUX_SEL GENMASK(7, 6)
+#define RK3568_SYS_GRF_PCIE30X2_M0        0
+
 #define RK3568_PIPE_GRF_PIPE_CON0             0x0000
 #define RK3568_PIPE_GRF_PCIE30X2_LINK_RST_GRT BIT(2)
 
 #define RK3568_PHY_GRF_CON3           0x000c
+#define RK3568_PHY_GRF_CON4           0x0010
 #define RK3568_PHY_GRF_STATUS0        0x0080
 #define RK3568_PHY_GRF_USE_PAD_REFCLK BIT(15)
 #define RK3568_PHY_GRF_MPLLA_FORCE_EN BIT(7)
+#define RK3568_PHY_GRF_EXT_CTRL_SEL   BIT(3)
 #define RK3568_PHY_GRF_MPLLA_STATE    BIT(27)
 
 #define RK3568_PCIE_PLL_LOCK_TIMEOUT_US 100000
+#define RK3568_PCIE_DMA_TIMEOUT_US      1000000
+
+/* RK3568 TRM Part 2, chapter 18: PCIe embedded DMA registers. */
+#define RK3568_PCIE_DMA_BASE          0x380000
+#define RK3568_PCIE_DMA_WR_ENGINE_EN  0x00c
+#define RK3568_PCIE_DMA_WR_DOORBELL   0x010
+#define RK3568_PCIE_DMA_RD_ENGINE_EN  0x02c
+#define RK3568_PCIE_DMA_RD_DOORBELL   0x030
+#define RK3568_PCIE_DMA_CH_CONTROL1   0x200
+#define RK3568_PCIE_DMA_TRANSFER_SIZE 0x208
+#define RK3568_PCIE_DMA_SAR_LOW       0x20c
+#define RK3568_PCIE_DMA_SAR_HIGH      0x210
+#define RK3568_PCIE_DMA_DAR_LOW       0x214
+#define RK3568_PCIE_DMA_DAR_HIGH      0x218
+#define RK3568_PCIE_DMA_ENGINE_ENABLE BIT(0)
+#define RK3568_PCIE_DMA_DOORBELL_STOP BIT(31)
 
 struct rk3568_pcie_ep_config {
 	uintptr_t dbi_addr;
@@ -118,12 +154,12 @@ struct rk3568_pcie_ep_config {
 	size_t cru_size;
 	uintptr_t pmu_grf_addr;
 	size_t pmu_grf_size;
+	uintptr_t sys_grf_addr;
+	size_t sys_grf_size;
 	uintptr_t pipe_grf_addr;
 	size_t pipe_grf_size;
 	uintptr_t phy_grf_addr;
 	size_t phy_grf_size;
-	uintptr_t phy_addr;
-	size_t phy_size;
 	uint8_t num_ob_windows;
 	bool external_refclk;
 	bool configure_m0_pins;
@@ -143,15 +179,18 @@ struct rk3568_pcie_ep_data {
 	mm_reg_t map_addr;
 	mm_reg_t cru_addr;
 	mm_reg_t pmu_grf_addr;
+	mm_reg_t sys_grf_addr;
 	mm_reg_t pipe_grf_addr;
 	mm_reg_t phy_grf_addr;
-	mm_reg_t phy_addr;
 	uint16_t ob_in_use;
+	uint64_t ob_target[RK3568_PCIE_ATU_MAX_REGIONS];
+	uint64_t ob_region_size[RK3568_PCIE_ATU_MAX_REGIONS];
 	uint8_t ib_in_use;
 	uint8_t bar_64;
 	pcie_ep_reset_callback_t reset_cb[PCIE_RESET_MAX];
 	void *reset_cb_arg[PCIE_RESET_MAX];
 	struct k_work hot_reset_work;
+	struct k_mutex dma_lock;
 };
 
 static inline void rk3568_pcie_hiword_update(uintptr_t addr, uint32_t mask, uint32_t value)
@@ -299,6 +338,8 @@ static int rk3568_pcie_map_addr(const struct device *dev, uint64_t pcie_addr, ui
 		return -EIO;
 	}
 
+	data->ob_target[index] = target;
+	data->ob_region_size[index] = region_size;
 	*mapped_addr = data->map_addr + (index * window_size) + offset;
 	return (int)MIN((uint64_t)size, region_size - offset);
 }
@@ -322,6 +363,8 @@ static void rk3568_pcie_unmap_addr(const struct device *dev, uint64_t mapped_add
 
 	key = k_spin_lock(&data->lock);
 	data->ob_in_use &= ~BIT(index);
+	data->ob_target[index] = 0;
+	data->ob_region_size[index] = 0;
 	k_spin_unlock(&data->lock, key);
 }
 
@@ -329,6 +372,8 @@ static int rk3568_pcie_raise_irq(const struct device *dev, enum pci_ep_irq_type 
 				 uint32_t irq_num)
 {
 	struct rk3568_pcie_ep_data *data = dev->data;
+	uint32_t enabled_vectors;
+	uint32_t msi_cap;
 	k_spinlock_key_t key;
 	int ret = 0;
 
@@ -350,11 +395,22 @@ static int rk3568_pcie_raise_irq(const struct device *dev, enum pci_ep_irq_type 
 			ret = -EINVAL;
 			break;
 		}
+		msi_cap = sys_read32(data->dbi_addr + RK3568_PCIE_MSI_CAP);
+		enabled_vectors = BIT(FIELD_GET(RK3568_PCIE_MSI_MME, msi_cap));
+		if ((msi_cap & RK3568_PCIE_MSI_ENABLE) == 0U || irq_num >= enabled_vectors) {
+			ret = -EACCES;
+			break;
+		}
 		sys_write32(BIT(irq_num), data->client_addr + RK3568_PCIE_CLIENT_MSI_GEN_CON);
 		break;
 	case PCIE_EP_IRQ_MSIX:
 		if (irq_num >= RK3568_PCIE_MAX_MSIX) {
 			ret = -EINVAL;
+			break;
+		}
+		if ((sys_read32(data->dbi_addr + RK3568_PCIE_MSIX_CAP) & RK3568_PCIE_MSIX_ENABLE) ==
+		    0U) {
+			ret = -EACCES;
 			break;
 		}
 		sys_write32(irq_num, data->dbi_addr + RK3568_PCIE_MSIX_DOORBELL);
@@ -382,6 +438,9 @@ static int rk3568_pcie_set_bar(const struct device *dev, const struct pcie_ep_ba
 	}
 	if ((bar->flags & PCIE_EP_BAR_IO) != 0U &&
 	    (bar->flags & (PCIE_EP_BAR_64 | PCIE_EP_BAR_PREFETCH)) != 0U) {
+		return -EINVAL;
+	}
+	if ((bar->flags & ~(PCIE_EP_BAR_IO | PCIE_EP_BAR_64 | PCIE_EP_BAR_PREFETCH)) != 0U) {
 		return -EINVAL;
 	}
 	if ((bar->flags & PCIE_EP_BAR_64) != 0U &&
@@ -450,6 +509,9 @@ static int rk3568_pcie_clear_bar(const struct device *dev, uint8_t bar)
 	if (bar >= RK3568_PCIE_MAX_BARS) {
 		return -EINVAL;
 	}
+	if (bar > 0U && (data->bar_64 & BIT(bar - 1U)) != 0U) {
+		return -EINVAL;
+	}
 
 	sys_write32(0, rk3568_pcie_atu_inbound_region(data, bar) + RK3568_PCIE_ATU_REGION_CTRL2);
 	sys_write32(0, data->dbi_addr + RK3568_PCIE_DBI2_OFFSET + RK3568_PCIE_CFG_BAR0 +
@@ -506,6 +568,80 @@ static int rk3568_pcie_register_reset_cb(const struct device *dev, enum pcie_res
 	data->reset_cb_arg[reset] = arg;
 	k_spin_unlock(&data->lock, key);
 	return 0;
+}
+
+static int rk3568_pcie_dma_xfer(const struct device *dev, uint64_t mapped_addr,
+				uintptr_t local_addr, uint32_t size, enum xfer_direction dir)
+{
+	const struct rk3568_pcie_ep_config *cfg = dev->config;
+	struct rk3568_pcie_ep_data *data = dev->data;
+	const uint64_t window_size = cfg->map_size / cfg->num_ob_windows;
+	uint64_t aperture_offset;
+	uint64_t region_offset;
+	uint64_t remote_addr;
+	uint64_t source;
+	uint64_t destination;
+	uintptr_t dma = data->dbi_addr + RK3568_PCIE_DMA_BASE;
+	uint32_t engine;
+	uint32_t doorbell;
+	uint8_t index;
+	int ret = -ETIMEDOUT;
+
+	if (size == 0U || (dir != HOST_TO_DEVICE && dir != DEVICE_TO_HOST) ||
+	    mapped_addr < data->map_addr || mapped_addr >= data->map_addr + cfg->map_size) {
+		return -EINVAL;
+	}
+
+	aperture_offset = mapped_addr - data->map_addr;
+	index = aperture_offset / window_size;
+	region_offset = aperture_offset % window_size;
+	if ((data->ob_in_use & BIT(index)) == 0U ||
+	    region_offset + size > data->ob_region_size[index]) {
+		return -EINVAL;
+	}
+
+	remote_addr = data->ob_target[index] + region_offset;
+	if (dir == DEVICE_TO_HOST) {
+		source = local_addr;
+		destination = remote_addr;
+		engine = RK3568_PCIE_DMA_WR_ENGINE_EN;
+		doorbell = RK3568_PCIE_DMA_WR_DOORBELL;
+	} else {
+		source = remote_addr;
+		destination = local_addr;
+		engine = RK3568_PCIE_DMA_RD_ENGINE_EN;
+		doorbell = RK3568_PCIE_DMA_RD_DOORBELL;
+	}
+
+	k_mutex_lock(&data->dma_lock, K_FOREVER);
+
+	/*
+	 * Non-linked-list channel zero transfer from the TRM programming
+	 * examples. Writing zero to an engine-enable register resets DMA,
+	 * therefore it is only ever written with the enable bit set.
+	 */
+	sys_write32(RK3568_PCIE_DMA_ENGINE_ENABLE, dma + engine);
+	sys_write32(0, dma + RK3568_PCIE_DMA_CH_CONTROL1);
+	sys_write32(size, dma + RK3568_PCIE_DMA_TRANSFER_SIZE);
+	sys_write32((uint32_t)source, dma + RK3568_PCIE_DMA_SAR_LOW);
+	sys_write32((uint32_t)(source >> 32), dma + RK3568_PCIE_DMA_SAR_HIGH);
+	sys_write32((uint32_t)destination, dma + RK3568_PCIE_DMA_DAR_LOW);
+	sys_write32((uint32_t)(destination >> 32), dma + RK3568_PCIE_DMA_DAR_HIGH);
+	sys_write32(0, dma + doorbell);
+
+	for (uint32_t timeout = 0; timeout < RK3568_PCIE_DMA_TIMEOUT_US; timeout++) {
+		if (sys_read32(dma + RK3568_PCIE_DMA_TRANSFER_SIZE) == 0U) {
+			ret = 0;
+			break;
+		}
+		k_busy_wait(1);
+	}
+	if (ret != 0) {
+		sys_write32(RK3568_PCIE_DMA_DOORBELL_STOP, dma + doorbell);
+	}
+
+	k_mutex_unlock(&data->dma_lock);
+	return ret;
 }
 
 static void rk3568_pcie_hot_reset_work(struct k_work *work)
@@ -572,17 +708,22 @@ static int rk3568_pcie_ep_init(const struct device *dev)
 	device_map(&data->map_addr, cfg->map_addr, cfg->map_size, K_MEM_CACHE_NONE);
 	device_map(&data->cru_addr, cfg->cru_addr, cfg->cru_size, K_MEM_CACHE_NONE);
 	device_map(&data->pmu_grf_addr, cfg->pmu_grf_addr, cfg->pmu_grf_size, K_MEM_CACHE_NONE);
+	device_map(&data->sys_grf_addr, cfg->sys_grf_addr, cfg->sys_grf_size, K_MEM_CACHE_NONE);
 	device_map(&data->pipe_grf_addr, cfg->pipe_grf_addr, cfg->pipe_grf_size, K_MEM_CACHE_NONE);
 	device_map(&data->phy_grf_addr, cfg->phy_grf_addr, cfg->phy_grf_size, K_MEM_CACHE_NONE);
-	device_map(&data->phy_addr, cfg->phy_addr, cfg->phy_size, K_MEM_CACHE_NONE);
 
 	data->dev = dev;
 	data->ob_in_use = 0;
 	data->ib_in_use = 0;
 	data->bar_64 = 0;
 	k_work_init(&data->hot_reset_work, rk3568_pcie_hot_reset_work);
+	k_mutex_init(&data->dma_lock);
 
 	if (cfg->configure_m0_pins) {
+		rk3568_pcie_hiword_update(
+			data->sys_grf_addr + RK3568_SYS_GRF_IOFUNC_SEL5,
+			RK3568_SYS_GRF_PCIE30X2_IOMUX_SEL,
+			FIELD_PREP(RK3568_SYS_GRF_PCIE30X2_IOMUX_SEL, RK3568_SYS_GRF_PCIE30X2_M0));
 		rk3568_pcie_hiword_update(
 			data->pmu_grf_addr + RK3568_PMU_GRF_GPIO0A_IOMUX_H,
 			RK3568_PMU_GRF_PCIE_CLKREQ_M0,
@@ -611,6 +752,13 @@ static int rk3568_pcie_ep_init(const struct device *dev)
 				  RK3568_PHY_GRF_USE_PAD_REFCLK | RK3568_PHY_GRF_MPLLA_FORCE_EN,
 				  (cfg->external_refclk ? RK3568_PHY_GRF_USE_PAD_REFCLK : 0) |
 					  RK3568_PHY_GRF_MPLLA_FORCE_EN);
+	/*
+	 * Keep external protocol overrides disabled. The PHY databook fields
+	 * state that the PCS selects its hard-coded per-protocol PLL and
+	 * analog settings when EXT_CTRL_SEL is clear.
+	 */
+	rk3568_pcie_hiword_update(data->phy_grf_addr + RK3568_PHY_GRF_CON4,
+				  RK3568_PHY_GRF_EXT_CTRL_SEL, 0);
 
 	/* Release PHY resets first and wait for its PCIe TX PLL. */
 	rk3568_pcie_hiword_update(data->cru_addr + RK3568_CRU_SOFTRST_CON27,
@@ -654,6 +802,21 @@ static int rk3568_pcie_ep_init(const struct device *dev)
 		rk3568_pcie_conf_write(dev, RK3568_PCIE_CFG_SUBSYSTEM_ID, value);
 	}
 
+	/* Advertise all interrupt vectors implemented by the client logic. */
+	value = sys_read32(data->dbi_addr + RK3568_PCIE_MSI_CAP);
+	value &= ~RK3568_PCIE_MSI_MMC;
+	value |= FIELD_PREP(RK3568_PCIE_MSI_MMC, 5) | RK3568_PCIE_MSI_PVM_CAPABLE;
+	rk3568_pcie_conf_write(dev, RK3568_PCIE_MSI_CAP, value);
+
+	value = sys_read32(data->dbi_addr + RK3568_PCIE_MSIX_CAP);
+	value &= ~RK3568_PCIE_MSIX_TABLE_SIZE;
+	value |= FIELD_PREP(RK3568_PCIE_MSIX_TABLE_SIZE, RK3568_PCIE_MAX_MSIX - 1);
+	rk3568_pcie_conf_write(dev, RK3568_PCIE_MSIX_CAP, value);
+	rk3568_pcie_conf_write(dev, RK3568_PCIE_MSIX_TABLE,
+			       RK3568_PCIE_MSIX_TABLE_OFFSET | FIELD_PREP(RK3568_PCIE_MSIX_BIR, 0));
+	rk3568_pcie_conf_write(dev, RK3568_PCIE_MSIX_PBA,
+			       RK3568_PCIE_MSIX_PBA_OFFSET | FIELD_PREP(RK3568_PCIE_MSIX_BIR, 0));
+
 	/* Use the PIPE_GRF grant path recommended by the TRM for hot reset. */
 	sys_write32(RK3568_PCIE_HOT_RESET_LTSSM_ENHANCE,
 		    data->client_addr + RK3568_PCIE_CLIENT_HOT_RESET_CTRL);
@@ -683,6 +846,7 @@ static DEVICE_API(pcie_ep, rk3568_pcie_ep_api) = {
 	.unmap_addr = rk3568_pcie_unmap_addr,
 	.raise_irq = rk3568_pcie_raise_irq,
 	.register_reset_cb = rk3568_pcie_register_reset_cb,
+	.dma_xfer = rk3568_pcie_dma_xfer,
 	.set_bar = rk3568_pcie_set_bar,
 	.clear_bar = rk3568_pcie_clear_bar,
 	.start = rk3568_pcie_start,
@@ -709,12 +873,12 @@ static DEVICE_API(pcie_ep, rk3568_pcie_ep_api) = {
 		.cru_size = DT_INST_REG_SIZE_BY_NAME(inst, cru),                                   \
 		.pmu_grf_addr = DT_INST_REG_ADDR_BY_NAME(inst, pmu_grf),                           \
 		.pmu_grf_size = DT_INST_REG_SIZE_BY_NAME(inst, pmu_grf),                           \
+		.sys_grf_addr = DT_INST_REG_ADDR_BY_NAME(inst, sys_grf),                           \
+		.sys_grf_size = DT_INST_REG_SIZE_BY_NAME(inst, sys_grf),                           \
 		.pipe_grf_addr = DT_INST_REG_ADDR_BY_NAME(inst, pipe_grf),                         \
 		.pipe_grf_size = DT_INST_REG_SIZE_BY_NAME(inst, pipe_grf),                         \
 		.phy_grf_addr = DT_INST_REG_ADDR_BY_NAME(inst, phy_grf),                           \
 		.phy_grf_size = DT_INST_REG_SIZE_BY_NAME(inst, phy_grf),                           \
-		.phy_addr = DT_INST_REG_ADDR_BY_NAME(inst, phy),                                   \
-		.phy_size = DT_INST_REG_SIZE_BY_NAME(inst, phy),                                   \
 		.num_ob_windows = DT_INST_PROP(inst, num_ob_windows),                              \
 		.external_refclk = DT_INST_PROP(inst, rockchip_external_refclk),                   \
 		.configure_m0_pins = DT_INST_PROP(inst, rockchip_configure_m0_pins),               \

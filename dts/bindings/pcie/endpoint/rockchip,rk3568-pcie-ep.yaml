@@ -19,7 +19,7 @@ properties:
     required: true
     description: |
       Must contain "dbi", "client", "map", "cru", "pmu_grf",
-      "pipe_grf", "phy_grf", and "phy".
+      "sys_grf", "pipe_grf", and "phy_grf".
 
   rockchip,configure-m0-pins:
     type: boolean

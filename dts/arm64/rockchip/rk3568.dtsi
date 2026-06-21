@@ -91,11 +91,11 @@
 		      <0xf0000000 0x02000000>,
 		      <0xfdd20000 0x00010000>,
 		      <0xfdc20000 0x00010000>,
+		      <0xfdc60000 0x00010000>,
 		      <0xfdc50000 0x00010000>,
-		      <0xfdcb8000 0x00008000>,
-		      <0xfe8c0000 0x00020000>;
-		reg-names = "dbi", "client", "map", "cru", "pmu_grf", "pipe_grf",
-			    "phy_grf", "phy";
+		      <0xfdcb8000 0x00008000>;
+		reg-names = "dbi", "client", "map", "cru", "pmu_grf", "sys_grf",
+			    "pipe_grf", "phy_grf";
 		num-ob-windows = <1>;
 		interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
 		interrupt-names = "sys";
