@@ -1,0 +1,8 @@
+&pcie3x2_ep {
+	status = "okay";
+	vendor-id = <0x1d87>;
+	device-id = <0x3568>;
+	class-revision = <0xff000001>;
+	subsystem-vendor-id = <0x1d87>;
+	subsystem-id = <0x3568>;
+};
