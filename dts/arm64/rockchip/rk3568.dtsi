@@ -83,4 +83,16 @@
 		reg-shift = <2>;
 		status = "disabled";
 	};
+
+	pcie3x2_ep: pcie-ep@f6000000 {
+		compatible = "rockchip,rk3568-pcie-ep";
+		reg = <0xf6000000 0x00400000>,
+		      <0xfe280000 0x00010000>,
+		      <0xf0000000 0x02000000>;
+		reg-names = "dbi", "client", "map";
+		num-ob-windows = <1>;
+		interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+		interrupt-names = "sys";
+		status = "disabled";
+	};
 };
