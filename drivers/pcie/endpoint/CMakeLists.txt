@@ -9,3 +9,8 @@ zephyr_library_sources_ifdef(
   pcie_ep_iproc.c
   pcie_ep_iproc_msi.c
   )
+
+zephyr_library_sources_ifdef(
+  CONFIG_PCIE_EP_ROCKCHIP_RK3568
+  pcie_ep_rockchip_rk3568.c
+  )

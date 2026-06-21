@@ -1,0 +1,46 @@
+# Copyright 2026
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Rockchip RK3568 dual-mode PCIe 3.0 x2 controller in endpoint mode.
+
+  The clocks, reset and PCIe PHY are expected to be initialized before the
+  endpoint driver starts.
+
+compatible: "rockchip,rk3568-pcie-ep"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+
+  reg-names:
+    required: true
+
+  num-ob-windows:
+    type: int
+    default: 1
+    description: |
+      Number of outbound iATU regions used to divide the outbound memory
+      aperture. Valid values are powers of two from 1 through 16.
+
+  vendor-id:
+    type: int
+    description: PCI vendor ID programmed before link training
+
+  device-id:
+    type: int
+    description: PCI device ID programmed before link training
+
+  class-revision:
+    type: int
+    description: Combined PCI class code and revision ID register value
+
+  subsystem-vendor-id:
+    type: int
+    description: PCI subsystem vendor ID programmed before link training
+
+  subsystem-id:
+    type: int
+    description: PCI subsystem ID programmed before link training

@@ -1,0 +1,15 @@
+# Copyright 2026
+# SPDX-License-Identifier: Apache-2.0
+
+config PCIE_EP_ROCKCHIP_RK3568
+	bool "Rockchip RK3568 PCIe endpoint controller"
+	default y
+	depends on DT_HAS_ROCKCHIP_RK3568_PCIE_EP_ENABLED
+	help
+	  Enable the endpoint driver for the dual-mode PCIe 3.0 x2
+	  controller in the Rockchip RK3568.
+
+	  The clocks, reset and PCIe PHY must be initialized before this
+	  driver runs. The driver configures the controller for endpoint
+	  mode, starts link training, manages outbound iATU windows and
+	  generates legacy, MSI and MSI-X interrupts.
