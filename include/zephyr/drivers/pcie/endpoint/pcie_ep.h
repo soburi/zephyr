@@ -42,6 +42,21 @@ enum pcie_reset {
 	PCIE_RESET_MAX
 };
 
+/** PCIe endpoint BAR configuration flags. */
+enum pcie_ep_bar_flags {
+	PCIE_EP_BAR_IO = BIT(0),       /**< I/O BAR instead of a memory BAR */
+	PCIE_EP_BAR_64 = BIT(1),       /**< 64-bit memory BAR */
+	PCIE_EP_BAR_PREFETCH = BIT(2), /**< Prefetchable memory BAR */
+};
+
+/** PCIe endpoint BAR configuration. */
+struct pcie_ep_bar {
+	uint64_t phys_addr; /**< Local address exposed through the BAR */
+	size_t size;        /**< BAR size; must be a power of two */
+	uint32_t flags;     /**< Combination of @ref pcie_ep_bar_flags */
+	uint8_t bar;        /**< BAR number, from 0 through 5 */
+};
+
 /**
  * @brief Callback API for PCIe reset interrupts
  *
@@ -73,6 +88,11 @@ __subsystem struct pcie_ep_driver_api {
 	int (*dma_xfer)(const struct device *dev, uint64_t mapped_addr,
 			uintptr_t local_addr, uint32_t size,
 			enum xfer_direction dir);
+	int (*set_bar)(const struct device *dev, const struct pcie_ep_bar *bar);
+	int (*clear_bar)(const struct device *dev, uint8_t bar);
+	int (*start)(const struct device *dev);
+	int (*stop)(const struct device *dev);
+	bool (*is_link_up)(const struct device *dev);
 };
 
 /**
@@ -240,6 +260,78 @@ static inline int pcie_ep_dma_xfer(const struct device *dev,
 	}
 
 	return -ENOTSUP;
+}
+
+/**
+ * @brief Configure a BAR and its inbound translation.
+ *
+ * @param dev Pointer to the endpoint device.
+ * @param bar BAR configuration.
+ *
+ * @return 0 if successful, negative errno code if failure.
+ */
+static inline int pcie_ep_set_bar(const struct device *dev, const struct pcie_ep_bar *bar)
+{
+	const struct pcie_ep_driver_api *api = DEVICE_API_GET(pcie_ep, dev);
+
+	return api->set_bar ? api->set_bar(dev, bar) : -ENOTSUP;
+}
+
+/**
+ * @brief Disable a BAR and its inbound translation.
+ *
+ * @param dev Pointer to the endpoint device.
+ * @param bar BAR number.
+ *
+ * @return 0 if successful, negative errno code if failure.
+ */
+static inline int pcie_ep_clear_bar(const struct device *dev, uint8_t bar)
+{
+	const struct pcie_ep_driver_api *api = DEVICE_API_GET(pcie_ep, dev);
+
+	return api->clear_bar ? api->clear_bar(dev, bar) : -ENOTSUP;
+}
+
+/**
+ * @brief Start PCIe link training.
+ *
+ * @param dev Pointer to the endpoint device.
+ *
+ * @return 0 if successful, negative errno code if failure.
+ */
+static inline int pcie_ep_start(const struct device *dev)
+{
+	const struct pcie_ep_driver_api *api = DEVICE_API_GET(pcie_ep, dev);
+
+	return api->start ? api->start(dev) : -ENOTSUP;
+}
+
+/**
+ * @brief Stop PCIe link training.
+ *
+ * @param dev Pointer to the endpoint device.
+ *
+ * @return 0 if successful, negative errno code if failure.
+ */
+static inline int pcie_ep_stop(const struct device *dev)
+{
+	const struct pcie_ep_driver_api *api = DEVICE_API_GET(pcie_ep, dev);
+
+	return api->stop ? api->stop(dev) : -ENOTSUP;
+}
+
+/**
+ * @brief Test whether both the physical and data link layers are up.
+ *
+ * @param dev Pointer to the endpoint device.
+ *
+ * @return true if the link is up, otherwise false.
+ */
+static inline bool pcie_ep_is_link_up(const struct device *dev)
+{
+	const struct pcie_ep_driver_api *api = DEVICE_API_GET(pcie_ep, dev);
+
+	return api->is_link_up ? api->is_link_up(dev) : false;
 }
 
 /**

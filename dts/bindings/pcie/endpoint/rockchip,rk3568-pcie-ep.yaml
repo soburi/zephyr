@@ -4,8 +4,8 @@
 description: |
   Rockchip RK3568 dual-mode PCIe 3.0 x2 controller in endpoint mode.
 
-  The clocks, reset and PCIe PHY are expected to be initialized before the
-  endpoint driver starts.
+  The register ranges include the controller, CRU and PCIe 3.0 x2 PHY
+  resources needed by the endpoint initialization sequence.
 
 compatible: "rockchip,rk3568-pcie-ep"
 
@@ -17,6 +17,19 @@ properties:
 
   reg-names:
     required: true
+    description: |
+      Must contain "dbi", "client", "map", "cru", "pmu_grf",
+      "pipe_grf", "phy_grf", and "phy".
+
+  rockchip,configure-m0-pins:
+    type: boolean
+    description: |
+      Configure GPIO0_A6, GPIO0_C5, and GPIO0_C6 for the PCIe3x2 M0
+      CLKREQ#, WAKE#, and PERST# functions.
+
+  rockchip,external-refclk:
+    type: boolean
+    description: Use the 100 MHz differential reference clock input from the host
 
   num-ob-windows:
     type: int
