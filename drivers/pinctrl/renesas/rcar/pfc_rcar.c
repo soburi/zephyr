@@ -12,8 +12,11 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/init.h>
+#include <zephyr/logging/log.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/device_mmio.h>
+
+LOG_MODULE_REGISTER(pinctrl_rcar, CONFIG_PINCTRL_LOG_LEVEL);
 
 #define PFC_RCAR_PMMR 0x0
 
@@ -77,15 +80,22 @@ static void pfc_rcar_set_gpsr(uintptr_t pfc_base,
 	uint8_t bank = 0;
 #endif
 	uint8_t bit = pin % 32;
-	uint32_t val = sys_read32(pfc_base + PFC_RCAR_GPSR +
-				  bank * sizeof(uint32_t));
+	uint32_t reg_offs = PFC_RCAR_GPSR + bank * sizeof(uint32_t);
+	uint32_t val = sys_read32(pfc_base + reg_offs);
+	uint32_t before = val;
 
 	if (peripheral) {
 		val |= BIT(bit);
 	} else {
 		val &= ~BIT(bit);
 	}
-	pfc_rcar_write(pfc_base, PFC_RCAR_GPSR + bank * sizeof(uint32_t), val);
+	pfc_rcar_write(pfc_base, reg_offs, val);
+
+	LOG_DBG("GPSR pin=%u bank=%u bit=%u mode=%s base=0x%lx "
+		"before=0x%08x write=0x%08x after=0x%08x",
+		pin, bank, bit, peripheral ? "peripheral" : "gpio",
+		(unsigned long)pfc_base, before, val,
+		sys_read32(pfc_base + reg_offs));
 }
 
 /* Set peripheral function */
@@ -94,10 +104,17 @@ static void pfc_rcar_set_ipsr(uintptr_t pfc_base,
 {
 	uint16_t reg_offs = PFC_RCAR_IPSR + rcar_func->bank * sizeof(uint32_t);
 	uint32_t val = sys_read32(pfc_base + reg_offs);
+	uint32_t before = val;
 
 	val &= ~(0xFU << rcar_func->shift);
 	val |= (rcar_func->func << rcar_func->shift);
 	pfc_rcar_write(pfc_base, reg_offs, val);
+
+	LOG_DBG("IPSR bank=%u shift=%u func=%u base=0x%lx "
+		"before=0x%08x write=0x%08x after=0x%08x",
+		rcar_func->bank, rcar_func->shift, rcar_func->func,
+		(unsigned long)pfc_base, before, val,
+		sys_read32(pfc_base + reg_offs));
 }
 
 static uint32_t pfc_rcar_get_drive_reg(uint16_t pin, uint8_t *offset,
@@ -128,7 +145,7 @@ static int pfc_rcar_set_drive_strength(uintptr_t pfc_base, uint16_t pin,
 				       uint8_t strength)
 {
 	uint8_t offset, size, step;
-	uint32_t reg, val;
+	uint32_t reg, val, before;
 
 	reg = pfc_rcar_get_drive_reg(pin, &offset, &size);
 	if (reg == 0U) {
@@ -146,10 +163,16 @@ static int pfc_rcar_set_drive_strength(uintptr_t pfc_base, uint16_t pin,
 	strength = (strength / step) - 1U;
 	/* clear previous drive strength value */
 	val = sys_read32(pfc_base + reg);
+	before = val;
 	val &= ~GENMASK(offset + size - 1U, offset);
 	val |= strength << offset;
 
 	pfc_rcar_write(pfc_base, reg, val);
+
+	LOG_DBG("DRVCTRL pin=%u reg=0x%x base=0x%lx "
+		"before=0x%08x write=0x%08x after=0x%08x",
+		pin, reg, (unsigned long)pfc_base, before, val,
+		sys_read32(pfc_base + reg));
 
 	return 0;
 }
@@ -176,6 +199,8 @@ static const struct pfc_bias_reg *pfc_rcar_get_bias_reg(uint16_t pin,
 int pfc_rcar_set_bias(uintptr_t pfc_base, uint16_t pin, uint16_t flags)
 {
 	uint32_t val;
+	uint32_t puen_before;
+	uint32_t pud_before;
 	uint8_t bit;
 	const struct pfc_bias_reg *bias_reg = pfc_rcar_get_bias_reg(pin, &bit);
 
@@ -185,19 +210,33 @@ int pfc_rcar_set_bias(uintptr_t pfc_base, uint16_t pin, uint16_t flags)
 
 	/* pull enable/disable*/
 	val = sys_read32(pfc_base + bias_reg->puen);
+	puen_before = val;
 	if ((flags & RCAR_PIN_FLAGS_PUEN) == 0U) {
 		sys_write32(val & ~BIT(bit), pfc_base + bias_reg->puen);
+		LOG_DBG("BIAS pin=%u bit=%u disable base=0x%lx "
+			"PUEN before=0x%08x after=0x%08x",
+			pin, bit, (unsigned long)pfc_base, puen_before,
+			sys_read32(pfc_base + bias_reg->puen));
 		return 0;
 	}
 	sys_write32(val | BIT(bit), pfc_base + bias_reg->puen);
 
 	/* pull - up/down */
 	val = sys_read32(pfc_base + bias_reg->pud);
+	pud_before = val;
 	if (flags & RCAR_PIN_FLAGS_PUD) {
 		sys_write32(val | BIT(bit), pfc_base + bias_reg->pud);
 	} else {
 		sys_write32(val & ~BIT(bit), pfc_base + bias_reg->pud);
 	}
+
+	LOG_DBG("BIAS pin=%u bit=%u %s base=0x%lx "
+		"PUEN before=0x%08x after=0x%08x "
+		"PUD before=0x%08x after=0x%08x",
+		pin, bit, (flags & RCAR_PIN_FLAGS_PUD) ? "pull-up" : "pull-down",
+		(unsigned long)pfc_base, puen_before,
+		sys_read32(pfc_base + bias_reg->puen), pud_before,
+		sys_read32(pfc_base + bias_reg->pud));
 	return 0;
 }
 
@@ -311,22 +350,34 @@ int pinctrl_configure_pin(const pinctrl_soc_pin_t *pin)
 	uint8_t reg_index;
 	uintptr_t pfc_base;
 
+	LOG_DBG("configure pin=%u flags=0x%x func=(bank=%u shift=%u func=%u) "
+		"drive=%u voltage=%u",
+		pin->pin, pin->flags, pin->func.bank, pin->func.shift,
+		pin->func.func, pin->drive_strength, pin->voltage);
+
 	ret = pfc_rcar_get_reg_index(pin->pin, &reg_index);
 	if (ret) {
+		LOG_ERR("pin=%u: failed to get PFC register index (%d)",
+			pin->pin, ret);
 		return ret;
 	}
 
 	if (reg_index >= ARRAY_SIZE(reg_base)) {
+		LOG_ERR("pin=%u: invalid PFC register index %u", pin->pin,
+			reg_index);
 		return -EINVAL;
 	}
 
 	pfc_base = reg_base[reg_index];
+	LOG_DBG("pin=%u uses PFC[%u] base=0x%lx", pin->pin, reg_index,
+		(unsigned long)pfc_base);
 
 	/* Set pin as GPIO if capable */
 	if (RCAR_IS_GP_PIN(pin->pin)) {
 		pfc_rcar_set_gpsr(pfc_base, pin->pin, false);
 	} else if ((pin->flags & RCAR_PIN_FLAGS_FUNC_SET) == 0U) {
 		/* A function must be set for non GPIO capable pin */
+		LOG_ERR("pin=%u is not GPIO-capable and has no function", pin->pin);
 		return -EINVAL;
 	}
 
@@ -350,6 +401,8 @@ int pinctrl_configure_pin(const pinctrl_soc_pin_t *pin)
 		if ((pin->flags & RCAR_PIN_FLAGS_PULL_SET) != 0U) {
 			ret = pfc_rcar_set_bias(pfc_base, pin->pin, pin->flags);
 			if (ret < 0) {
+				LOG_ERR("pin=%u: failed to configure bias (%d)",
+					pin->pin, ret);
 				return ret;
 			}
 		}
@@ -358,6 +411,10 @@ int pinctrl_configure_pin(const pinctrl_soc_pin_t *pin)
 	if (pin->drive_strength != 0U) {
 		ret = pfc_rcar_set_drive_strength(pfc_base, pin->pin,
 						  pin->drive_strength);
+		if (ret < 0) {
+			LOG_ERR("pin=%u: failed to configure drive strength %u (%d)",
+				pin->pin, pin->drive_strength, ret);
+		}
 	}
 
 	return ret;
@@ -367,14 +424,17 @@ int pinctrl_configure_pins(const pinctrl_soc_pin_t *pins, uint8_t pin_cnt,
 			   uintptr_t reg)
 {
 	int ret = 0;
+	uint8_t pin_count = pin_cnt;
 
 	ARG_UNUSED(reg);
+	LOG_DBG("configure %u pins", pin_count);
 	while (pin_cnt-- > 0U) {
 		ret = pinctrl_configure_pin(pins++);
 		if (ret < 0) {
 			break;
 		}
 	}
+	LOG_DBG("configure %u pins: ret=%d", pin_count, ret);
 
 	return ret;
 }
