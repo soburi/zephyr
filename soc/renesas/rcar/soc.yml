@@ -17,3 +17,4 @@ family:
           - name: r8a779g0
             cpuclusters:
               - name: r52
+              - name: a76
