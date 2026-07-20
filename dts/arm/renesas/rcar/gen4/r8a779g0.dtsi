@@ -8,7 +8,7 @@
 #include <zephyr/dt-bindings/gpio/gpio.h>
 #include <zephyr/dt-bindings/clock/r8a779g0_cpg_mssr.h>
 
-/ {	
+/ {
 	can_clk: can {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;

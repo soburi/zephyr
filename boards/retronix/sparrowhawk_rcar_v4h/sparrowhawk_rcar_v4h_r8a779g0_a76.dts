@@ -51,14 +51,14 @@
 };
 
 &gpio3 {
-	pinctrl-0 = <&sd_cd>;
-	pinctrl-names = "default";
+	//pinctrl-0 = <&sd_cd>;
+	//pinctrl-names = "default";
 	status = "okay";
 };
 
 &gpio8 {
-	pinctrl-0 = <&sd_vqmmc>;
-	pinctrl-names = "default";
+	//pinctrl-0 = <&sd_vqmmc>;
+	//pinctrl-names = "default";
 	status = "okay";
 };
 
