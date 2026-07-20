@@ -3,3 +3,11 @@
 
 config BUILD_OUTPUT_BIN
 	default y if BOARD_SPARROWHAWK_RCAR_V4H_R8A779G0_R52
+
+if BOARD_SPARROWHAWK_RCAR_V4H_R8A779G0_A76
+
+# GPIO must initialize after the GIC/PFC and before GPIO regulators.
+config GPIO_INIT_PRIORITY
+	default 70
+
+endif
