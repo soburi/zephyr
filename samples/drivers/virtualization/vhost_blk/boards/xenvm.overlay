@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2026 TOKITA Hiroshi
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	vhost {
+		blk: blk {
+			compatible = "xen,vhost-mmio";
+			device-id = <2>;
+			vendor-id = <0x7a707972>; /* "zphy" */
+			num-queues = <1>;
+			queue-size-max = <16>;
+			base = <0x02000000>;
+			/* capacity: 2048 512-byte sectors, little-endian */
+			config-data = [00 08 00 00 00 00 00 00];
+		};
+	};
+
+	chosen {
+		zephyr,shell-uart = &xen_hvc;
+	};
+};
