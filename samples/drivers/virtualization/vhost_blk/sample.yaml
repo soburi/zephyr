@@ -1,0 +1,20 @@
+sample:
+  description: Xen vhost virtio-blk RAM backend sample
+  name: xen vhost virtio-blk
+common:
+  integration_platforms:
+    - xenvm/xenvm/gicv3
+  platform_allow:
+    - xenvm/xenvm/gicv3
+  harness: console
+  harness_config:
+    type: multi_line
+    regex:
+      - "VHost blk device .* ready"
+      - "VHost virtio-blk sample started"
+  timeout: 60
+  depends_on: vhost
+tests:
+  sample.drivers.virtualization.vhost_blk:
+    tags: drivers virtualization vhost xen virtio
+    min_ram: 16
