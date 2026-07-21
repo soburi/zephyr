@@ -1,0 +1,14 @@
+# Copyright (c) 2026 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: In-memory storage backend for the vhost virtio-blk sample
+
+compatible: "zephyr,vhost-blk-memory"
+
+include: base.yaml
+
+properties:
+  sector-count:
+    type: int
+    required: true
+    description: Number of 512-byte sectors exposed to the guest.
