@@ -1,0 +1,19 @@
+# Copyright (c) 2026 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+description: Disk Access storage backend for the vhost virtio-blk sample
+
+compatible: "zephyr,vhost-blk-disk"
+
+include: base.yaml
+
+properties:
+  disk-name:
+    type: string
+    required: true
+    description: Disk Access API name, for example SD.
+
+  sector-count:
+    type: int
+    required: true
+    description: Number of 512-byte sectors exposed to the guest.
