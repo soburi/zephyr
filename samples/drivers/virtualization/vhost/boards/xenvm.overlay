@@ -14,6 +14,45 @@
 			queue-size-max= <16>;
 			base = <0x2000000>;
 		};
+
+		blk: blk {
+			compatible = "xen,vhost-mmio";
+			device-id = <2>;
+			vendor-id = <0x7a707972>; /* "zphy" */
+			device-features = <0x200>; /* VIRTIO_BLK_F_FLUSH */
+			num-queues = <1>;
+			queue-size-max = <16>;
+			base = <0x2001000>;
+			/* capacity: 2048 512-byte sectors, little-endian */
+			config-data = [00 08 00 00 00 00 00 00];
+		};
+	};
+
+	vhost_blk_backends {
+		blk_memory: memory {
+			compatible = "zephyr,vhost-blk-memory";
+			sector-count = <2048>;
+			status = "okay";
+		};
+
+		blk_sd: sd {
+			compatible = "zephyr,vhost-blk-disk";
+			disk-name = "SD";
+			sector-count = <2048>;
+			status = "disabled";
+		};
+
+		blk_file: file {
+			compatible = "zephyr,vhost-blk-file";
+			file-path = "/SD:/virtio-blk.img";
+			sector-count = <2048>;
+			status = "disabled";
+		};
+	};
+
+	zephyr,user {
+		/* Select &blk_memory, &blk_sd, or &blk_file. */
+		vhost-blk-backend = <&blk_memory>;
 	};
 
 	chosen {

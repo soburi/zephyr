@@ -1,0 +1,16 @@
+# Copyright (c) 2026 TOKITA Hiroshi
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Vhost sample"
+
+config VHOST_BLK_DISK_BACKEND
+	bool
+	default y if DT_HAS_ZEPHYR_VHOST_BLK_DISK_ENABLED
+	select DISK_ACCESS
+
+config VHOST_BLK_FILE_BACKEND
+	bool
+	default y if DT_HAS_ZEPHYR_VHOST_BLK_FILE_ENABLED
+	select FILE_SYSTEM
+
+source "Kconfig.zephyr"
