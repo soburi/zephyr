@@ -41,6 +41,13 @@ properties:
       Virtio vendor ID value reported by the device. A value of 0 selects the
       implementation-defined or Xen-provided default vendor ID.
 
+  device-features:
+    type: int
+    default: 0
+    description: |
+      Device-specific feature bits 0 through 31 advertised in addition to the
+      transport feature bits supplied by the driver.
+
   stack-size:
     type: int
     description: |

@@ -1453,7 +1453,8 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.workq_stack = (k_thread_stack_t *)&workq_stack_##idx,                             \
 		.workq_stack_size = K_THREAD_STACK_SIZEOF(workq_stack_##idx),                      \
 		.workq_priority = DT_INST_PROP_OR(idx, priority, 0),                               \
-		.device_features = BIT(VIRTIO_F_VERSION_1) | BIT(VIRTIO_F_ACCESS_PLATFORM),        \
+		.device_features = BIT(VIRTIO_F_VERSION_1) | BIT(VIRTIO_F_ACCESS_PLATFORM) |      \
+				   DT_INST_PROP_OR(idx, device_features, 0),                         \
 	};                                                                                         \
 	struct mapped_pages_chunk vhost_xen_mmio_pages_chunks_##idx[Q_NUM(idx)]                    \
 								   [Q_SZ_MAX(idx) + 1];            \
