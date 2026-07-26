@@ -224,6 +224,63 @@
 			current-speed = <921600>;
 			status = "disabled";
 		};
+
+		canfd: can@e6660000 {
+			compatible = "renesas,rcar-canfd";
+			reg = <0 0xe6660000 0 0x8500>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 412 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>,
+				<GIC_SPI 413 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
+
+			clocks = <&cpg CPG_MOD 328>,
+				 <&cpg CPG_CORE R8A779G0_CLK_CANFD>,
+				 <&can_clk>;
+			clock-names = "fck", "canfd", "can_clk";
+			/*
+			resets = <&cpg 328>;
+			*/
+			status = "okay";
+
+			channel0 {
+				max-bitrate = <1000000>;
+				status = "disabled";
+			};
+
+			channel1 {
+				max-bitrate = <1000000>;
+				status = "disabled";
+			};
+
+			channel2 {
+				max-bitrate = <1000000>;
+				status = "disabled";
+			};
+
+			channel3 {
+				max-bitrate = <1000000>;
+				status = "disabled";
+			};
+
+			channel4 {
+				max-bitrate = <1000000>;
+				status = "disabled";
+			};
+
+			channel5 {
+				max-bitrate = <1000000>;
+				status = "disabled";
+			};
+
+			channel6 {
+				max-bitrate = <1000000>;
+				status = "disabled";
+			};
+
+			channel7 {
+				status = "disabled";
+				max-bitrate = <1000000>;
+			};
+		};
 	};
 
 	clocks {
@@ -231,6 +288,12 @@
 			compatible = "fixed-clock";
 			clock-frequency = <16660000>;
 			#clock-cells = <0>;
+		};
+
+		can_clk: can {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
 		};
 	};
 };

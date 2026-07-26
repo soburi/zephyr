@@ -64,8 +64,12 @@ static struct cpg_clk_info_table core_props[] = {
 	RCAR_CORE_CLK_INFO_ITEM(R8A779G0_CLK_SD0, 0x0870, R8A779G0_CLK_SD0H, RCAR_CPG_NONE),
 
 	RCAR_CORE_CLK_INFO_ITEM(R8A779G0_CLK_SASYNCPERD1, RCAR_CPG_NONE, RCAR_CPG_NONE, 266666666),
+	RCAR_CORE_CLK_INFO_ITEM(R8A779G0_CLK_SASYNCPERD2, RCAR_CPG_NONE, RCAR_CPG_NONE, 133333333),
+	RCAR_CORE_CLK_INFO_ITEM(R8A779G0_CLK_SASYNCPERD4, RCAR_CPG_NONE, RCAR_CPG_NONE,  66666666),
 	RCAR_CORE_CLK_INFO_ITEM(CLK_PLL5, RCAR_CPG_NONE, RCAR_CPG_NONE, RCAR_CPG_MHZ(3200)),
 	RCAR_CORE_CLK_INFO_ITEM(CLK_SDSRC, 0x08A4, CLK_PLL5, RCAR_CPG_NONE),
+
+	RCAR_CORE_CLK_INFO_ITEM(R8A779G0_CLK_CANFD, RCAR_CPG_NONE, RCAR_CPG_NONE, RCAR_CPG_MHZ(40)),
 };
 
 /*
@@ -77,6 +81,7 @@ static struct cpg_clk_info_table core_props[] = {
 
 /* NOTE: the array MUST be sorted by module field */
 static struct cpg_clk_info_table mod_props[] = {
+	RCAR_MOD_CLK_INFO_ITEM(328, R8A779G0_CLK_CANFD),       /* CANFD */
 	RCAR_MOD_CLK_INFO_ITEM(514, R8A779G0_CLK_SASYNCPERD1), /* HSCIF0 */
 	RCAR_MOD_CLK_INFO_ITEM(515, R8A779G0_CLK_SASYNCPERD1), /* HSCIF1 */
 	RCAR_MOD_CLK_INFO_ITEM(702, R8A779G0_CLK_S0D12_PER),   /* SCIF0 */
@@ -205,7 +210,7 @@ static int r8a779g0_cpg_mssr_init(const struct device *dev)
 	return 0;
 }
 
-static const struct clock_control_driver_api r8a779g0_cpg_mssr_api = {
+static DEVICE_API(clock_control, r8a779g0_cpg_mssr_api) = {
 	.on = r8a779g0_cpg_mssr_on,
 	.off = r8a779g0_cpg_mssr_off,
 	.get_rate = rcar_cpg_get_rate,
