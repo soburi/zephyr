@@ -4,6 +4,7 @@
  */
 
 #include <zephyr/drivers/clock_control.h>
+#include <zephyr/drivers/clock_control/renesas_cpg_mssr.h>
 #include <zephyr/sys/util.h>
 
 #include <zephyr/logging/log.h>
@@ -168,6 +169,22 @@ zephyr_clock_controller_emul_subsys_rate_to_value(clock_control_subsys_rate_t ra
 	return 0;
 }
 
+__maybe_unused static bool
+zephyr_clock_controller_emul_rcar_cpg_mssr_subsys_match(clock_control_subsys_t sys,
+							const uint32_t *cells, size_t num_cells)
+{
+	const struct rcar_cpg_clk *clk = sys;
+
+	return clk != NULL && num_cells == 2U && cells[0] == clk->domain && cells[1] == clk->module;
+}
+
+__maybe_unused static int
+zephyr_clock_controller_emul_rcar_cpg_mssr_rate_to_value(clock_control_subsys_rate_t rate,
+							 uint32_t *value)
+{
+	return zephyr_clock_controller_emul_subsys_rate_to_value(rate, value);
+}
+
 #define CLOCK_CONTROL_EMUL_INIT(node_id, cell_count)                                               \
 	BUILD_ASSERT(DT_PROP_LEN(node_id, clock_ids) % cell_count == 0,                            \
 		     "clock-ids must contain complete clock identifiers");                         \
@@ -195,3 +212,4 @@ zephyr_clock_controller_emul_subsys_rate_to_value(clock_control_subsys_rate_t ra
 			 CONFIG_CLOCK_CONTROL_INIT_PRIORITY, &clock_control_emul_api);
 
 DT_FOREACH_STATUS_OKAY_VARGS(zephyr_clock_controller_emul, CLOCK_CONTROL_EMUL_INIT, 1)
+DT_FOREACH_STATUS_OKAY_VARGS(zephyr_clock_controller_emul_rcar_cpg_mssr, CLOCK_CONTROL_EMUL_INIT, 2)

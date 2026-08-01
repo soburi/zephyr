@@ -81,8 +81,15 @@
 /delete-node/ &hscif1;
 
 &cpg {
-	compatible = "renesas,rcar-cpg-mssr-emul";
+	compatible = "zephyr,clock-controller-emul-rcar-cpg-mssr";
 	#clock-cells = <2>;
+	clock-ids = <CPG_MOD 328>,
+		    <CPG_CORE R8A779G0_CLK_CANFD>,
+		    <CPG_CORE R8A779G0_CLK_SASYNCPERD2>,
+		    <CPG_MOD 706>,
+		    <CPG_CORE R8A779G0_CLK_SD0H>,
+		    <CPG_MOD 916>,
+		    <CPG_MOD 918>;
+	clock-initial-values = <40000000>, <40000000>, <133333333>, <200000000>,
+			       <200000000>, <16660000>, <16660000>;
 };
-
-
