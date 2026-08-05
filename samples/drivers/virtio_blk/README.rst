@@ -39,6 +39,32 @@ The QEMU integration creates a raw disk image in the build directory and
 attaches it to the emulated VirtIO block device. Its size can be changed with
 :kconfig:option:`CONFIG_QEMU_VIRTIO_BLK_DISK_SIZE`.
 
+Sparrow Hawk R-Car V4H
+======================
+
+The ``sparrowhawk_rcar_v4h/r8a779g0/a76`` configuration runs as a Xen guest;
+the physical board does not provide a VirtIO device when booted bare metal.
+Build it with the ``xen-guest`` snippet:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/drivers/virtio_blk
+   :board: sparrowhawk_rcar_v4h/r8a779g0/a76
+   :snippets: xen-guest
+   :goals: build
+   :compact:
+
+The board overlay describes the first Xen Arm VirtIO-MMIO slot at
+``0x02000000`` with IRQ 33. The VirtIO block disk must therefore be the first
+VirtIO-MMIO device assigned to the domain. The Xen configuration must use
+``grant_usage=0`` because the Zephyr VirtIO frontend currently publishes guest
+physical addresses and does not implement Xen grant DMA addresses. A backend
+that requires ``grant_usage=1``, including the Xen ``vhost_blk`` sample, is not
+compatible with this frontend yet.
+
+The guest configuration must allocate 16 MiB of RAM, matching the
+``xen-guest`` snippet, and expose a writable VirtIO block device. The sample
+image is ``build/zephyr/zephyr.bin``.
+
 Sample Output
 =============
 

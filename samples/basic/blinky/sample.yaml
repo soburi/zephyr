@@ -10,3 +10,12 @@ tests:
     harness: led
     integration_platforms:
       - frdm_k64f
+  sample.basic.blinky.xen_domd_rpi5:
+    tags:
+      - LED
+      - gpio
+      - xen
+    build_only: true
+    extra_args: SNIPPET=xen-domd
+    platform_allow:
+      - rpi_5/bcm2712

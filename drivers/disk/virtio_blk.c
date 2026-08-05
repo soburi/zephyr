@@ -12,6 +12,10 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/util.h>
 
+#if defined(CONFIG_MMU)
+#include <kernel_arch_interface.h>
+#endif
+
 #define DT_DRV_COMPAT        virtio_blk
 #define VIRTIO_BLK_QUEUE_IDX 0
 

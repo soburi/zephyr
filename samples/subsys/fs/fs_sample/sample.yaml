@@ -75,6 +75,12 @@ tests:
     filter: dt_compat_enabled("zephyr,sdmmc-disk")
     integration_platforms:
       - frdm_k64f
+  sample.filesystem.fat_fs.xen_domd_sparrowhawk:
+    build_only: true
+    extra_args: SNIPPET=xen-domd
+    filter: dt_compat_enabled("zephyr,sdmmc-disk")
+    platform_allow:
+      - sparrowhawk_rcar_v4h/r8a779g0/a76
   sample.filesystem.ext2:
     simulation_exclude:
       - renode
