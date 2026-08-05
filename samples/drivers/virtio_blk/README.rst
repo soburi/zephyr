@@ -39,6 +39,23 @@ The QEMU integration creates a raw disk image in the build directory and
 attaches it to the emulated VirtIO block device. Its size can be changed with
 :kconfig:option:`CONFIG_QEMU_VIRTIO_BLK_DISK_SIZE`.
 
+xenvm
+=====
+
+The ``xenvm/xenvm/gicv3`` configuration uses the first Xen Arm VirtIO-MMIO
+slot at ``0x02000000`` and IRQ 33. Build it with:
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/drivers/virtio_blk
+   :board: xenvm/xenvm/gicv3
+   :goals: build
+   :compact:
+
+The Xen domain configuration must provide a writable VirtIO block device at
+that slot. As with the other Xen configurations, the frontend currently uses
+guest physical DMA addresses and does not implement Xen grant DMA addresses;
+grant-backed backends therefore require additional frontend support.
+
 Sparrow Hawk R-Car V4H
 ======================
 
