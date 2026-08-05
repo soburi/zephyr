@@ -17,4 +17,11 @@ zephyr_library_sources_ifdef(CONFIG_DISK_DRIVER_VIRTIO_BLK virtio_blk.c)
 zephyr_library_sources_ifdef(CONFIG_SDMMC_STM32 sdmmc_stm32.c)
 # zephyr-keep-sorted-stop
 
+if(CONFIG_DISK_DRIVER_VIRTIO_BLK AND CONFIG_MMU)
+  zephyr_library_include_directories(
+    ${ZEPHYR_BASE}/kernel/include
+    ${ARCH_DIR}/${ARCH}/include
+  )
+endif()
+
 endif()

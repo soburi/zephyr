@@ -26,3 +26,8 @@ tests:
       - qemu_cortex_a53
     integration_platforms:
       - qemu_cortex_a53
+  sample.drivers.virtio_blk.sparrowhawk_xen:
+    build_only: true
+    extra_args: SNIPPET=xen-guest
+    platform_allow:
+      - sparrowhawk_rcar_v4h/r8a779g0/a76
