@@ -1,0 +1,42 @@
+/*
+ * Copyright (c) 2026 TOKITA Hiroshi
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	virtio_mmio0: virtio@2000000 {
+		compatible = "virtio,mmio";
+		reg = <0x0 0x02000000 0x0 0x200>;
+		interrupts = <GIC_SPI 1 IRQ_TYPE_EDGE IRQ_DEFAULT_PRIORITY>;
+		interrupt-parent = <&gic>;
+		status = "okay";
+
+		virtio_blk: virtio-blk {
+			compatible = "virtio,blk";
+			disk-name = "VIRTIOBLK0";
+			status = "okay";
+		};
+	};
+};
+
+/* The Xen guest uses the virtual block device instead of physical SDHI. */
+&mmc0 {
+	status = "disabled";
+
+	disk {
+		status = "disabled";
+	};
+};
+
+&gpio3 {
+	status = "disabled";
+};
+
+&gpio8 {
+	status = "disabled";
+};
+
+&vcc_sdhi {
+	status = "disabled";
+};
