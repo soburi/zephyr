@@ -13,16 +13,19 @@
 / {
 	compatible = "raspberrypi,5-model-b-domd", "raspberrypi,5-model-b", "brcm,bcm2712";
 	model = "Raspberry Pi 5 Xen DomD";
+	#size-cells = <1>;
 
 	passthrough {
 		compatible = "simple-bus";
 		ranges;
 		#address-cells = <2>;
-		#size-cells = <2>;
+		#size-cells = <1>;
 	};
 
 	chosen {
 		zephyr,shell-uart = &xen_hvc;
+		/delete-property/ zephyr,pcie-controller;
+		/delete-property/ zephyr,entropy;
 	};
 
 	soc {
@@ -35,20 +38,23 @@
 		#interrupt-cells = <4>;
 		#address-cells = <0>;
 		interrupt-controller;
-		reg = <0x00 0x3001000 0x00 0x10000 0x00 0x3020000 0x00 0x1000000>;
+		reg = <0x00 0x3001000 0x10000 0x00 0x3020000 0x1000000>;
 	};
 };
 
+&ram {
+	reg = <0x00 0x40000000 DT_SIZE_M(16)>;
+};
+
+&hypervisor {
+	reg = <0x00 0x38000000 0x1000000>;
+};
 
 &rng {
 	status = "disabled";
 };
 
 &uart10 {
-	status = "disabled";
-};
-
-&gio_aon {
 	status = "disabled";
 };
 

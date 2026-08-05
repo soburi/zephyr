@@ -11,7 +11,7 @@
 /delete-node/ &gic;
 
 / {
-	compatible = "retronix,sparrowhawk-v4h-cr52-domd";
+	compatible = "retronix,sparrowhawk-v4h-ca76-domd";
 	model = "Retronix Sparrow Hawk on R-Car V4H: Xen DomD";
 
 	passthrough {
@@ -40,8 +40,17 @@
 };
 
 &cpg {
-	compatible = "renesas,rcar-cpg-mssr-emul";
+	compatible = "zephyr,clock-controller-emul-rcar-cpg-mssr";
 	#clock-cells = <2>;
+	clock-ids = <CPG_MOD 328>,
+		    <CPG_CORE R8A779G0_CLK_CANFD>,
+		    <CPG_CORE R8A779G0_CLK_SASYNCPERD2>,
+		    <CPG_MOD 706>,
+		    <CPG_CORE R8A779G0_CLK_SD0H>,
+		    <CPG_MOD 916>,
+		    <CPG_MOD 918>;
+	clock-initial-values = <40000000>, <40000000>, <133333333>, <200000000>,
+			       <200000000>, <16660000>, <16660000>;
 };
 
 &gpio0 {
@@ -61,25 +70,5 @@
 };
 
 &hscif1 {
-	status = "disabled";
-};
-
-&scif0 {
-	status = "disabled";
-};
-
-&scif1 {
-	status = "disabled";
-};
-
-&scif3 {
-	status = "disabled";
-};
-
-&scif4 {
-	status = "disabled";
-};
-
-&canfd {
 	status = "disabled";
 };
