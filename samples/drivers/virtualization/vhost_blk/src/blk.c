@@ -169,15 +169,24 @@ static uint32_t process_request(void)
 		if (ret == 0 && data_length <= UINT32_MAX - sizeof(status)) {
 			status = VIRTIO_BLK_S_OK;
 			used_length = data_length + sizeof(status);
+			LOG_DBG("READ sector=%" PRIu64 " length=%zu", sector, data_length);
+			LOG_HEXDUMP_DBG(&disk[sector * VIRTIO_BLK_SECTOR_SIZE], data_length,
+					 "READ data");
 		}
 		break;
 	}
-	case VIRTIO_BLK_T_OUT:
-		ret = process_rw_request(true, sector, read_length - sizeof(header));
+	case VIRTIO_BLK_T_OUT: {
+		const size_t data_length = read_length - sizeof(header);
+
+		ret = process_rw_request(true, sector, data_length);
 		if (ret == 0) {
 			status = VIRTIO_BLK_S_OK;
+			LOG_DBG("WRITE sector=%" PRIu64 " length=%zu", sector, data_length);
+			LOG_HEXDUMP_DBG(&disk[sector * VIRTIO_BLK_SECTOR_SIZE], data_length,
+					 "WRITE data");
 		}
 		break;
+	}
 	case VIRTIO_BLK_T_FLUSH:
 		ret = 0;
 		status = VIRTIO_BLK_S_OK;
