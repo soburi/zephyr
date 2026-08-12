@@ -214,12 +214,4 @@
 			status = "disabled";
 		};
 	};
-
-	clocks {
-		clock-cl16m_rt {
-			compatible = "fixed-clock";
-			clock-frequency = <16660000>;
-			#clock-cells = <0>;
-		};
-	};
 };

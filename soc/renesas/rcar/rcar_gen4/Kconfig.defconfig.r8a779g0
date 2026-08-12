@@ -9,10 +9,15 @@ config NUM_IRQS
 
 # Arm Generic Timer frequency (Hz)
 config SYS_CLOCK_HW_CYCLES_PER_SEC
-	default $(dt_node_int_prop_int,/clocks/clock-cl16m_rt,clock-frequency)
+	default $(dt_node_int_prop_int,/clocks/clock-cl16m_rt,clock-frequency) if SOC_R8A779G0_R52
+	default 0 if SOC_R8A779G0_A76
 
 # Clock Pulse Generator
 config CLOCK_CONTROL
 	default y
 
-endif # SOC_R8A779G0_R52
+config TIMER_READS_ITS_FREQUENCY_AT_RUNTIME
+        default n if SOC_R8A779G0_R52
+        default y if SOC_R8A779G0_A76
+
+endif # SOC_R8A779G0_R52 || SOC_R8A779G0_A76
