@@ -8,7 +8,6 @@ include: [clock-controller.yaml, base.yaml]
 properties:
   clock-ids:
     type: array
-    required: true
     description: |
       Clock identifiers supported by the controller. Each identifier consists
       of #clock-cells values, laid out in the same order as the clock-cells
@@ -17,5 +16,10 @@ properties:
 
   clock-initial-values:
     type: array
-    required: true
     description: Initial rate in Hz for each identifier in clock-ids.
+
+  strict:
+    type: boolean
+    description: |
+      A flag indicate to checks the validity of the operation—such as the presence
+      or absence of a clock ID—and returns an error response.
