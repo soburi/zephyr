@@ -58,7 +58,22 @@ static void vringh_kick_callback(const struct device *dev, uint16_t queue_id, vo
 
 static inline void vringh_fail_device(struct vringh *vrh)
 {
-	int rc = vhost_set_device_status(vrh->dev, DEVICE_STATUS_FAILED);
+	k_spinlock_key_t key;
+	int rc;
+
+	if ((vrh == NULL) || (vrh->dev == NULL)) {
+		return;
+	}
+
+	key = k_spin_lock(&vrh->lock);
+	if (vrh->failed) {
+		k_spin_unlock(&vrh->lock, key);
+		return;
+	}
+	vrh->failed = true;
+	k_spin_unlock(&vrh->lock, key);
+
+	rc = vhost_set_device_status(vrh->dev, BIT(DEVICE_STATUS_FAILED));
 
 	if (rc < 0) {
 		LOG_ERR("vhost_set_device_status failed: %d", rc);
@@ -78,6 +93,7 @@ int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t qu
 		return -EINVAL;
 	}
 
+	memset(vrh, 0, sizeof(*vrh));
 	ret = vhost_get_virtq(dev, queue_id, parts, &q_num);
 	if (ret < 0) {
 		LOG_ERR("vhost_get_virtq failed: %d", ret);
@@ -115,6 +131,7 @@ int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t qu
 	ret = vhost_register_virtq_notify_cb(dev, queue_id, vringh_kick_callback, (void *)vrh);
 	if (ret < 0) {
 		LOG_ERR("vhost_register_virtq_notify_cb failed: %d", ret);
+		memset(vrh, 0, sizeof(*vrh));
 		return ret;
 	}
 
