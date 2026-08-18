@@ -548,22 +548,22 @@ void vringh_notify(struct vringh *vrh)
 		return;
 	}
 
+	barrier_dmem_fence_full();
+
 	k_spinlock_key_t key = k_spin_lock(&vrh->lock);
 	const uint16_t flags = sys_le16_to_cpu(vrh->vring.avail->flags);
 
-	k_spin_unlock(&vrh->lock, key);
-
-	if (flags & VIRTQ_AVAIL_F_NO_INTERRUPT) {
+	if (vrh->failed || (vrh->completed == 0U) || (flags & VIRTQ_AVAIL_F_NO_INTERRUPT)) {
+		k_spin_unlock(&vrh->lock, key);
 		return;
 	}
 
+	/* Claim this batch before calling the backend so concurrent completions survive. */
+	vrh->completed = 0U;
+	k_spin_unlock(&vrh->lock, key);
+
 	if (vrh->notify != NULL) {
 		vrh->notify(vrh);
-
-		k_spinlock_key_t key2 = k_spin_lock(&vrh->lock);
-
-		vrh->completed = 0U;
-		k_spin_unlock(&vrh->lock, key2);
 		return;
 	}
 
@@ -574,9 +574,4 @@ void vringh_notify(struct vringh *vrh)
 		vringh_fail_device(vrh);
 		return;
 	}
-
-	k_spinlock_key_t key2 = k_spin_lock(&vrh->lock);
-
-	vrh->completed = 0U;
-	k_spin_unlock(&vrh->lock, key2);
 }
