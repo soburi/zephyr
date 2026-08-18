@@ -14,6 +14,90 @@
 
 LOG_MODULE_REGISTER(vhost_vringh, CONFIG_VHOST_LOG_LEVEL);
 
+enum vringh_pending_state {
+	VRINGH_PENDING_ACTIVE = 0U,
+	VRINGH_PENDING_ABANDONED,
+};
+
+/*
+ * desc_bufs is split into a parsing area at the front and a host-owned
+ * pending list at the back.  The pending list is newest-first; its metadata
+ * never comes from guest memory.
+ */
+static inline struct vhost_buf *vringh_pending_entry(struct vringh *vrh, uint16_t rank)
+{
+	return &vrh->desc_bufs[vrh->vring.num - vrh->pending_count + rank];
+}
+
+static int vringh_find_pending(struct vringh *vrh, uint16_t head, bool include_abandoned)
+{
+	for (uint16_t rank = 0U; rank < vrh->pending_count; rank++) {
+		struct vhost_buf *entry = vringh_pending_entry(vrh, rank);
+
+		if ((entry->gpa == head) &&
+		    (include_abandoned || (entry->len != VRINGH_PENDING_ABANDONED))) {
+			return rank;
+		}
+	}
+
+	return -1;
+}
+
+static bool vringh_head_in_use(struct vringh *vrh, uint16_t head)
+{
+	return vringh_find_pending(vrh, head, false) >= 0;
+}
+
+static int vringh_find_active(struct vringh *vrh, uint16_t *head)
+{
+	for (uint16_t rank = 0U; rank < vrh->pending_count; rank++) {
+		struct vhost_buf *entry = vringh_pending_entry(vrh, rank);
+
+		if (entry->len == VRINGH_PENDING_ACTIVE) {
+			*head = (uint16_t)entry->gpa;
+			return rank;
+		}
+	}
+
+	return -1;
+}
+
+static int vringh_insert_pending(struct vringh *vrh, uint16_t rank, uint16_t head,
+				 enum vringh_pending_state state)
+{
+	struct vhost_buf *old_start;
+	struct vhost_buf *new_start;
+
+	if ((rank > vrh->pending_count) || (vrh->pending_count >= vrh->vring.num)) {
+		return -E2BIG;
+	}
+
+	old_start = &vrh->desc_bufs[vrh->vring.num - vrh->pending_count];
+	new_start = old_start - 1;
+
+	if (rank > 0U) {
+		memmove(new_start, old_start, rank * sizeof(*new_start));
+	}
+
+	new_start[rank].gpa = head;
+	new_start[rank].len = state;
+	new_start[rank].is_write = false;
+	vrh->pending_count++;
+
+	return 0;
+}
+
+static void vringh_remove_pending(struct vringh *vrh, uint16_t rank)
+{
+	struct vhost_buf *entry = vringh_pending_entry(vrh, rank);
+
+	if (rank > 0U) {
+		memmove(entry - rank + 1, entry - rank, rank * sizeof(*entry));
+	}
+
+	vrh->pending_count--;
+}
+
 static int vringh_init(struct vringh *vrh, uint64_t features, uint16_t num, bool weak_barriers,
 		       struct virtq_desc *desc, struct virtq_avail *avail, struct virtq_used *used)
 {
@@ -294,7 +378,9 @@ failed:
 int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t total_len)
 {
 	struct vhost_vring *vr;
-	int rc = 0;
+	k_spinlock_key_t key;
+	int rank;
+	int rc;
 
 	if (!vrh) {
 		return -EINVAL;
@@ -310,6 +396,13 @@ int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t total_len)
 		return -EINVAL;
 	}
 
+	key = k_spin_lock(&vrh->lock);
+	rank = vringh_find_pending(vrh, head, false);
+	k_spin_unlock(&vrh->lock, key);
+	if (rank < 0) {
+		return -EINVAL;
+	}
+
 	rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
 	if (rc < 0) {
 		LOG_ERR("vhost_release_iovec failed: %d", rc);
@@ -317,7 +410,16 @@ int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t total_len)
 		return rc;
 	}
 
-	k_spinlock_key_t key = k_spin_lock(&vrh->lock);
+	key = k_spin_lock(&vrh->lock);
+	rank = vringh_find_pending(vrh, head, false);
+	if (rank < 0) {
+		k_spin_unlock(&vrh->lock, key);
+		LOG_ERR("Descriptor head %u was lost before completion", head);
+		vringh_fail_device(vrh);
+		return -EINVAL;
+	}
+
+	vringh_remove_pending(vrh, (uint16_t)rank);
 
 	const uint16_t used_idx = vrh->last_used_idx;
 	struct virtq_used_elem *ue = &vr->used->ring[used_idx % vr->num];
