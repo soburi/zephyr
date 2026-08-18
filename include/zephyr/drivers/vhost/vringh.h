@@ -55,10 +55,12 @@ struct vringh {
 	uint16_t last_avail_idx;     /**< Next available ring index to consume */
 	uint16_t last_used_idx;      /**< Next used ring index to publish */
 	uint32_t completed;          /**< Used entries published since last notification */
+	bool failed;                 /**< Queue processing has been stopped after an error */
+	uint16_t pending_count;      /**< Retrieved descriptors tracked for completion or replay */
 	struct vhost_vring vring;    /**< VirtQueue ring components */
 	const struct device *dev;    /**< Associated VHost backend device */
 	uint16_t queue_id;           /**< Queue ID within VHost device */
-	struct vhost_buf *desc_bufs; /**< Descriptor scratch buffer */
+	struct vhost_buf *desc_bufs; /**< Descriptor scratch and pending-head storage */
 	size_t desc_bufs_count;      /**< Number of entries in desc_bufs */
 	struct k_spinlock lock;      /**< Spinlock for vring state updates */
 
@@ -97,8 +99,8 @@ struct vringh_iov {
  * @param vrh              VirtQueue ring handler to initialize
  * @param dev              VHost backend device
  * @param queue_id         Queue ID to handle
- * @param desc_bufs        Scratch buffer for descriptor chain parsing. It must remain valid
- *                         until the vringh is no longer used.
+ * @param desc_bufs        Scratch buffer for descriptor chain parsing and internal pending-head
+ *                         tracking. It must remain valid until the vringh is no longer used.
  * @param desc_bufs_count  Number of entries in desc_bufs
  * @param kick_callback    Optional queue kick callback. May be @c NULL.
  *
