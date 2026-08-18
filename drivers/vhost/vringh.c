@@ -225,6 +225,21 @@ int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t qu
 int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_iov *wiov,
 		   uint16_t *head_out)
 {
+	struct vhost_vring *vr;
+	k_spinlock_key_t key;
+	uint16_t head = 0U;
+	uint16_t replay_rank = 0U;
+	size_t filled_read = 0;
+	size_t filled_write = 0;
+	size_t chain_len = 0;
+	size_t count = 0;
+	bool replay = false;
+	bool fail_device = true;
+	bool seen_write = false;
+	uint16_t idx;
+	uint16_t flags;
+	int ret;
+
 	if (!vrh || !riov || !wiov || !head_out || (riov->iov == NULL) || (wiov->iov == NULL) ||
 	    (riov->max_num == 0U) || (wiov->max_num == 0U)) {
 		return -EINVAL;
@@ -234,40 +249,54 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 		return -ENODEV;
 	}
 
-	k_spinlock_key_t key = k_spin_lock(&vrh->lock);
-	struct vhost_vring *vr = &vrh->vring;
-	const uint16_t avail_idx = sys_le16_to_cpu(vr->avail->idx);
+	vr = &vrh->vring;
 
-	if (vrh->last_avail_idx == avail_idx) {
+	key = k_spin_lock(&vrh->lock);
+	if (vrh->failed) {
 		k_spin_unlock(&vrh->lock, key);
-		return 0;
+		return -EIO;
 	}
 
-	barrier_dmem_fence_full();
+	/* Re-try abandoned chains from host-owned metadata before consuming new entries. */
+	for (int rank = (int)vrh->pending_count - 1; rank >= 0; rank--) {
+		struct vhost_buf *entry = vringh_pending_entry(vrh, (uint16_t)rank);
 
-	const uint16_t slot = vrh->last_avail_idx % vr->num;
-	const uint16_t head = sys_le16_to_cpu(vr->avail->ring[slot]);
-	struct vhost_buf *desc_bufs = vrh->desc_bufs;
-	size_t filled_read = 0;
-	size_t filled_write = 0;
-	uint16_t idx = head;
-	size_t chain_len = 0;
-	size_t count = 0;
-	bool fail_device = false;
-	bool seen_write = false;
-	uint16_t flags;
-	int ret;
+		if (entry->len == VRINGH_PENDING_ABANDONED) {
+			replay = true;
+			replay_rank = (uint16_t)rank;
+			head = (uint16_t)entry->gpa;
+			vringh_remove_pending(vrh, replay_rank);
+			break;
+		}
+	}
 
-	if (head >= vrh->vring.num) {
-		k_spin_unlock(&vrh->lock, key);
-		LOG_ERR("Invalid descriptor head: %u >= %u", head, vrh->vring.num);
-		return -EINVAL;
+	if (!replay) {
+		const uint16_t avail_idx = sys_le16_to_cpu(vr->avail->idx);
+
+		if (vrh->last_avail_idx == avail_idx) {
+			k_spin_unlock(&vrh->lock, key);
+			return 0;
+		}
+
+		barrier_dmem_fence_full();
+
+		const uint16_t slot = vrh->last_avail_idx % vr->num;
+
+		head = sys_le16_to_cpu(vr->avail->ring[slot]);
+
+		if ((head >= vr->num) || vringh_head_in_use(vrh, head)) {
+			k_spin_unlock(&vrh->lock, key);
+			LOG_ERR("Invalid or busy descriptor head: %u", head);
+			ret = -EINVAL;
+			goto failed;
+		}
 	}
 
 	k_spin_unlock(&vrh->lock, key);
 
 	vringh_iov_reset(riov);
 	vringh_iov_reset(wiov);
+	idx = head;
 
 	do {
 		const struct virtq_desc *d = &vr->desc[idx];
@@ -280,14 +309,12 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 		if ((flags & ~(VIRTQ_DESC_F_NEXT | VIRTQ_DESC_F_WRITE)) != 0U) {
 			LOG_ERR("Unsupported descriptor flags 0x%x at index %u", flags, idx);
 			ret = -ENOTSUP;
-			fail_device = true;
 			goto failed;
 		}
 
 		if (chain_len++ >= vr->num) {
 			LOG_ERR("Descriptor chain too long: %zu", chain_len);
 			ret = -E2BIG;
-			fail_device = true;
 			goto failed;
 		}
 
@@ -295,7 +322,6 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 		if ((flags & VIRTQ_DESC_F_NEXT) && next >= vr->num) {
 			LOG_ERR("Invalid next descriptor: %u >= %u", next, vr->num);
 			ret = -EINVAL;
-			fail_device = true;
 			goto failed;
 		}
 
@@ -304,7 +330,6 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 		} else if (seen_write) {
 			LOG_ERR("Readable descriptor after writable at index %u", idx);
 			ret = -EINVAL;
-			fail_device = true;
 			goto failed;
 		}
 
@@ -315,16 +340,15 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 		}
 
 		/* Store descriptor information for Phase 2 */
-		if (count >= vrh->desc_bufs_count) {
-			LOG_ERR("Descriptor scratch too small: %zu >= %zu", count,
-				vrh->desc_bufs_count);
+		if (count >= (vr->num - vrh->pending_count)) {
+			LOG_ERR("Descriptor scratch overlaps pending heads");
 			ret = -E2BIG;
 			goto failed;
 		}
 
-		desc_bufs[count].gpa = gpa;
-		desc_bufs[count].len = len;
-		desc_bufs[count].is_write = !!(flags & VIRTQ_DESC_F_WRITE);
+		vrh->desc_bufs[count].gpa = gpa;
+		vrh->desc_bufs[count].len = len;
+		vrh->desc_bufs[count].is_write = !!(flags & VIRTQ_DESC_F_WRITE);
 
 		count++;
 		idx = next;
@@ -333,16 +357,16 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 	if (count == 0U) {
 		LOG_ERR("Descriptor chain contains no non-zero buffers (head %u)", head);
 		ret = -EINVAL;
-		fail_device = true;
 		goto failed;
 	}
 
-	ret = vhost_prepare_iovec(vrh->dev, vrh->queue_id, head, desc_bufs, count, riov->iov,
+	ret = vhost_prepare_iovec(vrh->dev, vrh->queue_id, head, vrh->desc_bufs, count, riov->iov,
 				  riov->max_num, wiov->iov, wiov->max_num, &filled_read,
 				  &filled_write);
 	if (ret < 0) {
 		int rc;
 
+		fail_device = false;
 		LOG_ERR("vhost_prepare_iovec failed: %d", ret);
 		rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
 		if (rc < 0) {
@@ -359,12 +383,21 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 	*head_out = head;
 
 	key = k_spin_lock(&vrh->lock);
-	vrh->last_avail_idx++;
+	(void)vringh_insert_pending(vrh, 0U, head, VRINGH_PENDING_ACTIVE);
+	if (!replay) {
+		vrh->last_avail_idx++;
+	}
 	k_spin_unlock(&vrh->lock, key);
 
 	return 1;
 
 failed:
+	if (replay) {
+		key = k_spin_lock(&vrh->lock);
+		(void)vringh_insert_pending(vrh, replay_rank, head, VRINGH_PENDING_ABANDONED);
+		k_spin_unlock(&vrh->lock, key);
+	}
+
 	if (fail_device) {
 		vringh_fail_device(vrh);
 	}
@@ -441,12 +474,8 @@ int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t total_len)
 
 int vringh_abandon(struct vringh *vrh, uint32_t num)
 {
-	struct vhost_vring *vr;
-	uint16_t outstanding;
-	uint16_t abandon_num;
-	uint16_t last_avail_idx;
-	uint16_t new_avail_idx;
-	int rc = 0;
+	uint16_t active_count = 0U;
+	k_spinlock_key_t key;
 
 	if (!vrh) {
 		return -EINVAL;
@@ -460,52 +489,48 @@ int vringh_abandon(struct vringh *vrh, uint32_t num)
 		return -ENODEV;
 	}
 
-	vr = &vrh->vring;
-
-	k_spinlock_key_t key = k_spin_lock(&vrh->lock);
-
-	outstanding = (uint16_t)(vrh->last_avail_idx - vrh->last_used_idx);
-
-	if (num > outstanding) {
-		LOG_ERR("Cannot abandon %u descs, outstanding=%u", num, outstanding);
+	key = k_spin_lock(&vrh->lock);
+	for (uint16_t rank = 0U; rank < vrh->pending_count; rank++) {
+		if (vringh_pending_entry(vrh, rank)->len == VRINGH_PENDING_ACTIVE) {
+			active_count++;
+		}
+	}
+	if (num > active_count) {
+		LOG_ERR("Cannot abandon %u descs, active=%u", num, active_count);
 		k_spin_unlock(&vrh->lock, key);
 		return -ERANGE;
 	}
 
-	abandon_num = (uint16_t)num;
-	last_avail_idx = vrh->last_avail_idx;
-	new_avail_idx = last_avail_idx - abandon_num;
-
 	k_spin_unlock(&vrh->lock, key);
 
-	for (uint16_t i = 0U; i < abandon_num; i++) {
-		const uint16_t avail_idx = new_avail_idx + i;
-		const uint16_t slot = avail_idx % vr->num;
-		const uint16_t head = sys_le16_to_cpu(vr->avail->ring[slot]);
+	for (uint32_t i = 0U; i < num; i++) {
+		uint16_t head;
+		int rank;
 		int ret;
 
-		if (head >= vr->num) {
-			LOG_ERR("Invalid descriptor head: %u >= %u", head, vr->num);
-			vringh_fail_device(vrh);
-			rc = -EINVAL;
-			continue;
+		key = k_spin_lock(&vrh->lock);
+		rank = vringh_find_active(vrh, &head);
+		k_spin_unlock(&vrh->lock, key);
+		if (rank < 0) {
+			LOG_ERR("Active descriptor disappeared while abandoning");
+			return -ERANGE;
 		}
 
 		ret = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
 		if (ret < 0) {
 			LOG_ERR("vhost_release_iovec failed: %d", ret);
 			vringh_fail_device(vrh);
-			rc = ret;
+			return ret;
 		}
+
+		key = k_spin_lock(&vrh->lock);
+		vringh_pending_entry(vrh, (uint16_t)rank)->len = VRINGH_PENDING_ABANDONED;
+		k_spin_unlock(&vrh->lock, key);
 	}
 
-	key = k_spin_lock(&vrh->lock);
-	vrh->last_avail_idx = new_avail_idx;
-	k_spin_unlock(&vrh->lock, key);
+	LOG_DBG("Abandoned %u descs", num);
 
-	LOG_DBG("Abandoned %u descs, new last_avail_idx: %u", num, new_avail_idx);
-
-	return rc;
+	return 0;
 }
 
 void vringh_iov_reset(struct vringh_iov *iov)
