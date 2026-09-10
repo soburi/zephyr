@@ -14,6 +14,12 @@
  * This API follows Linux vringh terminology where practical, but is not source
  * or ABI compatible with it.
  *
+ * The helper separates ring access from device-specific request processing. A
+ * caller may process descriptors asynchronously or in parallel after
+ * vringh_getdesc() returns, provided that each request keeps its iovecs alive
+ * and is completed or abandoned exactly once. The API does not prescribe a
+ * worker model or callback execution context.
+ *
  * @defgroup vringh_apis VIRTIO Ring Handler APIs
  * @ingroup vhost_apis
  * @{
@@ -48,6 +54,10 @@ struct vhost_vring {
  * @brief VIRTIO ring host-side handler
  *
  * Host-side interface for processing guest split virtqueues.
+ * Based on Linux kernel vringh implementation with split virtqueue support.
+ * The handler state is associated with one queue. Concurrent access to the
+ * same handler must follow the synchronization rules of its owner; separate
+ * handlers or queues may be processed concurrently.
  */
 struct vringh {
 	bool event_indices;          /**< Reserved; VIRTIO_RING_F_EVENT_IDX is not supported */
@@ -109,6 +119,30 @@ struct vringh_iov {
  * @retval -E2BIG    Descriptor scratch buffer is too small for the queue
  * @retval -ENOTSUP  A negotiated ring feature is not supported
  * @retval -errno    Error returned by the VHost backend
+ * @retval -ENODEV  Device or queue not found
+ * @retval -ENOMEM  Insufficient memory
+ * @retval -EBUSY   Queue already in use
+ * @retval -ENOTCONN Device not connected
+ *
+ * @note kick_callback is a notification hook. Its execution context and
+ *       serialization are determined by the VHost controller.
+ *
+ * @code{.c}
+ * static void kick_handler(struct vringh *vrh)
+ * {
+ *     uint16_t head;
+ *
+ *     while (vringh_getdesc(vrh, &riov, &wiov, &head) > 0) {
+ *         process_buffers(&riov, &wiov);
+ *         vringh_complete(vrh, head, total_bytes_written(&wiov));
+ *         if (vringh_need_notify(vrh) > 0) {
+ *             vringh_notify(vrh);
+ *         }
+ *     }
+ * }
+ *
+ * int ret = vringh_init_device(&vrh, vhost_dev, 0, kick_handler);
+ * @endcode
  */
 int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t queue_id,
 		       struct vhost_buf *desc_bufs, size_t desc_bufs_count,
@@ -134,6 +168,13 @@ int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t qu
  * @retval -ENOTSUP  Unsupported descriptor flags
  * @retval -E2BIG    Descriptor chain or scratch buffer is too large
  * @retval -errno    Error returned by the VHost backend
+ *
+ * @note On success, ownership of the returned descriptor head and iovecs is
+ *       transferred to the caller. The caller must eventually call
+ *       vringh_complete() or vringh_abandon() for the request and must not
+ *       access the iovecs after that operation. Descriptor validation is
+ *       bounded by the configured queue size; malformed chains are rejected
+ *       before their buffers are exposed to the backend.
  */
 int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_iov *wiov,
 		   uint16_t *head_out);
@@ -154,6 +195,28 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
  * @warning Do not call multiple times for the same descriptor.
  * @warning Calls to vringh_getdesc(), vringh_complete(), and vringh_abandon()
  *          for the same vringh must be serialized by the caller.
+ * @retval -EFAULT  Cannot access used ring
+ * @retval -ENOSPC  Used ring full
+ * @warning Do not call multiple times for the same descriptor. The iovecs
+ *          associated with the request must not be accessed after this call,
+ *          including when it returns an error.
+ *
+ * Completion may be performed after asynchronous request processing and need
+ * not correspond to the callback that originally discovered the descriptor.
+ * The caller remains responsible for ensuring that the descriptor has not
+ * been abandoned or reset.
+ *
+ * @code{.c}
+ * // After processing a descriptor chain
+ * uint32_t bytes_written = generate_response(&wiov);
+ * int ret = vringh_complete(&vrh, head, bytes_written);
+ * if (ret == 0) {
+ *     // Check if guest notification needed
+ *     if (vringh_need_notify(&vrh) > 0) {
+ *         vringh_notify(&vrh);
+ *     }
+ * }
+ * @endcode
  */
 int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t len);
 
@@ -174,6 +237,14 @@ int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t len);
  * @retval -errno   vhost_release_iovec() failed
  * @warning Calls to vringh_getdesc(), vringh_complete(), and vringh_abandon()
  *          for the same vringh must be serialized by the caller.
+ * @retval -EFAULT  Error accessing ring
+ *
+ * Only descriptors that have been retrieved and are still outstanding may be
+ * abandoned. Abandoning a descriptor does not complete it in the used ring;
+ * controller-owned mappings must be released before the descriptor is made
+ * available for reuse. The operation is intended for the most recently
+ * retrieved outstanding descriptors and does not define arbitrary cancellation
+ * of requests already being processed by another context.
  */
 int vringh_abandon(struct vringh *vrh, uint32_t num);
 
@@ -199,6 +270,9 @@ __maybe_unused static inline void vringh_iov_init(struct vringh_iov *iov, struct
  * Restores a partially consumed current entry and resets the traversal state.
  *
  * @param iov  IOV structure to reset
+ *
+ * This resets only the cursor and consumed length. It does not release a
+ * controller mapping or change the lifetime of the associated request.
  */
 void vringh_iov_reset(struct vringh_iov *iov);
 
@@ -214,6 +288,11 @@ void vringh_iov_reset(struct vringh_iov *iov);
  * @retval 0        Notification suppressed
  * @retval -EINVAL  Invalid parameters
  * @retval -ENODEV  Ring handler not initialized with a device
+ * @retval -EFAULT  Cannot access guest memory
+ *
+ * The result is advisory. Notification suppression may change while another
+ * context updates the ring; callers must follow the controller's queue
+ * synchronization rules.
  */
 int vringh_need_notify(struct vringh *vrh);
 
@@ -224,6 +303,10 @@ int vringh_need_notify(struct vringh *vrh);
  * optional notification callback or the VHost backend notification operation.
  *
  * @param vrh  VirtQueue ring handler
+ *
+ * Notification delivery may be coalesced or suppressed according to the
+ * VirtIO ring flags. The function does not impose a particular execution
+ * context or waiting policy on the controller.
  */
 void vringh_notify(struct vringh *vrh);
 
