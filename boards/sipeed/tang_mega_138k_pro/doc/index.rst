@@ -1,0 +1,116 @@
+.. zephyr:board:: tang_mega_138k_pro
+
+Overview
+********
+
+The _`Tang Mega 138K Pro Dock` is an FPGA development board from Sipeed based on the Gowin GW5AST-LV138 device.
+It combines a large FPGA fabric with an integrated 32-bit RISC-V _`AndesTech AE350` SoC and provides interfaces
+such as DDR3, PCIe Gen3 x4, SFP+, Gigabit Ethernet, HDMI/DVI, MIPI CSI, and M.2.
+
+Hardware
+********
+
+The Tang Mega 138K Pro Dock provides the following hardware features:
+
+- Andes AE350 32-bit RISC-V processor
+- 1 GB DDR3 memory
+- 2 x 128 Mbit SPI flash
+- 1 x 8 Kbit I2C EPROM
+- PCIe connector
+- 2 x SFP+ connectors
+- Gigabit Ethernet
+- 2 x DVI TX interface
+- 2 x DVI RX interface
+- DVP interface
+- RGB interface
+- 2 x MIPI CSI connectors
+- 2 x ADC
+- 2 x MS5351 Clock generator
+- MicroSD card slot
+- M.2 Key-B socket
+- 3 x PMOD connectors
+- 1 x Customizable USB-C connector
+- 40-pin expansion header
+- 3.5 mm headphone jack
+- Speaker connector
+- Mic Array interface
+- WS2812 RGB LED and aRGB/WS2812 strip connector
+- PWM fan connector
+- JTAG and UART debug interfaces
+- User LEDs and buttons
+
+
+Supported Features
+==================
+
+.. zephyr:board-supported-hw::
+
+The ``tang_mega_138kpro/ae350/demo`` configuration supports the peripherals enabled by the
+``ae350_demo`` FPGA IP configuration in the _`Modified Reference Design`:
+
+- UART2 as the console
+- GPIO for LEDs and buttons
+- Watchdog
+- RTC
+- PIT
+
+
+Programming and debugging
+*************************
+
+.. zephyr:board-supported-runners::
+
+
+Building and flashing
+=====================
+
+You can build applications in the usual way. Here is an example for
+the :zephyr:code-sample:`blinky` application.
+
+Flash programming of the FPGA is performed via the FT2232 chip connected to the ``JTAG|UART``
+interface on the board.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/basic/blinky
+   :board: tang_mega_138k_pro/ae350/demo
+   :goals: build flash
+
+Debugging
+=========
+
+Debugging of the AE350 out via the dedicated AE350 JTAG port that is exposed on the 40-pin connector(J23).
+Therefore, a separate JTAG adapter compatible with OpenOCD is required for debugging the AE350.
+
+AE350 JTAG pin is following:
+
+.. list-table::
+   :header-rows: 1
+
+   * - JTAG Function
+     - Pin number
+   * - TMS
+     - 5
+   * - TCK
+     - 6
+   * - TRST
+     - 7
+   * - TDO
+     - 8
+   * - TDI
+     - 9
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/basic/blinky
+   :board: tang_mega_138k_pro/ae350/demo
+   :goals: build flash
+
+References
+**********
+
+.. target-notes::
+
+.. _Tang Mega 138K Pro Dock: https://en.wiki.sipeed.com/hardware/en/tang/tang-mega-138k/mega-138k-pro.html
+
+.. _AndesTech AE350: http://www.andestech.com/en/products-solutions/andeshape-platforms/ae350-axi-based-platform-pre-integrated-with-n25f-nx25f-a25-ax25/
+
+.. _Modified Reference Design: https://github.com/soburi/tang_mega_138kpro_ae350_demo
