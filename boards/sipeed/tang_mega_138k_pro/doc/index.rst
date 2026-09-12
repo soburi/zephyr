@@ -87,6 +87,23 @@ Zephyr firmware is programmed via the FT2232 chip connected to the ``JTAG|UART``
 the board. The ``west flash`` command writes only ``zephyr.bin`` to the firmware area reserved
 by the board runner; it does not program the FPGA image.
 
+The offset written to is taken from the ``xip`` partition of the configuration flash in the
+variant's devicetree, which follows the ``fpga_bitstream`` partition the bitstream occupies.
+A bitstream of a different size therefore needs both partitions resized in an overlay:
+
+.. code-block:: devicetree
+
+   &bitstream_partition {
+       reg = <0x0 DT_SIZE_M(8)>;
+   };
+
+   &xip_partition {
+       reg = <0x800000 DT_SIZE_M(8)>;
+   };
+
+A variant that describes no ``xip`` partition gets no flash runner, because offset zero, the
+only remaining default, is where the bitstream lives.
+
 .. zephyr-app-commands::
    :zephyr-app: samples/basic/blinky
    :board: tang_mega_138k_pro/ae350/demo
