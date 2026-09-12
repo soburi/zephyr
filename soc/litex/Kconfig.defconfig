@@ -1,11 +1,20 @@
 # SPDX-FileCopyrightText: Copyright The Zephyr Project Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+DT_CHOSEN_ZEPHYR_SYSTEM_TIMER := zephyr,system-timer
+DT_CHOSEN_ZEPHYR_SYSTEM_TIMER_PATH := $(dt_chosen_path,$(DT_CHOSEN_ZEPHYR_SYSTEM_TIMER))
+
 if SOC_FAMILY_LITEX
 
 rsource "*/Kconfig.defconfig"
 
 config SYS_CLOCK_HW_CYCLES_PER_SEC
+	# Prefer the frequency reported by the selected system timer: the LiteX
+	# timer counts sys_clk cycles, which is not the CPU clock on SoCs whose CPU
+	# has its own clock domain. Fall back to /cpus/cpu@0 for device trees that
+	# predate the zephyr,system-timer chosen.
+	default $(dt_node_int_prop_int,$(DT_CHOSEN_ZEPHYR_SYSTEM_TIMER_PATH),clock-frequency) \
+		if $(dt_node_has_prop,$(DT_CHOSEN_ZEPHYR_SYSTEM_TIMER_PATH),clock-frequency)
 	default $(dt_node_int_prop_int,/cpus/cpu@0,clock-frequency)
 
 config REBOOT

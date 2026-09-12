@@ -3,10 +3,17 @@
 # Copyright (c) 2019 Intel Corp.
 # SPDX-License-Identifier: Apache-2.0
 
+DT_CHOSEN_ZEPHYR_SYSTEM_TIMER := zephyr,system-timer
+DT_CHOSEN_ZEPHYR_SYSTEM_TIMER_PATH := $(dt_chosen_path,$(DT_CHOSEN_ZEPHYR_SYSTEM_TIMER))
+
 config LITEX_TIMER
 	bool "LiteX Timer"
 	default y
 	depends on DT_HAS_LITEX_TIMER0_ENABLED
+	# When a system timer is chosen explicitly, only claim the role if it is
+	# ours; without the chosen, keep binding to timer0 as before.
+	depends on $(dt_node_has_compat,$(DT_CHOSEN_ZEPHYR_SYSTEM_TIMER_PATH),$(DT_COMPAT_LITEX_TIMER0)) || \
+		   !$(dt_chosen_enabled,$(DT_CHOSEN_ZEPHYR_SYSTEM_TIMER))
 	select TIMER_HAS_64BIT_CYCLE_COUNTER
 	help
 	  This module implements a kernel device driver for LiteX Timer.

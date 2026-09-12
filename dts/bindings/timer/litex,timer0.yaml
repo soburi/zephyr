@@ -13,3 +13,9 @@ properties:
 
   interrupts:
     required: true
+
+  clock-frequency:
+    type: int
+    description: |
+      Frequency the timer counts at, in Hz. This is the LiteX sys_clk, which is
+      not necessarily the CPU clock.
