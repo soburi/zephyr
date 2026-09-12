@@ -74,3 +74,12 @@
 	ngpios = <6>;
 	status = "okay";
 };
+
+&pit0 {
+	clock-frequency = <DT_FREQ_M(50)>;
+	status = "okay";
+};
+
+&wdt {
+	status = "okay";
+};

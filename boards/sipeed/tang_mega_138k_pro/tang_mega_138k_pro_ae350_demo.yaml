@@ -7,8 +7,10 @@ toolchain:
   - cross-compile
 ram: 262144
 supported:
+  - counter
   - gpio
   - led
+  - watchdog
 testing:
   ignore_tags:
     - bluetooth

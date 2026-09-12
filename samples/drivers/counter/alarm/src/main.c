@@ -34,6 +34,8 @@ struct counter_alarm_cfg alarm_cfg;
 #define SAMPLE_TIMER DT_NODELABEL(timer3)
 #elif defined(CONFIG_COUNTER_NATIVE_SIM)
 #define SAMPLE_TIMER DT_NODELABEL(counter0)
+#elif defined(CONFIG_COUNTER_ANDES_ATCPIT100)
+#define SAMPLE_TIMER DT_INST(0, andestech_atcpit100)
 #elif defined(CONFIG_COUNTER_XLNX_AXI_TIMER)
 #define SAMPLE_TIMER DT_INST(0, xlnx_xps_timer_1_00_a)
 #elif defined(CONFIG_COUNTER_TMR_ESP32)
