@@ -95,10 +95,10 @@ by the board runner; it does not program the FPGA image.
 Debugging
 =========
 
-Debugging of the AE350 out via the dedicated AE350 JTAG port that is exposed on the 40-pin connector(J23).
-Therefore, a separate JTAG adapter compatible with OpenOCD is required for debugging the AE350.
+The AE350 is debugged via its dedicated JTAG port on the 40-pin connector (J23). A separate
+JTAG adapter compatible with OpenOCD is required.
 
-AE350 JTAG pin is following:
+The AE350 JTAG pins are:
 
 .. list-table::
    :header-rows: 1
