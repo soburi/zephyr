@@ -11,5 +11,7 @@ board_runner_args(openfpgaloader
   --offset=${TANG_MEGA_138K_PRO_AE350_FLASH_OFFSET}
   --verify)
 
+board_runner_args(openocd --no-load)
+
 include(${ZEPHYR_BASE}/boards/common/openfpgaloader.board.cmake)
 include(${ZEPHYR_BASE}/boards/common/openocd.board.cmake)
