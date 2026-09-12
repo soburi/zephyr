@@ -62,14 +62,30 @@ Programming and debugging
 .. zephyr:board-supported-runners::
 
 
-Building and flashing
-=====================
+FPGA provisioning
+=================
+
+Before using any board variant for the first time, program the matching FPGA image to offset
+zero of the external flash. For the ``tang_mega_138k_pro/ae350/demo`` variant, build the
+``ae350_demo.fs`` image from the `Modified Reference Design`_ and program it as follows:
+
+.. code-block:: console
+
+   openFPGALoader --board tangmega138k --external-flash --write-flash \
+     --offset 0x0 ae350_demo.fs
+
+This step creates the AE350 processor and peripherals described by the selected variant's
+devicetree. Repeat it after the FPGA image has been erased or replaced.
+
+Building and flashing Zephyr
+============================
 
 You can build applications in the usual way. Here is an example for
 the :zephyr:code-sample:`blinky` application.
 
-Flash programming of the FPGA is performed via the FT2232 chip connected to the ``JTAG|UART``
-interface on the board.
+Zephyr firmware is programmed via the FT2232 chip connected to the ``JTAG|UART`` interface on
+the board. The ``west flash`` command writes only ``zephyr.bin`` to the firmware area reserved
+by the board runner; it does not program the FPGA image.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/basic/blinky
