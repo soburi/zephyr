@@ -116,10 +116,14 @@ The AE350 JTAG pins are:
    * - TDI
      - 9
 
+Flash the application before starting a debug session. The OpenOCD runner does not load the
+application because the XIP flash mapping is read-only to the debugger:
+
 .. zephyr-app-commands::
    :zephyr-app: samples/basic/blinky
    :board: tang_mega_138k_pro/ae350/demo
-   :goals: build flash
+   :maybe-skip-config:
+   :goals: debug
 
 References
 **********
