@@ -1,19 +1,21 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 TOKITA Hiroshi
 # SPDX-License-Identifier: Apache-2.0
 
-# The offset the image is written at within the configuration flash is a property of the
-# bitstream, so it is described by the variant devicetree. Without it there is no safe offset
-# to write at: offset 0 holds the bitstream itself.
-dt_nodelabel(xip_partition NODELABEL "xip_partition")
+# The bitstream decides where in the configuration flash the image goes, so the code partition
+# of the variant devicetree holds the offset openFPGALoader writes at. Its reg is chip relative,
+# unlike the mapped address dt_reg_addr() returns. A variant that describes no code partition
+# gets no flash runner: offset 0, the only remaining default, is where the bitstream lives.
+dt_chosen(code_partition PROPERTY "zephyr,code-partition")
 
-if(xip_partition)
-  dt_reg_addr(xip_offset PATH "${xip_partition}")
-  math(EXPR xip_offset "${xip_offset}" OUTPUT_FORMAT HEXADECIMAL)
+if(code_partition)
+  dt_prop(code_partition_reg PATH "${code_partition}" PROPERTY "reg")
+  list(GET code_partition_reg 0 code_partition_offset)
+  math(EXPR code_partition_offset "${code_partition_offset}" OUTPUT_FORMAT HEXADECIMAL)
 
   board_runner_args(openfpgaloader
     --board tangmega138k
     --external-flash
-    --offset=${xip_offset}
+    --offset=${code_partition_offset}
     --verify)
 
   include(${ZEPHYR_BASE}/boards/common/openfpgaloader.board.cmake)

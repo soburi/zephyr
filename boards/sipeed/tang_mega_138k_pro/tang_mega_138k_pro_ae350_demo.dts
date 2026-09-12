@@ -13,6 +13,10 @@
 	model = "Sipeed Tang Mega 138K Pro Dock AE350 Demo";
 	compatible = "sipeed,tang-mega-138k-pro-ae350-demo";
 
+	chosen {
+		zephyr,code-partition = &code_partition;
+	};
+
 	aliases {
 		led0 = &led0;
 		led1 = &led1;
@@ -65,7 +69,22 @@
 };
 
 &spiflash {
+	/*
+	 * The bitstream occupies the start of the configuration flash and maps the remainder
+	 * at 0x80000000, so the first byte the CPU can see is at chip offset 0x600000. ranges
+	 * carries that translation: partition offsets stay chip relative, which is what the
+	 * flash programmer needs, while the linker gets the mapped address.
+	 */
 	reg = <0x80000000 DT_SIZE_M(10)>;
+	ranges = <0x600000 0x80000000 DT_SIZE_M(10)>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	code_partition: partition@600000 {
+		compatible = "zephyr,mapped-partition";
+		label = "code";
+		reg = <0x600000 DT_SIZE_M(10)>;
+	};
 };
 
 &dram {
@@ -81,37 +100,4 @@
 &gpio0 {
 	ngpios = <6>;
 	status = "okay";
-};
-
-&spi0 {
-	/*
-	 * The configuration flash the FPGA boots from. The bitstream occupies the start of the
-	 * chip and maps the rest into the read-only window spiflash describes, so the xip
-	 * partition and spiflash are the same storage under two addresses. This layout is what
-	 * the flash programmer needs; the link address comes from spiflash, which is why this
-	 * is not the zephyr,code-partition.
-	 */
-	config_flash: flash@0 {
-		compatible = "jedec,spi-nor";
-		reg = <0>;
-		size = <DT_SIZE_M(128)>;
-		spi-max-frequency = <50000000>;
-
-		partitions {
-			compatible = "fixed-partitions";
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			bitstream_partition: partition@0 {
-				label = "fpga_bitstream";
-				reg = <0x0 DT_SIZE_M(6)>;
-				read-only;
-			};
-
-			xip_partition: partition@600000 {
-				label = "xip";
-				reg = <0x600000 DT_SIZE_M(10)>;
-			};
-		};
-	};
 };
