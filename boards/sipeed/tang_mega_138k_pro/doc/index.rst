@@ -3,9 +3,10 @@
 Overview
 ********
 
-The _`Tang Mega 138K Pro Dock` is an FPGA development board from Sipeed based on the Gowin GW5AST-LV138 device.
-It combines a large FPGA fabric with an integrated 32-bit RISC-V _`AndesTech AE350` SoC and provides interfaces
-such as DDR3, PCIe Gen3 x4, SFP+, Gigabit Ethernet, HDMI/DVI, MIPI CSI, and M.2.
+The `Tang Mega 138K Pro Dock`_ is an FPGA development board from Sipeed based on the Gowin
+GW5AST-LV138 device. It combines a large FPGA fabric with an integrated 32-bit RISC-V
+`AndesTech AE350`_ SoC and provides interfaces such as DDR3, PCIe Gen3 x4, SFP+, Gigabit
+Ethernet, HDMI/DVI, MIPI CSI, and M.2.
 
 Hardware
 ********
@@ -45,8 +46,8 @@ Supported Features
 
 .. zephyr:board-supported-hw::
 
-The ``tang_mega_138kpro/ae350/demo`` configuration supports the peripherals enabled by the
-``ae350_demo`` FPGA IP configuration in the _`Modified Reference Design`:
+The ``tang_mega_138k_pro/ae350/demo`` configuration supports the peripherals enabled by the
+``ae350_demo`` FPGA IP configuration in the `Modified Reference Design`_:
 
 - UART2 as the console
 - GPIO for LEDs and buttons
