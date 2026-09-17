@@ -3,9 +3,11 @@
 
 if(CONFIG_XIP)
   dt_chosen(code_partition PROPERTY "zephyr,code-partition")
-  dt_prop(code_partition_reg PATH "${code_partition}" PROPERTY "reg")
-  list(GET code_partition_reg 0 code_partition_offset)
-  math(EXPR code_partition_offset "${code_partition_offset}" OUTPUT_FORMAT HEXADECIMAL)
+  dt_reg_addr(code_partition_addr PATH "${code_partition}")
+  math(EXPR code_partition_offset
+       "${code_partition_addr} + (${CONFIG_BUILD_OUTPUT_ADJUST_LMA})"
+       OUTPUT_FORMAT HEXADECIMAL
+  )
 
   board_runner_args(openfpgaloader
     --board tangmega138k

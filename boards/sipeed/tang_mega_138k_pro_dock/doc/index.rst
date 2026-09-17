@@ -87,7 +87,14 @@ the :zephyr:code-sample:`blinky` application.
 
 Zephyr firmware is programmed via the FTDI JTAG adapter connected to the ``JTAG|UART`` interface
 on the board. For the XIP configuration, ``west flash`` writes only ``zephyr.bin`` to the
-firmware area reserved by the board runner; it does not program the FPGA image.
+external flash; it does not program the FPGA image.
+
+The AE350 SPI flash instruction memory maps the external flash starting at offset ``0x600000``
+read-only at CPU address ``0x80000000``. The FPGA bitstream area below that offset is not
+visible to the CPU. XIP images are linked at ``0x80000000``, and
+:kconfig:option:`CONFIG_BUILD_OUTPUT_ADJUST_LMA` moves the load addresses in ``zephyr.elf`` and
+``zephyr.hex`` to the flash offset. Do not load these files through the debugger, as their load
+addresses fall into the DDR3 memory.
 
 .. zephyr-app-commands::
    :zephyr-app: samples/basic/blinky

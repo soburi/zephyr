@@ -2,4 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config XIP
-        default y
+	default y
+
+DT_CHOSEN_Z_FLASH := zephyr,flash
+
+# The SPI flash instruction memory maps flash offset 0x600000 at the base
+# address of the flash node.
+config BUILD_OUTPUT_ADJUST_LMA
+	default "0x600000 - $(dt_chosen_reg_addr_hex,$(DT_CHOSEN_Z_FLASH))" if XIP
