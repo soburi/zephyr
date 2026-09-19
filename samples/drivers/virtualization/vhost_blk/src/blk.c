@@ -169,8 +169,8 @@ static uint32_t process_request(void)
 		if (ret == 0 && data_length <= UINT32_MAX - sizeof(status)) {
 			status = VIRTIO_BLK_S_OK;
 			used_length = data_length + sizeof(status);
-			LOG_DBG("READ sector=%" PRIu64 " length=%zu", sector, data_length);
-			LOG_HEXDUMP_DBG(&disk[sector * VIRTIO_BLK_SECTOR_SIZE], data_length,
+			LOG_INF("READ sector=%" PRIu64 " length=%zu", sector, data_length);
+			LOG_HEXDUMP_INF(&disk[sector * VIRTIO_BLK_SECTOR_SIZE], 16,
 					 "READ data");
 		}
 		break;
@@ -181,8 +181,8 @@ static uint32_t process_request(void)
 		ret = process_rw_request(true, sector, data_length);
 		if (ret == 0) {
 			status = VIRTIO_BLK_S_OK;
-			LOG_DBG("WRITE sector=%" PRIu64 " length=%zu", sector, data_length);
-			LOG_HEXDUMP_DBG(&disk[sector * VIRTIO_BLK_SECTOR_SIZE], data_length,
+			LOG_INF("WRITE sector=%" PRIu64 " length=%zu", sector, data_length);
+			LOG_HEXDUMP_INF(&disk[sector * VIRTIO_BLK_SECTOR_SIZE], 16,
 					 "WRITE data");
 		}
 		break;

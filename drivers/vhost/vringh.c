@@ -305,7 +305,7 @@ int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t total_len)
 	const uint16_t used_idx = vrh->last_used_idx;
 	struct virtq_used_elem *ue = &vr->used->ring[used_idx % vr->num];
 
-	LOG_DBG("used_idx %u ue={%u, %u}", used_idx, head, total_len);
+	//LOG_DBG("used_idx %u ue={%u, %u}", used_idx, head, total_len);
 
 	ue->id = sys_cpu_to_le32((uint32_t)head);
 	ue->len = sys_cpu_to_le32(total_len);
