@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+family:
+- name: gigadevice_gd32
+  series:
+  - name: gigadevice_gd32vf103
+    socs:
+    - name: gigadevice_gd32vf103

@@ -1,0 +1,31 @@
+/* SPDX-FileCopyrightText: Copyright The Zephyr Project Contributors */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+#include <mem.h>
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@0 {
+			compatible = "riscv";
+			reg = <0>;
+			riscv,isa-base = "rv32i";
+			riscv,isa-extensions = "i", "m", "a", "c", "zicsr", "zifencei";
+		};
+	};
+
+	sram0: memory@20000000 {
+		compatible = "mmio-sram";
+		reg = <0x20000000 DT_SIZE_K(32)>;
+	};
+
+	flash0: flash@8000000 {
+		compatible = "soc-nv-flash";
+		reg = <0x08000000 DT_SIZE_K(128)>;
+	};
+};

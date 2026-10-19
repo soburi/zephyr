@@ -1,0 +1,22 @@
+# Copyright (c) 2021, ATL Electronics
+# SPDX-License-Identifier: Apache-2.0
+
+config SOC_FAMILY_GIGADEVICE_GD32
+	bool
+
+config SOC_SERIES_GIGADEVICE_GD32VF103
+	bool
+	select SOC_FAMILY_GIGADEVICE_GD32
+
+config SOC_GIGADEVICE_GD32VF103
+	bool
+	select SOC_SERIES_GIGADEVICE_GD32VF103
+
+config SOC_FAMILY
+	default "gigadevice_gd32" if SOC_FAMILY_GIGADEVICE_GD32
+
+config SOC_SERIES
+	default "gigadevice_gd32vf103" if SOC_SERIES_GIGADEVICE_GD32VF103
+
+config SOC
+	default "gigadevice_gd32vf103" if SOC_GIGADEVICE_GD32VF103
