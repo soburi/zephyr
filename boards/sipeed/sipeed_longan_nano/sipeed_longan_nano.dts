@@ -1,0 +1,10 @@
+/dts-v1/;
+
+#include <gd/gd32vf103Xb.dtsi>
+
+/ {
+        chosen {
+                zephyr,sram = &sram0;
+                zephyr,flash = &flash0;
+        };
+};
