@@ -1,6 +1,6 @@
 /dts-v1/;
 
-#include <gd/gd32vf103Xb.dtsi>
+#include <gigadevice/gd32vf103.dtsi>
 
 / {
         chosen {
