@@ -1,6 +1,3 @@
-# Copyright (c) 2021, ATL Electronics
-# SPDX-License-Identifier: Apache-2.0
-
 config SOC_SERIES_GIGADEVICE_GD32VF103
 	select RISCV
 	select RISCV_PRIVILEGED

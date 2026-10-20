@@ -1,10 +1,4 @@
-# SPDX-FileCopyrightText: Copyright The Zephyr Project Contributors
-# SPDX-License-Identifier: Apache-2.0
-
 if SOC_GIGADEVICE_GD32VF103
-
-config SYS_CLOCK_EXISTS
-	default n
 
 config NUM_IRQS
 	default 16
@@ -21,4 +15,10 @@ config SRAM_SIZE
 config SRAM_BASE_ADDRESS
 	default 0x20000000
 
-endif # SOC_GIGADEVICE_GD32VF103_MINIMAL
+config SYS_CLOCK_EXISTS
+	default n
+
+config MULTITHREADING
+	default n
+
+endif
