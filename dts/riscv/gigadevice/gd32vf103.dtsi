@@ -2,6 +2,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
 #include <mem.h>
+#include <freq.h>
 
 / {
 	#address-cells = <1>;
@@ -10,6 +11,7 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+                timebase-frequency = <DT_FREQ_M(27)>;
 
 		cpu0: cpu@0 {
 			compatible = "riscv";

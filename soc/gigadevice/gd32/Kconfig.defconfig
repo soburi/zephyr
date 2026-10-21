@@ -1,5 +1,8 @@
 if SOC_GIGADEVICE_GD32VF103
 
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+        default $(dt_node_int_prop_int,/cpus/,timebase-frequency)
+
 config NUM_IRQS
 	default 16
 
@@ -14,9 +17,6 @@ config SRAM_SIZE
 
 config SRAM_BASE_ADDRESS
 	default 0x20000000
-
-config SYS_CLOCK_EXISTS
-	default n
 
 config MULTITHREADING
 	default n
