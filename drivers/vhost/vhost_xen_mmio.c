@@ -157,121 +157,8 @@ struct vhost_xen_mmio_data {
 	struct virtq_context *vq_ctx;
 };
 
-struct query_param {
-	const char *key;
-	const char *expected;
-};
-
-/**
- * Get the nth string from a null-separated string buffer
- */
-static const char *nth_str(const char *buf, size_t len, size_t n)
-{
-	int cnt = 0;
-
-	if (n == 0) {
-		return buf;
-	}
-
-	for (size_t i = 0; i < len; i++) {
-		if (buf[i] == '\0') {
-			cnt++;
-		}
-
-		if (cnt == n && (i != (len - 1))) {
-			return &buf[i + 1];
-		}
-	}
-
-	return NULL;
-}
-
-/**
- * Query VIRTIO frontend's domid/deviceid from XenStore
- */
-static int query_virtio_backend(const struct query_param *params, size_t param_num, domid_t *domid,
-				int *deviceid)
-{
-	char buf[65] = {0};
-	const size_t len = ARRAY_SIZE(buf) - 1;
-	const char *ptr_i, *ptr_j;
-	int i, j;
-
-	const ssize_t len_i = xs_directory("backend/virtio", buf, len, 0);
-
-	if (len_i < 0) {
-		return -EIO;
-	}
-	if (len_i == 6 && strncmp(buf, "ENOENT", len) == 0) {
-		return -ENOENT;
-	}
-
-	for (i = 0, ptr_i = buf; ptr_i; ptr_i = nth_str(buf, len_i, i++)) {
-		char *endptr;
-
-		*domid = strtol(ptr_i, &endptr, 10);
-		if (*endptr != '\0') {
-			continue;
-		}
-
-		snprintf(buf, len, "backend/virtio/%d", *domid);
-
-		const ssize_t len_j = xs_directory(buf, buf, ARRAY_SIZE(buf), 0);
-
-		if (len_j < 0 || strncmp(buf, "ENOENT", ARRAY_SIZE(buf)) == 0) {
-			continue;
-		}
-
-		for (j = 0, ptr_j = buf; ptr_j; ptr_j = nth_str(buf, len_j, j++)) {
-			*deviceid = strtol(ptr_j, &endptr, 10);
-			if (*endptr != '\0') {
-				continue; /* Skip invalid device ID */
-			}
-
-			bool match = true;
-
-			for (size_t k = 0; k < param_num; k++) {
-				snprintf(buf, len, "backend/virtio/%d/%d/%s", *domid, *deviceid,
-					 params[k].key);
-				const ssize_t len_k = xs_read(buf, buf, ARRAY_SIZE(buf), 0);
-
-				if ((len_k < 0) || (strncmp(buf, "ENOENT", ARRAY_SIZE(buf)) == 0) ||
-				    (strncmp(params[k].expected, buf, ARRAY_SIZE(buf)) != 0)) {
-					match = false;
-					break;
-				}
-			}
-
-			if (match) {
-				return 0;
-			}
-		}
-	}
-
-	return -ENOENT;
-}
-
-static uintptr_t query_irq(domid_t domid, int deviceid)
-{
-	char buf[65] = {0};
-	size_t len = ARRAY_SIZE(buf) - 1;
-	char *endptr;
-
-	snprintf(buf, len, "backend/virtio/%d/%d/irq", domid, deviceid);
-
-	len = xs_read(buf, buf, ARRAY_SIZE(buf) - 1, 0);
-	if ((len < 0) || (strncmp(buf, "ENOENT", ARRAY_SIZE(buf)) == 0)) {
-		return (uintptr_t)-1;
-	}
-
-	uintptr_t irq_val = strtol(buf, &endptr, 10);
-
-	if (*endptr != '\0') {
-		return (uintptr_t)-1;
-	}
-
-	return irq_val;
-}
+int query_virtio_backend(const char *key, const char *expected, domid_t *domid, int *deviceid);
+uintptr_t query_irq(domid_t domid, int deviceid);
 
 static int unmap_pages(struct mapped_pages *pages)
 {
@@ -973,12 +860,7 @@ static void init_workhandler(struct k_work *work)
 
 	snprintf(baseaddr, sizeof(baseaddr), "0x%lx", config->base);
 
-	struct query_param params[] = {{
-		.key = "base",
-		.expected = baseaddr,
-	}};
-
-	ret = query_virtio_backend(params, ARRAY_SIZE(params), &data->fe.domid, &data->fe.deviceid);
+	ret = query_virtio_backend("base", baseaddr, &data->fe.domid, &data->fe.deviceid);
 	if (ret < 0) {
 		LOG_INF("%s: failed %d", __func__, ret);
 		goto retry;

@@ -4,4 +4,5 @@
 zephyr_library()
 
 zephyr_library_sources_ifdef(CONFIG_VHOST vringh.c)
+zephyr_library_sources_ifdef(CONFIG_VHOST_XEN_MMIO filename.c)
 zephyr_library_sources_ifdef(CONFIG_VHOST_XEN_MMIO vhost_xen_mmio.c)
