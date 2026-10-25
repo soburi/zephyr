@@ -79,6 +79,7 @@ struct vhost_xen_mmio_config {
 	uint16_t num_queues;
 	uint16_t queue_size_max;
 	size_t buffer_size;
+	size_t map_slots;
 	uint8_t device_id;
 	uint32_t vendor_id;
 	uintptr_t base;
@@ -248,12 +249,10 @@ static size_t buffer_pages(const struct vhost_buf *buf)
 	       DIV_ROUND_UP(offset + buf->len % XEN_PAGE_SIZE, XEN_PAGE_SIZE);
 }
 
-static int map_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk,
-		     domid_t domid, const struct vhost_buf *bufs, size_t count)
+static int prepare_map_ops(struct mapped_pages_chunk *chunk, domid_t domid,
+			   const struct vhost_buf *bufs, size_t count, size_t *total)
 {
-	size_t total = 0;
-	int ret;
-
+	*total = 0;
 	if (count > chunk->capacity) {
 		LOG_ERR("Buffer count exceeds capacity: count=%zu capacity=%zu", count,
 			chunk->capacity);
@@ -270,51 +269,34 @@ static int map_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk
 		if (ref > UINT32_MAX || pages - 1 > UINT32_MAX - ref) {
 			return -EINVAL;
 		}
-		if (pages > chunk->capacity - total) {
+		if (pages > chunk->capacity - *total) {
 			LOG_ERR("Mapping page capacity exceeded: buf=%zu len=%zu offset=%zu "
 				"pages=%zu used=%zu capacity=%zu",
 				i, bufs[i].len, (size_t)(bufs[i].gpa & (XEN_PAGE_SIZE - 1)),
-				pages, total, chunk->capacity);
+				pages, *total, chunk->capacity);
 			return -E2BIG;
 		}
-		total += pages;
-	}
-
-	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
-
-	if (chunk->releasing) {
-		k_spin_unlock(&ctx->lock, key);
-		return -EBUSY;
-	}
-	chunk->releasing = true;
-	k_spin_unlock(&ctx->lock, key);
-
-	ret = unmap_chunk(chunk);
-	if (ret != 0 || total == 0) {
-		goto out;
-	}
-
-	size_t index = 0;
-
-	for (size_t i = 0; i < count; i++) {
-		chunk->map[i] = chunk->buf + index * XEN_PAGE_SIZE;
-		for (size_t j = 0; j < buffer_pages(&bufs[i]); j++, index++) {
-			chunk->map_ops[index] = (struct gnttab_map_grant_ref){
-				.host_addr = (uintptr_t)(chunk->buf + index * XEN_PAGE_SIZE),
+		chunk->map[i] = chunk->buf + *total * XEN_PAGE_SIZE;
+		for (size_t j = 0; j < pages; j++, (*total)++) {
+			chunk->map_ops[*total] = (struct gnttab_map_grant_ref){
+				.host_addr = (uintptr_t)(chunk->buf + *total * XEN_PAGE_SIZE),
 				.flags = GNTMAP_host_map |
 					 (bufs[i].is_write ? 0 : GNTMAP_readonly),
-				.ref = ((bufs[i].gpa & ~XEN_GRANT_ADDR_OFF) >>
-					XEN_PAGE_SHIFT) + j,
+				.ref = ref + j,
 				.dom = domid,
 			};
 		}
 	}
+	return 0;
+}
 
-	ret = gnttab_map_refs(chunk->map_ops, total);
+static int map_grants(struct mapped_pages_chunk *chunk, size_t total)
+{
+	int ret = gnttab_map_refs(chunk->map_ops, total);
+
 	if (ret != 0) {
-		goto out;
+		return ret;
 	}
-
 	chunk->map_count = total;
 	for (size_t i = 0; i < total; i++) {
 		const struct gnttab_map_grant_ref *op = &chunk->map_ops[i];
@@ -329,11 +311,34 @@ static int map_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk
 			ret = -EIO;
 		}
 	}
+	return ret;
+}
+
+static int map_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk,
+		     domid_t domid, const struct vhost_buf *bufs, size_t count)
+{
+	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
+	size_t total;
+	int ret;
+
+	if (chunk->releasing) {
+		k_spin_unlock(&ctx->lock, key);
+		return -EBUSY;
+	}
+	chunk->releasing = true;
+	k_spin_unlock(&ctx->lock, key);
+
+	ret = unmap_chunk(chunk);
 	if (ret == 0) {
-		chunk->count = count;
+		ret = prepare_map_ops(chunk, domid, bufs, count, &total);
+		if (ret == 0 && total > 0) {
+			ret = map_grants(chunk, total);
+		}
+		if (ret == 0) {
+			chunk->count = count;
+		}
 	}
 
-out:
 	key = k_spin_lock(&ctx->lock);
 	if (chunk->reset_pending) {
 		k_spin_unlock(&ctx->lock, key);
@@ -1006,53 +1011,26 @@ static const struct vhost_driver_api vhost_driver_xen_mmio_api = {
 	.register_virtq_notify_cb = vhost_xen_mmio_register_virtq_notify_cb,
 };
 
-static void free_chunks(const struct device *dev)
+static void init_chunks(const struct device *dev, uint8_t *pages)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
+	size_t offset = 0;
 
 	for (size_t q = 0; q < config->num_queues; q++) {
 		for (size_t h = 0; h <= config->queue_size_max; h++) {
 			struct mapped_pages_chunk *chunk = &data->vq_ctx[q].pages_chunks[h];
 
-			if (chunk->buf != NULL) {
-				int ret = gnttab_put_pages(chunk->buf, chunk->capacity);
-
-				if (ret != 0) {
-					LOG_ERR("Failed to free mapping pages: %d", ret);
-				}
-			}
-			chunk->buf = NULL;
-		}
-	}
-}
-
-static int allocate_chunks(const struct device *dev)
-{
-	const struct vhost_xen_mmio_config *config = dev->config;
-	struct vhost_xen_mmio_data *data = dev->data;
-	size_t size = config->queue_size_max;
-	size_t offset = 0;
-	size_t meta_pages = RING_MAP_PAGES(size);
-
-	for (size_t q = 0; q < config->num_queues; q++) {
-		for (size_t h = 0; h <= size; h++) {
-			struct mapped_pages_chunk *chunk = &data->vq_ctx[q].pages_chunks[h];
-
-			chunk->capacity = h == size ? meta_pages :
+			chunk->capacity = h == config->queue_size_max ?
+				RING_MAP_PAGES(config->queue_size_max) :
 				DIV_ROUND_UP(config->buffer_size, XEN_PAGE_SIZE);
+			chunk->buf = pages + offset * XEN_PAGE_SIZE;
 			chunk->map = config->maps + offset;
 			chunk->map_ops = config->map_ops + offset;
 			chunk->ops = config->unmap_ops + offset;
 			offset += chunk->capacity;
-			chunk->buf = gnttab_get_pages(chunk->capacity);
-			if (chunk->buf == NULL) {
-				free_chunks(dev);
-				return -ENOMEM;
-			}
 		}
 	}
-	return 0;
 }
 
 static int xen_event_initialized;
@@ -1086,17 +1064,23 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		return ret;
 	}
 
-	ret = allocate_chunks(dev);
-	if (ret != 0) {
-		return ret;
+	uint8_t *pages = gnttab_get_pages(config->map_slots);
+
+	if (pages == NULL) {
+		return -ENOMEM;
 	}
 
 	ret = xs_watch("backend/virtio", dev->name, buf, ARRAY_SIZE(buf) - 1, 0);
 	if (ret < 0) {
 		LOG_INF("xs_watch failed: %d", ret);
-		free_chunks(dev);
+		int rc = gnttab_put_pages(pages, config->map_slots);
+
+		if (rc != 0) {
+			LOG_ERR("Failed to free mapping pages: %d", rc);
+		}
 		return ret;
 	}
+	init_chunks(dev, pages);
 
 	k_work_init_delayable(&data->init_work, init_workhandler);
 	k_work_init_delayable(&data->isr_work, isr_workhandler);
@@ -1135,6 +1119,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	static struct gnttab_map_grant_ref vhost_xen_mmio_map_ops_##idx[MAP_SLOTS(idx)]; \
 	static struct gnttab_unmap_grant_ref vhost_xen_mmio_unmap_ops_##idx[MAP_SLOTS(idx)]; \
 	static const struct vhost_xen_mmio_config vhost_xen_mmio_config_##idx = {                  \
+		.map_slots = MAP_SLOTS(idx),                                                    \
 		.maps = vhost_xen_mmio_maps_##idx,                                                \
 		.map_ops = vhost_xen_mmio_map_ops_##idx,                                          \
 		.unmap_ops = vhost_xen_mmio_unmap_ops_##idx,                                      \
