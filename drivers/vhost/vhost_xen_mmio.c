@@ -164,83 +164,6 @@ struct vhost_xen_mmio_data {
 int query_virtio_backend(const char *key, const char *expected, domid_t *domid, int *deviceid);
 uintptr_t query_irq(domid_t domid, int deviceid);
 
-static int unmap_chunk(struct mapped_pages_chunk *chunk)
-{
-	int ret = 0;
-
-	for (size_t i = 0; i < chunk->map_count; i++) {
-		if (chunk->ops[i].status != GNTST_okay) {
-			continue;
-		}
-
-		int rc = gnttab_unmap_refs(&chunk->ops[i], 1);
-
-		if (rc != 0 || chunk->ops[i].status != GNTST_okay) {
-			ret = rc != 0 ? rc : -EIO;
-			/* Retain the handle if unmapping failed. */
-			chunk->ops[i].status = GNTST_okay;
-		} else {
-			chunk->ops[i].status = GNTST_general_error;
-		}
-	}
-
-	if (ret == 0) {
-		chunk->map_count = 0;
-		chunk->count = 0;
-	}
-
-	return ret;
-}
-
-static int release_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk, bool reset)
-{
-	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
-
-	if (chunk->releasing) {
-		chunk->reset_pending |= reset;
-		k_spin_unlock(&ctx->lock, key);
-		return reset ? 0 : -EBUSY;
-	}
-	chunk->releasing = true;
-	k_spin_unlock(&ctx->lock, key);
-
-	int ret = unmap_chunk(chunk);
-
-	key = k_spin_lock(&ctx->lock);
-	chunk->reset_pending = false;
-	chunk->releasing = false;
-	k_spin_unlock(&ctx->lock, key);
-
-	return ret;
-}
-
-static void reset_queue(const struct device *dev, uint16_t queue_id)
-{
-	const struct vhost_xen_mmio_config *config = dev->config;
-	struct vhost_xen_mmio_data *data = dev->data;
-
-	if (queue_id >= config->num_queues) {
-		return;
-	}
-
-	struct virtq_context *ctx = &data->vq_ctx[queue_id];
-
-	atomic_set(&ctx->queue_size, 0);
-	atomic_set(&ctx->queue_ready_notified, 0);
-	for (size_t i = 0; i <= config->queue_size_max; i++) {
-		int ret = release_chunk(ctx, &ctx->pages_chunks[i], true);
-
-		if (ret != 0) {
-			LOG_ERR_Q("Failed to reset chunk %zu: %d", i, ret);
-		}
-	}
-
-	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
-
-	ctx->queue_notify_cb = (struct virtq_callback){0};
-	k_spin_unlock(&ctx->lock, key);
-}
-
 static size_t buffer_pages(const struct vhost_buf *buf)
 {
 	size_t offset = buf->gpa & (XEN_PAGE_SIZE - 1);
@@ -314,6 +237,56 @@ static int map_grants(struct mapped_pages_chunk *chunk, size_t total)
 	return ret;
 }
 
+static int unmap_chunk(struct mapped_pages_chunk *chunk)
+{
+	int ret = 0;
+
+	for (size_t i = 0; i < chunk->map_count; i++) {
+		if (chunk->ops[i].status != GNTST_okay) {
+			continue;
+		}
+
+		int rc = gnttab_unmap_refs(&chunk->ops[i], 1);
+
+		if (rc != 0 || chunk->ops[i].status != GNTST_okay) {
+			ret = rc != 0 ? rc : -EIO;
+			/* Retain the handle if unmapping failed. */
+			chunk->ops[i].status = GNTST_okay;
+		} else {
+			chunk->ops[i].status = GNTST_general_error;
+		}
+	}
+
+	if (ret == 0) {
+		chunk->map_count = 0;
+		chunk->count = 0;
+	}
+
+	return ret;
+}
+
+static int release_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk, bool reset)
+{
+	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
+
+	if (chunk->releasing) {
+		chunk->reset_pending |= reset;
+		k_spin_unlock(&ctx->lock, key);
+		return reset ? 0 : -EBUSY;
+	}
+	chunk->releasing = true;
+	k_spin_unlock(&ctx->lock, key);
+
+	int ret = unmap_chunk(chunk);
+
+	key = k_spin_lock(&ctx->lock);
+	chunk->reset_pending = false;
+	chunk->releasing = false;
+	k_spin_unlock(&ctx->lock, key);
+
+	return ret;
+}
+
 static int map_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk,
 		     domid_t domid, const struct vhost_buf *bufs, size_t count)
 {
@@ -353,6 +326,28 @@ static int map_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk
 	return ret;
 }
 
+static void init_chunks(const struct device *dev, uint8_t *pages)
+{
+	const struct vhost_xen_mmio_config *config = dev->config;
+	struct vhost_xen_mmio_data *data = dev->data;
+	size_t offset = 0;
+
+	for (size_t q = 0; q < config->num_queues; q++) {
+		for (size_t h = 0; h <= config->queue_size_max; h++) {
+			struct mapped_pages_chunk *chunk = &data->vq_ctx[q].pages_chunks[h];
+
+			chunk->capacity = h == config->queue_size_max ?
+				RING_MAP_PAGES(config->queue_size_max) :
+				DIV_ROUND_UP(config->buffer_size, XEN_PAGE_SIZE);
+			chunk->buf = pages + offset * XEN_PAGE_SIZE;
+			chunk->map = config->maps + offset;
+			chunk->map_ops = config->map_ops + offset;
+			chunk->ops = config->unmap_ops + offset;
+			offset += chunk->capacity;
+		}
+	}
+}
+
 static int setup_queue(const struct device *dev, uint16_t queue_id)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
@@ -370,6 +365,33 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 	}
 	return map_chunk(ctx, &ctx->pages_chunks[META_PAGES_INDEX(config)], data->fe.domid,
 			 bufs, ARRAY_SIZE(bufs));
+}
+
+static void reset_queue(const struct device *dev, uint16_t queue_id)
+{
+	const struct vhost_xen_mmio_config *config = dev->config;
+	struct vhost_xen_mmio_data *data = dev->data;
+
+	if (queue_id >= config->num_queues) {
+		return;
+	}
+
+	struct virtq_context *ctx = &data->vq_ctx[queue_id];
+
+	atomic_set(&ctx->queue_size, 0);
+	atomic_set(&ctx->queue_ready_notified, 0);
+	for (size_t i = 0; i <= config->queue_size_max; i++) {
+		int ret = release_chunk(ctx, &ctx->pages_chunks[i], true);
+
+		if (ret != 0) {
+			LOG_ERR_Q("Failed to reset chunk %zu: %d", i, ret);
+		}
+	}
+
+	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
+
+	ctx->queue_notify_cb = (struct virtq_callback){0};
+	k_spin_unlock(&ctx->lock, key);
 }
 
 static void reset_device(const struct device *dev)
@@ -1010,28 +1032,6 @@ static const struct vhost_driver_api vhost_driver_xen_mmio_api = {
 	.register_virtq_ready_cb = vhost_xen_mmio_register_virtq_ready_cb,
 	.register_virtq_notify_cb = vhost_xen_mmio_register_virtq_notify_cb,
 };
-
-static void init_chunks(const struct device *dev, uint8_t *pages)
-{
-	const struct vhost_xen_mmio_config *config = dev->config;
-	struct vhost_xen_mmio_data *data = dev->data;
-	size_t offset = 0;
-
-	for (size_t q = 0; q < config->num_queues; q++) {
-		for (size_t h = 0; h <= config->queue_size_max; h++) {
-			struct mapped_pages_chunk *chunk = &data->vq_ctx[q].pages_chunks[h];
-
-			chunk->capacity = h == config->queue_size_max ?
-				RING_MAP_PAGES(config->queue_size_max) :
-				DIV_ROUND_UP(config->buffer_size, XEN_PAGE_SIZE);
-			chunk->buf = pages + offset * XEN_PAGE_SIZE;
-			chunk->map = config->maps + offset;
-			chunk->map_ops = config->map_ops + offset;
-			chunk->ops = config->unmap_ops + offset;
-			offset += chunk->capacity;
-		}
-	}
-}
 
 static int xen_event_initialized;
 
