@@ -40,7 +40,6 @@ LOG_MODULE_REGISTER(xen_vhost_mmio);
 
 #define DT_DRV_COMPAT xen_vhost_mmio
 
-#define PAGE_SHIFT         (__builtin_ctz(CONFIG_MMU_PAGE_SIZE))
 #define XEN_GRANT_ADDR_OFF (1ULL << 63)
 
 #define VIRTIO_MMIO_MAGIC             0x74726976
@@ -75,6 +74,7 @@ struct vhost_xen_mmio_config {
 
 	uint16_t num_queues;
 	uint16_t queue_size_max;
+	size_t buffer_size;
 	uint8_t device_id;
 	uint32_t vendor_id;
 	uintptr_t base;
@@ -85,19 +85,16 @@ struct vhost_xen_mmio_config {
 	uint64_t device_features;
 };
 
-struct mapped_pages {
-	uint64_t gpa;
-	uint8_t *buf;
-	size_t len;
-	struct gnttab_unmap_grant_ref *ops;
-	size_t map_count;
-	size_t pages;
-};
-
 struct mapped_pages_chunk {
+	uint8_t *buf;
+	uint8_t **map;
+	struct gnttab_map_grant_ref *map_ops;
+	struct gnttab_unmap_grant_ref *ops;
+	size_t capacity;
 	size_t count;
-	struct mapped_pages *map;
+	size_t map_count;
 	bool releasing;
+	bool reset_pending;
 };
 
 struct virtq_callback {
@@ -130,7 +127,6 @@ struct vhost_xen_mmio_data {
 	atomic_t retry;
 
 	struct xs_watcher watcher;
-	evtchn_port_t xs_port;
 	evtchn_port_t ioserv_port;
 	struct shared_iopage *shared_iopage;
 	uint32_t vcpus;
@@ -160,408 +156,208 @@ struct vhost_xen_mmio_data {
 int query_virtio_backend(const char *key, const char *expected, domid_t *domid, int *deviceid);
 uintptr_t query_irq(domid_t domid, int deviceid);
 
-static int unmap_pages(struct mapped_pages *pages)
+static int unmap_chunk(struct mapped_pages_chunk *chunk)
 {
 	int ret = 0;
 
-	if (!pages || !pages->ops) {
-		return 0;
-	}
+	for (size_t i = 0; i < chunk->map_count; i++) {
+		if (chunk->ops[i].status != GNTST_okay) {
+			continue;
+		}
 
-	LOG_DBG("%s: pages=%p unmap=%p count=%zu pages=%zu", __func__, pages, pages->ops,
-		pages->map_count, pages->pages);
+		int rc = gnttab_unmap_refs(&chunk->ops[i], 1);
 
-	for (size_t i = 0; i < pages->map_count; i++) {
-		LOG_DBG("pages: i=%zu status=%d", i, pages->ops[i].status);
-		if (pages->ops[i].status == GNTST_okay) {
-			int rc = gnttab_unmap_refs(&pages->ops[i], 1);
-
-			if (rc < 0) {
-				LOG_ERR("gnttab_unmap_refs failed: %d", rc);
-				ret = rc;
-			}
-			pages->ops[i].status = GNTST_general_error;
+		if (rc != 0 || chunk->ops[i].status != GNTST_okay) {
+			ret = rc != 0 ? rc : -EIO;
+			/* Retain the handle if unmapping failed. */
+			chunk->ops[i].status = GNTST_okay;
+		} else {
+			chunk->ops[i].status = GNTST_general_error;
 		}
 	}
 
-	pages->map_count = 0;
-
-	return ret;
-}
-
-static int free_pages_array(struct mapped_pages *pages, size_t len)
-{
-	int ret = 0;
-
-	if (!pages) {
-		return 0;
-	}
-
-	for (size_t i = 0; i < len; i++) {
-		int rc = unmap_pages(&pages[i]);
-
-		if (rc < 0) {
-			LOG_ERR("%s: [%zu] unmap failed: %d", __func__, i, rc);
-			ret = rc;
-		}
-
-		if (pages[i].ops) {
-			k_free(pages[i].ops);
-		}
-
-		if (pages[i].buf) {
-			rc = gnttab_put_pages(pages[i].buf, pages[i].pages);
-			if (rc < 0) {
-				LOG_ERR("%s: [%zu] gnttab_put_pages failed: %d", __func__, i, rc);
-				ret = rc;
-			}
-		}
+	if (ret == 0) {
+		chunk->map_count = 0;
+		chunk->count = 0;
 	}
 
 	return ret;
 }
 
-static inline k_spinlock_key_t wait_for_chunk_ready(struct virtq_context *ctx,
-						    struct mapped_pages_chunk *chunk,
-						    k_spinlock_key_t key)
+static int release_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk, bool reset)
 {
-	while (chunk->releasing) {
+	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
+
+	if (chunk->releasing) {
+		chunk->reset_pending |= reset;
 		k_spin_unlock(&ctx->lock, key);
-		key = k_spin_lock(&ctx->lock);
+		return reset ? 0 : -EBUSY;
 	}
+	chunk->releasing = true;
+	k_spin_unlock(&ctx->lock, key);
 
-	return key;
+	int ret = unmap_chunk(chunk);
+
+	key = k_spin_lock(&ctx->lock);
+	chunk->reset_pending = false;
+	chunk->releasing = false;
+	k_spin_unlock(&ctx->lock, key);
+
+	return ret;
 }
 
 static void reset_queue(const struct device *dev, uint16_t queue_id)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
-	k_spinlock_key_t key = k_spin_lock(&vq_ctx->lock);
+	if (queue_id >= config->num_queues) {
+		return;
+	}
 
+	struct virtq_context *ctx = &data->vq_ctx[queue_id];
+
+	atomic_set(&ctx->queue_size, 0);
+	atomic_set(&ctx->queue_ready_notified, 0);
 	for (size_t i = 0; i <= config->queue_size_max; i++) {
-		struct mapped_pages_chunk *chunk = &vq_ctx->pages_chunks[i];
+		int ret = release_chunk(ctx, &ctx->pages_chunks[i], true);
 
-		key = wait_for_chunk_ready(vq_ctx, chunk, key);
-
-		if (chunk->map && chunk->count > 0) {
-			const size_t count = chunk->count;
-
-			chunk->releasing = true;
-			chunk->map = NULL;
-			chunk->count = 0;
-			k_spin_unlock(&vq_ctx->lock, key);
-
-			free_pages_array(chunk->map, count);
-			k_free(chunk->map);
-
-			key = k_spin_lock(&vq_ctx->lock);
-			chunk->releasing = false;
-		} else {
-			chunk->count = 0;
+		if (ret != 0) {
+			LOG_ERR_Q("Failed to reset chunk %zu: %d", i, ret);
 		}
 	}
 
-	vq_ctx->queue_notify_cb.cb = NULL;
-	vq_ctx->queue_notify_cb.data = NULL;
+	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
 
-	k_spin_unlock(&vq_ctx->lock, key);
-
-	atomic_set(&vq_ctx->queue_size, 0);
-	atomic_set(&vq_ctx->queue_ready_notified, 0);
+	ctx->queue_notify_cb = (struct virtq_callback){0};
+	k_spin_unlock(&ctx->lock, key);
 }
 
-static void setup_unmap_info(struct mapped_pages *pages, const struct vhost_buf *bufs,
-			     size_t bufs_len, const struct gnttab_map_grant_ref *map_ops)
+static size_t buffer_pages(const struct vhost_buf *buf)
 {
-	size_t map_idx = 0;
+	size_t offset = buf->gpa & (XEN_PAGE_SIZE - 1);
 
-	for (size_t i = 0; i < bufs_len; i++) {
-		const size_t num_pages = (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
-		struct mapped_pages *page_info = &pages[i];
-
-		for (size_t j = 0; j < num_pages; j++) {
-			const struct gnttab_map_grant_ref *map = &map_ops[map_idx];
-			struct gnttab_unmap_grant_ref *unmap = &page_info->ops[j];
-
-			unmap->host_addr = map->host_addr;
-			unmap->dev_bus_addr = map->dev_bus_addr;
-			unmap->handle = map->handle;
-			unmap->status = map->status;
-			map_idx++;
-		}
-
-		page_info->map_count = num_pages;
-		LOG_DBG("%s: range[%zu] map_count=%zu num_pages=%zu "
-			"pages=%zu",
-			__func__, i, page_info->map_count, num_pages, page_info->pages);
-	}
+	return buf->len / XEN_PAGE_SIZE +
+	       DIV_ROUND_UP(offset + buf->len % XEN_PAGE_SIZE, XEN_PAGE_SIZE);
 }
 
-static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
-				const struct vhost_buf *bufs, size_t bufs_len)
+static int map_chunk(struct virtq_context *ctx, struct mapped_pages_chunk *chunk,
+		     domid_t domid, const struct vhost_buf *bufs, size_t count)
 {
-	size_t total_map_ops = 0;
-	size_t map_idx = 0;
-	int ret = 0;
-
-	for (size_t i = 0; i < bufs_len; i++) {
-		total_map_ops += (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
-	}
-
-	struct gnttab_map_grant_ref *map_ops =
-		k_malloc(sizeof(struct gnttab_map_grant_ref) * total_map_ops);
-
-	if (!map_ops) {
-		LOG_ERR("k_malloc failed for %zu map operations", total_map_ops);
-		return -ENOMEM;
-	}
-
-	for (size_t i = 0; i < bufs_len; i++) {
-		const size_t num_pages = (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
-		struct mapped_pages *page_info = &pages[i];
-
-		for (size_t j = 0; j < num_pages; j++) {
-			const uint64_t page_gpa = bufs[i].gpa + (j * XEN_PAGE_SIZE);
-
-			if (!(page_gpa & XEN_GRANT_ADDR_OFF)) {
-				LOG_ERR("addr missing grant marker: 0x%" PRIx64, page_gpa);
-				ret = -EINVAL;
-				goto free_ops;
-			}
-
-			map_ops[map_idx].host_addr =
-				(uintptr_t)page_info->buf + (j * XEN_PAGE_SIZE);
-			map_ops[map_idx].flags =
-				GNTMAP_host_map | (bufs[i].is_write ? 0 : GNTMAP_readonly);
-			map_ops[map_idx].ref = (page_gpa & ~XEN_GRANT_ADDR_OFF) >> XEN_PAGE_SHIFT;
-			map_ops[map_idx].dom = domid;
-
-			map_idx++;
-		}
-	}
-
-	ret = gnttab_map_refs(map_ops, total_map_ops);
-	if (ret < 0) {
-		LOG_ERR("gnttab_map_refs failed: %d", ret);
-		goto free_ops;
-	}
-
-	/* Check mapping results */
-	map_idx = 0;
-	for (size_t i = 0; i < bufs_len; i++) {
-		const size_t num_pages = (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
-
-		for (size_t j = 0; j < num_pages; j++) {
-			const struct gnttab_map_grant_ref *op = &map_ops[map_idx];
-
-			if (op->status != GNTST_okay) {
-				LOG_ERR("Mapping failed for range %zu page %zu: status=%d", i, j,
-					op->status);
-				ret = -EIO;
-				goto unmap;
-			}
-			map_idx++;
-		}
-	}
-
-	ret = 0;
-
-unmap:
-	setup_unmap_info(pages, bufs, bufs_len, map_ops);
-
-	if (ret < 0) {
-		unmap_pages(pages);
-	}
-
-free_ops:
-	if (map_ops) {
-		k_free(map_ops);
-	}
-
-	return ret;
-}
-
-static int init_pages_chunks(const struct device *dev, uint16_t queue_id, uint16_t head,
-			     const struct vhost_buf *bufs, size_t bufs_len,
-			     struct vhost_iovec *r_iovecs, size_t r_iovecs_len,
-			     struct vhost_iovec *w_iovecs, size_t w_iovecs_len, size_t *r_count_out,
-			     size_t *w_count_out, size_t total_pages)
-{
-	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	struct mapped_pages_chunk *chunk = &vq_ctx->pages_chunks[head];
-	size_t r_iovecs_count = 0, w_iovecs_count = 0;
+	size_t total = 0;
 	int ret;
 
-	LOG_DBG_Q("%zu bufs, %zu total pages", bufs_len, total_pages);
+	if (count > chunk->capacity) {
+		LOG_ERR("Buffer count exceeds capacity: count=%zu capacity=%zu", count,
+			chunk->capacity);
+		return -E2BIG;
+	}
+	for (size_t i = 0; i < count; i++) {
+		if (bufs[i].len == 0 || (bufs[i].gpa & XEN_GRANT_ADDR_OFF) == 0 ||
+		    bufs[i].len - 1 > UINT64_MAX - bufs[i].gpa) {
+			return -EINVAL;
+		}
+		size_t pages = buffer_pages(&bufs[i]);
+		uint64_t ref = (bufs[i].gpa & ~XEN_GRANT_ADDR_OFF) >> XEN_PAGE_SHIFT;
 
-	/* Reallocate page chunk structure */
-	if (!chunk->map || chunk->count < bufs_len) {
-		if (chunk->map) {
-			free_pages_array(chunk->map, chunk->count);
-			k_free(chunk->map);
+		if (ref > UINT32_MAX || pages - 1 > UINT32_MAX - ref) {
+			return -EINVAL;
 		}
-		chunk->map = k_malloc(sizeof(struct mapped_pages) * bufs_len);
-		if (!chunk->map) {
-			return -ENOMEM;
+		if (pages > chunk->capacity - total) {
+			LOG_ERR("Mapping page capacity exceeded: buf=%zu len=%zu offset=%zu "
+				"pages=%zu used=%zu capacity=%zu",
+				i, bufs[i].len, (size_t)(bufs[i].gpa & (XEN_PAGE_SIZE - 1)),
+				pages, total, chunk->capacity);
+			return -E2BIG;
 		}
-		memset(chunk->map, 0, sizeof(struct mapped_pages) * bufs_len);
-		chunk->count = bufs_len;
-		LOG_DBG_Q("Allocated chunk at %p, count=%zu", chunk->map, chunk->count);
+		total += pages;
 	}
 
-	for (size_t i = 0; i < bufs_len; i++) {
-		const size_t num_pages = (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
-		struct mapped_pages *page_info = &chunk->map[i];
+	k_spinlock_key_t key = k_spin_lock(&ctx->lock);
 
-		/* Allocate or reuse buffer for this range */
-		if (!page_info->buf || page_info->pages < num_pages) {
-			free_pages_array(page_info, 1);
-			memset(page_info, 0, sizeof(struct mapped_pages));
+	if (chunk->releasing) {
+		k_spin_unlock(&ctx->lock, key);
+		return -EBUSY;
+	}
+	chunk->releasing = true;
+	k_spin_unlock(&ctx->lock, key);
 
-			barrier_dmem_fence_full();
-
-			page_info->len = num_pages * XEN_PAGE_SIZE;
-			page_info->gpa = bufs[i].gpa;
-			page_info->buf = gnttab_get_pages(num_pages);
-			page_info->ops =
-				k_malloc(sizeof(struct gnttab_unmap_grant_ref) * num_pages);
-			page_info->pages = num_pages;
-			page_info->map_count = 0;
-
-			LOG_DBG_Q("range[%zu] allocated pages=%zu num_pages=%zu buf=%p unmap=%p", i,
-				  page_info->pages, num_pages, page_info->buf, page_info->ops);
-
-			if (!page_info->buf || !page_info->ops) {
-				LOG_ERR_Q("Failed to allocate for range[%zu]: buf=%p unmap=%p", i,
-					  page_info->buf, page_info->ops);
-				return -ENOMEM;
-			}
-
-			for (size_t j = 0; j < num_pages; j++) {
-				page_info->ops[j].status = GNTST_general_error;
-			}
-		}
+	ret = unmap_chunk(chunk);
+	if (ret != 0 || total == 0) {
+		goto out;
 	}
 
-	ret = setup_iovec_mappings(chunk->map, data->fe.domid, bufs, bufs_len);
-	if (ret < 0) {
-		return ret;
-	}
+	size_t index = 0;
 
-	k_spinlock_key_t key = k_spin_lock(&vq_ctx->lock);
-
-	key = wait_for_chunk_ready(vq_ctx, chunk, key);
-
-	for (size_t i = 0; i < bufs_len; i++) {
-		const bool is_write = bufs[i].is_write;
-		const size_t iovecs_len = is_write ? w_iovecs_len : r_iovecs_len;
-		const size_t current_count = is_write ? w_iovecs_count : r_iovecs_count;
-		struct vhost_iovec *iovec =
-			is_write ? &w_iovecs[w_iovecs_count] : &r_iovecs[r_iovecs_count];
-
-		if (current_count >= iovecs_len) {
-			LOG_ERR_Q("no more %s iovecs: %zu >= %zu", is_write ? "write" : "read",
-				  current_count, iovecs_len);
-			k_spin_unlock(&vq_ctx->lock, key);
-			ret = -E2BIG;
-			break;
-		}
-
-		const size_t page_offset = bufs[i].gpa & (XEN_PAGE_SIZE - 1);
-		const void *base_buf = chunk->map[i].buf;
-		const void *va = (void *)(((uintptr_t)base_buf) + page_offset);
-
-		iovec->iov_base = (void *)va;
-		iovec->iov_len = bufs[i].len;
-
-		if (is_write) {
-			w_iovecs_count++;
-		} else {
-			r_iovecs_count++;
+	for (size_t i = 0; i < count; i++) {
+		chunk->map[i] = chunk->buf + index * XEN_PAGE_SIZE;
+		for (size_t j = 0; j < buffer_pages(&bufs[i]); j++, index++) {
+			chunk->map_ops[index] = (struct gnttab_map_grant_ref){
+				.host_addr = (uintptr_t)(chunk->buf + index * XEN_PAGE_SIZE),
+				.flags = GNTMAP_host_map |
+					 (bufs[i].is_write ? 0 : GNTMAP_readonly),
+				.ref = ((bufs[i].gpa & ~XEN_GRANT_ADDR_OFF) >>
+					XEN_PAGE_SHIFT) + j,
+				.dom = domid,
+			};
 		}
 	}
 
-	if (ret != -E2BIG) {
-		k_spin_unlock(&vq_ctx->lock, key);
+	ret = gnttab_map_refs(chunk->map_ops, total);
+	if (ret != 0) {
+		goto out;
 	}
 
-	if (ret < 0) {
-		LOG_ERR_Q("chunk[%u] initialization failed: %d", head, ret);
-	} else {
-		*r_count_out = r_iovecs_count;
-		*w_count_out = w_iovecs_count;
-		LOG_DBG_Q("chunk[%u] init succeed bufs=%zu", head, bufs_len);
+	chunk->map_count = total;
+	for (size_t i = 0; i < total; i++) {
+		const struct gnttab_map_grant_ref *op = &chunk->map_ops[i];
+
+		chunk->ops[i] = (struct gnttab_unmap_grant_ref){
+			.host_addr = op->host_addr,
+			.dev_bus_addr = op->dev_bus_addr,
+			.handle = op->handle,
+			.status = op->status,
+		};
+		if (op->status != GNTST_okay) {
+			ret = -EIO;
+		}
+	}
+	if (ret == 0) {
+		chunk->count = count;
 	}
 
+out:
+	key = k_spin_lock(&ctx->lock);
+	if (chunk->reset_pending) {
+		k_spin_unlock(&ctx->lock, key);
+		int rc = unmap_chunk(chunk);
+
+		ret = rc != 0 ? rc : -ECANCELED;
+		key = k_spin_lock(&ctx->lock);
+		chunk->reset_pending = false;
+	}
+	chunk->releasing = false;
+	k_spin_unlock(&ctx->lock, key);
 	return ret;
 }
 
-/**
- * @brief Set up a VirtIO queue for operation
- *
- * Maps the required grant pages for VirtIO ring structures (descriptor,
- * available, and used rings) based on the current queue size. Uses
- * metachain (pages[queue_size_max]) to store the meta pages.
- *
- * @param dev VHost device instance
- * @param queue_id ID of the queue to set up
- * @return 0 on success, negative error code on failure
- */
 static int setup_queue(const struct device *dev, uint16_t queue_id)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	const size_t queue_size = atomic_get(&data->vq_ctx[queue_id].queue_size);
-	const size_t num_pages[] = {DIV_ROUND_UP(16 * queue_size, XEN_PAGE_SIZE),
-				    DIV_ROUND_UP(2 * queue_size + 6, XEN_PAGE_SIZE),
-				    DIV_ROUND_UP(8 * queue_size + 6, XEN_PAGE_SIZE)};
-	int ret = 0;
+	struct virtq_context *ctx = &data->vq_ctx[queue_id];
+	size_t size = atomic_get(&ctx->queue_size);
+	struct vhost_buf bufs[NUM_OF_VIRTQ_PARTS] = {
+		{.gpa = ctx->virtq_parts_gpa[VIRTQ_DESC], .len = 16 * size, .is_write = true},
+		{.gpa = ctx->virtq_parts_gpa[VIRTQ_AVAIL], .len = 2 * size + 6, .is_write = true},
+		{.gpa = ctx->virtq_parts_gpa[VIRTQ_USED], .len = 8 * size + 6, .is_write = true},
+	};
 
-	struct vhost_buf meta_bufs[NUM_OF_VIRTQ_PARTS];
-	struct vhost_iovec dummy_iovecs[NUM_OF_VIRTQ_PARTS];
-	size_t dummy_read_count, dummy_write_count;
-	size_t total_pages = 0;
-
-	for (size_t i = 0; i < NUM_OF_VIRTQ_PARTS; i++) {
-		meta_bufs[i].gpa = vq_ctx->virtq_parts_gpa[i];
-		meta_bufs[i].len = num_pages[i] * XEN_PAGE_SIZE;
-		meta_bufs[i].is_write = true;
-		total_pages += num_pages[i];
-
-		LOG_DBG_Q("Meta range[%zu]: gpa=0x%" PRIx64 " len=%zu pages=%zu", i,
-			  meta_bufs[i].gpa, meta_bufs[i].len, num_pages[i]);
+	if (size == 0) {
+		return -EINVAL;
 	}
-
-	ret = init_pages_chunks(dev, queue_id, META_PAGES_INDEX(config), meta_bufs,
-				NUM_OF_VIRTQ_PARTS, dummy_iovecs,
-				0, /* No read iovecs needed for meta pages */
-				dummy_iovecs, NUM_OF_VIRTQ_PARTS, /* Write iovecs for meta pages */
-				&dummy_read_count, &dummy_write_count, total_pages);
-
-	if (ret < 0) {
-		LOG_ERR_Q("init_pages_chunks failed: %d", ret);
-		return ret;
-	}
-
-	k_spinlock_key_t key = k_spin_lock(&vq_ctx->lock);
-
-	for (size_t i = 0; i < config->queue_size_max; i++) {
-		struct mapped_pages_chunk *chunk = &vq_ctx->pages_chunks[i];
-
-		key = wait_for_chunk_ready(vq_ctx, chunk, key);
-
-		chunk->map = NULL;
-		chunk->count = 0;
-	}
-
-	k_spin_unlock(&vq_ctx->lock, key);
-
-	return 0;
+	return map_chunk(ctx, &ctx->pages_chunks[META_PAGES_INDEX(config)], data->fe.domid,
+			 bufs, ARRAY_SIZE(bufs));
 }
 
 static void reset_device(const struct device *dev)
@@ -952,13 +748,14 @@ static bool vhost_xen_mmio_virtq_is_ready(const struct device *dev, uint16_t que
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	const struct vhost_xen_mmio_data *data = dev->data;
-	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	const size_t queue_size = atomic_get(&vq_ctx->queue_size);
 
 	if (queue_id >= config->num_queues) {
 		LOG_ERR_Q("Invalid queue ID");
 		return false;
 	}
+
+	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	const size_t queue_size = atomic_get(&vq_ctx->queue_size);
 
 	if (queue_size == 0) {
 		return false;
@@ -970,15 +767,12 @@ static bool vhost_xen_mmio_virtq_is_ready(const struct device *dev, uint16_t que
 		return false;
 	}
 
-	for (size_t i = 0; i < meta->count; i++) {
-		if (meta->map[i].buf == NULL) {
+	if (meta->releasing || meta->map_count == 0) {
+		return false;
+	}
+	for (size_t i = 0; i < meta->map_count; i++) {
+		if (meta->ops[i].status != GNTST_okay) {
 			return false;
-		}
-
-		for (size_t j = 0; j < meta->map[i].map_count; j++) {
-			if (meta->map[i].ops[j].status != GNTST_okay) {
-				return false;
-			}
 		}
 	}
 
@@ -992,12 +786,13 @@ static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	const struct vhost_xen_mmio_data *data = dev->data;
-	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
 	if (queue_id >= config->num_queues) {
 		LOG_ERR_Q("Invalid queue ID");
 		return -EINVAL;
 	}
+
+	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 
 	if (!vhost_xen_mmio_virtq_is_ready(dev, queue_id)) {
 		LOG_ERR_Q("not ready");
@@ -1011,7 +806,7 @@ static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
 	}
 
 	for (size_t i = 0; i < meta->count; i++) {
-		parts[i] = meta->map[i].buf + (vq_ctx->virtq_parts_gpa[i] & (XEN_PAGE_SIZE - 1));
+		parts[i] = meta->map[i] + (vq_ctx->virtq_parts_gpa[i] & (XEN_PAGE_SIZE - 1));
 	}
 
 	if (!parts[VIRTQ_DESC] || !parts[VIRTQ_AVAIL] || !parts[VIRTQ_USED]) {
@@ -1075,58 +870,14 @@ static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	const size_t queue_size = atomic_get(&vq_ctx->queue_size);
-	int ret = 0;
 
-	k_spinlock_key_t key = k_spin_lock(&vq_ctx->lock);
-
-	if (queue_id >= config->num_queues) {
-		LOG_ERR_Q("Invalid queue ID");
-		k_spin_unlock(&vq_ctx->lock, key);
+	if (queue_id >= config->num_queues || head >= config->queue_size_max) {
 		return -EINVAL;
 	}
 
-	if (head >= queue_size) {
-		LOG_ERR_Q("Invalid head: head=%u >= queue_size=%zu", head, queue_size);
-		k_spin_unlock(&vq_ctx->lock, key);
-		return -EINVAL;
-	}
+	struct virtq_context *ctx = &data->vq_ctx[queue_id];
 
-	struct mapped_pages_chunk *chunk = &vq_ctx->pages_chunks[head];
-
-	if (!chunk->map || chunk->count == 0) {
-		LOG_ERR_Q("Head not in use: head=%u", head);
-
-		k_spin_unlock(&vq_ctx->lock, key);
-		return -EINVAL;
-	}
-
-	key = wait_for_chunk_ready(vq_ctx, chunk, key);
-
-	chunk->releasing = true;
-
-	k_spin_unlock(&vq_ctx->lock, key);
-
-	for (size_t i = 0; i < chunk->count; i++) {
-		int rc = unmap_pages(&chunk->map[i]);
-
-		if (rc < 0) {
-			LOG_ERR_Q("gnttab_unmap_refs failed for page %zu: %d", i, rc);
-			ret = rc;
-		}
-	}
-
-	key = k_spin_lock(&vq_ctx->lock);
-
-	for (size_t i = 0; i < chunk->count; i++) {
-		chunk->map[i].map_count = 0;
-	}
-
-	chunk->releasing = false;
-	k_spin_unlock(&vq_ctx->lock, key);
-
-	return ret;
+	return release_chunk(ctx, &ctx->pages_chunks[head], false);
 }
 
 static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
@@ -1137,68 +888,57 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
-	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
-	const size_t queue_size = atomic_get(&vq_ctx->queue_size);
-	size_t total_pages = 0;
-	int ret = 0;
+	size_t reads = 0, writes = 0;
+	size_t length = 0;
 
+	*read_count = 0;
+	*write_count = 0;
 	if (queue_id >= config->num_queues) {
-		LOG_ERR_Q("Invalid queue ID");
-		ret = -EINVAL;
-		goto end;
+		return -EINVAL;
 	}
 
-	if (head >= queue_size) {
-		LOG_ERR_Q("Invalid head: head=%u >= queue_size=%zu", head, queue_size);
-		ret = -EINVAL;
-		goto end;
-	}
+	struct virtq_context *ctx = &data->vq_ctx[queue_id];
 
+	if (head >= atomic_get(&ctx->queue_size)) {
+		return -EINVAL;
+	}
 	for (size_t i = 0; i < bufs_count; i++) {
-		const uint64_t start_page = bufs[i].gpa >> XEN_PAGE_SHIFT;
-		const uint64_t end_page = (bufs[i].gpa + bufs[i].len - 1) >> XEN_PAGE_SHIFT;
-
-		if (!(bufs[i].gpa & XEN_GRANT_ADDR_OFF)) {
-			LOG_ERR_Q("addr missing grant marker: 0x%" PRIx64, bufs[i].gpa);
-			ret = -EINVAL;
-			goto end;
+		if (bufs[i].len > config->buffer_size - length) {
+			LOG_ERR_Q("head=%u byte capacity exceeded: buf=%zu len=%zu "
+				  "used=%zu capacity=%zu",
+				  head, i, bufs[i].len, length, config->buffer_size);
+			return -E2BIG;
 		}
-
-		total_pages += end_page - start_page + 1;
-	}
-
-	if (total_pages == 0) {
-		*read_count = 0;
-		*write_count = 0;
-
-		return 0;
-	}
-
-	LOG_DBG_Q("bufs_count=%zu total_pages=%zu max_read=%zu max_write=%zu", bufs_count,
-		  total_pages, r_iovecs_count, w_iovecs_count);
-
-	struct mapped_pages_chunk *chunk = &vq_ctx->pages_chunks[head];
-
-	if (chunk->map && chunk->count > 0 && chunk->map[0].map_count > 0) {
-		LOG_WRN("Found unreleased head: %d", head);
-
-		ret = vhost_xen_mmio_release_iovec(dev, queue_id, head);
-		if (ret < 0) {
-			LOG_ERR_Q("vhost_xen_mmio_release_iovec: failed %d", ret);
-			goto end;
+		length += bufs[i].len;
+		if (bufs[i].is_write) {
+			writes++;
+		} else {
+			reads++;
 		}
 	}
-
-	ret = init_pages_chunks(dev, queue_id, head, bufs, bufs_count, r_iovecs, r_iovecs_count,
-				w_iovecs, w_iovecs_count, read_count, write_count, total_pages);
-
-end:
-	if (ret < 0) {
-		*read_count = 0;
-		*write_count = 0;
+	if (reads > r_iovecs_count || writes > w_iovecs_count) {
+		LOG_ERR_Q("head=%u iovec capacity exceeded: read=%zu capacity=%zu "
+			  "write=%zu capacity=%zu",
+			  head, reads, r_iovecs_count, writes, w_iovecs_count);
+		return -E2BIG;
 	}
 
-	return ret;
+	struct mapped_pages_chunk *chunk = &ctx->pages_chunks[head];
+	int ret = map_chunk(ctx, chunk, data->fe.domid, bufs, bufs_count);
+
+	if (ret != 0) {
+		LOG_ERR_Q("head=%u mapping failed: %d", head, ret);
+		return ret;
+	}
+	for (size_t i = 0; i < bufs_count; i++) {
+		struct vhost_iovec *iov = bufs[i].is_write ?
+			&w_iovecs[(*write_count)++] : &r_iovecs[(*read_count)++];
+
+		iov->iov_base = chunk->map[i] + (bufs[i].gpa & (XEN_PAGE_SIZE - 1));
+		iov->iov_len = bufs[i].len;
+	}
+
+	return 0;
 }
 
 static int vhost_xen_mmio_register_virtq_ready_cb(const struct device *dev,
@@ -1259,6 +999,59 @@ static const struct vhost_driver_api vhost_driver_xen_mmio_api = {
 	.register_virtq_notify_cb = vhost_xen_mmio_register_virtq_notify_cb,
 };
 
+static void free_chunks(const struct device *dev)
+{
+	const struct vhost_xen_mmio_config *config = dev->config;
+	struct vhost_xen_mmio_data *data = dev->data;
+
+	for (size_t q = 0; q < config->num_queues; q++) {
+		for (size_t h = 0; h <= config->queue_size_max; h++) {
+			struct mapped_pages_chunk *chunk = &data->vq_ctx[q].pages_chunks[h];
+
+			if (chunk->buf != NULL) {
+				int ret = gnttab_put_pages(chunk->buf, chunk->capacity);
+
+				if (ret != 0) {
+					LOG_ERR("Failed to free mapping pages: %d", ret);
+				}
+			}
+			k_free(chunk->map);
+			k_free(chunk->map_ops);
+			k_free(chunk->ops);
+			*chunk = (struct mapped_pages_chunk){0};
+		}
+	}
+}
+
+static int allocate_chunks(const struct device *dev)
+{
+	const struct vhost_xen_mmio_config *config = dev->config;
+	struct vhost_xen_mmio_data *data = dev->data;
+	size_t size = config->queue_size_max;
+	size_t meta_pages = DIV_ROUND_UP(16 * size + XEN_PAGE_SIZE - 1, XEN_PAGE_SIZE) +
+		DIV_ROUND_UP(2 * size + 6 + XEN_PAGE_SIZE - 1, XEN_PAGE_SIZE) +
+		DIV_ROUND_UP(8 * size + 6 + XEN_PAGE_SIZE - 1, XEN_PAGE_SIZE);
+
+	for (size_t q = 0; q < config->num_queues; q++) {
+		for (size_t h = 0; h <= size; h++) {
+			struct mapped_pages_chunk *chunk = &data->vq_ctx[q].pages_chunks[h];
+
+			chunk->capacity = h == size ? meta_pages :
+				DIV_ROUND_UP(config->buffer_size, XEN_PAGE_SIZE);
+			chunk->buf = gnttab_get_pages(chunk->capacity);
+			chunk->map = k_calloc(chunk->capacity, sizeof(*chunk->map));
+			chunk->map_ops = k_calloc(chunk->capacity, sizeof(*chunk->map_ops));
+			chunk->ops = k_calloc(chunk->capacity, sizeof(*chunk->ops));
+			if (chunk->buf == NULL || chunk->map == NULL || chunk->map_ops == NULL ||
+			    chunk->ops == NULL) {
+				free_chunks(dev);
+				return -ENOMEM;
+			}
+		}
+	}
+	return 0;
+}
+
 static int xen_event_initialized;
 
 static int vhost_xen_mmio_init(const struct device *dev)
@@ -1290,6 +1083,18 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		return ret;
 	}
 
+	ret = allocate_chunks(dev);
+	if (ret != 0) {
+		return ret;
+	}
+
+	ret = xs_watch("backend/virtio", dev->name, buf, ARRAY_SIZE(buf) - 1, 0);
+	if (ret < 0) {
+		LOG_INF("xs_watch failed: %d", ret);
+		free_chunks(dev);
+		return ret;
+	}
+
 	k_work_init_delayable(&data->init_work, init_workhandler);
 	k_work_init_delayable(&data->isr_work, isr_workhandler);
 	k_work_init_delayable(&data->ready_work, ready_workhandler);
@@ -1300,12 +1105,8 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	xs_watcher_init(&data->watcher, xs_notify_handler, (void *)dev);
 	xs_watcher_register(&data->watcher);
 
-	ret = xs_watch("backend/virtio", dev->name, buf, ARRAY_SIZE(buf) - 1, 0);
-
-	if (ret < 0) {
-		LOG_INF("xs_watch failed: %d", ret);
-		return ret;
-	}
+	/* Probe once even if the initial watch event arrived before registration. */
+	k_work_schedule_for_queue(&data->workq, &data->init_work, K_NO_WAIT);
 
 	return 0;
 }
@@ -1319,11 +1120,13 @@ static int vhost_xen_mmio_init(const struct device *dev)
 #define Q_SZ_MAX(idx) DT_INST_PROP_OR(idx, queue_size_max, 1)
 
 #define VHOST_XEN_MMIO_INST(idx)                                                                   \
+	BUILD_ASSERT(DT_INST_PROP(idx, buffer_size) > 0, "buffer-size must be positive");          \
 	static K_THREAD_STACK_DEFINE(workq_stack_##idx, DT_INST_PROP_OR(idx, stack_size, 4096));   \
 	uint8_t config_data##idx[] = {                                                             \
 		COND_CODE_1(DT_INST_NODE_HAS_PROP(idx, config_data),                               \
 		(DT_INST_FOREACH_PROP_ELEM_SEP(idx, config_data, DT_PROP_BY_IDX, (,))), ())};      \
 	static const struct vhost_xen_mmio_config vhost_xen_mmio_config_##idx = {                  \
+		.buffer_size = DT_INST_PROP(idx, buffer_size),                               \
 		.queue_size_max = DT_INST_PROP_OR(idx, queue_size_max, 1),                         \
 		.num_queues = DT_INST_PROP_OR(idx, num_queues, 1),                                 \
 		.device_id = DT_INST_PROP(idx, device_id),                                         \

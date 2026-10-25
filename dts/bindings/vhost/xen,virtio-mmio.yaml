@@ -27,6 +27,18 @@ properties:
     description: |
       Maximum number of entries supported in each virtqueue for this device.
 
+  buffer-size:
+    type: int
+    required: true
+    description: |
+      Fixed data buffer capacity in bytes for each descriptor-chain head.
+      The driver allocates this capacity, rounded up to Xen pages, at
+      initialization. The sum of buffer lengths in a request must not exceed
+      this value. Each buffer consumes whole mapping pages, including its
+      page offset, so fragmented requests can exhaust the mapping capacity
+      before reaching this byte limit. Requests exceeding either capacity
+      are rejected. Virtqueue ring mappings are allocated separately.
+
   device-id:
     type: int
     required: true

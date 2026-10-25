@@ -12,6 +12,7 @@
 			vendor-id = <0x7a707972>; /* "zphy" */
 			num-queues = <2>;
 			queue-size-max= <16>;
+			buffer-size = <65536>;
 			base = <0x2000000>;
 		};
 
@@ -22,6 +23,7 @@
 			device-features = <0x200>; /* VIRTIO_BLK_F_FLUSH */
 			num-queues = <1>;
 			queue-size-max = <16>;
+			buffer-size = <65536>;
 			base = <0x2001000>;
 			/* capacity: 2048 512-byte sectors, little-endian */
 			config-data = [00 08 00 00 00 00 00 00];
