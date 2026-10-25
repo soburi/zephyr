@@ -59,6 +59,10 @@ LOG_MODULE_REGISTER(xen_vhost_mmio);
 #define LOG_DBG_Q(str, ...) LOG_LVL_Q(DBG, str, ##__VA_ARGS__)
 
 #define META_PAGES_INDEX(cfg) (cfg->queue_size_max)
+#define RING_MAP_PAGES(size)                                                               \
+	(DIV_ROUND_UP(16U * (size) + XEN_PAGE_SIZE - 1U, XEN_PAGE_SIZE) +                    \
+	 DIV_ROUND_UP(2U * (size) + 6U + XEN_PAGE_SIZE - 1U, XEN_PAGE_SIZE) +                \
+	 DIV_ROUND_UP(8U * (size) + 6U + XEN_PAGE_SIZE - 1U, XEN_PAGE_SIZE))
 
 enum virtq_parts {
 	VIRTQ_DESC = 0,
@@ -83,6 +87,9 @@ struct vhost_xen_mmio_config {
 	size_t config_data_len;
 
 	uint64_t device_features;
+	uint8_t **maps;
+	struct gnttab_map_grant_ref *map_ops;
+	struct gnttab_unmap_grant_ref *unmap_ops;
 };
 
 struct mapped_pages_chunk {
@@ -1015,10 +1022,7 @@ static void free_chunks(const struct device *dev)
 					LOG_ERR("Failed to free mapping pages: %d", ret);
 				}
 			}
-			k_free(chunk->map);
-			k_free(chunk->map_ops);
-			k_free(chunk->ops);
-			*chunk = (struct mapped_pages_chunk){0};
+			chunk->buf = NULL;
 		}
 	}
 }
@@ -1028,9 +1032,8 @@ static int allocate_chunks(const struct device *dev)
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	size_t size = config->queue_size_max;
-	size_t meta_pages = DIV_ROUND_UP(16 * size + XEN_PAGE_SIZE - 1, XEN_PAGE_SIZE) +
-		DIV_ROUND_UP(2 * size + 6 + XEN_PAGE_SIZE - 1, XEN_PAGE_SIZE) +
-		DIV_ROUND_UP(8 * size + 6 + XEN_PAGE_SIZE - 1, XEN_PAGE_SIZE);
+	size_t offset = 0;
+	size_t meta_pages = RING_MAP_PAGES(size);
 
 	for (size_t q = 0; q < config->num_queues; q++) {
 		for (size_t h = 0; h <= size; h++) {
@@ -1038,12 +1041,12 @@ static int allocate_chunks(const struct device *dev)
 
 			chunk->capacity = h == size ? meta_pages :
 				DIV_ROUND_UP(config->buffer_size, XEN_PAGE_SIZE);
+			chunk->map = config->maps + offset;
+			chunk->map_ops = config->map_ops + offset;
+			chunk->ops = config->unmap_ops + offset;
+			offset += chunk->capacity;
 			chunk->buf = gnttab_get_pages(chunk->capacity);
-			chunk->map = k_calloc(chunk->capacity, sizeof(*chunk->map));
-			chunk->map_ops = k_calloc(chunk->capacity, sizeof(*chunk->map_ops));
-			chunk->ops = k_calloc(chunk->capacity, sizeof(*chunk->ops));
-			if (chunk->buf == NULL || chunk->map == NULL || chunk->map_ops == NULL ||
-			    chunk->ops == NULL) {
+			if (chunk->buf == NULL) {
 				free_chunks(dev);
 				return -ENOMEM;
 			}
@@ -1118,6 +1121,9 @@ static int vhost_xen_mmio_init(const struct device *dev)
 
 #define Q_NUM(idx)    DT_INST_PROP_OR(idx, num_queues, 1)
 #define Q_SZ_MAX(idx) DT_INST_PROP_OR(idx, queue_size_max, 1)
+#define DATA_MAP_PAGES(idx) DIV_ROUND_UP(DT_INST_PROP(idx, buffer_size), XEN_PAGE_SIZE)
+#define MAP_SLOTS(idx)                                                                    \
+	(Q_NUM(idx) * (Q_SZ_MAX(idx) * DATA_MAP_PAGES(idx) + RING_MAP_PAGES(Q_SZ_MAX(idx))))
 
 #define VHOST_XEN_MMIO_INST(idx)                                                                   \
 	BUILD_ASSERT(DT_INST_PROP(idx, buffer_size) > 0, "buffer-size must be positive");          \
@@ -1125,7 +1131,13 @@ static int vhost_xen_mmio_init(const struct device *dev)
 	uint8_t config_data##idx[] = {                                                             \
 		COND_CODE_1(DT_INST_NODE_HAS_PROP(idx, config_data),                               \
 		(DT_INST_FOREACH_PROP_ELEM_SEP(idx, config_data, DT_PROP_BY_IDX, (,))), ())};      \
+	static uint8_t *vhost_xen_mmio_maps_##idx[MAP_SLOTS(idx)];                                 \
+	static struct gnttab_map_grant_ref vhost_xen_mmio_map_ops_##idx[MAP_SLOTS(idx)]; \
+	static struct gnttab_unmap_grant_ref vhost_xen_mmio_unmap_ops_##idx[MAP_SLOTS(idx)]; \
 	static const struct vhost_xen_mmio_config vhost_xen_mmio_config_##idx = {                  \
+		.maps = vhost_xen_mmio_maps_##idx,                                                \
+		.map_ops = vhost_xen_mmio_map_ops_##idx,                                          \
+		.unmap_ops = vhost_xen_mmio_unmap_ops_##idx,                                      \
 		.buffer_size = DT_INST_PROP(idx, buffer_size),                               \
 		.queue_size_max = DT_INST_PROP_OR(idx, queue_size_max, 1),                         \
 		.num_queues = DT_INST_PROP_OR(idx, num_queues, 1),                                 \
