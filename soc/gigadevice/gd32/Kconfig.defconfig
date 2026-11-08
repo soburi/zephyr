@@ -9,4 +9,10 @@ config NUM_IRQS
 config MULTITHREADING
 	default n
 
+config KERNEL_ENTRY
+	default "__nuclei_start"
+
+config RISCV_TRAP_HANDLER_ALIGNMENT
+	default 64
+
 endif
