@@ -109,7 +109,7 @@ static int vringh_init(struct vringh *vrh, uint64_t features, uint16_t num, bool
 		return -ENOTSUP;
 	}
 
-	if ((features & BIT64(VIRTIO_RING_F_INDIRECT_DESC)) != 0U) {
+	if ((features & (BIT64(VIRTIO_RING_F_INDIRECT_DESC) | BIT64(VIRTIO_F_RING_PACKED))) != 0U) {
 		return -ENOTSUP;
 	}
 
@@ -157,7 +157,7 @@ static inline void vringh_fail_device(struct vringh *vrh)
 	vrh->failed = true;
 	k_spin_unlock(&vrh->lock, key);
 
-	rc = vhost_set_device_status(vrh->dev, BIT(DEVICE_STATUS_FAILED));
+	rc = vhost_set_device_status(vrh->dev, BIT(DEVICE_STATUS_NEEDS_RESET));
 
 	if (rc < 0) {
 		LOG_ERR("vhost_set_device_status failed: %d", rc);
