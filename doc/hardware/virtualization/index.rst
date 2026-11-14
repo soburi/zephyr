@@ -9,3 +9,4 @@ These pages document Zephyr virtualization facilities.
    :maxdepth: 1
 
    virtio.rst
+   vhost.rst

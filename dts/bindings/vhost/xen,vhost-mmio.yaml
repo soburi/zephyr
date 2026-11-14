@@ -1,19 +1,20 @@
 # Copyright (c) 2025 TOKITA Hiroshi
 # SPDX-License-Identifier: Apache-2.0
 
-description: Xen VHost MMIO device for VIRTIO backends
+description: |
+  Xen VHost MMIO device for VIRTIO backends.
+
+  The reg property gives the guest physical address and size of the VIRTIO
+  MMIO register window that this backend emulates for the frontend domain
+  through the Xen ioreq server interface.
 
 compatible: "xen,vhost-mmio"
 
 include: base.yaml
 
 properties:
-  base:
-    type: int
+  reg:
     required: true
-    description: |
-      Guest physical base address of the virtio MMIO register region used by
-      this Xen vhost-mmio device.
 
   num-queues:
     type: int

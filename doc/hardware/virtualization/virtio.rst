@@ -16,7 +16,8 @@ Concepts
 
 Virtio defines various components used during communication and initialization. It specifies both the
 host (named "device" in the specification) and guest (named "driver" in the specification) sides.
-Currently Zephyr can only work as a guest. On top of the facilities exposed by the Virtio driver,
+The drivers described here implement the guest side; the device (host) side is provided by the
+separate :ref:`vhost` subsystem. On top of the facilities exposed by the Virtio driver,
 a driver for a specific device (e.g. network card) can be implemented.
 
 A high-level overview of a system with a Virtio device is shown below.

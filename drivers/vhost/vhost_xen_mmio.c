@@ -28,18 +28,17 @@
 #include <zephyr/drivers/vhost.h>
 #include <zephyr/drivers/vhost/vringh.h>
 #include <zephyr/sys/util_macro.h>
-#include <zephyr/xen/public/xen.h>
-#include <zephyr/xen/public/hvm/ioreq.h>
-#include <zephyr/xen/public/hvm/dm_op.h>
-#include <zephyr/xen/public/hvm/hvm_op.h>
+#include <xen/public/xen.h>
+#include <xen/public/hvm/ioreq.h>
+#include <xen/public/hvm/dm_op.h>
+#include <xen/public/hvm/hvm_op.h>
 
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(xen_vhost_mmio);
+LOG_MODULE_REGISTER(xen_vhost_mmio, CONFIG_VHOST_LOG_LEVEL);
 
 #define DT_DRV_COMPAT xen_vhost_mmio
 
-#define PAGE_SHIFT         (__builtin_ctz(CONFIG_MMU_PAGE_SIZE))
 #define XEN_GRANT_ADDR_OFF (1ULL << 63)
 
 #define VIRTIO_MMIO_MAGIC             0x74726976
@@ -812,6 +811,11 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 			reset_device(dev);
 		} else {
 			atomic_or(&data->be.status, r->data);
+
+			if ((r->data & BIT(DEVICE_STATUS_DRIVER_OK)) != 0U) {
+				k_work_schedule_for_queue(&data->workq, &data->ready_work,
+							  K_NO_WAIT);
+			}
 		}
 	} break;
 	case VIRTIO_MMIO_QUEUE_DESC_LOW:
@@ -864,8 +868,6 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 			if (err < 0) {
 				atomic_or(&data->be.status, BIT(DEVICE_STATUS_FAILED));
 				LOG_ERR("queue%u setup failed: %d", queue_sel, err);
-			} else if (data->queue_ready_cb.cb) {
-				data->queue_ready_cb.cb(dev, queue_id, data->queue_ready_cb.data);
 			}
 		}
 	} break;
@@ -935,6 +937,11 @@ static void ready_workhandler(struct k_work *work)
 		CONTAINER_OF(delayable, struct vhost_xen_mmio_data, ready_work);
 	const struct device *dev = data->dev;
 	const struct vhost_xen_mmio_config *config = dev->config;
+
+	/* Queues may be processed only after the driver has set DRIVER_OK. */
+	if ((atomic_get(&data->be.status) & BIT(DEVICE_STATUS_DRIVER_OK)) == 0U) {
+		return;
+	}
 
 	for (size_t i = 0; i < config->num_queues; i++) {
 		bool queue_ready_notified = atomic_get(&data->vq_ctx[i].queue_ready_notified);
@@ -1453,8 +1460,8 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.num_queues = DT_INST_PROP_OR(idx, num_queues, 1),                                 \
 		.device_id = DT_INST_PROP(idx, device_id),                                         \
 		.vendor_id = DT_INST_PROP_OR(idx, vendor_id, 0),                                   \
-		.base = DT_INST_PROP(idx, base),                                                   \
-		.reg_size = XEN_PAGE_SIZE,                                                         \
+		.base = DT_INST_REG_ADDR(idx),                                                     \
+		.reg_size = DT_INST_REG_SIZE(idx),                                                 \
 		.config_data = config_data##idx,                                                   \
 		.config_data_len = DT_INST_PROP_LEN_OR(idx, config_data, 0),                       \
 		.workq_stack = (k_thread_stack_t *)&workq_stack_##idx,                             \

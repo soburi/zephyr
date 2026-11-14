@@ -46,7 +46,12 @@ Expected Output
 
 When running successfully, you should see output similar to::
 
-   *** Booting Zephyr OS build zephyr-v3.x.x ***
-   [00:00:00.000,000] <inf> vhost: VHost device ready
-   [00:00:00.000,000] <dbg> vhost: queue_ready_handler(dev=0x..., qid=0, data=0x...)
-   [00:00:00.000,000] <dbg> vhost: vringh_kick_handler: queue_id=0
+   *** Booting Zephyr OS build zephyr-v4.x.x ***
+   [00:00:00.000,000] <inf> vhost: VHost device vhost-rng@2000000 ready
+   [00:00:00.000,000] <inf> vhost: VHost sample application started, waiting for guest connections...
+   [00:00:00.000,000] <dbg> vhost_rng: rng_queue_ready(dev=0x..., queue_id=0)
+   [00:00:00.000,000] <dbg> vhost_rng: vringh_kick_handler: queue_id=0
+
+The sample implements a virtio-rng (entropy) backend. The random data is
+generated with :c:func:`sys_rand_get`, which is not cryptographically secure;
+a production backend must use a hardware entropy source.

@@ -4,31 +4,40 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/vhost.h>
 #include <zephyr/drivers/vhost/vringh.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/random/random.h>
+#include <zephyr/sys/barrier.h>
+#include <zephyr/sys/util.h>
 
 LOG_MODULE_REGISTER(vhost_rng);
 
-static struct vhost_iovec riovec[16];
-static struct vhost_iovec wiovec[16];
+/* virtio-rng has a single request queue */
+#define RNG_REQUESTQ 0
+
+#define QUEUE_SIZE_MAX DT_PROP(DT_COMPAT_GET_ANY_STATUS_OKAY(xen_vhost_mmio), queue_size_max)
+#define NUM_IOVECS     16
+
+static struct vhost_iovec riovec[NUM_IOVECS];
+static struct vhost_iovec wiovec[NUM_IOVECS];
 
 static struct vringh_iov riov = {
 	.iov = riovec,
-	.max_num = 16,
+	.max_num = NUM_IOVECS,
 };
 
 static struct vringh_iov wiov = {
 	.iov = wiovec,
-	.max_num = 16,
+	.max_num = NUM_IOVECS,
 };
-
-static struct vringh vrh_inst;
 
 static void vringh_kick_handler(struct vringh *vrh)
 {
-	LOG_DBG("%s: queue_id=%lu", __func__, vrh->queue_id);
 	uint16_t head;
+
+	LOG_DBG("%s: queue_id=%u", __func__, vrh->queue_id);
 
 	while (true) {
 		int ret = vringh_getdesc(vrh, &riov, &wiov, &head);
@@ -42,50 +51,54 @@ static void vringh_kick_handler(struct vringh *vrh)
 			return;
 		}
 
-		/* Process writable iovecs */
-		for (uint32_t s = 0; s < wiov.used; s++) {
-			uint8_t *dst = wiov.iov[s].iov_base;
-			uint32_t len = wiov.iov[s].iov_len;
+		uint32_t total_len = 0;
 
-			LOG_DBG("%s: addr=%p len=%u", __func__, dst, len);
-
-			for (uint32_t i = 0; i < len; i++) {
-				sys_write8(i, (mem_addr_t)&dst[i]);
-			}
+		/*
+		 * sys_rand_get() is not cryptographically secure; a production
+		 * virtio-rng backend must use a hardware entropy source.
+		 */
+		for (unsigned int i = 0; i < wiov.used; i++) {
+			sys_rand_get(wiov.iov[i].iov_base, wiov.iov[i].iov_len);
+			total_len += (uint32_t)wiov.iov[i].iov_len;
 		}
 
 		barrier_dmem_fence_full();
 
-		uint32_t total_len = 0;
-
-		for (uint32_t i = 0; i < wiov.used; i++) {
-			total_len += wiov.iov[i].iov_len;
+		ret = vringh_complete(vrh, head, total_len);
+		if (ret < 0) {
+			LOG_ERR("vringh_complete failed: %d", ret);
+			return;
 		}
-
-		vringh_complete(vrh, head, total_len);
 
 		if (vringh_need_notify(vrh) > 0) {
 			vringh_notify(vrh);
 		}
 
-		/* Reset iovecs for next iteration */
 		vringh_iov_reset(&riov);
 		vringh_iov_reset(&wiov);
 	}
 }
 
-void rng_queue_ready(const struct device *dev, uint16_t qid, void *data)
+void rng_queue_ready(const struct device *dev, uint16_t queue_id, void *user_data)
 {
-	LOG_DBG("%s(dev=%p, qid=%u, data=%p)", __func__, dev, qid, data);
+	static struct vringh vrh_inst;
+	static struct vhost_buf desc_bufs[QUEUE_SIZE_MAX];
 
-	/* Initialize iovecs before descriptor processing */
-	vringh_iov_init(&riov, riov.iov, riov.max_num);
-	vringh_iov_init(&wiov, wiov.iov, wiov.max_num);
+	ARG_UNUSED(user_data);
 
-	int err = vringh_init_device(&vrh_inst, dev, qid, vringh_kick_handler);
+	LOG_DBG("%s(dev=%p, queue_id=%u)", __func__, dev, queue_id);
 
-	if (err) {
-		LOG_ERR("vringh_init_device failed: %d", err);
+	if (queue_id != RNG_REQUESTQ) {
 		return;
+	}
+
+	vringh_iov_init(&riov, riovec, ARRAY_SIZE(riovec));
+	vringh_iov_init(&wiov, wiovec, ARRAY_SIZE(wiovec));
+
+	int err = vringh_init_device(&vrh_inst, dev, queue_id, desc_bufs, ARRAY_SIZE(desc_bufs),
+				     vringh_kick_handler);
+
+	if (err != 0) {
+		LOG_ERR("vringh_init_device failed: %d", err);
 	}
 }

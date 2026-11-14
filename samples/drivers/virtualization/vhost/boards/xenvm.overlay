@@ -5,15 +5,13 @@
  */
 
 / {
-	vhost {
-		rng {
-			compatible = "xen,vhost-mmio";
-			device-id = <4>;
-			vendor-id = <0x7a707972>; /* "zphy" */
-			num-queues = <2>;
-			queue-size-max = <16>;
-			base = <0x2000000>;
-		};
+	vhost_rng: vhost-rng@2000000 {
+		compatible = "xen,vhost-mmio";
+		reg = <0x00 0x2000000 0x00 0x1000>;
+		device-id = <4>;
+		vendor-id = <0x7a707972>; /* "zphy" */
+		num-queues = <1>;
+		queue-size-max = <16>;
 	};
 
 	chosen {
