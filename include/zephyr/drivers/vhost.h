@@ -58,12 +58,38 @@ struct vhost_iovec {
 };
 
 /**
- * Represents a guest physical address and length pair for VHost operations.
+ * Represents a guest buffer reference and length pair for VHost operations.
+ *
+ * @p gpa carries the address field of a VIRTIO descriptor verbatim. It is an
+ * opaque, controller-specific token for guest memory (for example a guest
+ * physical address or an encoded grant reference). Users must not interpret
+ * it or perform arithmetic on it; it is only meaningful as an argument to
+ * vhost_prepare_iovec() on the controller it came from.
  */
 struct vhost_buf {
-	uint64_t gpa;    /**< Guest physical address. */
+	uint64_t gpa;    /**< Opaque guest buffer reference (descriptor address field). */
 	size_t len;      /**< Buffer length in bytes. */
 	bool is_write;   /**< True when the backend writes to the guest buffer. */
+};
+
+struct virtq_desc;
+struct virtq_avail;
+struct virtq_used;
+
+/**
+ * @brief Split virtqueue ring components
+ *
+ * Host-side view of a guest split virtqueue: descriptor table, available
+ * ring, and used ring, as defined by the VIRTIO specification. This
+ * structure describes the split virtqueue format only; controllers that
+ * implement another format, or that cannot expose the rings in the host
+ * address space, do not provide it.
+ */
+struct vhost_vring {
+	uint16_t num;              /**< Number of descriptors in ring (power of 2) */
+	struct virtq_desc *desc;   /**< Descriptor table pointer (guest memory) */
+	struct virtq_avail *avail; /**< Available ring pointer (guest memory) */
+	struct virtq_used *used;   /**< Used ring pointer (guest memory) */
 };
 
 /**
@@ -81,9 +107,9 @@ __subsystem struct vhost_driver_api {
 			     struct vhost_iovec *read_iovec, size_t max_read_iovecs,
 			     struct vhost_iovec *write_iovec, size_t max_write_iovecs,
 			     size_t *read_count, size_t *write_count);
-	int (*release_iovec)(const struct device *dev, uint16_t queue_id, uint16_t head);
-	int (*get_virtq)(const struct device *dev, uint16_t queue_id, void **parts,
-			 size_t *queue_size);
+	int (*release_iovec)(const struct device *dev, uint16_t queue_id, uint16_t head,
+			     uint32_t written);
+	int (*get_virtq)(const struct device *dev, uint16_t queue_id, struct vhost_vring *vring);
 	int (*get_driver_features)(const struct device *dev, uint64_t *drv_feats);
 	bool (*virtq_is_ready)(const struct device *dev, uint16_t queue_id);
 	int (*register_virtq_ready_cb)(const struct device *dev,
@@ -125,9 +151,10 @@ __subsystem struct vhost_driver_api {
  *
  * @note On success, the returned iovecs and their backing mappings remain
  *       valid until vhost_release_iovec() is called for the same queue and
- *       descriptor head. The caller must release the mapping exactly once
- *       after the last access. On failure, the controller releases any
- *       partial mapping it created.
+ *       descriptor head. The caller must call vhost_release_iovec() exactly
+ *       once per vhost_prepare_iovec() call, on success and on failure
+ *       alike; a failed call may leave a partial mapping that only the
+ *       release operation reclaims.
  */
 static inline int vhost_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
 				      const struct vhost_buf *bufs, size_t bufs_count,
@@ -149,41 +176,55 @@ static inline int vhost_prepare_iovec(const struct device *dev, uint16_t queue_i
  * preparation left by a failed call. It must also succeed when there is
  * nothing to release.
  *
+ * @p written is the total number of bytes the backend wrote to the writable
+ * iovecs, counted from the start of the writable buffer sequence. Controllers
+ * that map guest memory directly may ignore it; controllers that copy between
+ * guest and host buffers use it to bound the write-back. Pass 0 when nothing
+ * was written, including after a failed vhost_prepare_iovec() call.
+ *
  * @param dev       VHost controller device
  * @param queue_id  Queue ID
  * @param head      Head of descriptor
+ * @param written   Bytes written to the writable buffers
  *
  * @retval 0        Success
  * @retval -EINVAL  Invalid parameters
  */
-static inline int vhost_release_iovec(const struct device *dev, uint16_t queue_id, uint16_t head)
+static inline int vhost_release_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
+				      uint32_t written)
 {
 	const struct vhost_driver_api *api = DEVICE_API_GET(vhost, dev);
 
-	return api->release_iovec(dev, queue_id, head);
+	return api->release_iovec(dev, queue_id, head, written);
 }
 
 /**
- * @brief Get VirtQueue components
+ * @brief Get split virtqueue ring components
  *
- * @param dev         VHost controller device
- * @param queue_id    Queue ID
- * @param parts       Array for descriptor, available, used ring pointers
- * @param queue_size  Queue size output
+ * Fills @p vring with host-accessible pointers to the queue's split
+ * virtqueue rings and the queue size. Only the split virtqueue format is
+ * expressible through this operation. A controller that cannot expose the
+ * rings in the host address space returns -ENOTSUP; such a controller cannot
+ * be used with ring-processing helpers that require direct ring access.
+ *
+ * @param dev       VHost controller device
+ * @param queue_id  Queue ID
+ * @param vring     Output for ring pointers and queue size
  *
  * @retval 0          Success
  * @retval -EINVAL    Invalid parameters
  * @retval -ENODEV    Queue not ready
+ * @retval -ENOTSUP   Rings are not accessible in the host address space
  *
  * @note The returned ring pointers remain valid only while the queue remains
  *       configured. A queue reset or reconfiguration invalidates them.
  */
-static inline int vhost_get_virtq(const struct device *dev, uint16_t queue_id, void **parts,
-				  size_t *queue_size)
+static inline int vhost_get_virtq(const struct device *dev, uint16_t queue_id,
+				  struct vhost_vring *vring)
 {
 	const struct vhost_driver_api *api = DEVICE_API_GET(vhost, dev);
 
-	return api->get_virtq(dev, queue_id, parts, queue_size);
+	return api->get_virtq(dev, queue_id, vring);
 }
 
 /**
@@ -221,12 +262,17 @@ static inline bool vhost_queue_ready(const struct device *dev, uint16_t queue_id
 /**
  * @brief Register device-wide queue ready callback
  *
+ * The callback signals that the backend may start processing the queue: the
+ * controller delivers it for each queue no earlier than when the guest driver
+ * has enabled the queue and completed device initialization (DRIVER_OK), as
+ * required by the VIRTIO specification.
+ *
  * The controller may unregister this callback when the device or a queue is
  * reset. The callback can be delivered asynchronously and may be coalesced;
  * its execution context is controller-specific.
  *
  * @param dev         VHost controller device
- * @param callback    Function to call when any queue becomes ready
+ * @param callback    Function to call when a queue becomes ready for processing
  * @param user_data   User data for callback
  *
  * @retval 0          Success
@@ -293,7 +339,12 @@ static inline int vhost_notify_virtq(const struct device *dev, uint16_t queue_id
 }
 
 /**
- * @brief Set device status and notify guest
+ * @brief Set device status bits and notify guest
+ *
+ * ORs @p status into the VIRTIO device status field and delivers a device
+ * configuration change notification to the guest. Status bits cannot be
+ * cleared through this API; the status field is cleared only by a device
+ * reset initiated by the guest driver.
  *
  * @param dev         VHost controller device
  * @param status      VirtIO device status bits to set

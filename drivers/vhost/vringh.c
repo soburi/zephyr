@@ -168,9 +168,8 @@ int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t qu
 		       struct vhost_buf *desc_bufs, size_t desc_bufs_count,
 		       void (*kick_callback)(struct vringh *vrh))
 {
+	struct vhost_vring vring;
 	uint64_t drv_feats;
-	void *parts[3];
-	size_t q_num;
 	int ret;
 
 	if (!vrh || !dev || !desc_bufs || desc_bufs_count == 0) {
@@ -178,19 +177,14 @@ int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t qu
 	}
 
 	memset(vrh, 0, sizeof(*vrh));
-	ret = vhost_get_virtq(dev, queue_id, parts, &q_num);
+	ret = vhost_get_virtq(dev, queue_id, &vring);
 	if (ret < 0) {
 		LOG_ERR("vhost_get_virtq failed: %d", ret);
 		return ret;
 	}
 
-	if (q_num > UINT16_MAX) {
-		LOG_ERR("Virtqueue size too large: %zu", q_num);
-		return -EINVAL;
-	}
-
-	if (q_num > desc_bufs_count) {
-		LOG_ERR("Descriptor scratch too small: %zu < %zu", desc_bufs_count, q_num);
+	if (vring.num > desc_bufs_count) {
+		LOG_ERR("Descriptor scratch too small: %zu < %u", desc_bufs_count, vring.num);
 		return -E2BIG;
 	}
 
@@ -200,7 +194,7 @@ int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t qu
 		return ret;
 	}
 
-	ret = vringh_init(vrh, drv_feats, (uint16_t)q_num, false, parts[0], parts[1], parts[2]);
+	ret = vringh_init(vrh, drv_feats, vring.num, false, vring.desc, vring.avail, vring.used);
 	if (ret < 0) {
 		LOG_ERR("vringh_init failed: %d", ret);
 		return ret;
@@ -368,7 +362,7 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
 
 		fail_device = false;
 		LOG_ERR("vhost_prepare_iovec failed: %d", ret);
-		rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
+		rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head, 0U);
 		if (rc < 0) {
 			LOG_ERR("vhost_release_iovec failed: %d", rc);
 			vringh_fail_device(vrh);
@@ -436,7 +430,7 @@ int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t total_len)
 		return -EINVAL;
 	}
 
-	rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
+	rc = vhost_release_iovec(vrh->dev, vrh->queue_id, head, total_len);
 	if (rc < 0) {
 		LOG_ERR("vhost_release_iovec failed: %d", rc);
 		vringh_fail_device(vrh);
@@ -516,7 +510,7 @@ int vringh_abandon(struct vringh *vrh, uint32_t num)
 			return -ERANGE;
 		}
 
-		ret = vhost_release_iovec(vrh->dev, vrh->queue_id, head);
+		ret = vhost_release_iovec(vrh->dev, vrh->queue_id, head, 0U);
 		if (ret < 0) {
 			LOG_ERR("vhost_release_iovec failed: %d", ret);
 			vringh_fail_device(vrh);

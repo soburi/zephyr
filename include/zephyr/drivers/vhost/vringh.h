@@ -33,23 +33,6 @@
 extern "C" {
 #endif
 
-struct virtq_desc;
-struct virtq_avail;
-struct virtq_used;
-
-/**
- * @brief VirtQueue ring structure
- *
- * Contains pointers to VIRTIO ring components: descriptor table,
- * available ring, and used ring.
- */
-struct vhost_vring {
-	uint16_t num;              /**< Number of descriptors in ring (power of 2) */
-	struct virtq_desc *desc;   /**< Descriptor table pointer (guest memory) */
-	struct virtq_avail *avail; /**< Available ring pointer (guest memory) */
-	struct virtq_used *used;   /**< Used ring pointer (guest memory) */
-};
-
 /**
  * @brief VIRTIO ring host-side handler
  *
@@ -141,7 +124,10 @@ struct vringh_iov {
  *     }
  * }
  *
- * int ret = vringh_init_device(&vrh, vhost_dev, 0, kick_handler);
+ * static struct vhost_buf desc_bufs[QUEUE_SIZE_MAX];
+ *
+ * int ret = vringh_init_device(&vrh, vhost_dev, 0, desc_bufs,
+ *                              ARRAY_SIZE(desc_bufs), kick_handler);
  * @endcode
  */
 int vringh_init_device(struct vringh *vrh, const struct device *dev, uint16_t queue_id,
