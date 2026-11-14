@@ -4,46 +4,42 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <zephyr/device.h>
 #include <zephyr/drivers/vhost.h>
-#include <zephyr/drivers/vhost/vringh.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(vhost);
 
-#define QUEUE_READY_HANDLER_NAME(node_name) UTIL_CAT(node_name, _queue_ready)
+#define DT_DRV_COMPAT xen_vhost_mmio
 
-#define QUEUE_READY_HANDLER_PROTODECL(sym)                                                         \
-	void QUEUE_READY_HANDLER_NAME(sym)(const struct device *dev, uint16_t qid, void *data);
+void rng_queue_ready(const struct device *dev, uint16_t queue_id, void *user_data);
 
-#define DECL_HANDLER(inst, x, y)                                                                   \
-	QUEUE_READY_HANDLER_PROTODECL(DT_NODE_FULL_NAME_UNQUOTED(DT_INST(inst, xen_vhost_mmio)))
-
-#define REGISTER_HANDLER(inst, x, y)                                                               \
-	{                                                                                          \
-		const struct device *dev = DEVICE_DT_GET(DT_INST(inst, xen_vhost_mmio));           \
-		register_handler(dev, QUEUE_READY_HANDLER_NAME(DT_NODE_FULL_NAME_UNQUOTED(         \
-					      DT_INST(inst, xen_vhost_mmio))));                    \
-	}
-
-DT_COMPAT_FOREACH_STATUS_OKAY_VARGS(xen_vhost_mmio, DECL_HANDLER, ())
-
-int register_handler(const struct device *dev,
-		     void (*handler)(const struct device *, uint16_t, void *))
+static int register_backend(const struct device *dev)
 {
+	int err;
+
 	if (!device_is_ready(dev)) {
 		LOG_ERR("VHost device %s not ready", dev->name);
 		return -ENODEV;
 	}
 
+	err = vhost_register_virtq_ready_cb(dev, rng_queue_ready, NULL);
+	if (err != 0) {
+		LOG_ERR("Failed to register ready callback for %s: %d", dev->name, err);
+		return err;
+	}
+
 	LOG_INF("VHost device %s ready", dev->name);
-	vhost_register_virtq_ready_cb(dev, handler, (void *)dev);
 
 	return 0;
 }
 
+#define REGISTER_BACKEND(inst) (void)register_backend(DEVICE_DT_INST_GET(inst));
+
 int main(void)
 {
-	DT_COMPAT_FOREACH_STATUS_OKAY_VARGS(xen_vhost_mmio, REGISTER_HANDLER, ())
+	DT_INST_FOREACH_STATUS_OKAY(REGISTER_BACKEND)
 
 	LOG_INF("VHost sample application started, waiting for guest connections...");
 	k_sleep(K_FOREVER);

@@ -154,6 +154,15 @@ Libraries / Subsystems
     command was run without that argument and its remaining arguments, which usually failed
     with a wrong argument count.
 
+* Virtualization
+
+  * Zephyr can now act as the device (host) side of VIRTIO. The new :ref:`VHost <vhost>`
+    subsystem provides a controller API that abstracts hypervisor-specific guest memory access
+    and notification delivery, a vringh helper for host-side split virtqueue processing, and a
+    controller for the Xen hypervisor based on its MMIO transport
+    (:dtcompatible:`xen,vhost-mmio`). The :zephyr:code-sample:`vhost` sample implements a
+    virtio-rng backend serving a guest domain.
+
 Devicetree
 **********
 
