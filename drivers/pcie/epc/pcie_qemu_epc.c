@@ -49,15 +49,27 @@ LOG_MODULE_REGISTER(pcie_qemu_epc, CONFIG_PCIE_EPC_LOG_LEVEL);
 #define QEMU_EPC_BAR_CFG_MSI            0x40
 #define QEMU_EPC_BAR_CFG_MSIX           0x60
 
+/* The capabilities of the endpoint function follow MSI and MSI-X */
+#define QEMU_EPC_CAP_AREA_START         0x80
+#define QEMU_EPC_CAP_AREA_END           0x100
+
 #define QEMU_EPC_CONFIG_SPACE_SIZE      0x1000
 #define QEMU_EPC_MAX_FUNCTIONS          0x8
 #define QEMU_EPC_ALIGN_PAGE_SIZE        0x1000
 
 #define QEMU_EPC_NUM_OB_WINDOWS         32
 
+struct qemu_epc_caps_s {
+	/* Offset the next capability is placed at, 0 when none was added */
+	uint8_t next;
+	/* Offset of the last capability, 0 when none was added */
+	uint8_t tail;
+};
+
 struct qemu_epc_s {
 	/* Must stay first, the device data starts with the EPC control */
 	struct pcie_epc_ctrl_s epc;
+	struct qemu_epc_caps_s caps[QEMU_EPC_MAX_FUNCTIONS];
 	struct pcie_dev *pdev;
 	mm_reg_t ctl_base;
 	mm_reg_t cfg_base;
@@ -85,6 +97,7 @@ static const struct pcie_epc_features_s g_qemu_epc_features = {
 	.core_init_notifier = false,
 	.msi_capable = true,
 	.msix_capable = true,
+	.capability_writable = true,
 };
 
 static void qemu_epc_ctl_write8(struct qemu_epc_s *qep, unsigned int offset,
@@ -201,6 +214,67 @@ static int qemu_epc_write_header(const struct device *dev, uint8_t funcno,
 	qemu_epc_cfg_write8(qep, base + PCI_INTERRUPT_PIN, hdr->interrupt_pin);
 
 	return 0;
+}
+
+static int qemu_epc_add_capability(const struct device *dev, uint8_t funcno,
+				   uint8_t id, const void *body, size_t len)
+{
+	struct qemu_epc_s *qep = dev->data;
+	struct qemu_epc_caps_s *caps = &qep->caps[funcno];
+	const uint8_t *bytes = body;
+	/* The capability is dword aligned and starts with its ID and link */
+	const size_t size = ROUND_UP(len + 2U, 4U);
+	uint32_t base = qemu_epc_func_base(qep, funcno);
+	uint8_t off = (caps->next != 0U) ? caps->next : QEMU_EPC_CAP_AREA_START;
+	uint16_t status;
+
+	if (size > QEMU_EPC_CAP_AREA_END - off) {
+		return -ENOSPC;
+	}
+
+	for (size_t i = 0; i < size; i++) {
+		/* The first two bytes link the capability, the tail is padding */
+		uint8_t val = (i >= 2U && i - 2U < len) ? bytes[i - 2U] : 0U;
+
+		qemu_epc_cfg_write8(qep, base + off + i, (i == 0U) ? id : val);
+	}
+
+	/* Link the capability once it is complete */
+	if (caps->tail == 0U) {
+		qemu_epc_cfg_write8(qep, base + PCI_CAPABILITY_LIST, off);
+		status = qemu_epc_cfg_read16(qep, base + PCI_STATUS);
+		qemu_epc_cfg_write16(qep, base + PCI_STATUS,
+				     status | PCI_STATUS_CAP_LIST);
+	} else {
+		qemu_epc_cfg_write8(qep, base + caps->tail + PCI_CAP_LIST_NEXT, off);
+	}
+
+	caps->tail = off;
+	caps->next = off + size;
+
+	return 0;
+}
+
+static void qemu_epc_clear_capabilities(const struct device *dev, uint8_t funcno)
+{
+	struct qemu_epc_s *qep = dev->data;
+	struct qemu_epc_caps_s *caps = &qep->caps[funcno];
+	uint32_t base = qemu_epc_func_base(qep, funcno);
+	uint16_t status;
+
+	if (caps->tail == 0U) {
+		return;
+	}
+
+	for (uint32_t off = QEMU_EPC_CAP_AREA_START; off < caps->next; off++) {
+		qemu_epc_cfg_write8(qep, base + off, 0U);
+	}
+
+	qemu_epc_cfg_write8(qep, base + PCI_CAPABILITY_LIST, 0U);
+	status = qemu_epc_cfg_read16(qep, base + PCI_STATUS);
+	qemu_epc_cfg_write16(qep, base + PCI_STATUS, status & ~PCI_STATUS_CAP_LIST);
+	caps->next = 0U;
+	caps->tail = 0U;
 }
 
 static int qemu_epc_set_bar(const struct device *dev, uint8_t funcno,
@@ -501,6 +575,8 @@ static int qemu_epc_set_msix(const struct device *dev, uint8_t funcno,
 
 static const struct pcie_epc_ops_s g_qemu_epc_ops = {
 	.write_header = qemu_epc_write_header,
+	.add_capability = qemu_epc_add_capability,
+	.clear_capabilities = qemu_epc_clear_capabilities,
 	.set_bar      = qemu_epc_set_bar,
 	.clear_bar    = qemu_epc_clear_bar,
 	.map_addr     = qemu_epc_map_addr,

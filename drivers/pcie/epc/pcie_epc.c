@@ -367,6 +367,37 @@ int pcie_epc_set_bar(const struct device *dev, uint8_t funcno,
 	return ret;
 }
 
+int pcie_epc_add_capability(const struct device *dev, uint8_t funcno,
+			    uint8_t id, const void *body, size_t len)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL || body == NULL || len == 0U) {
+		return -EINVAL;
+	}
+
+	epc = pcie_epc_get_ctrl(dev);
+	if (funcno >= epc->max_functions) {
+		return -EINVAL;
+	}
+
+	if (epc->ops->add_capability == NULL) {
+		return -ENOTSUP;
+	}
+
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	/* The host reads the capabilities once it enumerates the function */
+	if (epc->started) {
+		ret = -EBUSY;
+	} else {
+		ret = epc->ops->add_capability(dev, funcno, id, body, len);
+	}
+
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
+
 int pcie_epc_write_header(const struct device *dev, uint8_t funcno,
 			  struct pcie_epf_header_s *header)
 {
@@ -437,6 +468,10 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 	k_mutex_unlock(&epf->lock);
 
 	if (ret < 0) {
+		if (epc->ops->clear_capabilities != NULL) {
+			epc->ops->clear_capabilities(dev, funcno);
+		}
+
 		epc->funcno_map &= ~BIT(funcno);
 		sys_dlist_remove(&epf->epc_node);
 		epf->epc = NULL;
@@ -472,6 +507,10 @@ void pcie_epc_remove_epf(const struct device *dev,
 	}
 
 	k_mutex_unlock(&epf->lock);
+
+	if (epc->ops->clear_capabilities != NULL) {
+		epc->ops->clear_capabilities(dev, epf->funcno);
+	}
 
 	epc->funcno_map &= ~BIT(epf->funcno);
 	sys_dlist_remove(&epf->epc_node);

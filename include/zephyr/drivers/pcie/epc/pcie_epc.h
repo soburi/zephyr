@@ -56,6 +56,8 @@ struct pcie_epc_features_s {
 	unsigned int msi_capable : 1;
 	/** Indicate if the endpoint function has MSI-X capability */
 	unsigned int msix_capable : 1;
+	/** Indicate if pcie_epc_add_capability() is supported */
+	unsigned int capability_writable : 1;
 	/** Bitmap to indicate reserved BAR unavailable to function driver */
 	uint8_t bar_reserved;
 	/** Bitmap to indicate fixed 64bit BARs */
@@ -76,6 +78,11 @@ struct pcie_epc_ops_s {
 	/** Ops to populate configuration space header */
 	int (*write_header)(const struct device *dev, uint8_t funcno,
 			    struct pcie_epf_header_s *hdr);
+	/** Ops to append a capability to the capability list of a function */
+	int (*add_capability)(const struct device *dev, uint8_t funcno,
+			      uint8_t id, const void *body, size_t len);
+	/** Ops to remove the capabilities added with add_capability */
+	void (*clear_capabilities)(const struct device *dev, uint8_t funcno);
 	/** Ops to configure the BAR */
 	int (*set_bar)(const struct device *dev, uint8_t funcno,
 		       struct pcie_epf_bar_s *bar);
@@ -547,6 +554,31 @@ void pcie_epc_init_notify(const struct device *dev);
  * @param dev The EPC device that received the BME event
  */
 void pcie_epc_bme_notify(const struct device *dev);
+
+/**
+ * @brief Append a capability to the capability list of a function
+ *
+ * The EPC device places the capability and links it into the list, after
+ * the capabilities it manages itself, such as MSI and MSI-X. The
+ * capabilities added to a function are removed when its EPF device is
+ * removed. Not every EPC device can describe capabilities, see
+ * @ref pcie_epc_features_s::capability_writable.
+ *
+ * @param dev    The EPC device
+ * @param funcno The function the capability belongs to
+ * @param id     The capability ID, for example PCI_CAP_ID_VNDR
+ * @param body   The capability without its first two bytes, the ID and the
+ *               offset of the next capability, which the EPC device fills
+ * @param len    The length of body in bytes
+ *
+ * @retval 0 Success
+ * @retval -EINVAL Invalid argument
+ * @retval -EBUSY The link has been started
+ * @retval -ENOSPC The capability does not fit in the configuration space
+ * @retval -ENOTSUP The EPC device cannot add capabilities
+ */
+int pcie_epc_add_capability(const struct device *dev, uint8_t funcno,
+			    uint8_t id, const void *body, size_t len);
 
 /**
  * @brief Register a new EPC device
