@@ -190,8 +190,6 @@ struct pcie_epc_ctrl_s {
 	unsigned int num_windows;
 	/** Max number of functions that can be configured in this EPC */
 	uint8_t max_functions;
-	/** Node in the global list of EPC devices */
-	sys_dnode_t node;
 	/** Heap for EPF BAR buffer allocation, may be NULL */
 	struct k_heap *dmaheap;
 
@@ -203,8 +201,6 @@ struct pcie_epc_ctrl_s {
 	unsigned long funcno_map;
 	/** Indicates if the PCI link has been started */
 	bool started;
-	/** The EPC name that is used to bind the EPF */
-	const char *name;
 };
 
 /**
@@ -220,18 +216,6 @@ pcie_epc_get_ctrl(const struct device *dev)
 {
 	return (struct pcie_epc_ctrl_s *)dev->data;
 }
-
-/**
- * @brief Get the PCI endpoint controller
- *
- * Invoke to get the registered EPC device corresponding to the name of the
- * endpoint controller.
- *
- * @param epc_name Name of the endpoint controller
- *
- * @return The EPC device if found, NULL otherwise
- */
-const struct device *pcie_get_epc(const char *epc_name);
 
 /**
  * @brief Get unreserved BAR starting from @p barno
@@ -605,29 +589,18 @@ void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
 			      uint8_t index);
 
 /**
- * @brief Register a new EPC device
+ * @brief Initialize the EPC control structure of an EPC device
  *
- * Invoke to initialize the EPC control structure placed at the beginning of
- * the device data and add the EPC device to the global list of EPC devices.
+ * Invoke from the init function of the EPC driver to initialize the control
+ * structure placed at the beginning of the device data.
  *
- * @param dev     The EPC device to be registered
- * @param name    EPC name string, used to bind EPF devices
+ * @param dev     The EPC device
  * @param dmaheap Heap used for EPF BAR buffer allocation, may be NULL
  *
  * @retval 0 Success
  * @retval -EINVAL Invalid argument
  */
-int pcie_epc_create(const struct device *dev, const char *name,
-		    struct k_heap *dmaheap);
-
-/**
- * @brief Unregister the EPC device
- *
- * Invoke to remove the EPC device from the global list of EPC devices.
- *
- * @param dev The EPC device that has to be removed
- */
-void pcie_epc_destroy(const struct device *dev);
+int pcie_epc_init(const struct device *dev, struct k_heap *dmaheap);
 
 /**
  * @brief Initialize the address spaces of the endpoint controller

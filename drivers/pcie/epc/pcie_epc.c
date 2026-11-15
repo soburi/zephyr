@@ -21,29 +21,6 @@ static inline const struct pcie_epc_driver_api *pcie_epc_api(const struct device
 	return DEVICE_API_GET(pcie_epc, dev);
 }
 
-static K_MUTEX_DEFINE(g_pcie_epc_lock);
-static sys_dlist_t g_pcie_epc_device_list =
-	SYS_DLIST_STATIC_INIT(&g_pcie_epc_device_list);
-
-const struct device *pcie_get_epc(const char *epc_name)
-{
-	const struct device *res = NULL;
-	struct pcie_epc_ctrl_s *epc;
-
-	__ASSERT_NO_MSG(epc_name != NULL);
-
-	k_mutex_lock(&g_pcie_epc_lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&g_pcie_epc_device_list, epc, node) {
-		if (strcmp(epc_name, epc->name) == 0) {
-			res = epc->dev;
-			break;
-		}
-	}
-
-	k_mutex_unlock(&g_pcie_epc_lock);
-	return res;
-}
-
 int pcie_epc_get_next_free_bar(const struct pcie_epc_features_s *epc_features,
 			       int barno)
 {
@@ -656,41 +633,21 @@ void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
 	}
 }
 
-int pcie_epc_create(const struct device *dev, const char *name,
-		    struct k_heap *dmaheap)
+int pcie_epc_init(const struct device *dev, struct k_heap *dmaheap)
 {
 	struct pcie_epc_ctrl_s *epc;
 
-	if (dev == NULL || name == NULL) {
+	if (dev == NULL) {
 		return -EINVAL;
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
 	epc->dev = dev;
-	epc->name = name;
 	epc->dmaheap = dmaheap;
 	k_mutex_init(&epc->lock);
 	sys_dlist_init(&epc->epf);
 
-	k_mutex_lock(&g_pcie_epc_lock, K_FOREVER);
-	sys_dlist_append(&g_pcie_epc_device_list, &epc->node);
-	k_mutex_unlock(&g_pcie_epc_lock);
-
 	return 0;
-}
-
-void pcie_epc_destroy(const struct device *dev)
-{
-	struct pcie_epc_ctrl_s *epc;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	epc = pcie_epc_get_ctrl(dev);
-	k_mutex_lock(&g_pcie_epc_lock, K_FOREVER);
-	sys_dlist_remove(&epc->node);
-	k_mutex_unlock(&g_pcie_epc_lock);
 }
 
 void *pcie_epc_dma_alloc(const struct device *dev, size_t size)

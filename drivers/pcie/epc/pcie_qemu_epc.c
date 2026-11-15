@@ -713,9 +713,9 @@ static int qemu_epc_init(const struct device *dev)
 
 	qep->pdev = cfg->pcie;
 
-	ret = pcie_epc_create(dev, "qemu_epc", &g_qemu_epc_dmaheap);
+	ret = pcie_epc_init(dev, &g_qemu_epc_dmaheap);
 	if (ret != 0) {
-		LOG_ERR("Failed to create qemu_epc device");
+		LOG_ERR("Failed to initialize the EPC control");
 		return ret;
 	}
 
@@ -738,7 +738,6 @@ static int qemu_epc_init(const struct device *dev)
 			       QEMU_EPC_ALIGN_PAGE_SIZE);
 	if (ret != 0) {
 		LOG_ERR("epc mem init error");
-		pcie_epc_destroy(dev);
 		return ret;
 	}
 
@@ -747,7 +746,6 @@ static int qemu_epc_init(const struct device *dev)
 		ret = qemu_epc_doorbell_init(dev);
 		if (ret != 0) {
 			pcie_epc_mem_exit(dev);
-			pcie_epc_destroy(dev);
 			return ret;
 		}
 	}

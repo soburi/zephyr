@@ -118,7 +118,7 @@ static int litepcie_init(const struct device *dev)
 	if (sys_read32(cfg->base + EPC_BAR_SIZE) != cfg->features.bar_fixed_size[0]) {
 		return -EINVAL;
 	}
-	ret = pcie_epc_create(dev, dev->name, NULL);
+	ret = pcie_epc_init(dev, NULL);
 	if (ret == 0) {
 		data->epc.max_functions = 1U;
 	}
