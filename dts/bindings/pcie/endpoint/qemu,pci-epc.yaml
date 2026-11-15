@@ -11,7 +11,7 @@ description: |
 
 compatible: "qemu,pci-epc"
 
-include: [base.yaml, pcie-device.yaml]
+include: [pcie-epc.yaml, pcie-device.yaml]
 
 properties:
   doorbell-bar:

@@ -17,9 +17,14 @@
 #define EPC_BAR_ENABLE BIT(1)
 
 struct litepcie_config {
+	/* Must stay first, the device config starts with the EPC config */
+	struct pcie_epc_config epc;
 	uintptr_t base;
 	struct pcie_epc_features_s features;
 };
+
+BUILD_ASSERT(offsetof(struct litepcie_config, epc) == 0,
+	     "the EPC config must be the first member");
 
 struct litepcie_data {
 	/* Must stay first, the device data starts with the EPC control */
@@ -111,23 +116,18 @@ static DEVICE_API(pcie_epc, litepcie_api) = {
 static int litepcie_init(const struct device *dev)
 {
 	const struct litepcie_config *cfg = dev->config;
-	struct litepcie_data *data = dev->data;
-	int ret;
 
 	litepcie_stop(dev);
 	if (sys_read32(cfg->base + EPC_BAR_SIZE) != cfg->features.bar_fixed_size[0]) {
 		return -EINVAL;
 	}
-	ret = pcie_epc_init(dev, NULL);
-	if (ret == 0) {
-		data->epc.max_functions = 1U;
-	}
-	return ret;
+	return pcie_epc_init(dev, NULL);
 }
 
 #define LITEPCIE_DEFINE(n)                                                   \
 	static struct litepcie_data litepcie_data_##n;                        \
 	static const struct litepcie_config litepcie_cfg_##n = {              \
+		.epc = PCIE_EPC_DT_INST_CONFIG_INIT(n),                      \
 		.base = DT_INST_REG_ADDR(n),                                 \
 		.features = {                                               \
 			.bar_reserved = 0x3eU,                               \

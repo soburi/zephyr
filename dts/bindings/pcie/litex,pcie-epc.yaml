@@ -3,7 +3,7 @@
 
 description: LitePCIe firmware-controlled inbound BAR0 controller (ABI v1)
 compatible: "litex,pcie-epc"
-include: base.yaml
+include: pcie-epc.yaml
 properties:
   reg:
     required: true

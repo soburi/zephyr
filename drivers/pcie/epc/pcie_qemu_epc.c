@@ -111,6 +111,8 @@ static const struct pcie_epc_features_s g_qemu_epc_features = {
 };
 
 struct qemu_epc_config_s {
+	/* Must stay first, the device config starts with the EPC config */
+	struct pcie_epc_config epc;
 	struct pcie_dev *pcie;
 	/* The BAR range that raises the doorbell, valid with has_doorbell */
 	bool has_doorbell;
@@ -120,6 +122,9 @@ struct qemu_epc_config_s {
 	unsigned int irq_priority;
 	uint32_t irq_flags;
 };
+
+BUILD_ASSERT(offsetof(struct qemu_epc_config_s, epc) == 0,
+	     "the EPC config must be the first member");
 
 static void qemu_epc_ctl_write8(struct qemu_epc_s *qep, unsigned int offset,
 				uint8_t value)
@@ -719,8 +724,6 @@ static int qemu_epc_init(const struct device *dev)
 		return ret;
 	}
 
-	qep->epc.max_functions = QEMU_EPC_MAX_FUNCTIONS;
-
 	phys = qemu_epc_ctl_read64(qep, QEMU_EPC_CTRL_OFF_WIN_START);
 	size = qemu_epc_ctl_read64(qep, QEMU_EPC_CTRL_OFF_WIN_SIZE);
 
@@ -769,9 +772,12 @@ static int qemu_epc_init(const struct device *dev)
 
 #define QEMU_EPC_DEVICE_INIT(n)						\
 	BUILD_ASSERT(n == 0, "only one QEMU EPC instance is supported");\
+	BUILD_ASSERT(DT_INST_PROP(n, max_functions) <= QEMU_EPC_MAX_FUNCTIONS,	\
+		     "too many functions for the QEMU EPC");			\
 	DEVICE_PCIE_INST_DECLARE(n);					\
 	static struct qemu_epc_s qemu_epc_data_##n;			\
 	static const struct qemu_epc_config_s qemu_epc_config_##n = {	\
+		.epc = PCIE_EPC_DT_INST_CONFIG_INIT(n),			\
 		DEVICE_PCIE_INST_INIT(n, pcie),				\
 		IF_ENABLED(QEMU_EPC_HAS_DOORBELL(n),			\
 			   (QEMU_EPC_DOORBELL_INIT(n)))			\

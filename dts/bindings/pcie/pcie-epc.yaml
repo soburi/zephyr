@@ -1,0 +1,14 @@
+# Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+description: PCIe endpoint controller (EPC) common properties
+
+include: base.yaml
+
+properties:
+  max-functions:
+    type: int
+    required: true
+    description: |
+      Number of endpoint functions the controller can host. Functions are
+      numbered from 0.

@@ -26,6 +26,7 @@ For the DDR AE350 build with SPI flash, JTAG and UART2, the devicetree node is::
            compatible = "litex,pcie-epc";
            reg = <0xe8003000 0x10>;
            bar0-size = <0x100000>;
+           max-functions = <1>;
        };
    };
 

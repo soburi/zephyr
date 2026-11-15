@@ -174,6 +174,30 @@ struct pcie_epc_mem_s {
 };
 
 /**
+ * @brief Static configuration of an EPC device
+ *
+ * The EPC driver places this structure at the beginning of the config of
+ * its device and initializes it from the devicetree node with
+ * PCIE_EPC_DT_INST_CONFIG_INIT().
+ */
+struct pcie_epc_config {
+	/** Number of functions that can be configured in this EPC */
+	uint8_t max_functions;
+};
+
+/**
+ * @brief Initializer of struct pcie_epc_config from a devicetree instance
+ *
+ * The node must include pcie-epc.yaml.
+ *
+ * @param inst Devicetree instance number
+ */
+#define PCIE_EPC_DT_INST_CONFIG_INIT(inst)				\
+	{								\
+		.max_functions = DT_INST_PROP(inst, max_functions),	\
+	}
+
+/**
  * @brief Represents the PCI EPC device
  *
  * The EPC driver places this structure at the beginning of the data of
@@ -188,8 +212,6 @@ struct pcie_epc_ctrl_s {
 	struct pcie_epc_mem_s *mem;
 	/** Number of address spaces supported by device */
 	unsigned int num_windows;
-	/** Max number of functions that can be configured in this EPC */
-	uint8_t max_functions;
 	/** Heap for EPF BAR buffer allocation, may be NULL */
 	struct k_heap *dmaheap;
 
@@ -215,6 +237,20 @@ static inline struct pcie_epc_ctrl_s *
 pcie_epc_get_ctrl(const struct device *dev)
 {
 	return (struct pcie_epc_ctrl_s *)dev->data;
+}
+
+/**
+ * @brief Get the EPC configuration of an EPC device
+ *
+ * @param dev The EPC device
+ *
+ * @return The EPC configuration stored at the beginning of the device
+ *         config
+ */
+static inline const struct pcie_epc_config *
+pcie_epc_get_config(const struct device *dev)
+{
+	return (const struct pcie_epc_config *)dev->config;
 }
 
 /**

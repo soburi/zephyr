@@ -16,6 +16,11 @@
 
 LOG_MODULE_REGISTER(pcie_epc, CONFIG_PCIE_EPC_LOG_LEVEL);
 
+static inline bool pcie_epc_funcno_valid(const struct device *dev, uint8_t funcno)
+{
+	return funcno < pcie_epc_get_config(dev)->max_functions;
+}
+
 static inline const struct pcie_epc_driver_api *pcie_epc_api(const struct device *dev)
 {
 	return DEVICE_API_GET(pcie_epc, dev);
@@ -64,7 +69,7 @@ pcie_epc_get_features(const struct device *dev, uint8_t funcno)
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (pcie_epc_api(dev)->get_features == NULL || funcno >= epc->max_functions) {
+	if (pcie_epc_api(dev)->get_features == NULL || !pcie_epc_funcno_valid(dev, funcno)) {
 		return NULL;
 	}
 
@@ -128,7 +133,7 @@ int pcie_epc_raise_irq(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (pcie_epc_api(dev)->raise_irq == NULL || funcno >= epc->max_functions) {
+	if (pcie_epc_api(dev)->raise_irq == NULL || !pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
@@ -151,7 +156,7 @@ int pcie_epc_map_msi_irq(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || pcie_epc_api(dev)->map_msi_irq == NULL) {
+	if (!pcie_epc_funcno_valid(dev, funcno) || pcie_epc_api(dev)->map_msi_irq == NULL) {
 		return -EINVAL;
 	}
 
@@ -172,7 +177,7 @@ int pcie_epc_get_msi(const struct device *dev, uint8_t funcno)
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || pcie_epc_api(dev)->get_msi == NULL) {
+	if (!pcie_epc_funcno_valid(dev, funcno) || pcie_epc_api(dev)->get_msi == NULL) {
 		return -EINVAL;
 	}
 
@@ -198,7 +203,7 @@ int pcie_epc_set_msi(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || interrupts < 1U ||
+	if (!pcie_epc_funcno_valid(dev, funcno) || interrupts < 1U ||
 	    interrupts > 32U || pcie_epc_api(dev)->set_msi == NULL) {
 		return -EINVAL;
 	}
@@ -224,7 +229,7 @@ int pcie_epc_get_msix(const struct device *dev, uint8_t funcno)
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || pcie_epc_api(dev)->get_msix == NULL) {
+	if (!pcie_epc_funcno_valid(dev, funcno) || pcie_epc_api(dev)->get_msix == NULL) {
 		return -EINVAL;
 	}
 
@@ -250,7 +255,7 @@ int pcie_epc_set_msix(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || interrupts < 1U ||
+	if (!pcie_epc_funcno_valid(dev, funcno) || interrupts < 1U ||
 	    interrupts > 2048U || pcie_epc_api(dev)->set_msix == NULL) {
 		return -EINVAL;
 	}
@@ -271,7 +276,7 @@ void pcie_epc_unmap_addr(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || pcie_epc_api(dev)->unmap_addr == NULL) {
+	if (!pcie_epc_funcno_valid(dev, funcno) || pcie_epc_api(dev)->unmap_addr == NULL) {
 		return;
 	}
 
@@ -291,7 +296,7 @@ int pcie_epc_map_addr(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || pcie_epc_api(dev)->map_addr == NULL) {
+	if (!pcie_epc_funcno_valid(dev, funcno) || pcie_epc_api(dev)->map_addr == NULL) {
 		return -EINVAL;
 	}
 
@@ -311,7 +316,7 @@ void pcie_epc_clear_bar(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || pcie_epc_api(dev)->clear_bar == NULL ||
+	if (!pcie_epc_funcno_valid(dev, funcno) || pcie_epc_api(dev)->clear_bar == NULL ||
 	    (bar->barno == PCI_STD_NUM_BARS - 1 &&
 	     (bar->flags & PCI_BASE_ADDRESS_MEM_TYPE_64) != 0)) {
 		return;
@@ -334,7 +339,7 @@ int pcie_epc_set_bar(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions ||
+	if (!pcie_epc_funcno_valid(dev, funcno) ||
 	    (bar->barno == PCI_STD_NUM_BARS - 1 &&
 	     (flags & PCI_BASE_ADDRESS_MEM_TYPE_64) != 0) ||
 	    (bar->size > UINT32_MAX &&
@@ -360,7 +365,7 @@ int pcie_epc_add_capability(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions) {
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
@@ -391,7 +396,7 @@ int pcie_epc_write_header(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
-	if (pcie_epc_api(dev)->write_header == NULL || funcno >= epc->max_functions) {
+	if (pcie_epc_api(dev)->write_header == NULL || !pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
@@ -426,13 +431,13 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 		goto out;
 	}
 
-	for (funcno = 0; funcno < epc->max_functions; funcno++) {
+	for (funcno = 0; funcno < pcie_epc_get_config(dev)->max_functions; funcno++) {
 		if ((epc->funcno_map & BIT(funcno)) == 0U) {
 			break;
 		}
 	}
 
-	if (funcno >= epc->max_functions) {
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		LOG_ERR("Exceeding max supported Function Number");
 		ret = -ENOENT;
 		goto out;
