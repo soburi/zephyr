@@ -76,58 +76,7 @@ struct pcie_epf_bar_s {
 	int flags;
 };
 
-/**
- * @brief Identifies EPF devices for probing
- */
-struct pcie_epf_device_id_s {
-	/** Name of the EPF device */
-	char name[32];
-	/** Data private to the driver */
-	unsigned long driver_data;
-};
-
-struct pcie_epf_driver_s;
-struct pcie_epc_event_ops_s;
-
-/**
- * @brief Represents the PCI EPF device
- */
-struct pcie_epf_device_s {
-	/** The name of the PCI EPF device */
-	const char *name;
-	/** The name of the EPC device this EPF device should bind to */
-	const char *epc_name;
-	/** Represents standard configuration header */
-	struct pcie_epf_header_s *header;
-	/** Represents the BAR of EPF device */
-	struct pcie_epf_bar_s bar[PCI_STD_NUM_BARS];
-	/** Number of MSI interrupts required by this function */
-	uint8_t msi_interrupts;
-	/** Number of MSI-X interrupts required by this function */
-	uint16_t msix_interrupts;
-	/** Unique (physical) function number within this endpoint device */
-	uint8_t funcno;
-
-	/** The EPC device to which this EPF device is bound */
-	const struct device *epc;
-	/** The EPF driver to which this EPF device is bound */
-	struct pcie_epf_driver_s *driver;
-	/** Pointer to the EPF device ID */
-	const struct pcie_epf_device_id_s *id;
-	/** Node in the global list of EPF devices */
-	sys_dnode_t node;
-	/** Node in the list of EPF devices bound to a pcie_epc_ctrl_s */
-	sys_dnode_t epc_node;
-
-	/** Mutex to protect against concurrent access of pcie_epf_ops_s */
-	struct k_mutex lock;
-	/** Indicates if bind notification to function driver has been invoked */
-	bool is_bound;
-	/** Callbacks for capturing the EPC events */
-	const struct pcie_epc_event_ops_s *event_ops;
-	/** The private data */
-	void *priv;
-};
+struct pcie_epf_device_s;
 
 /**
  * @brief Set of function pointers for performing EPF operations
@@ -156,24 +105,35 @@ struct pcie_epc_event_ops_s {
 };
 
 /**
- * @brief Represents the PCI EPF driver
+ * @brief Represents the PCI EPF device
  */
-struct pcie_epf_driver_s {
-	/** Ops to perform when a new EPF device has been bound to the EPF
-	 *  driver
-	 */
-	int (*probe)(struct pcie_epf_device_s *epf);
-	/** Ops to perform when the binding between the EPF device and EPF
-	 *  driver is broken
-	 */
-	void (*remove)(struct pcie_epf_device_s *epf);
+struct pcie_epf_device_s {
+	/** Represents standard configuration header */
+	struct pcie_epf_header_s *header;
+	/** Represents the BAR of EPF device */
+	struct pcie_epf_bar_s bar[PCI_STD_NUM_BARS];
+	/** Number of MSI interrupts required by this function */
+	uint8_t msi_interrupts;
+	/** Number of MSI-X interrupts required by this function */
+	uint16_t msix_interrupts;
+	/** Unique (physical) function number within this endpoint device */
+	uint8_t funcno;
 
-	/** Node in the global list of EPF drivers */
-	sys_dnode_t node;
+	/** The EPC device to which this EPF device is bound */
+	const struct device *epc;
+	/** Node in the list of EPF devices bound to a pcie_epc_ctrl_s */
+	sys_dnode_t epc_node;
+
+	/** Mutex to protect against concurrent access of pcie_epf_ops_s */
+	struct k_mutex lock;
+	/** Indicates if bind notification to function driver has been invoked */
+	bool is_bound;
 	/** Set of function pointers for performing EPF operations */
 	const struct pcie_epf_ops_s *ops;
-	/** Identifies EPF devices for probing */
-	const struct pcie_epf_device_id_s *id_table;
+	/** Callbacks for capturing the EPC events */
+	const struct pcie_epc_event_ops_s *event_ops;
+	/** The private data */
+	void *priv;
 };
 
 /**
@@ -189,52 +149,6 @@ struct pcie_epf_msix_tbl_s {
 	 */
 	uint32_t vector_ctrl;
 };
-
-/**
- * @brief Register a new PCI EPF device
- *
- * Invoke to register a statically allocated PCI EPF device. The EPF device
- * is bound to a matching EPF driver, if one is already registered.
- *
- * @param epf The PCI EPF device to be registered
- *
- * @retval 0 Success
- * @retval -ENODEV No EPC device matches the epc_name of the EPF device
- * @retval -errno Other negative errno on driver probe failure
- */
-int pcie_epf_device_register(struct pcie_epf_device_s *epf);
-
-/**
- * @brief Unregister a PCI EPF device
- *
- * @param epf The PCI EPF device to be unregistered
- *
- * @retval 0 Success
- */
-int pcie_epf_device_unregister(struct pcie_epf_device_s *epf);
-
-/**
- * @brief Register a new PCI EPF driver
- *
- * Registered EPF devices without a driver are bound to the new driver when
- * their name matches an entry of the driver's id_table.
- *
- * @param drv EPF driver
- *
- * @retval 0 Success
- * @retval -EINVAL Required driver callbacks are missing
- * @retval -ENODEV No EPC device matches a bound EPF device
- */
-int pcie_epf_register_driver(struct pcie_epf_driver_s *drv);
-
-/**
- * @brief Unregister the PCI EPF driver
- *
- * @param drv The PCI EPF driver that has to be unregistered
- *
- * @retval 0 Success
- */
-int pcie_epf_unregister_driver(struct pcie_epf_driver_s *drv);
 
 /**
  * @brief Allocate memory for the PCI EPF register space

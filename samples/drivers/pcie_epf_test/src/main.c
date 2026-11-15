@@ -5,24 +5,32 @@
  */
 
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/pcie/epc/pcie_epc.h>
 #include <zephyr/drivers/pcie/epc/pcie_epf_test.h>
 
 int main(void)
 {
+	const struct device *epc;
 	int ret;
 
-	ret = pcie_register_epf_test_driver();
-	if (ret != 0) {
-		printk("Failed to register the EPF test driver: %d\n", ret);
+	epc = pcie_get_epc("qemu_epc");
+	if (epc == NULL) {
+		printk("EPC device not found\n");
 		return 0;
 	}
 
-	ret = pcie_register_epf_test_device("qemu_epc");
+	ret = pcie_epf_test_add(epc);
 	if (ret != 0) {
-		printk("Failed to register the EPF test device: %d\n", ret);
+		printk("Failed to add the EPF test functions: %d\n", ret);
 		return 0;
 	}
 
-	printk("PCI endpoint test function registered\n");
+	ret = pcie_epc_start(epc);
+	if (ret != 0) {
+		printk("Failed to start the PCI link: %d\n", ret);
+		return 0;
+	}
+
+	printk("PCI endpoint test function started\n");
 	return 0;
 }
