@@ -1,0 +1,13 @@
+# Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+description: LitePCIe firmware-controlled inbound BAR0 controller (ABI v1)
+compatible: "litex,pcie-epc"
+include: base.yaml
+properties:
+  reg:
+    required: true
+  bar0-size:
+    type: int
+    required: true
+    description: Fixed BAR0 aperture configured in the PCIe hard IP

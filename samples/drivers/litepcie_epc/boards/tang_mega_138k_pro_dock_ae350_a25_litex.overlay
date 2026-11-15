@@ -1,0 +1,21 @@
+/*
+ * Copyright The Zephyr Project Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	pcie_epc: pcie-epc@e8003000 {
+		compatible = "litex,pcie-epc";
+		reg = <0xe8003000 0x10>;
+		bar0-size = <0x100000>;
+	};
+};
+
+&cpu0 {
+	riscv,isa-base = "rv32i";
+	riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "zicsr", "zifencei";
+};
+
+&code_partition {
+	reg = <0x10000 0x9f0000>;
+};

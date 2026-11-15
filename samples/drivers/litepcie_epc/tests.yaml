@@ -1,0 +1,13 @@
+# Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+sample:
+  name: LitePCIe shared BAR endpoint
+  description: Expose a shared BAR0 through the PCI EPC framework
+common:
+  tags:
+    - pcie
+  platform_allow:
+    - tang_mega_138k_pro_dock/ae350_a25/litex
+  build_only: true
+tests:
+  sample.drivers.litepcie_epc: {}

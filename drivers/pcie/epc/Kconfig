@@ -24,6 +24,14 @@ config PCIE_EPC_INIT_PRIORITY
 	  than the initialization priority of the PCIe host controller the
 	  EPC device is attached to, if any.
 
+config PCIE_EPC_LITEPCIE
+	bool "LitePCIe inbound endpoint controller"
+	default y
+	depends on DT_HAS_LITEX_PCIE_EPC_ENABLED
+	help
+	  Single-function, fixed BAR0 endpoint controller. Configuration
+	  space programming, outbound windows and interrupts are unsupported.
+
 config PCIE_EPC_QEMU
 	bool "QEMU PCI EPC driver"
 	default y
