@@ -12,3 +12,28 @@ description: |
 compatible: "qemu,pci-epc"
 
 include: [base.yaml, pcie-device.yaml]
+
+properties:
+  doorbell-bar:
+    type: int
+    default: 0
+    description: |
+      BAR of the endpoint function that holds the doorbell range. The
+      default is the first BAR.
+
+  doorbell-offset:
+    type: int
+    description: |
+      Offset of the doorbell range in the BAR. The device model interrupts
+      the endpoint when the PCI host writes the range, wherever it lies, so
+      set it to the register in which the endpoint function expects its
+      notifications. The node needs an interrupts property then. Without
+      this property the endpoint controller has no doorbell.
+
+  doorbell-width:
+    type: int
+    default: 4
+    enum: [1, 2, 4]
+    description: |
+      Width in bytes of the doorbell range. The default is a 32-bit
+      register.

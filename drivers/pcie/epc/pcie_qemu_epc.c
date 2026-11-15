@@ -37,6 +37,16 @@ LOG_MODULE_REGISTER(pcie_qemu_epc, CONFIG_PCIE_EPC_LOG_LEVEL);
 #define QEMU_EPC_CTRL_OFF_OB_MAP_PHYS   0x28
 #define QEMU_EPC_CTRL_OFF_OB_MAP_PCI    0x30
 #define QEMU_EPC_CTRL_OFF_OB_MAP_SIZE   0x38
+#define QEMU_EPC_CTRL_OFF_DB_CTRL       0x40
+#define QEMU_EPC_CTRL_OFF_DB_OFFSET     0x44
+#define QEMU_EPC_CTRL_OFF_DB_SIZE       0x48
+#define QEMU_EPC_CTRL_OFF_DB_STATUS     0x4c
+
+#define QEMU_EPC_DB_CTRL_ENABLE         BIT(31)
+#define QEMU_EPC_DB_STATUS_PENDING      BIT(0)
+
+/* The device model has the BARs, and so the doorbell, of one function */
+#define QEMU_EPC_DB_FUNCNO              0U
 
 #define QEMU_EPC_BAR_CFG_OFF_MASK       0x00
 #define QEMU_EPC_BAR_CFG_OFF_NUMBER     0x01
@@ -98,6 +108,17 @@ static const struct pcie_epc_features_s g_qemu_epc_features = {
 	.msi_capable = true,
 	.msix_capable = true,
 	.capability_writable = true,
+};
+
+struct qemu_epc_config_s {
+	struct pcie_dev *pcie;
+	/* The BAR range that raises the doorbell, valid with has_doorbell */
+	bool has_doorbell;
+	uint8_t doorbell_bar;
+	uint8_t doorbell_width;
+	uint32_t doorbell_offset;
+	unsigned int irq_priority;
+	uint32_t irq_flags;
 };
 
 static void qemu_epc_ctl_write8(struct qemu_epc_s *qep, unsigned int offset,
@@ -590,9 +611,54 @@ static const struct pcie_epc_ops_s g_qemu_epc_ops = {
 	.get_msix     = qemu_epc_get_msix,
 };
 
-struct qemu_epc_config_s {
-	struct pcie_dev *pcie;
-};
+#ifdef CONFIG_PCIE_EPC_QEMU_DOORBELL
+static void qemu_epc_doorbell_isr(const void *arg)
+{
+	const struct device *dev = arg;
+	struct qemu_epc_s *qep = dev->data;
+
+	/* The interrupt line can be shared with other devices */
+	if ((qemu_epc_ctl_read32(qep, QEMU_EPC_CTRL_OFF_DB_STATUS) &
+	     QEMU_EPC_DB_STATUS_PENDING) == 0U) {
+		return;
+	}
+
+	/* Acknowledge first, a later write then interrupts again */
+	qemu_epc_ctl_write32(qep, QEMU_EPC_CTRL_OFF_DB_STATUS,
+			     QEMU_EPC_DB_STATUS_PENDING);
+	pcie_epc_doorbell_notify(dev, QEMU_EPC_DB_FUNCNO, 0);
+}
+
+static int qemu_epc_doorbell_init(const struct device *dev)
+{
+	const struct qemu_epc_config_s *cfg = dev->config;
+	struct qemu_epc_s *qep = dev->data;
+	unsigned int irq;
+
+	irq = pcie_alloc_irq(cfg->pcie->bdf);
+	if (irq == PCIE_CONF_INTR_IRQ_NONE) {
+		LOG_ERR("Cannot allocate the doorbell interrupt");
+		return -ENODEV;
+	}
+
+	if (!pcie_connect_dynamic_irq(cfg->pcie->bdf, irq, cfg->irq_priority,
+				      qemu_epc_doorbell_isr, dev,
+				      cfg->irq_flags)) {
+		LOG_ERR("Cannot connect the doorbell interrupt");
+		return -EIO;
+	}
+
+	qemu_epc_ctl_write32(qep, QEMU_EPC_CTRL_OFF_DB_STATUS,
+			     QEMU_EPC_DB_STATUS_PENDING);
+	qemu_epc_ctl_write32(qep, QEMU_EPC_CTRL_OFF_DB_OFFSET, cfg->doorbell_offset);
+	qemu_epc_ctl_write32(qep, QEMU_EPC_CTRL_OFF_DB_SIZE, cfg->doorbell_width);
+	qemu_epc_ctl_write32(qep, QEMU_EPC_CTRL_OFF_DB_CTRL,
+			     QEMU_EPC_DB_CTRL_ENABLE | cfg->doorbell_bar);
+	pcie_irq_enable(cfg->pcie->bdf, irq);
+
+	return 0;
+}
+#endif /* CONFIG_PCIE_EPC_QEMU_DOORBELL */
 
 static int qemu_epc_map_bar(pcie_bdf_t bdf, uint8_t barno, mm_reg_t *base)
 {
@@ -677,8 +743,32 @@ static int qemu_epc_init(const struct device *dev)
 		return ret;
 	}
 
+#ifdef CONFIG_PCIE_EPC_QEMU_DOORBELL
+	if (cfg->has_doorbell) {
+		ret = qemu_epc_doorbell_init(dev);
+		if (ret != 0) {
+			pcie_epc_mem_exit(dev);
+			pcie_epc_destroy(dev);
+			return ret;
+		}
+	}
+#endif
+
 	return 0;
 }
+
+/* The doorbell is the range of a BAR the devicetree node selects */
+#define QEMU_EPC_DOORBELL_INIT(n)					\
+	.has_doorbell = true,						\
+	.doorbell_bar = DT_INST_PROP(n, doorbell_bar),			\
+	.doorbell_width = DT_INST_PROP(n, doorbell_width),		\
+	.doorbell_offset = DT_INST_PROP(n, doorbell_offset),		\
+	.irq_priority = DT_INST_IRQ(n, priority),			\
+	.irq_flags = DT_INST_IRQ(n, flags),
+
+#define QEMU_EPC_HAS_DOORBELL(n)					\
+	UTIL_AND(IS_ENABLED(CONFIG_PCIE_EPC_QEMU_DOORBELL),		\
+		 DT_INST_NODE_HAS_PROP(n, doorbell_offset))
 
 #define QEMU_EPC_DEVICE_INIT(n)						\
 	BUILD_ASSERT(n == 0, "only one QEMU EPC instance is supported");\
@@ -686,6 +776,8 @@ static int qemu_epc_init(const struct device *dev)
 	static struct qemu_epc_s qemu_epc_data_##n;			\
 	static const struct qemu_epc_config_s qemu_epc_config_##n = {	\
 		DEVICE_PCIE_INST_INIT(n, pcie),				\
+		IF_ENABLED(QEMU_EPC_HAS_DOORBELL(n),			\
+			   (QEMU_EPC_DOORBELL_INIT(n)))			\
 	};								\
 	DEVICE_DT_INST_DEFINE(n, qemu_epc_init, NULL,			\
 			      &qemu_epc_data_##n, &qemu_epc_config_##n,	\

@@ -102,6 +102,10 @@ struct pcie_epc_event_ops_s {
 	int (*link_down)(struct pcie_epf_device_s *epf);
 	/** Callback for the EPC BME (Bus Master Enable) event */
 	int (*bme)(struct pcie_epf_device_s *epf);
+	/** Callback for a doorbell rung by the host. It can run in an ISR;
+	 *  defer the processing to a thread.
+	 */
+	void (*doorbell)(struct pcie_epf_device_s *epf, uint8_t index);
 };
 
 /**

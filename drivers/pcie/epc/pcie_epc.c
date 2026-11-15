@@ -423,6 +423,7 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 {
 	struct pcie_epc_ctrl_s *epc;
 	uint32_t funcno;
+	k_spinlock_key_t key;
 	int ret;
 
 	if (dev == NULL || epf == NULL || epf->ops == NULL ||
@@ -459,7 +460,9 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 	epc->funcno_map |= BIT(funcno);
 	epf->funcno = funcno;
 	epf->epc = dev;
+	key = k_spin_lock(&epc->epf_lock);
 	sys_dlist_append(&epc->epf, &epf->epc_node);
+	k_spin_unlock(&epc->epf_lock, key);
 
 	/* Notify the function that it has been bound to the EPC device */
 	k_mutex_lock(&epf->lock, K_FOREVER);
@@ -473,7 +476,9 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 		}
 
 		epc->funcno_map &= ~BIT(funcno);
+		key = k_spin_lock(&epc->epf_lock);
 		sys_dlist_remove(&epf->epc_node);
+		k_spin_unlock(&epc->epf_lock, key);
 		epf->epc = NULL;
 	} else {
 		ret = 0;
@@ -488,6 +493,7 @@ void pcie_epc_remove_epf(const struct device *dev,
 			 struct pcie_epf_device_s *epf)
 {
 	struct pcie_epc_ctrl_s *epc;
+	k_spinlock_key_t key;
 
 	if (dev == NULL || epf == NULL || epf->epc != dev) {
 		return;
@@ -513,7 +519,9 @@ void pcie_epc_remove_epf(const struct device *dev,
 	}
 
 	epc->funcno_map &= ~BIT(epf->funcno);
+	key = k_spin_lock(&epc->epf_lock);
 	sys_dlist_remove(&epf->epc_node);
+	k_spin_unlock(&epc->epf_lock, key);
 	epf->epc = NULL;
 	k_mutex_unlock(&epc->lock);
 }
@@ -610,6 +618,37 @@ void pcie_epc_bme_notify(const struct device *dev)
 	}
 
 	k_mutex_unlock(&epc->lock);
+}
+
+void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
+			      uint8_t index)
+{
+	struct pcie_epf_device_s *epf = NULL;
+	struct pcie_epf_device_s *it;
+	struct pcie_epc_ctrl_s *epc;
+	k_spinlock_key_t key;
+
+	if (dev == NULL) {
+		return;
+	}
+
+	epc = pcie_epc_get_ctrl(dev);
+
+	/* The mutexes of the other notifications cannot be taken in an ISR */
+	key = k_spin_lock(&epc->epf_lock);
+	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, it, epc_node) {
+		if (it->funcno == funcno) {
+			epf = it;
+			break;
+		}
+	}
+
+	k_spin_unlock(&epc->epf_lock, key);
+
+	if (epf != NULL && epf->event_ops != NULL &&
+	    epf->event_ops->doorbell != NULL) {
+		epf->event_ops->doorbell(epf, index);
+	}
 }
 
 int pcie_epc_create(const struct device *dev, const char *name,

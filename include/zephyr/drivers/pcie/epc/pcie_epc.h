@@ -197,6 +197,8 @@ struct pcie_epc_ctrl_s {
 
 	/** Mutex to protect against concurrent access of EP controller */
 	struct k_mutex lock;
+	/** Protects the list of endpoint functions against ISR context */
+	struct k_spinlock epf_lock;
 	/** Bitmap to manage physical function number */
 	unsigned long funcno_map;
 	/** Indicates if the PCI link has been started */
@@ -579,6 +581,28 @@ void pcie_epc_bme_notify(const struct device *dev);
  */
 int pcie_epc_add_capability(const struct device *dev, uint8_t funcno,
 			    uint8_t id, const void *body, size_t len);
+
+/**
+ * @brief Notify an EPF device that the host rang one of its doorbells
+ *
+ * Invokes the doorbell callback of the EPF device bound to the function
+ * in the context of the caller. Can be called from an ISR.
+ *
+ * A doorbell is an interrupt the EPC device raises when the host writes a
+ * register of a BAR. Where that register lies, and what the write means, is
+ * an agreement between the endpoint function and its host driver that the
+ * EPC device knows nothing about. The integration, a devicetree or the
+ * hardware design, wires a register to a doorbell number. Likewise, the
+ * mapping of interrupts to functions and doorbell numbers is specific to the
+ * EPC driver. Doorbells can coalesce: after one, the function must look at
+ * everything the host may have written.
+ *
+ * @param dev    The EPC device that received the doorbell
+ * @param funcno The function the doorbell belongs to
+ * @param index  The doorbell number
+ */
+void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
+			      uint8_t index);
 
 /**
  * @brief Register a new EPC device
