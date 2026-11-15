@@ -1,0 +1,18 @@
+/*
+ * Copyright The Zephyr Project Contributors
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	pcie0 {
+		qemu_epc: epc {
+			compatible = "qemu,pci-epc";
+
+			vendor-id = <0x1b36>;
+			device-id = <0x0013>;
+
+			status = "okay";
+		};
+	};
+};

@@ -1,0 +1,11 @@
+sample:
+  description: PCI endpoint test function on the QEMU EPC device
+  name: PCI endpoint test function
+tests:
+  sample.drivers.pcie_epf_test:
+    build_only: true
+    platform_allow:
+      - qemu_x86_64
+      - qemu_cortex_a53
+    tags:
+      - pcie_epc
