@@ -102,10 +102,6 @@ struct vringh_iov {
  * @retval -E2BIG    Descriptor scratch buffer is too small for the queue
  * @retval -ENOTSUP  A negotiated ring feature is not supported
  * @retval -errno    Error returned by the VHost backend
- * @retval -ENODEV  Device or queue not found
- * @retval -ENOMEM  Insufficient memory
- * @retval -EBUSY   Queue already in use
- * @retval -ENOTCONN Device not connected
  *
  * @note kick_callback is a notification hook. Its execution context and
  *       serialization are determined by the VHost controller.
@@ -178,14 +174,12 @@ int vringh_getdesc(struct vringh *vrh, struct vringh_iov *riov, struct vringh_io
  * @retval -EINVAL  Invalid parameters
  * @retval -ENODEV  Ring handler not initialized with a device
  * @retval -errno   vhost_release_iovec() failed
- * @warning Do not call multiple times for the same descriptor.
- * @warning Calls to vringh_getdesc(), vringh_complete(), and vringh_abandon()
- *          for the same vringh must be serialized by the caller.
- * @retval -EFAULT  Cannot access used ring
- * @retval -ENOSPC  Used ring full
+ *
  * @warning Do not call multiple times for the same descriptor. The iovecs
  *          associated with the request must not be accessed after this call,
  *          including when it returns an error.
+ * @warning Calls to vringh_getdesc(), vringh_complete(), and vringh_abandon()
+ *          for the same vringh must be serialized by the caller.
  *
  * Completion may be performed after asynchronous request processing and need
  * not correspond to the callback that originally discovered the descriptor.
@@ -223,7 +217,6 @@ int vringh_complete(struct vringh *vrh, uint16_t head, uint32_t len);
  * @retval -errno   vhost_release_iovec() failed
  * @warning Calls to vringh_getdesc(), vringh_complete(), and vringh_abandon()
  *          for the same vringh must be serialized by the caller.
- * @retval -EFAULT  Error accessing ring
  *
  * Only descriptors that have been retrieved and are still outstanding may be
  * abandoned. Abandoning a descriptor does not complete it in the used ring;
@@ -274,7 +267,6 @@ void vringh_iov_reset(struct vringh_iov *iov);
  * @retval 0        Notification suppressed
  * @retval -EINVAL  Invalid parameters
  * @retval -ENODEV  Ring handler not initialized with a device
- * @retval -EFAULT  Cannot access guest memory
  *
  * The result is advisory. Notification suppression may change while another
  * context updates the ring; callers must follow the controller's queue
