@@ -111,6 +111,8 @@ __subsystem struct vhost_driver_api {
 			     uint32_t written);
 	int (*get_virtq)(const struct device *dev, uint16_t queue_id, struct vhost_vring *vring);
 	int (*get_driver_features)(const struct device *dev, uint64_t *drv_feats);
+	int (*get_supported_features)(const struct device *dev, uint64_t *supported);
+	int (*set_device_features)(const struct device *dev, uint64_t wanted, uint64_t *offered);
 	bool (*virtq_is_ready)(const struct device *dev, uint16_t queue_id);
 	int (*register_virtq_ready_cb)(const struct device *dev,
 				       void (*callback)(const struct device *dev, uint16_t queue_id,
@@ -225,6 +227,68 @@ static inline int vhost_get_virtq(const struct device *dev, uint16_t queue_id,
 	const struct vhost_driver_api *api = DEVICE_API_GET(vhost, dev);
 
 	return api->get_virtq(dev, queue_id, vring);
+}
+
+/**
+ * @brief Get the VirtIO feature bits the controller can offer
+ *
+ * Bits outside the returned mask are never offered to the driver, whatever
+ * the backend asks for in vhost_set_device_features(). The mask depends on
+ * the transport: a transport that cannot carry bits above 31, or that
+ * cannot implement a feature, leaves them out. The bits the transport
+ * requires, such as @ref VIRTIO_F_VERSION_1 where the transport has no
+ * legacy mode, are part of the mask and are always offered.
+ *
+ * @param dev         VHost controller device
+ * @param supported   Output for feature mask
+ *
+ * @retval 0          Success
+ * @retval -EINVAL    Invalid parameters
+ */
+static inline int vhost_get_supported_features(const struct device *dev, uint64_t *supported)
+{
+	const struct vhost_driver_api *api = DEVICE_API_GET(vhost, dev);
+
+	return api->get_supported_features(dev, supported);
+}
+
+/**
+ * @brief Set the VirtIO feature bits the backend wants to offer
+ *
+ * The backend decides which features the device implements, the controller
+ * decides which of them it can carry. The bits offered to the driver are
+ * those in @p wanted that the controller supports, plus the bits the
+ * transport requires. The result is returned in @p offered, so that the
+ * backend can tell whether a feature it depends on is available, and which
+ * transport bits it has to handle.
+ *
+ * The driver accepts a subset of the offered bits, available with
+ * vhost_get_driver_features(). A controller that finds bits outside the
+ * offered ones in the driver's selection, rejects it as the transport
+ * allows, or masks them where it has no way to reject.
+ *
+ * Call it before the driver can see the device, for example before the link
+ * to the PCI host is started. Without a call only the bits the transport
+ * requires are offered. The setting survives a device reset.
+ *
+ * A backend that uses the vringh helpers must not ask for the bits
+ * @ref VRINGH_UNSUPPORTED_FEATURES.
+ *
+ * @param dev         VHost controller device
+ * @param wanted      Feature bits the backend implements
+ * @param offered     Output for the bits offered to the driver, can be NULL
+ *
+ * @retval 0          Success
+ * @retval -EINVAL    Invalid parameters
+ * @retval -EBUSY     The driver has started to initialize the device
+ * @retval -ENODEV    The device is not available
+ */
+static inline int vhost_set_device_features(const struct device *dev, uint64_t wanted,
+					    uint64_t *offered)
+{
+	const struct vhost_driver_api *api = DEVICE_API_GET(vhost, dev);
+
+	return api->set_device_features(dev, wanted, offered);
 }
 
 /**

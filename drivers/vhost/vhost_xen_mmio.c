@@ -80,8 +80,20 @@ struct vhost_xen_mmio_config {
 	uint8_t *config_data;
 	size_t config_data_len;
 
-	uint64_t device_features;
+	/*
+	 * Feature bits the transport requires, always offered: VIRTIO_F_VERSION_1
+	 * because the MMIO interface version 2 has no legacy mode, and
+	 * VIRTIO_F_ACCESS_PLATFORM because the guest memory is reached through
+	 * grants only.
+	 */
+	uint64_t mandatory_features;
 };
+
+/*
+ * The 64 bits of the feature registers can all be carried. What the backend
+ * helpers cannot handle is not a limit of the transport.
+ */
+#define XEN_MMIO_SUPPORTED_FEATURES UINT64_MAX
 
 struct mapped_pages {
 	uint64_t gpa;
@@ -119,6 +131,9 @@ struct virtq_context {
 };
 
 struct vhost_xen_mmio_data {
+	/* Feature bits the backend asked for, guarded by features_lock */
+	uint64_t wanted_features;
+	struct k_spinlock features_lock;
 	struct k_work_delayable init_work;
 	struct k_work_delayable isr_work;
 	struct k_work_delayable ready_work;
@@ -675,6 +690,19 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 	return 0;
 }
 
+static uint64_t offered_features(const struct device *dev)
+{
+	const struct vhost_xen_mmio_config *config = dev->config;
+	struct vhost_xen_mmio_data *data = dev->data;
+	k_spinlock_key_t key = k_spin_lock(&data->features_lock);
+	uint64_t offered = (data->wanted_features & XEN_MMIO_SUPPORTED_FEATURES) |
+			   config->mandatory_features;
+
+	k_spin_unlock(&data->features_lock, key);
+
+	return offered;
+}
+
 static void reset_device(const struct device *dev)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
@@ -715,10 +743,12 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 		r->data = config->vendor_id;
 	} break;
 	case VIRTIO_MMIO_DEVICE_FEATURES: {
+		const uint64_t offered = offered_features(dev);
+
 		if (data->be.device_features_sel == 0) {
-			r->data = (config->device_features & UINT32_MAX);
+			r->data = (offered & UINT32_MAX);
 		} else if (data->be.device_features_sel == 1) {
-			r->data = (config->device_features >> 32);
+			r->data = (offered >> 32);
 		} else {
 			r->data = 0;
 		}
@@ -796,14 +826,15 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 	} break;
 	case VIRTIO_MMIO_STATUS: {
 		if (r->data & BIT(DEVICE_STATUS_FEATURES_OK)) {
-			const bool ok = !(data->be.driver_features & ~config->device_features);
+			const uint64_t offered = offered_features(dev);
+			const bool ok = !(data->be.driver_features & ~offered);
 
 			if (ok) {
 				atomic_or(&data->be.status, BIT(DEVICE_STATUS_FEATURES_OK));
 			} else {
 				LOG_ERR("%" PRIx64 " d driver_feats=%" PRIx64
 					" device_feats=%" PRIx64,
-					r->data, data->be.driver_features, config->device_features);
+					r->data, data->be.driver_features, offered);
 				atomic_or(&data->be.status, BIT(DEVICE_STATUS_FAILED));
 				atomic_and(&data->be.status, ~BIT(DEVICE_STATUS_FEATURES_OK));
 			}
@@ -1164,6 +1195,39 @@ static int vhost_xen_mmio_get_driver_features(const struct device *dev, uint64_t
 	return 0;
 }
 
+static int vhost_xen_mmio_get_supported_features(const struct device *dev, uint64_t *supported)
+{
+	if (supported == NULL) {
+		return -EINVAL;
+	}
+
+	*supported = XEN_MMIO_SUPPORTED_FEATURES;
+
+	return 0;
+}
+
+static int vhost_xen_mmio_set_device_features(const struct device *dev, uint64_t wanted,
+					      uint64_t *offered)
+{
+	struct vhost_xen_mmio_data *data = dev->data;
+	k_spinlock_key_t key;
+
+	/* The driver may have read the features already once it set a status */
+	if (atomic_get(&data->be.status) != 0) {
+		return -EBUSY;
+	}
+
+	key = k_spin_lock(&data->features_lock);
+	data->wanted_features = wanted;
+	k_spin_unlock(&data->features_lock, key);
+
+	if (offered != NULL) {
+		*offered = offered_features(dev);
+	}
+
+	return 0;
+}
+
 static int vhost_xen_mmio_notify_virtq(const struct device *dev, uint16_t queue_id)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
@@ -1383,6 +1447,8 @@ static DEVICE_API(vhost, vhost_driver_xen_mmio_api) = {
 	.virtq_is_ready = vhost_xen_mmio_virtq_is_ready,
 	.get_virtq = vhost_xen_mmio_get_virtq,
 	.get_driver_features = vhost_xen_mmio_get_driver_features,
+	.get_supported_features = vhost_xen_mmio_get_supported_features,
+	.set_device_features = vhost_xen_mmio_set_device_features,
 	.set_device_status = vhost_xen_mmio_set_device_status,
 	.notify_virtq = vhost_xen_mmio_notify_virtq,
 	.prepare_iovec = vhost_xen_mmio_prepare_iovec,
@@ -1467,7 +1533,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.workq_stack = (k_thread_stack_t *)&workq_stack_##idx,                             \
 		.workq_stack_size = K_THREAD_STACK_SIZEOF(workq_stack_##idx),                      \
 		.workq_priority = DT_INST_PROP_OR(idx, priority, 0),                               \
-		.device_features = BIT(VIRTIO_F_VERSION_1) | BIT(VIRTIO_F_ACCESS_PLATFORM),        \
+		.mandatory_features = BIT64(VIRTIO_F_VERSION_1) | BIT64(VIRTIO_F_ACCESS_PLATFORM), \
 	};                                                                                         \
 	struct mapped_pages_chunk vhost_xen_mmio_pages_chunks_##idx[Q_NUM(idx)]                    \
 								   [Q_SZ_MAX(idx) + 1];            \

@@ -32,6 +32,19 @@ iovecs returned by ``vhost_prepare_iovec()`` stay valid until the matching
 ``vhost_release_iovec()`` call, which must be made exactly once per prepare call, on success and
 on failure alike.
 
+Feature negotiation
+*******************
+
+The backend decides which device feature bits the device implements, and the controller decides
+which of them it can carry, because the transport may limit the width of the feature registers or
+require bits of its own, such as ``VIRTIO_F_VERSION_1``. The backend asks for its bits with
+``vhost_set_device_features()``, before the driver can see the device, and gets back the bits that
+are offered: those it asked for that the controller supports, plus the ones the transport
+requires. ``vhost_get_supported_features()`` returns what the controller could offer at all. The
+driver then selects a subset of the offered bits, which the backend reads with
+``vhost_get_driver_features()``. A backend that cannot work without a bit checks it in the offered
+set and gives up otherwise.
+
 Ring processing helper (vringh)
 *******************************
 
@@ -51,10 +64,11 @@ Limitations
 ***********
 
 * Only the split virtqueue format is supported; packed virtqueues, indirect descriptors and
-  ``VIRTIO_RING_F_EVENT_IDX`` are not.
-* Device feature bits and the device-specific configuration space are owned by the controller and
-  are static (for the Xen MMIO controller, they come from devicetree). Backends cannot yet offer
-  device-specific feature bits or serve dynamic configuration space contents.
+  ``VIRTIO_RING_F_EVENT_IDX`` are not. A backend that uses vringh must not offer the bits in
+  ``VRINGH_UNSUPPORTED_FEATURES``.
+* The device-specific configuration space is owned by the controller and is static (for the Xen
+  MMIO controller, it comes from devicetree). Backends cannot yet serve dynamic configuration
+  space contents.
 
 The :zephyr:code-sample:`vhost` sample implements a virtio-rng backend for a Xen guest domain.
 

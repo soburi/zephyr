@@ -41,13 +41,6 @@ properties:
       Number of entries of the virtqueue. It must be a power of two. With
       the legacy register layout the driver cannot select a smaller size.
 
-  device-features:
-    type: int
-    default: 0
-    description: |
-      Device feature bits 0 to 31 offered to the driver. The default offers
-      no feature, which every driver supports.
-
   max-buffers:
     type: int
     default: 16

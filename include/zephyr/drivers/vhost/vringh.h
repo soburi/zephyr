@@ -27,11 +27,23 @@
 
 #include <zephyr/drivers/virtio/virtqueue.h>
 #include <zephyr/drivers/vhost.h>
+#include <zephyr/drivers/virtio/virtio_config.h>
 #include <zephyr/spinlock.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief Feature bits the vringh helpers cannot handle
+ *
+ * A backend must clear them from the features it asks for with
+ * vhost_set_device_features(). Only the split ring layout with direct
+ * descriptors and without event indices is supported.
+ */
+#define VRINGH_UNSUPPORTED_FEATURES                                                                \
+	(BIT64(VIRTIO_RING_F_INDIRECT_DESC) | BIT64(VIRTIO_RING_F_EVENT_IDX) |                     \
+	 BIT64(VIRTIO_F_RING_PACKED))
 
 /**
  * @brief VIRTIO ring host-side handler

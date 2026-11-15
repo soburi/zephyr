@@ -52,6 +52,12 @@ LOG_MODULE_REGISTER(vhost_pci_epf, CONFIG_VHOST_LOG_LEVEL);
  * next write visible to the poll.
  */
 #define DRIVER_FEATURES_IDLE UINT32_MAX
+
+/*
+ * The device features register has 32 bits. Bit 31 stays clear, so that the
+ * idle pattern of the driver features register is never a valid selection.
+ */
+#define SUPPORTED_FEATURES (UINT32_MAX & ~BIT(31))
 #define QUEUE_NOTIFY_IDLE    UINT16_MAX
 
 /* Granularity of the outbound address windows */
@@ -66,7 +72,6 @@ struct vhost_pci_epf_config {
 	size_t workq_stack_size;
 	int workq_priority;
 	uint32_t poll_period_ms;
-	uint32_t device_features;
 	uint16_t device_id;
 	uint16_t queue_size;
 	const uint8_t *config_data;
@@ -98,6 +103,8 @@ struct vhost_pci_epf_data {
 	/* Protects the fields below and the register window */
 	struct k_mutex lock;
 	uint8_t *regs;
+	/* Feature bits offered to the driver, set by the backend */
+	uint32_t offered_features;
 	uint32_t driver_features;
 	uint32_t pfn;
 	uint8_t status;
@@ -234,7 +241,7 @@ static void init_regs(const struct device *dev)
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 
-	reg_write32(data, VIRTIO_PCI_LEGACY_DEVICE_FEATURES, config->device_features);
+	reg_write32(data, VIRTIO_PCI_LEGACY_DEVICE_FEATURES, data->offered_features);
 	reg_write32(data, VIRTIO_PCI_LEGACY_DRIVER_FEATURES, DRIVER_FEATURES_IDLE);
 	reg_write32(data, VIRTIO_PCI_LEGACY_QUEUE_PFN, 0);
 	reg_write16(data, VIRTIO_PCI_LEGACY_QUEUE_SIZE, config->queue_size);
@@ -287,9 +294,11 @@ static void poll_features(const struct device *dev)
 
 	/* A reset shorter than the poll period goes unnoticed otherwise */
 	reset_queue(dev);
-	data->driver_features = features;
+	/* The legacy interface cannot reject a selection, mask it */
+	data->driver_features = features & data->offered_features;
 
-	LOG_DBG("%s: driver features 0x%08x", dev->name, features);
+	LOG_DBG("%s: driver features 0x%08x, accepted 0x%08x", dev->name, features,
+		data->driver_features);
 }
 
 static void poll_reset(const struct device *dev, uint8_t status)
@@ -563,6 +572,46 @@ static int vhost_pci_epf_get_driver_features(const struct device *dev, uint64_t 
 	return 0;
 }
 
+static int vhost_pci_epf_get_supported_features(const struct device *dev, uint64_t *supported)
+{
+	ARG_UNUSED(dev);
+
+	if (supported == NULL) {
+		return -EINVAL;
+	}
+
+	*supported = SUPPORTED_FEATURES;
+
+	return 0;
+}
+
+static int vhost_pci_epf_set_device_features(const struct device *dev, uint64_t wanted,
+					     uint64_t *offered)
+{
+	struct vhost_pci_epf_data *data = dev->data;
+	int ret = 0;
+
+	k_mutex_lock(&data->lock, K_FOREVER);
+
+	if (data->regs == NULL) {
+		ret = -ENODEV;
+	} else if (reg_read8(data, VIRTIO_PCI_LEGACY_STATUS) != 0U) {
+		/* The driver may have read the features already */
+		ret = -EBUSY;
+	} else {
+		data->offered_features = (uint32_t)(wanted & SUPPORTED_FEATURES);
+		reg_write32(data, VIRTIO_PCI_LEGACY_DEVICE_FEATURES, data->offered_features);
+
+		if (offered != NULL) {
+			*offered = data->offered_features;
+		}
+	}
+
+	k_mutex_unlock(&data->lock);
+
+	return ret;
+}
+
 static int vhost_pci_epf_register_virtq_ready_cb(const struct device *dev,
 						 void (*callback)(const struct device *dev,
 								  uint16_t queue_id,
@@ -634,6 +683,8 @@ static DEVICE_API(vhost, vhost_pci_epf_api) = {
 	.release_iovec = vhost_pci_epf_release_iovec,
 	.get_virtq = vhost_pci_epf_get_virtq,
 	.get_driver_features = vhost_pci_epf_get_driver_features,
+	.get_supported_features = vhost_pci_epf_get_supported_features,
+	.set_device_features = vhost_pci_epf_set_device_features,
 	.virtq_is_ready = vhost_pci_epf_virtq_is_ready,
 	.register_virtq_ready_cb = vhost_pci_epf_register_virtq_ready_cb,
 	.register_virtq_notify_cb = vhost_pci_epf_register_virtq_notify_cb,
@@ -806,8 +857,6 @@ static int vhost_pci_epf_init(const struct device *dev)
 #define VHOST_PCI_EPF_INST(idx)                                                                    \
 	BUILD_ASSERT(IS_POWER_OF_TWO(DT_INST_PROP(idx, queue_size_max)),                           \
 		     "queue-size-max must be a power of two");                                     \
-	BUILD_ASSERT(DT_INST_PROP(idx, device_features) != DRIVER_FEATURES_IDLE,                   \
-		     "device-features cannot offer all the feature bits");                         \
 	static K_THREAD_STACK_DEFINE(vhost_pci_epf_stack_##idx, DT_INST_PROP(idx, stack_size));    \
 	static const uint8_t vhost_pci_epf_config_data_##idx[] =                                   \
 		DT_INST_PROP_OR(idx, config_data, {});                                             \
@@ -818,7 +867,6 @@ static int vhost_pci_epf_init(const struct device *dev)
 		.workq_stack_size = K_THREAD_STACK_SIZEOF(vhost_pci_epf_stack_##idx),              \
 		.workq_priority = DT_INST_PROP(idx, priority),                                     \
 		.poll_period_ms = DT_INST_PROP(idx, poll_period_ms),                               \
-		.device_features = DT_INST_PROP(idx, device_features),                             \
 		.device_id = DT_INST_PROP(idx, device_id),                                         \
 		.queue_size = DT_INST_PROP(idx, queue_size_max),                                   \
 		.config_data = vhost_pci_epf_config_data_##idx,                                    \
