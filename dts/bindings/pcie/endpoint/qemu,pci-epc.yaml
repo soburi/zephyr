@@ -1,0 +1,14 @@
+# Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  QEMU PCI endpoint controller (EPC) device.
+
+  The device is provided by the out-of-tree QEMU PCI endpoint controller
+  emulation and shows up on the guest PCI bus with vendor ID 0x1b36 and
+  device ID 0x0013. It forwards endpoint operations performed by the guest
+  to a PCI endpoint device model on another QEMU instance.
+
+compatible: "qemu,pci-epc"
+
+include: [base.yaml, pcie-device.yaml]

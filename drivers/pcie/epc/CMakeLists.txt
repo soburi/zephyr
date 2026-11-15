@@ -8,3 +8,5 @@ zephyr_library_sources(
   pcie_epc_mem.c
   pcie_epf.c
 )
+
+zephyr_library_sources_ifdef(CONFIG_PCIE_EPC_QEMU pcie_qemu_epc.c)
