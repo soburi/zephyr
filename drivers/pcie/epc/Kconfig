@@ -16,4 +16,42 @@ module = PCIE_EPC
 module-str = pcie_epc
 source "subsys/logging/Kconfig.template.log_config"
 
+config PCIE_EPC_INIT_PRIORITY
+	int "PCI EPC driver init priority"
+	default 80
+	help
+	  Initialization priority of the PCI EPC drivers. It must be larger
+	  than the initialization priority of the PCIe host controller the
+	  EPC device is attached to, if any.
+
+config PCIE_EPC_QEMU
+	bool "QEMU PCI EPC driver"
+	default y
+	depends on DT_HAS_QEMU_PCI_EPC_ENABLED
+	depends on PCIE
+	help
+	  Driver for the QEMU PCI endpoint controller device. The device is
+	  provided by the out-of-tree QEMU PCI endpoint controller emulation
+	  and shows up on the guest PCI bus with vendor ID 0x1b36 and device
+	  ID 0x0013.
+
+if PCIE_EPC_QEMU
+
+config PCIE_EPC_QEMU_WINDOW_PAGES
+	int "Number of outbound window pages"
+	default 1024
+	help
+	  Capacity, in pages of 4 KiB, of the allocation bitmap backing the
+	  outbound memory window of the QEMU EPC device. The usable part of
+	  the window is clamped to this size.
+
+config PCIE_EPC_QEMU_DMA_HEAP_SIZE
+	int "DMA heap size"
+	default 2097152
+	help
+	  Size in bytes of the heap used to allocate the BAR backing memory
+	  of the endpoint functions bound to the QEMU EPC device.
+
+endif # PCIE_EPC_QEMU
+
 endif # PCIE_EPC
