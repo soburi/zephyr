@@ -24,6 +24,26 @@ config VHOST_XEN_MMIO
 	  emulate the MMIO register window and the grant table interface to
 	  access guest buffers.
 
+config VHOST_PCI_EPF
+	bool "VIRTIO PCI endpoint function controller"
+	default y
+	depends on DT_HAS_ZEPHYR_VHOST_PCI_EPF_ENABLED
+	depends on PCIE_EPC
+	help
+	  Enable the VHost controller that exposes a VIRTIO PCI device to the
+	  PCI host through a function of a PCI endpoint controller. The
+	  function implements the legacy VIRTIO PCI register layout, polls it
+	  for driver activity, and accesses the driver buffers through the
+	  outbound address windows of the endpoint controller.
+
+config VHOST_PCI_EPF_INIT_PRIORITY
+	int "VIRTIO PCI endpoint function controller init priority"
+	default 90
+	depends on VHOST_PCI_EPF
+	help
+	  Initialization priority of the VIRTIO PCI endpoint function
+	  controller. It must be larger than PCIE_EPC_INIT_PRIORITY.
+
 module = VHOST
 module-str = VHOST
 source "subsys/logging/Kconfig.template.log_config"

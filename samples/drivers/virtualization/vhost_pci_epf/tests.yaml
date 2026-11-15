@@ -1,0 +1,14 @@
+sample:
+  description: VHost virtio-rng backend on a PCI endpoint function
+  name: VHost PCI endpoint function
+tests:
+  sample.drivers.virtualization.vhost_pci_epf:
+    build_only: true
+    platform_allow:
+      - qemu_x86_64
+      - qemu_cortex_a53
+    tags:
+      - drivers
+      - virtualization
+      - vhost
+      - pcie_epc
