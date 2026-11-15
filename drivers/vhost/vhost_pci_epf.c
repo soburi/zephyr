@@ -11,6 +11,7 @@
 
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/atomic.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/sys_io.h>
 #include <zephyr/sys/util.h>
@@ -72,6 +73,10 @@ struct vhost_pci_epf_config {
 	size_t workq_stack_size;
 	int workq_priority;
 	uint32_t poll_period_ms;
+	uint32_t doorbell_poll_period_ms;
+	/* The EPC doorbell wired to the queue notify register, if any */
+	bool has_doorbell;
+	uint8_t doorbell_index;
 	uint16_t device_id;
 	uint16_t queue_size;
 	const uint8_t *config_data;
@@ -100,6 +105,8 @@ struct vhost_pci_epf_data {
 	struct pcie_epf_header_s header;
 	struct k_work_q workq;
 	struct k_work_delayable poll_work;
+	/* Set by the doorbell of the queue notify register */
+	atomic_t kicked;
 	/* Protects the fields below and the register window */
 	struct k_mutex lock;
 	uint8_t *regs;
@@ -238,6 +245,7 @@ static void invalidate_queue(const struct device *dev)
 	data->notify_cb.cb = NULL;
 	data->notify_cb.data = NULL;
 	data->pfn = 0;
+	(void)atomic_clear(&data->kicked);
 
 	if (was_ready && (reset_cb.cb != NULL)) {
 		/* The caller holds the lock once. Do not hold it across the callback */
@@ -398,6 +406,8 @@ static void poll_handler(struct k_work *work)
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct virtq_callback ready_cb = {0};
 	struct virtq_callback notify_cb = {0};
+	uint32_t period_ms = config->poll_period_ms;
+	bool notified;
 	uint8_t status;
 
 	k_mutex_lock(&data->lock, K_FOREVER);
@@ -414,8 +424,19 @@ static void poll_handler(struct k_work *work)
 			ready_cb = data->ready_cb;
 		}
 
-		if (poll_notify(dev)) {
+		/* A doorbell write may or may not reach the register as well */
+		notified = poll_notify(dev);
+		if (atomic_clear(&data->kicked) != 0) {
+			notified = true;
+		}
+
+		if (notified) {
 			notify_cb = data->notify_cb;
+		}
+
+		/* Only a device reset is left to be found by polling */
+		if (config->has_doorbell) {
+			period_ms = config->doorbell_poll_period_ms;
 		}
 	}
 
@@ -438,7 +459,8 @@ static void poll_handler(struct k_work *work)
 		notify_cb.cb(dev, QUEUE_ID, notify_cb.data);
 	}
 
-	k_work_schedule_for_queue(&data->workq, &data->poll_work, K_MSEC(config->poll_period_ms));
+	/* No-op when a doorbell has already queued the next run */
+	k_work_schedule_for_queue(&data->workq, &data->poll_work, K_MSEC(period_ms));
 }
 
 static int vhost_pci_epf_prepare_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
@@ -737,6 +759,20 @@ static DEVICE_API(vhost, vhost_pci_epf_api) = {
 	.set_device_status = vhost_pci_epf_set_device_status,
 };
 
+static void vhost_pci_epf_doorbell(struct pcie_epf_device_s *epf, uint8_t index)
+{
+	const struct device *dev = epf->priv;
+	const struct vhost_pci_epf_config *config = dev->config;
+	struct vhost_pci_epf_data *data = dev->data;
+
+	if (!config->has_doorbell || (index != config->doorbell_index)) {
+		return;
+	}
+
+	(void)atomic_set(&data->kicked, 1);
+	(void)k_work_reschedule_for_queue(&data->workq, &data->poll_work, K_NO_WAIT);
+}
+
 static int vhost_pci_epf_core_init(struct pcie_epf_device_s *epf)
 {
 	const struct device *dev = epf->priv;
@@ -854,6 +890,7 @@ static int vhost_pci_epf_init(const struct device *dev)
 	};
 	static const struct pcie_epc_event_ops_s epf_event_ops = {
 		.core_init = vhost_pci_epf_core_init,
+		.doorbell = vhost_pci_epf_doorbell,
 	};
 	const struct k_work_queue_config qcfg = {.name = "vhost-pci-epf"};
 	const struct vhost_pci_epf_config *config = dev->config;
@@ -913,6 +950,9 @@ static int vhost_pci_epf_init(const struct device *dev)
 		.workq_stack_size = K_THREAD_STACK_SIZEOF(vhost_pci_epf_stack_##idx),              \
 		.workq_priority = DT_INST_PROP(idx, priority),                                     \
 		.poll_period_ms = DT_INST_PROP(idx, poll_period_ms),                               \
+		.doorbell_poll_period_ms = DT_INST_PROP(idx, doorbell_poll_period_ms),             \
+		.has_doorbell = DT_INST_NODE_HAS_PROP(idx, queue_notify_doorbell),                 \
+		.doorbell_index = DT_INST_PROP_OR(idx, queue_notify_doorbell, 0),                  \
 		.device_id = DT_INST_PROP(idx, device_id),                                         \
 		.queue_size = DT_INST_PROP(idx, queue_size_max),                                   \
 		.config_data = vhost_pci_epf_config_data_##idx,                                    \

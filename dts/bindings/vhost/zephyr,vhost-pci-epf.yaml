@@ -13,7 +13,9 @@ description: |
   The register window is plain memory to the host: accesses are not trapped,
   so the controller polls it. Registers that are banked by the queue
   selector cannot be emulated this way, which limits the device to a single
-  virtqueue.
+  virtqueue. When the platform wires a doorbell of the endpoint controller
+  to the queue notify register, queue notifications are taken from it
+  instead.
 
 compatible: "zephyr,vhost-pci-epf"
 
@@ -58,6 +60,25 @@ properties:
       Period, in milliseconds, at which the register window is polled for
       driver activity. The default trades request latency against the load
       of an idle device.
+
+  queue-notify-doorbell:
+    type: int
+    description: |
+      Number of the endpoint controller doorbell that the platform wired to
+      the queue notify register of the function: the 16-bit register at
+      offset 0x10 of BAR 0. The function cannot tell where the doorbell
+      lies, so the integration, which configures the endpoint controller,
+      must match it with the register layout described above. Without this
+      property queue notifications are found by polling.
+
+  doorbell-poll-period-ms:
+    type: int
+    default: 500
+    description: |
+      Period, in milliseconds, at which the register window is polled once
+      the driver runs the device and queue notifications arrive through the
+      doorbell given by queue-notify-doorbell. Only a device reset is left to be
+      detected by then, so the default favors a low idle load.
 
   stack-size:
     type: int

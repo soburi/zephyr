@@ -1,0 +1,26 @@
+/*
+ * Copyright The Zephyr Project Contributors
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/interrupt-controller/intel-ioapic.h>
+#include <zephyr/dt-bindings/pcie/pcie.h>
+
+#include "../app.overlay"
+
+&qemu_epc {
+	/*
+	 * The doorbell rings when the host writes the queue notify register
+	 * of the legacy VIRTIO PCI layout the vhost controller implements.
+	 */
+	doorbell-offset = <0x10>;
+	doorbell-width = <2>;
+
+	interrupts = <PCIE_IRQ_DETECT IRQ_TYPE_LOWEST_LEVEL_LOW 3>;
+	interrupt-parent = <&intc>;
+};
+
+&vhost_rng {
+	queue-notify-doorbell = <0>;
+};
