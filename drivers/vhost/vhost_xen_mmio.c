@@ -1104,12 +1104,13 @@ static bool vhost_xen_mmio_virtq_is_ready(const struct device *dev, uint16_t que
 	       vq_ctx->virtq_parts_gpa[VIRTQ_USED] != 0;
 }
 
-static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id, void **parts,
-				    size_t *queue_size)
+static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
+				    struct vhost_vring *vring)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	const struct vhost_xen_mmio_data *data = dev->data;
 	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
+	void *parts[NUM_OF_VIRTQ_PARTS];
 
 	if (queue_id >= config->num_queues) {
 		LOG_ERR_Q("Invalid queue ID");
@@ -1136,10 +1137,13 @@ static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
 		return -EINVAL;
 	}
 
-	*queue_size = atomic_get(&vq_ctx->queue_size);
+	vring->desc = parts[VIRTQ_DESC];
+	vring->avail = parts[VIRTQ_AVAIL];
+	vring->used = parts[VIRTQ_USED];
+	vring->num = (uint16_t)atomic_get(&vq_ctx->queue_size);
 
-	LOG_DBG_Q("rings desc=%p, avail=%p, used=%p, size=%zu", parts[VIRTQ_DESC],
-		  parts[VIRTQ_AVAIL], parts[VIRTQ_USED], *queue_size);
+	LOG_DBG_Q("rings desc=%p, avail=%p, used=%p, size=%u", (void *)vring->desc,
+		  (void *)vring->avail, (void *)vring->used, vring->num);
 
 	return 0;
 }
@@ -1188,13 +1192,17 @@ static int vhost_xen_mmio_set_device_status(const struct device *dev, uint32_t s
 	return 0;
 }
 
-static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue_id, uint16_t head)
+static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
+					uint32_t written)
 {
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 	const size_t queue_size = atomic_get(&vq_ctx->queue_size);
 	int ret = 0;
+
+	/* Guest buffers are mapped, not copied; no write-back is needed. */
+	ARG_UNUSED(written);
 
 	k_spinlock_key_t key = k_spin_lock(&vq_ctx->lock);
 
@@ -1299,7 +1307,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 	if (chunk->map && chunk->count > 0 && chunk->map[0].map_count > 0) {
 		LOG_WRN("Found unreleased head: %d", head);
 
-		ret = vhost_xen_mmio_release_iovec(dev, queue_id, head);
+		ret = vhost_xen_mmio_release_iovec(dev, queue_id, head, 0U);
 		if (ret < 0) {
 			LOG_ERR_Q("vhost_xen_mmio_release_iovec: failed %d", ret);
 			goto end;
@@ -1364,7 +1372,7 @@ static int vhost_xen_mmio_register_virtq_notify_cb(const struct device *dev, uin
 	return 0;
 }
 
-static const struct vhost_controller_api vhost_driver_xen_mmio_api = {
+static DEVICE_API(vhost, vhost_driver_xen_mmio_api) = {
 	.virtq_is_ready = vhost_xen_mmio_virtq_is_ready,
 	.get_virtq = vhost_xen_mmio_get_virtq,
 	.get_driver_features = vhost_xen_mmio_get_driver_features,
