@@ -108,9 +108,12 @@ struct vhost_pci_epf_data {
 	uint32_t driver_features;
 	uint32_t pfn;
 	uint8_t status;
+	/* The driver has set up the virtqueue and the backend may use it */
+	bool queue_valid;
 	bool ready_notified;
 	struct vhost_pci_epf_map ring;
 	struct virtq_callback ready_cb;
+	struct virtq_callback reset_cb;
 	struct virtq_callback notify_cb;
 };
 
@@ -218,8 +221,34 @@ static void release_head(const struct device *dev, uint16_t head)
 	}
 }
 
-/* Drop everything that refers to the virtqueue the driver has set up */
-static void reset_queue(const struct device *dev)
+/*
+ * The virtqueue the driver has set up is no longer valid. The backend is told
+ * at once and the controller does not wait for it. The guest memory stays
+ * mapped, so that a backend that has not stopped yet accesses stale but
+ * accessible memory. reclaim_queue() lets it go.
+ */
+static void invalidate_queue(const struct device *dev)
+{
+	struct vhost_pci_epf_data *data = dev->data;
+	const struct virtq_callback reset_cb = data->reset_cb;
+	const bool was_ready = data->ready_notified;
+
+	data->queue_valid = false;
+	data->ready_notified = false;
+	data->notify_cb.cb = NULL;
+	data->notify_cb.data = NULL;
+	data->pfn = 0;
+
+	if (was_ready && (reset_cb.cb != NULL)) {
+		/* The caller holds the lock once. Do not hold it across the callback */
+		k_mutex_unlock(&data->lock);
+		reset_cb.cb(dev, QUEUE_ID, reset_cb.data);
+		k_mutex_lock(&data->lock, K_FOREVER);
+	}
+}
+
+/* Unmap the guest memory of the queue that was invalidated */
+static void reclaim_queue(const struct device *dev)
 {
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
@@ -229,11 +258,6 @@ static void reset_queue(const struct device *dev)
 	}
 
 	unmap_bus_addr(dev, &data->ring);
-
-	data->pfn = 0;
-	data->ready_notified = false;
-	data->notify_cb.cb = NULL;
-	data->notify_cb.data = NULL;
 }
 
 static void init_regs(const struct device *dev)
@@ -293,7 +317,7 @@ static void poll_features(const struct device *dev)
 	reg_write32(data, VIRTIO_PCI_LEGACY_DRIVER_FEATURES, DRIVER_FEATURES_IDLE);
 
 	/* A reset shorter than the poll period goes unnoticed otherwise */
-	reset_queue(dev);
+	invalidate_queue(dev);
 	/* The legacy interface cannot reject a selection, mask it */
 	data->driver_features = features & data->offered_features;
 
@@ -311,7 +335,7 @@ static void poll_reset(const struct device *dev, uint8_t status)
 
 	LOG_DBG("%s: device reset", dev->name);
 
-	reset_queue(dev);
+	invalidate_queue(dev);
 	data->driver_features = 0;
 	reg_write32(data, VIRTIO_PCI_LEGACY_QUEUE_PFN, 0);
 	reg_write8(data, VIRTIO_PCI_LEGACY_ISR, 0);
@@ -328,7 +352,8 @@ static void poll_queue(const struct device *dev)
 		return;
 	}
 
-	reset_queue(dev);
+	invalidate_queue(dev);
+	reclaim_queue(dev);
 	data->pfn = pfn;
 	if (pfn == 0U) {
 		return;
@@ -340,7 +365,10 @@ static void poll_queue(const struct device *dev)
 		LOG_ERR("%s: failed to map the virtqueue: %d", dev->name, ret);
 		reg_write8(data, VIRTIO_PCI_LEGACY_STATUS,
 			   reg_read8(data, VIRTIO_PCI_LEGACY_STATUS) | BIT(DEVICE_STATUS_FAILED));
+		return;
 	}
+
+	data->queue_valid = true;
 }
 
 static bool poll_notify(const struct device *dev)
@@ -380,7 +408,7 @@ static void poll_handler(struct k_work *work)
 	poll_queue(dev);
 	data->status = status;
 
-	if (data->ring.used && ((status & BIT(DEVICE_STATUS_DRIVER_OK)) != 0U)) {
+	if (data->queue_valid && ((status & BIT(DEVICE_STATUS_DRIVER_OK)) != 0U)) {
 		if (!data->ready_notified && (data->ready_cb.cb != NULL)) {
 			data->ready_notified = true;
 			ready_cb = data->ready_cb;
@@ -434,7 +462,7 @@ static int vhost_pci_epf_prepare_iovec(const struct device *dev, uint16_t queue_
 
 	k_mutex_lock(&data->lock, K_FOREVER);
 
-	if (!data->ring.used) {
+	if (!data->queue_valid) {
 		ret = -ENODEV;
 	}
 
@@ -525,7 +553,7 @@ static bool vhost_pci_epf_virtq_is_ready(const struct device *dev, uint16_t queu
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	ready = data->ring.used;
+	ready = data->queue_valid;
 	k_mutex_unlock(&data->lock);
 
 	return ready;
@@ -544,7 +572,7 @@ static int vhost_pci_epf_get_virtq(const struct device *dev, uint16_t queue_id,
 
 	k_mutex_lock(&data->lock, K_FOREVER);
 
-	if (data->ring.used) {
+	if (data->queue_valid) {
 		uint8_t *base = data->ring.virt;
 
 		vring->num = config->queue_size;
@@ -629,6 +657,22 @@ static int vhost_pci_epf_register_virtq_ready_cb(const struct device *dev,
 	return 0;
 }
 
+static int vhost_pci_epf_register_virtq_reset_cb(const struct device *dev,
+						 void (*callback)(const struct device *dev,
+								  uint16_t queue_id,
+								  void *user_data),
+						 void *user_data)
+{
+	struct vhost_pci_epf_data *data = dev->data;
+
+	k_mutex_lock(&data->lock, K_FOREVER);
+	data->reset_cb.cb = callback;
+	data->reset_cb.data = user_data;
+	k_mutex_unlock(&data->lock);
+
+	return 0;
+}
+
 static int vhost_pci_epf_register_virtq_notify_cb(const struct device *dev, uint16_t queue_id,
 						  void (*callback)(const struct device *dev,
 								   uint16_t queue_id,
@@ -687,6 +731,7 @@ static DEVICE_API(vhost, vhost_pci_epf_api) = {
 	.set_device_features = vhost_pci_epf_set_device_features,
 	.virtq_is_ready = vhost_pci_epf_virtq_is_ready,
 	.register_virtq_ready_cb = vhost_pci_epf_register_virtq_ready_cb,
+	.register_virtq_reset_cb = vhost_pci_epf_register_virtq_reset_cb,
 	.register_virtq_notify_cb = vhost_pci_epf_register_virtq_notify_cb,
 	.notify_virtq = vhost_pci_epf_notify_virtq,
 	.set_device_status = vhost_pci_epf_set_device_status,
@@ -767,7 +812,8 @@ static void vhost_pci_epf_unbind(struct pcie_epf_device_s *epf)
 	k_work_cancel_delayable_sync(&data->poll_work, &sync);
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	reset_queue(dev);
+	invalidate_queue(dev);
+	reclaim_queue(dev);
 	k_mutex_unlock(&data->lock);
 
 	pcie_epc_clear_bar(epf->epc, epf->funcno, &epf->bar[VIRTIO_PCI_LEGACY_BAR]);

@@ -45,6 +45,23 @@ driver then selects a subset of the offered bits, which the backend reads with
 ``vhost_get_driver_features()``. A backend that cannot work without a bit checks it in the offered
 set and gives up otherwise.
 
+Queue lifetime
+**************
+
+A queue becomes usable when the controller delivers the ready callback registered with
+``vhost_register_virtq_ready_cb()``, and stops being usable when it delivers the reset callback
+registered with ``vhost_register_virtq_reset_cb()``. The two callbacks pair up: every queue that
+was reported ready is reported reset once, whether the driver resets the queue or the device,
+starts the initialization over, or the link to the driver is lost, and it can become ready again
+afterwards. The controller delivers the reset callback as soon as it sees the reset, in whatever
+context that is, and does not wait for the backend. The callback only records the reset: the
+backend defers the rest to its own context, where it stops using the queue, finishes or abandons
+the descriptors it holds, and drops its ring state. The controller keeps the guest memory of the
+queue accessible, and reclaims the memory of each descriptor when the backend releases it and the
+rest when the queue is set up again at the latest, so a backend that has not stopped yet does not
+fault, but what it does with the queue then no longer means anything to the driver. A controller that cannot report resets returns ``-ENOTSUP`` from the
+registration; the Xen MMIO controller does not report them yet.
+
 Ring processing helper (vringh)
 *******************************
 

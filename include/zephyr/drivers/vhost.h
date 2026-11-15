@@ -23,8 +23,9 @@
  * A buffer returned by vhost_prepare_iovec() remains valid until the matching
  * vhost_release_iovec() has completed. A queue reset invalidates outstanding
  * queue references; users must stop accessing them before reset reclamation
- * starts. Callback execution context and queue-to-queue concurrency are
- * controller-specific.
+ * starts, which a controller that supports vhost_register_virtq_reset_cb()
+ * signals with that callback. Callback execution context and queue-to-queue
+ * concurrency are controller-specific.
  *
  * This class does not require the vringh helper. A backend may use vringh or
  * another ring-processing implementation while using this controller API for
@@ -115,6 +116,10 @@ __subsystem struct vhost_driver_api {
 	int (*set_device_features)(const struct device *dev, uint64_t wanted, uint64_t *offered);
 	bool (*virtq_is_ready)(const struct device *dev, uint16_t queue_id);
 	int (*register_virtq_ready_cb)(const struct device *dev,
+				       void (*callback)(const struct device *dev, uint16_t queue_id,
+							void *data),
+				       void *data);
+	int (*register_virtq_reset_cb)(const struct device *dev,
 				       void (*callback)(const struct device *dev, uint16_t queue_id,
 							void *data),
 				       void *data);
@@ -353,6 +358,57 @@ static inline int vhost_register_virtq_ready_cb(const struct device *dev,
 	const struct vhost_driver_api *api = DEVICE_API_GET(vhost, dev);
 
 	return api->register_virtq_ready_cb(dev, callback, user_data);
+}
+
+/**
+ * @brief Register device-wide queue reset callback
+ *
+ * The callback signals that a queue is no longer valid: the driver reset the
+ * device or the queue, started the initialization over, or the link to the
+ * driver was lost. The controller delivers it exactly once for each queue
+ * for which the ready callback was delivered, so the two callbacks pair up,
+ * and a queue can become ready again afterwards.
+ *
+ * The controller delivers it as soon as it detects the reset, in whatever
+ * context that is, an interrupt handler included, and does not wait for the
+ * backend. The callback can run while the ready or notify callback of the
+ * queue runs, or while the backend processes the queue. It must not block and
+ * must not call this API: record the reset and defer the rest to a context of
+ * the backend, which then stops using the queue, finishes or abandons the
+ * descriptors it holds, for example with vringh_abandon(), and drops its ring
+ * state.
+ *
+ * From the notification on the queue is invalid. The controller drops the
+ * notify callback of the queue, vhost_prepare_iovec(), vhost_get_virtq() and
+ * vhost_notify_virtq() fail with -ENODEV, and vhost_release_iovec() still
+ * accepts the descriptors the backend holds. The controller keeps the guest
+ * memory of the queue accessible, so that the backend, which has not stopped
+ * yet, does not fault. It reclaims the memory of a descriptor when the backend
+ * releases it, and the rest when the queue is set up again at the latest.
+ * Whatever the backend reads or writes there meanwhile is meaningless and the
+ * driver may have reused the memory, so the backend must stop promptly. The
+ * backend must not use the queue again before the ready callback is delivered.
+ *
+ * @param dev         VHost controller device
+ * @param callback    Function to call when a queue is reset
+ * @param user_data   User data for callback
+ *
+ * @retval 0          Success
+ * @retval -EINVAL    Invalid parameters
+ * @retval -ENOTSUP   The controller does not report resets
+ */
+static inline int vhost_register_virtq_reset_cb(const struct device *dev,
+						void (*callback)(const struct device *dev,
+								 uint16_t queue_id, void *data),
+						void *user_data)
+{
+	const struct vhost_driver_api *api = DEVICE_API_GET(vhost, dev);
+
+	if (api->register_virtq_reset_cb == NULL) {
+		return -ENOTSUP;
+	}
+
+	return api->register_virtq_reset_cb(dev, callback, user_data);
 }
 
 /**

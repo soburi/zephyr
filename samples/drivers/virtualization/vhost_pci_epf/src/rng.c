@@ -100,3 +100,19 @@ void rng_queue_ready(const struct device *dev, uint16_t queue_id, void *user_dat
 
 	LOG_INF("virtio-rng request queue ready");
 }
+
+void rng_queue_reset(const struct device *dev, uint16_t queue_id, void *user_data)
+{
+	ARG_UNUSED(dev);
+	ARG_UNUSED(user_data);
+
+	/*
+	 * Requests are served to completion in the kick handler, so no
+	 * descriptor is held. A backend with work in flight only records the
+	 * reset here and stops it from a context of its own. The ring state is
+	 * set up again when the queue becomes ready.
+	 */
+	if (queue_id == RNG_REQUESTQ) {
+		LOG_INF("virtio-rng request queue reset");
+	}
+}

@@ -35,6 +35,12 @@ int main(void)
 		return 0;
 	}
 
+	err = vhost_register_virtq_reset_cb(vhost, rng_queue_reset, NULL);
+	if (err != 0) {
+		LOG_ERR("Failed to register reset callback for %s: %d", vhost->name, err);
+		return 0;
+	}
+
 	LOG_INF("VHost device %s ready", vhost->name);
 
 	/* Let the PCI host enumerate the VIRTIO PCI function */
