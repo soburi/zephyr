@@ -7,8 +7,8 @@
 Overview
 ********
 
-This sample registers the PCI endpoint test function driver on the QEMU PCI
-endpoint controller (EPC) device. The endpoint function implements the
+This sample adds the PCI endpoint test function to the QEMU PCI endpoint
+controller (EPC) device and starts the link. The endpoint function implements the
 register interface expected by the Linux ``pci_endpoint_test`` host driver,
 so the standard ``pcitest`` tool can exercise read, write, copy and
 interrupt tests against the Zephyr endpoint.

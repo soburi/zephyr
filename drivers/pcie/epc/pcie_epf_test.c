@@ -69,30 +69,12 @@ struct pcie_epf_test_s {
 
 static void pcie_epf_test_unbind(struct pcie_epf_device_s *epf);
 static int pcie_epf_test_bind(struct pcie_epf_device_s *epf);
-static int pcie_epf_test_probe(struct pcie_epf_device_s *epf);
 static int pcie_epf_test_core_init(struct pcie_epf_device_s *epf);
 static int pcie_epf_test_link_up(struct pcie_epf_device_s *epf);
 
 static const struct pcie_epf_ops_s g_pcie_epf_test_ops = {
 	.unbind = pcie_epf_test_unbind,
 	.bind   = pcie_epf_test_bind,
-};
-
-static const struct pcie_epf_device_id_s g_pcie_epf_test_id_table[] = {
-	{ .name = "pcie_epf_test_0", },
-	{ .name = "pcie_epf_test_1", },
-	{}
-};
-
-static const char * const g_pcie_epf_test_name[] = {
-	"pcie_epf_test_0",
-	"pcie_epf_test_1",
-};
-
-static struct pcie_epf_driver_s g_pcie_epf_test_driver = {
-	.id_table = g_pcie_epf_test_id_table,
-	.probe    = pcie_epf_test_probe,
-	.ops      = &g_pcie_epf_test_ops,
 };
 
 static const struct pcie_epc_event_ops_s g_pcie_epf_test_event_ops = {
@@ -110,6 +92,27 @@ static struct pcie_epf_device_s g_pcie_epf_test_device[
 static uint32_t pcie_epf_test_crc32(const void *buf, size_t size)
 {
 	return ~crc32_ieee_update(0, buf, size);
+}
+
+/* Use naturally aligned word accesses for the memory mapped EPC window.
+ * Byte copies turn each byte into a separate emulated PCI transaction.
+ */
+static void pcie_epf_test_transfer(void *dst, const void *src, size_t size)
+{
+	volatile uint8_t *d = dst;
+	const volatile uint8_t *s = src;
+
+	if ((((uintptr_t)dst | (uintptr_t)src) & (sizeof(uint64_t) - 1)) == 0) {
+		while (size >= sizeof(uint64_t)) {
+			*(volatile uint64_t *)d = *(const volatile uint64_t *)s;
+			d += sizeof(uint64_t);
+			s += sizeof(uint64_t);
+			size -= sizeof(uint64_t);
+		}
+	}
+	while (size-- > 0) {
+		*d++ = *s++;
+	}
 }
 
 static int pcie_epf_test_copy(struct pcie_epf_test_s *test)
@@ -155,7 +158,7 @@ static int pcie_epf_test_copy(struct pcie_epf_test_s *test)
 		goto err_dst_addr;
 	}
 
-	memcpy(vdst_addr, vsrc_addr, reg->size);
+	pcie_epf_test_transfer(vdst_addr, vsrc_addr, reg->size);
 	pcie_epc_unmap_addr(epc, epf->funcno, dst_addr);
 
 err_dst_addr:
@@ -199,7 +202,7 @@ static int pcie_epf_test_read(struct pcie_epf_test_s *test)
 		goto err_map_addr;
 	}
 
-	memcpy(buf, vsrc_addr, reg->size);
+	pcie_epf_test_transfer(buf, vsrc_addr, reg->size);
 	if (reg->checksum != pcie_epf_test_crc32(buf, reg->size)) {
 		ret = -EIO;
 	}
@@ -246,7 +249,7 @@ static int pcie_epf_test_write(struct pcie_epf_test_s *test)
 	}
 
 	reg->checksum = pcie_epf_test_crc32(buf, reg->size);
-	memcpy(vdst_addr, buf, reg->size);
+	pcie_epf_test_transfer(vdst_addr, buf, reg->size);
 	pcie_epc_dma_free(epc, buf);
 
 err_map_addr:
@@ -538,6 +541,7 @@ static int pcie_epf_test_bind(struct pcie_epf_device_s *epf)
 		return -ENOTSUP;
 	}
 
+	test->header.interrupt_pin = PCI_INTERRUPT_INTA + epf->funcno;
 	test->test_reg_bar = pcie_epc_get_first_free_bar(features);
 	if (test->test_reg_bar < 0) {
 		return -EINVAL;
@@ -555,12 +559,6 @@ static int pcie_epf_test_bind(struct pcie_epf_device_s *epf)
 		}
 	}
 
-	ret = pcie_epc_start(epf->epc);
-	if (ret < 0) {
-		LOG_ERR("epc control start error");
-		return ret;
-	}
-
 	if (!features->linkup_notifier && !features->core_init_notifier) {
 		k_work_schedule(&test->work, PCIE_EPF_TEST_WORK_PERIOD);
 	}
@@ -568,22 +566,15 @@ static int pcie_epf_test_bind(struct pcie_epf_device_s *epf)
 	return 0;
 }
 
-static int pcie_epf_test_probe(struct pcie_epf_device_s *epf)
+static void pcie_epf_test_init(struct pcie_epf_device_s *epf,
+			       struct pcie_epf_test_s *test)
 {
-	static int next_test;
-	struct pcie_epf_test_s *test;
-
-	if (next_test >= CONFIG_PCIE_EPF_TEST_FUNC_COUNT) {
-		return -ENOMEM;
-	}
-
-	test = &g_pcie_epf_test[next_test];
-	next_test++;
+	memset(epf, 0, sizeof(*epf));
+	memset(test, 0, sizeof(*test));
 
 	test->header.vendorid = 0x104c;
 	test->header.deviceid = 0xb500;
 	test->header.baseclass_code = PCI_CLASS_OTHERS;
-	test->header.interrupt_pin = PCI_INTERRUPT_INTA + epf->funcno;
 	test->bar_size[0] = 1024;
 	test->bar_size[1] = 512;
 	test->bar_size[2] = 1024;
@@ -595,27 +586,29 @@ static int pcie_epf_test_probe(struct pcie_epf_device_s *epf)
 	k_work_init_delayable(&test->work, pcie_epf_test_cmd_handler);
 
 	epf->header = &test->header;
+	epf->msi_interrupts = 1;
+	epf->msix_interrupts = 32;
 	epf->priv = test;
+	epf->ops = &g_pcie_epf_test_ops;
 	epf->event_ops = &g_pcie_epf_test_event_ops;
-
-	return 0;
 }
 
-int pcie_register_epf_test_device(const char *epc_name)
+int pcie_epf_test_add(const struct device *epc)
 {
 	struct pcie_epf_device_s *epf = g_pcie_epf_test_device;
 	int ret;
 	int i;
 
 	for (i = 0; i < CONFIG_PCIE_EPF_TEST_FUNC_COUNT; i++) {
-		epf[i].name = g_pcie_epf_test_name[i];
-		epf[i].epc_name = epc_name;
-		epf[i].msi_interrupts = 1;
-		epf[i].msix_interrupts = 32;
-		epf[i].funcno = i;
-		ret = pcie_epf_device_register(&epf[i]);
+		if (epf[i].epc != NULL) {
+			ret = -EBUSY;
+			goto err;
+		}
+
+		pcie_epf_test_init(&epf[i], &g_pcie_epf_test[i]);
+		ret = pcie_epc_add_epf(epc, &epf[i]);
 		if (ret < 0) {
-			LOG_ERR("func %d link error", i);
+			LOG_ERR("func %d bind error", i);
 			goto err;
 		}
 	}
@@ -624,13 +617,17 @@ int pcie_register_epf_test_device(const char *epc_name)
 
 err:
 	while (i-- > 0) {
-		pcie_epf_device_unregister(&epf[i]);
+		pcie_epc_remove_epf(epc, &epf[i]);
 	}
 
 	return ret;
 }
 
-int pcie_register_epf_test_driver(void)
+void pcie_epf_test_remove(const struct device *epc)
 {
-	return pcie_epf_register_driver(&g_pcie_epf_test_driver);
+	int i;
+
+	for (i = 0; i < CONFIG_PCIE_EPF_TEST_FUNC_COUNT; i++) {
+		pcie_epc_remove_epf(epc, &g_pcie_epf_test_device[i]);
+	}
 }

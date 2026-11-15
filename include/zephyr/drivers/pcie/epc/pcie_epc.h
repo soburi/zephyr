@@ -192,6 +192,8 @@ struct pcie_epc_ctrl_s {
 	struct k_mutex lock;
 	/** Bitmap to manage physical function number */
 	unsigned long funcno_map;
+	/** Indicates if the PCI link has been started */
+	bool started;
 	/** The EPC name that is used to bind the EPF */
 	const char *name;
 };
@@ -274,6 +276,10 @@ void pcie_epc_stop(const struct device *dev);
 
 /**
  * @brief Start the PCI link
+ *
+ * Invoke once all endpoint functions have been added with
+ * pcie_epc_add_epf(). The host can enumerate the functions from this point
+ * on, so no function can be added until the link is stopped again.
  *
  * @param dev The EPC device whose link has to be started
  *
@@ -468,12 +474,20 @@ int pcie_epc_write_header(const struct device *dev, uint8_t funcno,
  * pcie_epc_add_epf() to add a PCI endpoint function to an endpoint
  * controller.
  *
+ * The endpoint function is a caller provided object with its ops, header
+ * and interrupt counts filled in. It is assigned the first free function
+ * number of the EPC device and its bind operation is invoked. All functions
+ * must be added before the link is started with pcie_epc_start().
+ *
  * @param dev The EPC device to which the endpoint function should be added
  * @param epf The endpoint function to be added
  *
  * @retval 0 Success
+ * @retval -EINVAL Invalid argument or the EPF device has no bind operation
  * @retval -EBUSY The EPF device is already bound to an EPC device
+ * @retval -EBUSY The link of the EPC device is already started
  * @retval -ENOENT All function numbers of the EPC device are in use
+ * @retval -errno Other negative errno returned by the bind operation
  */
 int pcie_epc_add_epf(const struct device *dev,
 		     struct pcie_epf_device_s *epf);
@@ -481,7 +495,9 @@ int pcie_epc_add_epf(const struct device *dev,
 /**
  * @brief Remove PCI endpoint function from endpoint controller
  *
- * Invoke to remove PCI endpoint function from the endpoint controller.
+ * Invoke to remove PCI endpoint function from the endpoint controller. The
+ * unbind operation of the endpoint function is invoked. The link should be
+ * stopped with pcie_epc_stop() beforehand.
  *
  * @param dev The EPC device from which the endpoint function should be
  *            removed

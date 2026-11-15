@@ -10,7 +10,7 @@
 			compatible = "qemu,pci-epc";
 
 			vendor-id = <0x1b36>;
-			device-id = <0x0013>;
+			device-id = <0x0015>;
 
 			status = "okay";
 		};

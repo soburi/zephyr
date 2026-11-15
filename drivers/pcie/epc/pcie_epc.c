@@ -107,6 +107,7 @@ void pcie_epc_stop(const struct device *dev)
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
 	epc->ops->stop(dev);
+	epc->started = false;
 	k_mutex_unlock(&epc->lock);
 }
 
@@ -126,6 +127,10 @@ int pcie_epc_start(const struct device *dev)
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
 	ret = epc->ops->start(dev);
+	if (ret >= 0) {
+		epc->started = true;
+	}
+
 	k_mutex_unlock(&epc->lock);
 	return ret;
 }
@@ -387,9 +392,12 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 {
 	struct pcie_epc_ctrl_s *epc;
 	uint32_t funcno;
-	int ret = 0;
+	int ret;
 
-	__ASSERT_NO_MSG(dev != NULL && epf != NULL);
+	if (dev == NULL || epf == NULL || epf->ops == NULL ||
+	    epf->ops->bind == NULL) {
+		return -EINVAL;
+	}
 
 	if (epf->epc != NULL) {
 		return -EBUSY;
@@ -397,6 +405,12 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 
 	epc = pcie_epc_get_ctrl(dev);
 	k_mutex_lock(&epc->lock, K_FOREVER);
+
+	/* The functions cannot change once the host can enumerate them */
+	if (epc->started) {
+		ret = -EBUSY;
+		goto out;
+	}
 
 	for (funcno = 0; funcno < epc->max_functions; funcno++) {
 		if ((epc->funcno_map & BIT(funcno)) == 0U) {
@@ -410,10 +424,25 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 		goto out;
 	}
 
+	k_mutex_init(&epf->lock);
 	epc->funcno_map |= BIT(funcno);
 	epf->funcno = funcno;
 	epf->epc = dev;
 	sys_dlist_append(&epc->epf, &epf->epc_node);
+
+	/* Notify the function that it has been bound to the EPC device */
+	k_mutex_lock(&epf->lock, K_FOREVER);
+	ret = epf->ops->bind(epf);
+	epf->is_bound = (ret >= 0);
+	k_mutex_unlock(&epf->lock);
+
+	if (ret < 0) {
+		epc->funcno_map &= ~BIT(funcno);
+		sys_dlist_remove(&epf->epc_node);
+		epf->epc = NULL;
+	} else {
+		ret = 0;
+	}
 
 out:
 	k_mutex_unlock(&epc->lock);
@@ -425,17 +454,27 @@ void pcie_epc_remove_epf(const struct device *dev,
 {
 	struct pcie_epc_ctrl_s *epc;
 
-	if (dev == NULL || epf == NULL) {
+	if (dev == NULL || epf == NULL || epf->epc != dev) {
 		return;
 	}
 
 	epc = pcie_epc_get_ctrl(dev);
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	epc->funcno_map &= ~BIT(epf->funcno);
-	if (sys_dnode_is_linked(&epf->epc_node)) {
-		sys_dlist_remove(&epf->epc_node);
+
+	/* Notify the function that the binding is about to be lost */
+	k_mutex_lock(&epf->lock, K_FOREVER);
+	if (epf->is_bound) {
+		if (epf->ops->unbind != NULL) {
+			epf->ops->unbind(epf);
+		}
+
+		epf->is_bound = false;
 	}
 
+	k_mutex_unlock(&epf->lock);
+
+	epc->funcno_map &= ~BIT(epf->funcno);
+	sys_dlist_remove(&epf->epc_node);
 	epf->epc = NULL;
 	k_mutex_unlock(&epc->lock);
 }
