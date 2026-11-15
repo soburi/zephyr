@@ -35,7 +35,7 @@ extern "C" {
  */
 
 /** @brief Type of interrupt an endpoint function raises to the host */
-enum pcie_epc_irq_type_e {
+enum pcie_epc_irq_type {
 	PCIE_EPC_IRQ_UNKNOWN,
 	PCIE_EPC_IRQ_LEGACY,
 	PCIE_EPC_IRQ_MSI,
@@ -71,10 +71,12 @@ struct pcie_epc_features_s {
 /**
  * @brief Set of function pointers for performing EPC operations
  *
- * Each operation receives the EPC device; the driver state is reached
- * through the device data, which starts with struct pcie_epc_ctrl_s.
+ * Each operation receives the EPC device. The driver defines the table with
+ * DEVICE_API(pcie_epc, ...) and passes it as the API of its device; the
+ * driver state is reached through the device data, which starts with
+ * struct pcie_epc_ctrl_s.
  */
-struct pcie_epc_ops_s {
+__subsystem struct pcie_epc_driver_api {
 	/** Ops to populate configuration space header */
 	int (*write_header)(const struct device *dev, uint8_t funcno,
 			    struct pcie_epf_header_s *hdr);
@@ -115,7 +117,7 @@ struct pcie_epc_ops_s {
 	int (*get_msix)(const struct device *dev, uint8_t funcno);
 	/** Ops to raise a legacy, MSI or MSI-X interrupt */
 	int (*raise_irq)(const struct device *dev, uint8_t funcno,
-			 enum pcie_epc_irq_type_e type,
+			 enum pcie_epc_irq_type type,
 			 uint16_t interrupt_num);
 	/** Ops to map physical address to MSI address and return MSI data */
 	int (*map_msi_irq)(const struct device *dev, uint8_t funcno,
@@ -182,8 +184,6 @@ struct pcie_epc_ctrl_s {
 	const struct device *dev;
 	/** List of endpoint functions present in this EPC device */
 	sys_dlist_t epf;
-	/** Function pointers for performing endpoint operations */
-	const struct pcie_epc_ops_s *ops;
 	/** Array of address spaces of the endpoint controller */
 	struct pcie_epc_mem_s *mem;
 	/** Number of address spaces supported by device */
@@ -312,7 +312,7 @@ int pcie_epc_start(const struct device *dev);
  * @retval -EINVAL Invalid argument
  */
 int pcie_epc_raise_irq(const struct device *dev, uint8_t funcno,
-		       enum pcie_epc_irq_type_e type, uint16_t interrupt_num);
+		       enum pcie_epc_irq_type type, uint16_t interrupt_num);
 
 /**
  * @brief Map physical address to MSI address and return MSI data
@@ -613,13 +613,12 @@ void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
  * @param dev     The EPC device to be registered
  * @param name    EPC name string, used to bind EPF devices
  * @param dmaheap Heap used for EPF BAR buffer allocation, may be NULL
- * @param ops     Function pointers for performing EPC operations
  *
  * @retval 0 Success
  * @retval -EINVAL Invalid argument
  */
 int pcie_epc_create(const struct device *dev, const char *name,
-		    struct k_heap *dmaheap, const struct pcie_epc_ops_s *ops);
+		    struct k_heap *dmaheap);
 
 /**
  * @brief Unregister the EPC device

@@ -14,9 +14,10 @@
 
 LOG_MODULE_DECLARE(pcie_epc, CONFIG_PCIE_EPC_LOG_LEVEL);
 
-static struct pcie_epc_mem_s *pcie_epc_mem_find(struct pcie_epc_ctrl_s *epc,
+static struct pcie_epc_mem_s *pcie_epc_mem_find(const struct device *dev,
 						uintptr_t phys_addr)
 {
+	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
 	unsigned int i;
 
 	for (i = 0; i < epc->num_windows; i++) {
@@ -108,12 +109,11 @@ void *pcie_epc_mem_alloc_addr(const struct device *dev, uintptr_t *phys,
 void pcie_epc_mem_free_addr(const struct device *dev, uintptr_t phys_addr,
 			    size_t size)
 {
-	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
 	struct pcie_epc_mem_s *mem;
 	size_t pageno;
 	size_t pages;
 
-	mem = pcie_epc_mem_find(epc, phys_addr);
+	mem = pcie_epc_mem_find(dev, phys_addr);
 	if (mem == NULL) {
 		LOG_ERR("Failed to get matching window");
 		return;

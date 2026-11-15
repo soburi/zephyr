@@ -416,7 +416,7 @@ static int qemu_epc_get_msix(const struct device *dev, uint8_t funcno)
 }
 
 static int qemu_epc_raise_irq(const struct device *dev, uint8_t funcno,
-			      enum pcie_epc_irq_type_e type,
+			      enum pcie_epc_irq_type type,
 			      uint16_t interrupt_num)
 {
 	struct qemu_epc_s *qep = dev->data;
@@ -594,7 +594,7 @@ static int qemu_epc_set_msix(const struct device *dev, uint8_t funcno,
 	return 0;
 }
 
-static const struct pcie_epc_ops_s g_qemu_epc_ops = {
+static DEVICE_API(pcie_epc, qemu_epc_api) = {
 	.write_header = qemu_epc_write_header,
 	.add_capability = qemu_epc_add_capability,
 	.clear_capabilities = qemu_epc_clear_capabilities,
@@ -713,8 +713,7 @@ static int qemu_epc_init(const struct device *dev)
 
 	qep->pdev = cfg->pcie;
 
-	ret = pcie_epc_create(dev, "qemu_epc", &g_qemu_epc_dmaheap,
-			      &g_qemu_epc_ops);
+	ret = pcie_epc_create(dev, "qemu_epc", &g_qemu_epc_dmaheap);
 	if (ret != 0) {
 		LOG_ERR("Failed to create qemu_epc device");
 		return ret;
@@ -782,6 +781,6 @@ static int qemu_epc_init(const struct device *dev)
 	DEVICE_DT_INST_DEFINE(n, qemu_epc_init, NULL,			\
 			      &qemu_epc_data_##n, &qemu_epc_config_##n,	\
 			      POST_KERNEL, CONFIG_PCIE_EPC_INIT_PRIORITY,\
-			      NULL);
+			      &qemu_epc_api);
 
 DT_INST_FOREACH_STATUS_OKAY(QEMU_EPC_DEVICE_INIT)

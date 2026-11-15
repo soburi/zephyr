@@ -22,9 +22,13 @@ struct litepcie_config {
 };
 
 struct litepcie_data {
+	/* Must stay first, the device data starts with the EPC control */
 	struct pcie_epc_ctrl_s epc;
 	bool bar_set;
 };
+
+BUILD_ASSERT(offsetof(struct litepcie_data, epc) == 0,
+	     "the EPC control structure must be the first member");
 
 static int litepcie_set_bar(const struct device *dev, uint8_t funcno,
 			  struct pcie_epf_bar_s *bar)
@@ -95,7 +99,7 @@ static const struct pcie_epc_features_s *litepcie_features(const struct device *
 	return funcno == 0U ? &cfg->features : NULL;
 }
 
-static const struct pcie_epc_ops_s litepcie_ops = {
+static DEVICE_API(pcie_epc, litepcie_api) = {
 	.write_header = litepcie_write_header,
 	.set_bar = litepcie_set_bar,
 	.clear_bar = litepcie_clear_bar,
@@ -114,7 +118,7 @@ static int litepcie_init(const struct device *dev)
 	if (sys_read32(cfg->base + EPC_BAR_SIZE) != cfg->features.bar_fixed_size[0]) {
 		return -EINVAL;
 	}
-	ret = pcie_epc_create(dev, dev->name, NULL, &litepcie_ops);
+	ret = pcie_epc_create(dev, dev->name, NULL);
 	if (ret == 0) {
 		data->epc.max_functions = 1U;
 	}
@@ -133,6 +137,6 @@ static int litepcie_init(const struct device *dev)
 	};                                                                  \
 	DEVICE_DT_INST_DEFINE(n, litepcie_init, NULL, &litepcie_data_##n,      \
 			      &litepcie_cfg_##n, POST_KERNEL,                 \
-			      CONFIG_PCIE_EPC_INIT_PRIORITY, NULL);
+			      CONFIG_PCIE_EPC_INIT_PRIORITY, &litepcie_api);
 
 DT_INST_FOREACH_STATUS_OKAY(LITEPCIE_DEFINE)
