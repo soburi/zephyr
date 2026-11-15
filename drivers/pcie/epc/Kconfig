@@ -1,0 +1,19 @@
+# Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig PCIE_EPC
+	bool "PCI Endpoint Controller (EPC) framework"
+	help
+	  Enable the PCI endpoint controller (EPC) and endpoint function
+	  (EPF) framework. The framework splits endpoint support into
+	  endpoint controller drivers, which program the endpoint hardware,
+	  and endpoint function drivers, which implement the behavior of a
+	  PCI function exposed to the host.
+
+if PCIE_EPC
+
+module = PCIE_EPC
+module-str = pcie_epc
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # PCIE_EPC
