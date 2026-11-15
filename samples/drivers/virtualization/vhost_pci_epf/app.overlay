@@ -1,0 +1,25 @@
+/*
+ * Copyright The Zephyr Project Contributors
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	pcie0 {
+		qemu_epc: epc {
+			compatible = "qemu,pci-epc";
+
+			vendor-id = <0x1b36>;
+			device-id = <0x0015>;
+
+			status = "okay";
+		};
+	};
+
+	vhost_rng: vhost-rng {
+		compatible = "zephyr,vhost-pci-epf";
+		epc = <&qemu_epc>;
+		device-id = <4>; /* entropy source */
+		queue-size-max = <16>;
+	};
+};
