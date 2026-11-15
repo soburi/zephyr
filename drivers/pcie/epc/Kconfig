@@ -54,4 +54,23 @@ config PCIE_EPC_QEMU_DMA_HEAP_SIZE
 
 endif # PCIE_EPC_QEMU
 
+config PCIE_EPF_TEST
+	bool "PCI endpoint test function driver"
+	select CRC
+	help
+	  Endpoint function driver compatible with the Linux host side
+	  pci_endpoint_test driver and the pcitest tool.
+
+if PCIE_EPF_TEST
+
+config PCIE_EPF_TEST_FUNC_COUNT
+	int "Number of endpoint test functions"
+	range 1 2
+	default 1
+	help
+	  Number of physical functions the endpoint test function driver
+	  registers on the endpoint controller.
+
+endif # PCIE_EPF_TEST
+
 endif # PCIE_EPC
