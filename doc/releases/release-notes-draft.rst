@@ -132,6 +132,16 @@ Libraries / Subsystems
     enabled, so a connection can use send and receive windows above 64 KB. The window size
     options, ``SO_RCVBUF`` and ``SO_SNDBUF`` then accept values up to 65535 << 14.
 
+* PCI endpoint
+
+  * Added a PCI endpoint controller (EPC) and endpoint function (EPF) framework
+    (:kconfig:option:`CONFIG_PCIE_EPC`), ported from NuttX. An endpoint controller driver
+    exposes configuration header, BAR, outbound window, MSI/MSI-X and interrupt operations
+    to endpoint function drivers, which implement the behavior of a PCI function exposed
+    to the host. It comes with a driver for the QEMU PCI endpoint controller device and an
+    endpoint test function compatible with the Linux ``pci_endpoint_test`` host driver,
+    see :zephyr:code-sample:`pcie-epf-test`.
+
 * PTP Clock
 
   * :c:func:`ptp_clock_adjust_rate` adjusts the clock rate by an offset in scaled parts per
