@@ -134,6 +134,11 @@ Libraries / Subsystems
 
 * PCI endpoint
 
+  * The :zephyr:code-sample:`vhost-pci-epf` sample can serve legacy virtio-rng through a QEMU
+    EPC with software-serviced BAR accesses. The extension preserves register access order,
+    implements ISR read-to-clear and reset, and controls INTx as a level. Both QEMU instances
+    require the EPC1 extensions described in the sample documentation.
+
   * Added a PCI endpoint controller (EPC) and endpoint function (EPF) framework
     (:kconfig:option:`CONFIG_PCIE_EPC`), ported from NuttX. An endpoint controller driver
     exposes configuration header, BAR, outbound window, MSI/MSI-X and interrupt operations

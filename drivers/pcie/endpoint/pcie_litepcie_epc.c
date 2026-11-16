@@ -89,11 +89,12 @@ static int litepcie_start(const struct device *dev)
 	return 0;
 }
 
-static void litepcie_stop(const struct device *dev)
+static int litepcie_stop(const struct device *dev)
 {
 	const struct litepcie_config *cfg = dev->config;
 
 	sys_write32(0U, cfg->base + EPC_CONTROL);
+	return 0;
 }
 
 static const struct pcie_epc_features_s *litepcie_features(const struct device *dev,

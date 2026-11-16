@@ -53,6 +53,14 @@ int pcie_epc_mem_multi_init(const struct device *dev,
 			return -EINVAL;
 		}
 
+		if (pages < mem[i].bitmap->num_bits) {
+			int ret = sys_bitarray_set_region(mem[i].bitmap,
+						 mem[i].bitmap->num_bits - pages, pages);
+
+			if (ret != 0) {
+				return ret;
+			}
+		}
 		mem[i].pages = pages;
 	}
 

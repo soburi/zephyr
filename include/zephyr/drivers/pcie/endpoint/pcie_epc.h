@@ -58,6 +58,8 @@ struct pcie_epc_features_s {
 	unsigned int msix_capable : 1;
 	/** Indicate if pcie_epc_add_capability() is supported */
 	unsigned int capability_writable : 1;
+	/** Supports ordered BAR requests and level-controlled legacy interrupts */
+	unsigned int bar_access : 1;
 	/** Bitmap to indicate reserved BAR unavailable to function driver */
 	uint8_t bar_reserved;
 	/** Bitmap to indicate fixed 64bit BARs */
@@ -66,6 +68,22 @@ struct pcie_epc_features_s {
 	uint64_t bar_fixed_size[PCI_STD_NUM_BARS];
 	/** Alignment size required for BAR buffer allocation */
 	size_t align;
+};
+
+/** @brief One host access to a software-serviced BAR. */
+struct pcie_epc_bar_access {
+	/** Controller-assigned request identifier */
+	uint32_t id;
+	/** Byte offset within the BAR */
+	uint32_t offset;
+	/** Write value or read response, in CPU byte order */
+	uint64_t value;
+	/** BAR number */
+	uint8_t bar;
+	/** Access width in bytes: 1, 2, 4 or 8 */
+	uint8_t size;
+	/** True for a host write */
+	bool write;
 };
 
 /**
@@ -127,16 +145,90 @@ __subsystem struct pcie_epc_driver_api {
 	/** Ops to start the PCI link */
 	int (*start)(const struct device *dev);
 	/** Ops to stop the PCI link */
-	void (*stop)(const struct device *dev);
+	int (*stop)(const struct device *dev);
 	/** Ops to get the features supported by the EPC */
 	const struct pcie_epc_features_s *
 	(*get_features)(const struct device *dev, uint8_t funcno);
+	/** Enable software handling of host accesses to a BAR */
+	int (*bar_access_enable)(const struct device *dev, uint8_t funcno, uint8_t bar,
+				 bool enable);
+	/** Get the next outstanding host access */
+	int (*bar_access_get)(const struct device *dev, uint8_t funcno,
+			     struct pcie_epc_bar_access *access);
+	/** Complete the outstanding access */
+	int (*bar_access_complete)(const struct device *dev, uint8_t funcno,
+				  const struct pcie_epc_bar_access *access, int status);
+	/** Set the level of the legacy interrupt */
+	int (*set_legacy_irq)(const struct device *dev, uint8_t funcno, bool asserted);
+
 	/** Ops to transfer data between mapped Host memory and device memory
 	 *  with "System DMA"
 	 */
 	int (*dma_xfer)(const struct device *dev, uintptr_t mapped_addr,
 			uintptr_t local_addr, uint32_t size, bool fromdev);
 };
+
+/**
+ * @brief Enable or disable software servicing of a BAR
+ *
+ * Call before starting the controller. Accesses to enabled BARs are delivered
+ * in host order and reads wait for completion. Other BARs retain direct memory
+ * access. One thread per function must retrieve and complete requests. The
+ * controller must stop delivering requests and abort outstanding requests on
+ * stop. All functions below require thread context.
+ *
+ * @param dev EPC device
+ * @param funcno Function number
+ * @param bar BAR number
+ * @param enable Enable software servicing
+ * @retval 0 Success
+ * @retval -EINVAL Invalid function or BAR
+ * @retval -EBUSY Controller is started
+ * @retval -ENOTSUP Operation is unsupported
+ */
+int pcie_epc_bar_access_enable(const struct device *dev, uint8_t funcno, uint8_t bar,
+			       bool enable);
+
+/**
+ * @brief Retrieve a host BAR access without waiting
+ *
+ * @param dev EPC device
+ * @param funcno Function number
+ * @param access Request destination
+ * @retval 0 Request available
+ * @retval -EAGAIN No request available
+ * @retval -EINVAL Invalid argument
+ * @retval -ENOTSUP Operation is unsupported
+ */
+int pcie_epc_bar_access_get(const struct device *dev, uint8_t funcno,
+			  struct pcie_epc_bar_access *access);
+
+/**
+ * @brief Complete a host BAR access
+ *
+ * @param dev EPC device
+ * @param funcno Function number
+ * @param access Request with the read response in value
+ * @param status Zero on success, negative errno on failure
+ * @retval 0 Response submitted
+ * @retval -ESTALE Request expired or was aborted
+ * @retval -EINVAL Invalid argument
+ * @retval -ENOTSUP Operation is unsupported
+ */
+int pcie_epc_bar_access_complete(const struct device *dev, uint8_t funcno,
+			       const struct pcie_epc_bar_access *access, int status);
+
+/**
+ * @brief Assert or deassert the function's legacy interrupt
+ *
+ * @param dev EPC device
+ * @param funcno Function number
+ * @param asserted Interrupt level
+ * @retval 0 Success
+ * @retval -EINVAL Invalid function
+ * @retval -ENOTSUP Operation is unsupported
+ */
+int pcie_epc_set_legacy_irq(const struct device *dev, uint8_t funcno, bool asserted);
 
 /**
  * @brief Address window of the endpoint controller
@@ -271,9 +363,17 @@ pcie_epc_get_features(const struct device *dev, uint8_t funcno);
 /**
  * @brief Stop the PCI link
  *
+ * Successful return guarantees that inbound BAR accesses have stopped.
+ * A failed stop leaves the controller started and prevents EPF removal.
+ *
  * @param dev The EPC device whose link has to be stopped
+ *
+ * @retval 0 Controller stopped
+ * @retval -EINVAL Invalid device
+ * @retval -ENOTSUP Stopping is not supported
+ * @return Other negative errno from the controller
  */
-void pcie_epc_stop(const struct device *dev);
+int pcie_epc_stop(const struct device *dev);
 
 /**
  * @brief Start the PCI link

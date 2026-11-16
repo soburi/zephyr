@@ -27,8 +27,7 @@ LOG_MODULE_REGISTER(vhost_pci_epf, CONFIG_VHOST_LOG_LEVEL);
 /*
  * Legacy VIRTIO PCI register layout ("Legacy Interfaces: A Note on PCI
  * Device Layout" in the VIRTIO specification), without MSI-X. The layout
- * needs no vendor-specific PCI capability, which the endpoint controller
- * API cannot describe.
+ * needs no vendor-specific PCI capability.
  */
 #define VIRTIO_PCI_LEGACY_DEVICE_FEATURES 0x00
 #define VIRTIO_PCI_LEGACY_DRIVER_FEATURES 0x04
@@ -48,9 +47,8 @@ LOG_MODULE_REGISTER(vhost_pci_epf, CONFIG_VHOST_LOG_LEVEL);
 #define VIRTIO_PCI_LEGACY_BAR       0
 
 /*
- * The driver only writes these registers, and the register window is not
- * trapped. Keeping a value in them that the driver never writes makes the
- * next write visible to the poll.
+ * For controllers without software BAR access, a value the driver never
+ * writes makes the next register write visible to the polling fallback.
  */
 #define DRIVER_FEATURES_IDLE UINT32_MAX
 
@@ -110,6 +108,8 @@ struct vhost_pci_epf_data {
 	/* Protects the fields below and the register window */
 	struct k_mutex lock;
 	uint8_t *regs;
+	bool trapped;
+	uint16_t queue_select;
 	/* Feature bits offered to the driver, set by the backend */
 	uint32_t offered_features;
 	uint32_t driver_features;
@@ -294,16 +294,14 @@ static int raise_irq(const struct device *dev, uint8_t isr)
 	struct vhost_pci_epf_data *data = dev->data;
 	int ret;
 
-	/*
-	 * The driver expects the ISR register to clear when read, which an
-	 * untrapped register cannot do. The bits stay set until the device is
-	 * reset; the driver then finds nothing to do on a spurious interrupt.
-	 */
 	k_mutex_lock(&data->lock, K_FOREVER);
 	reg_write8(data, VIRTIO_PCI_LEGACY_ISR, reg_read8(data, VIRTIO_PCI_LEGACY_ISR) | isr);
+	if (data->trapped) {
+		ret = pcie_epc_set_legacy_irq(config->epc, data->epf.funcno, true);
+	} else {
+		ret = pcie_epc_raise_irq(config->epc, data->epf.funcno, PCIE_EPC_IRQ_LEGACY, 0);
+	}
 	k_mutex_unlock(&data->lock);
-
-	ret = pcie_epc_raise_irq(config->epc, data->epf.funcno, PCIE_EPC_IRQ_LEGACY, 0);
 	if (ret < 0) {
 		LOG_ERR("%s: failed to raise interrupt: %d", dev->name, ret);
 		return -EIO;
@@ -398,6 +396,120 @@ static bool poll_notify(const struct device *dev)
 	return queue_id == QUEUE_ID;
 }
 
+/* Called under the register lock; each host access is completed exactly once. */
+static int service_access(const struct device *dev, struct pcie_epc_bar_access *access)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+	struct vhost_pci_epf_data *data = dev->data;
+	uint32_t off = access->offset;
+	uint32_t value = access->value;
+
+	if (access->bar != VIRTIO_PCI_LEGACY_BAR ||
+	    (access->size != 1U && access->size != 2U && access->size != 4U) ||
+	    off % access->size != 0U) {
+		return -EINVAL;
+	}
+	if (off >= VIRTIO_PCI_LEGACY_CONFIG) {
+		size_t pos = off - VIRTIO_PCI_LEGACY_CONFIG;
+
+		if (pos > config->config_data_len || access->size > config->config_data_len - pos) {
+			return -EINVAL;
+		}
+		if (!access->write) {
+			access->value = 0U;
+			for (uint8_t i = 0U; i < access->size; i++) {
+				access->value |= (uint64_t)data->regs[off + i] << (8U * i);
+			}
+		}
+		return 0;
+	}
+
+	if (access->write) {
+		switch (off) {
+		case VIRTIO_PCI_LEGACY_DRIVER_FEATURES:
+			if (access->size != 4U) {
+				return -EINVAL;
+			}
+			data->driver_features = value & data->offered_features;
+			break;
+		case VIRTIO_PCI_LEGACY_QUEUE_SELECT:
+			if (access->size != 2U) {
+				return -EINVAL;
+			}
+			data->queue_select = value;
+			break;
+		case VIRTIO_PCI_LEGACY_QUEUE_PFN:
+			if (access->size != 4U) {
+				return -EINVAL;
+			}
+			if (data->queue_select == QUEUE_ID) {
+				reg_write32(data, off, value);
+				poll_queue(dev);
+			}
+			break;
+		case VIRTIO_PCI_LEGACY_QUEUE_NOTIFY:
+			if (access->size != 2U) {
+				return -EINVAL;
+			}
+			if (value == QUEUE_ID) {
+				atomic_set(&data->kicked, 1);
+			}
+			break;
+		case VIRTIO_PCI_LEGACY_STATUS:
+			if (access->size != 1U) {
+				return -EINVAL;
+			}
+			if (value == 0U) {
+				int ret;
+
+				invalidate_queue(dev);
+				data->driver_features = 0U;
+				data->queue_select = 0U;
+				init_regs(dev);
+				ret = pcie_epc_set_legacy_irq(config->epc, data->epf.funcno, false);
+				if (ret != 0) {
+					return ret;
+				}
+			}
+			reg_write8(data, off, value);
+			break;
+		default:
+			return -EINVAL;
+		}
+		return 0;
+	}
+
+	switch (off) {
+	case VIRTIO_PCI_LEGACY_DEVICE_FEATURES:
+		access->value = data->offered_features;
+		return access->size == 4U ? 0 : -EINVAL;
+	case VIRTIO_PCI_LEGACY_DRIVER_FEATURES:
+		access->value = data->driver_features;
+		return access->size == 4U ? 0 : -EINVAL;
+	case VIRTIO_PCI_LEGACY_QUEUE_PFN:
+		access->value = data->queue_select == QUEUE_ID ? data->pfn : 0U;
+		return access->size == 4U ? 0 : -EINVAL;
+	case VIRTIO_PCI_LEGACY_QUEUE_SIZE:
+		access->value = data->queue_select == QUEUE_ID ? config->queue_size : 0U;
+		return access->size == 2U ? 0 : -EINVAL;
+	case VIRTIO_PCI_LEGACY_QUEUE_SELECT:
+		access->value = data->queue_select;
+		return access->size == 2U ? 0 : -EINVAL;
+	case VIRTIO_PCI_LEGACY_STATUS:
+		access->value = reg_read8(data, off);
+		return access->size == 1U ? 0 : -EINVAL;
+	case VIRTIO_PCI_LEGACY_ISR:
+		if (access->size != 1U) {
+			return -EINVAL;
+		}
+		access->value = reg_read8(data, off);
+		reg_write8(data, off, 0U);
+		return pcie_epc_set_legacy_irq(config->epc, data->epf.funcno, false);
+	default:
+		return -EINVAL;
+	}
+}
+
 static void poll_handler(struct k_work *work)
 {
 	struct k_work_delayable *dwork = k_work_delayable_from_work(work);
@@ -412,10 +524,26 @@ static void poll_handler(struct k_work *work)
 
 	k_mutex_lock(&data->lock, K_FOREVER);
 
+	if (data->trapped) {
+		struct pcie_epc_bar_access access;
+		int ret = pcie_epc_bar_access_get(config->epc, data->epf.funcno, &access);
+
+		if (ret == 0) {
+			ret = service_access(dev, &access);
+			ret = pcie_epc_bar_access_complete(config->epc, data->epf.funcno,
+						   &access, ret);
+			if (ret != 0 && ret != -ESTALE) {
+				LOG_ERR("BAR response failed: %d", ret);
+			}
+		}
+		period_ms = 1U;
+	} else {
+		status = reg_read8(data, VIRTIO_PCI_LEGACY_STATUS);
+		poll_reset(dev, status);
+		poll_features(dev);
+		poll_queue(dev);
+	}
 	status = reg_read8(data, VIRTIO_PCI_LEGACY_STATUS);
-	poll_reset(dev, status);
-	poll_features(dev);
-	poll_queue(dev);
 	data->status = status;
 
 	if (data->queue_valid && ((status & BIT(DEVICE_STATUS_DRIVER_OK)) != 0U)) {
@@ -425,7 +553,7 @@ static void poll_handler(struct k_work *work)
 		}
 
 		/* A doorbell write may or may not reach the register as well */
-		notified = poll_notify(dev);
+		notified = data->trapped ? false : poll_notify(dev);
 		if (atomic_clear(&data->kicked) != 0) {
 			notified = true;
 		}
@@ -435,7 +563,7 @@ static void poll_handler(struct k_work *work)
 		}
 
 		/* Only a device reset is left to be found by polling */
-		if (config->has_doorbell) {
+		if (config->has_doorbell && !data->trapped) {
 			period_ms = config->doorbell_poll_period_ms;
 		}
 	}
@@ -822,6 +950,10 @@ static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
 		return -ENOMEM;
 	}
 
+	data->trapped = features->bar_access;
+	if (data->trapped) {
+		epf->bar[VIRTIO_PCI_LEGACY_BAR].flags = PCI_BASE_ADDRESS_SPACE_IO;
+	}
 	memset(data->regs, 0, epf->bar[VIRTIO_PCI_LEGACY_BAR].size);
 	init_regs(dev);
 
@@ -834,6 +966,16 @@ static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
 		}
 	}
 
+	if (data->trapped) {
+		ret = pcie_epc_bar_access_enable(epf->epc, epf->funcno,
+						VIRTIO_PCI_LEGACY_BAR, true);
+		if (ret != 0) {
+			pcie_epc_clear_bar(epf->epc, epf->funcno, &epf->bar[VIRTIO_PCI_LEGACY_BAR]);
+			pcie_epf_free_space(epf, VIRTIO_PCI_LEGACY_BAR, data->regs);
+			data->regs = NULL;
+			return ret;
+		}
+	}
 	k_work_schedule_for_queue(&data->workq, &data->poll_work, K_NO_WAIT);
 
 	return 0;
@@ -846,6 +988,14 @@ static void vhost_pci_epf_unbind(struct pcie_epf_device_s *epf)
 	struct k_work_sync sync;
 
 	k_work_cancel_delayable_sync(&data->poll_work, &sync);
+	if (data->trapped) {
+		int ret = pcie_epc_bar_access_enable(epf->epc, epf->funcno,
+						   VIRTIO_PCI_LEGACY_BAR, false);
+
+		if (ret != 0) {
+			LOG_ERR("Cannot disable BAR servicing: %d", ret);
+		}
+	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
 	invalidate_queue(dev);

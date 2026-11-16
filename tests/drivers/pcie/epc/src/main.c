@@ -25,9 +25,12 @@ static int controller_start(const struct device *dev)
 	return 0;
 }
 
-static void controller_stop(const struct device *dev)
+static int stop_result;
+
+static int controller_stop(const struct device *dev)
 {
 	ARG_UNUSED(dev);
+	return stop_result;
 }
 
 static int controller_init(const struct device *dev)
@@ -119,7 +122,11 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 		zassert_equal(function.epf.epc, dev);
 		zassert_true(function.epf.is_bound);
 
-		pcie_epc_stop(dev);
+		stop_result = -ENOTSUP;
+		zassert_equal(pcie_epc_stop(dev), -ENOTSUP);
+		zassert_equal(pcie_epc_remove_epf(dev, &function.epf), -EBUSY);
+		stop_result = 0;
+		zassert_ok(pcie_epc_stop(dev));
 		zassert_ok(pcie_epc_remove_epf(dev, &function.epf));
 		zassert_equal(function.unbinds, i + 1U);
 		zassert_equal(function.doorbells, i + 1U);
@@ -128,6 +135,29 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 		zassert_is_null(function.epf.epc);
 		zassert_false(function.epf.is_bound);
 	}
+}
+
+ZTEST(pcie_epc, test_window_bitmap_bounds)
+{
+	SYS_BITARRAY_DEFINE_STATIC(bitmap, 32);
+	uint8_t backing[48];
+	struct pcie_epc_mem_s mem = {.bitmap = &bitmap};
+	const struct device *dev = DEVICE_GET(test_epc);
+	uintptr_t phys;
+
+	zassert_ok(pcie_epc_mem_init(dev, &mem, backing, 0x1000U, sizeof(backing), 16U));
+	for (size_t i = 0U; i < 3U; i++) {
+		zassert_equal(pcie_epc_mem_alloc_addr(dev, &phys, 16U), backing + 16U * i);
+		zassert_equal(phys, 0x1000U + 16U * i);
+	}
+	/* Padding bits in the bitmap must not extend the outbound window. */
+	zassert_is_null(pcie_epc_mem_alloc_addr(dev, &phys, 16U));
+	pcie_epc_mem_free_addr(dev, 0x1010U, 16U);
+	zassert_equal(pcie_epc_mem_alloc_addr(dev, &phys, 16U), backing + 16U);
+	zassert_equal(phys, 0x1010U);
+	zassert_is_null(pcie_epc_mem_alloc_addr(dev, &phys, 16U));
+	pcie_epc_mem_free_addr(dev, 0x1000U, sizeof(backing));
+	pcie_epc_mem_exit(dev);
 }
 
 ZTEST_SUITE(pcie_epc, NULL, NULL, NULL, NULL, NULL);

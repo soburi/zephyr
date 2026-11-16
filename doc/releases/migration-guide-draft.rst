@@ -271,6 +271,11 @@ OPAMP
 PCIe
 ====
 
+* PCI endpoint controller stop implementations must return an error code. Applications must check
+  :c:func:`pcie_epc_stop` before removing functions: a failed stop leaves the controller running
+  and function removal returns ``-EBUSY``. Older QEMU EPC emulators without stop support return
+  ``-ENOTSUP``.
+
 * :c:func:`pcie_msi_map` now returns ``uint64_t`` instead of ``uint32_t``, and the ``address``
   member of :c:struct:`msi_vector_generic` is now ``uint64_t``. Out-of-tree implementations of
   :c:func:`pcie_msi_map` and code that reads the MSI vector address must be updated. The ITS

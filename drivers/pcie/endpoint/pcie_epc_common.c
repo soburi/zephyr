@@ -28,6 +28,98 @@ static inline const struct pcie_epc_driver_api *pcie_epc_api(const struct device
 	return DEVICE_API_GET(pcie_epc, dev);
 }
 
+int pcie_epc_bar_access_enable(const struct device *dev, uint8_t funcno,
+			uint8_t bar, bool enable)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL || bar >= PCI_STD_NUM_BARS) {
+		return -EINVAL;
+	}
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+	if (pcie_epc_api(dev)->bar_access_enable == NULL) {
+		return -ENOTSUP;
+	}
+	epc = dev->data;
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	if (epc->started) {
+		k_mutex_unlock(&epc->lock);
+		return -EBUSY;
+	}
+	ret = pcie_epc_api(dev)->bar_access_enable(dev, funcno, bar, enable);
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
+
+int pcie_epc_bar_access_get(const struct device *dev, uint8_t funcno,
+			struct pcie_epc_bar_access *access)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL || access == NULL) {
+		return -EINVAL;
+	}
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+	if (pcie_epc_api(dev)->bar_access_get == NULL) {
+		return -ENOTSUP;
+	}
+	epc = dev->data;
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	ret = pcie_epc_api(dev)->bar_access_get(dev, funcno, access);
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
+
+int pcie_epc_bar_access_complete(const struct device *dev, uint8_t funcno,
+			const struct pcie_epc_bar_access *access, int status)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL || access == NULL) {
+		return -EINVAL;
+	}
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+	if (pcie_epc_api(dev)->bar_access_complete == NULL) {
+		return -ENOTSUP;
+	}
+	epc = dev->data;
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	ret = pcie_epc_api(dev)->bar_access_complete(dev, funcno, access, status);
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
+
+int pcie_epc_set_legacy_irq(const struct device *dev, uint8_t funcno,
+			bool asserted)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL) {
+		return -EINVAL;
+	}
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+	if (pcie_epc_api(dev)->set_legacy_irq == NULL) {
+		return -ENOTSUP;
+	}
+	epc = dev->data;
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	ret = pcie_epc_api(dev)->set_legacy_irq(dev, funcno, asserted);
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
+
 int pcie_epc_get_next_free_bar(const struct pcie_epc_features_s *epc_features,
 			       int barno)
 {
@@ -81,23 +173,27 @@ pcie_epc_get_features(const struct device *dev, uint8_t funcno)
 	return epc_features;
 }
 
-void pcie_epc_stop(const struct device *dev)
+int pcie_epc_stop(const struct device *dev)
 {
 	struct pcie_epc_ctrl_s *epc;
+	int ret;
 
 	if (dev == NULL) {
-		return;
+		return -EINVAL;
 	}
 
 	epc = dev->data;
 	if (pcie_epc_api(dev)->stop == NULL) {
-		return;
+		return -ENOTSUP;
 	}
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	pcie_epc_api(dev)->stop(dev);
-	epc->started = false;
+	ret = pcie_epc_api(dev)->stop(dev);
+	if (ret == 0) {
+		epc->started = false;
+	}
 	k_mutex_unlock(&epc->lock);
+	return ret;
 }
 
 int pcie_epc_start(const struct device *dev)

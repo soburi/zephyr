@@ -92,6 +92,7 @@ struct qemu_epc_s {
 	void *msix_vob;
 	uintptr_t msix_pob;
 	struct pcie_epc_mem_s mem;
+	struct pcie_epc_features_s features;
 };
 
 BUILD_ASSERT(offsetof(struct qemu_epc_s, epc) == 0,
@@ -105,8 +106,8 @@ SYS_BITARRAY_DEFINE_STATIC(g_qemu_epc_ob_bitmap,
 static const struct pcie_epc_features_s g_qemu_epc_features = {
 	.linkup_notifier = false,
 	.core_init_notifier = false,
-	.msi_capable = true,
-	.msix_capable = true,
+	.msi_capable = false,
+	.msix_capable = false,
 	.capability_writable = true,
 };
 
@@ -531,10 +532,10 @@ static int qemu_epc_start(const struct device *dev)
 static const struct pcie_epc_features_s *
 qemu_epc_get_features(const struct device *dev, uint8_t funcno)
 {
-	ARG_UNUSED(dev);
-	ARG_UNUSED(funcno);
+	struct qemu_epc_s *qep = dev->data;
 
-	return &g_qemu_epc_features;
+	ARG_UNUSED(funcno);
+	return &qep->features;
 }
 
 static int qemu_epc_get_msi(const struct device *dev, uint8_t funcno)
@@ -599,6 +600,99 @@ static int qemu_epc_set_msix(const struct device *dev, uint8_t funcno,
 	return 0;
 }
 
+/* Optional software BAR access mailbox, ABI version EPC1. */
+#define QEMU_EPC_ACCESS_ABI      0x50U
+#define QEMU_EPC_ACCESS_MASK     0x54U
+#define QEMU_EPC_ACCESS_INFO     0x58U
+#define QEMU_EPC_ACCESS_OFFSET   0x5cU
+#define QEMU_EPC_ACCESS_DATA     0x60U
+#define QEMU_EPC_INTX_LEVEL      0x6cU
+#define QEMU_EPC_ACCESS_ID       0x70U
+#define QEMU_EPC_ACCESS_DONE     0x74U
+#define QEMU_EPC_ACCESS_ERROR    0x78U
+
+static int qemu_epc_bar_access_enable(const struct device *dev, uint8_t funcno,
+				    uint8_t bar, bool enable)
+{
+	struct qemu_epc_s *qep = dev->data;
+	uint32_t mask;
+
+	if (!qep->features.bar_access || funcno != 0U) {
+		return -ENOTSUP;
+	}
+	mask = qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_MASK);
+	mask = enable ? mask | BIT(bar) : mask & ~BIT(bar);
+	qemu_epc_ctl_write32(qep, QEMU_EPC_ACCESS_MASK, mask);
+	return 0;
+}
+
+static int qemu_epc_bar_access_get(const struct device *dev, uint8_t funcno,
+				 struct pcie_epc_bar_access *access)
+{
+	struct qemu_epc_s *qep = dev->data;
+	uint32_t info;
+
+	if (!qep->features.bar_access || funcno != 0U) {
+		return -ENOTSUP;
+	}
+	access->id = qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_ID);
+	info = qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_INFO);
+	if ((info & BIT(31)) == 0U) {
+		return -EAGAIN;
+	}
+	access->offset = qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_OFFSET);
+	access->value = qemu_epc_ctl_read64(qep, QEMU_EPC_ACCESS_DATA);
+	access->bar = (info >> 16) & 7U;
+	access->size = info & 0xffU;
+	access->write = (info & BIT(30)) != 0U;
+	if (qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_ID) != access->id ||
+	    qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_INFO) != info) {
+		return -EAGAIN;
+	}
+	return 0;
+}
+
+static int qemu_epc_bar_access_complete(const struct device *dev, uint8_t funcno,
+				      const struct pcie_epc_bar_access *access, int status)
+{
+	struct qemu_epc_s *qep = dev->data;
+
+	if (!qep->features.bar_access || funcno != 0U) {
+		return -ENOTSUP;
+	}
+	if (qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_ID) != access->id ||
+	    (qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_INFO) & BIT(31)) == 0U) {
+		return -ESTALE;
+	}
+	qemu_epc_ctl_write64(qep, QEMU_EPC_ACCESS_DATA, access->value);
+	qemu_epc_ctl_write32(qep, QEMU_EPC_ACCESS_ERROR, status != 0);
+	qemu_epc_ctl_write32(qep, QEMU_EPC_ACCESS_DONE, access->id);
+	return 0;
+}
+
+static int qemu_epc_set_legacy_irq(const struct device *dev, uint8_t funcno, bool asserted)
+{
+	struct qemu_epc_s *qep = dev->data;
+
+	if (!qep->features.bar_access || funcno != 0U) {
+		return -ENOTSUP;
+	}
+	qemu_epc_ctl_write32(qep, QEMU_EPC_INTX_LEVEL, asserted);
+	return 0;
+}
+
+static int qemu_epc_stop(const struct device *dev)
+{
+	struct qemu_epc_s *qep = dev->data;
+
+	if (!qep->features.bar_access) {
+		return -ENOTSUP;
+	}
+	qemu_epc_ctl_write8(qep, QEMU_EPC_CTRL_OFF_START, 0);
+	qemu_epc_ctl_write32(qep, QEMU_EPC_INTX_LEVEL, 0U);
+	return 0;
+}
+
 static DEVICE_API(pcie_epc, qemu_epc_api) = {
 	.write_header = qemu_epc_write_header,
 	.add_capability = qemu_epc_add_capability,
@@ -609,6 +703,11 @@ static DEVICE_API(pcie_epc, qemu_epc_api) = {
 	.unmap_addr   = qemu_epc_unmap_addr,
 	.raise_irq    = qemu_epc_raise_irq,
 	.start        = qemu_epc_start,
+	.stop         = qemu_epc_stop,
+	.bar_access_enable = qemu_epc_bar_access_enable,
+	.bar_access_get = qemu_epc_bar_access_get,
+	.bar_access_complete = qemu_epc_bar_access_complete,
+	.set_legacy_irq = qemu_epc_set_legacy_irq,
 	.get_features = qemu_epc_get_features,
 	.set_msi      = qemu_epc_set_msi,
 	.get_msi      = qemu_epc_get_msi,
@@ -717,6 +816,9 @@ static int qemu_epc_init(const struct device *dev)
 	}
 
 	qep->pdev = cfg->pcie;
+	qep->features = g_qemu_epc_features;
+	qep->features.bar_access =
+		qemu_epc_ctl_read32(qep, QEMU_EPC_ACCESS_ABI) == 0x45504331U;
 
 	ret = pcie_epc_init(dev, &g_qemu_epc_dmaheap);
 	if (ret != 0) {
