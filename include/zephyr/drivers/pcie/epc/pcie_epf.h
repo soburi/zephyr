@@ -136,8 +136,6 @@ struct pcie_epf_device_s {
 	const struct pcie_epf_ops_s *ops;
 	/** Callbacks for capturing the EPC events */
 	const struct pcie_epc_event_ops_s *event_ops;
-	/** The private data */
-	void *priv;
 };
 
 /**

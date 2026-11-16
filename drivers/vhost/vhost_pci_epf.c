@@ -761,7 +761,7 @@ static DEVICE_API(vhost, vhost_pci_epf_api) = {
 
 static void vhost_pci_epf_doorbell(struct pcie_epf_device_s *epf, uint8_t index)
 {
-	const struct device *dev = epf->priv;
+	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 
@@ -775,7 +775,7 @@ static void vhost_pci_epf_doorbell(struct pcie_epf_device_s *epf, uint8_t index)
 
 static int vhost_pci_epf_core_init(struct pcie_epf_device_s *epf)
 {
-	const struct device *dev = epf->priv;
+	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
 	int ret;
 
 	ret = pcie_epc_write_header(epf->epc, epf->funcno, epf->header);
@@ -794,7 +794,7 @@ static int vhost_pci_epf_core_init(struct pcie_epf_device_s *epf)
 
 static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
 {
-	const struct device *dev = epf->priv;
+	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 	const struct pcie_epc_features_s *features;
@@ -841,7 +841,7 @@ static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
 
 static void vhost_pci_epf_unbind(struct pcie_epf_device_s *epf)
 {
-	const struct device *dev = epf->priv;
+	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
 	struct vhost_pci_epf_data *data = dev->data;
 	struct k_work_sync sync;
 
@@ -920,7 +920,6 @@ static int vhost_pci_epf_init(const struct device *dev)
 	data->epf.header = &data->header;
 	data->epf.ops = &epf_ops;
 	data->epf.event_ops = &epf_event_ops;
-	data->epf.priv = (void *)dev;
 
 	k_mutex_init(&data->lock);
 	k_work_init_delayable(&data->poll_work, poll_handler);
