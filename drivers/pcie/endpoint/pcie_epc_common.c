@@ -546,16 +546,13 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 		goto out;
 	}
 
-	k_mutex_init(&epf->lock);
 	epc->funcno_map |= BIT(funcno);
 	epf->funcno = funcno;
 	epf->epc = dev;
 
 	/* Notify the function that it has been bound to the EPC device */
-	k_mutex_lock(&epf->lock, K_FOREVER);
 	ret = epf->ops->bind(epf);
 	epf->is_bound = (ret >= 0);
-	k_mutex_unlock(&epf->lock);
 
 	if (ret < 0) {
 		if (pcie_epc_api(dev)->clear_capabilities != NULL) {
@@ -619,98 +616,79 @@ int pcie_epc_remove_epf(const struct device *dev,
 	return 0;
 }
 
-void pcie_epc_linkup(const struct device *dev)
+enum pcie_epc_event {
+	PCIE_EPC_EVENT_LINK_UP,
+	PCIE_EPC_EVENT_LINK_DOWN,
+	PCIE_EPC_EVENT_CORE_INIT,
+	PCIE_EPC_EVENT_BME,
+};
+
+/* Deliver an event to every function, in the context of the caller */
+static void pcie_epc_notify_all(const struct device *dev, enum pcie_epc_event event)
 {
 	struct pcie_epf_device_s *epf;
 	struct pcie_epc_ctrl_s *epc;
+	k_spinlock_key_t key;
 
 	if (dev == NULL) {
 		return;
 	}
 
 	epc = dev->data;
-	k_mutex_lock(&epc->lock, K_FOREVER);
+
+	/* Keep the targets alive until their ISR-safe callbacks return. */
+	key = k_spin_lock(&epc->epf_lock);
 	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
-		k_mutex_lock(&epf->lock, K_FOREVER);
-		if (epf->event_ops != NULL && epf->event_ops->link_up != NULL) {
-			epf->event_ops->link_up(epf);
+		const struct pcie_epc_event_ops_s *ops = epf->event_ops;
+		void (*cb)(struct pcie_epf_device_s *epf) = NULL;
+
+		if (ops == NULL) {
+			continue;
 		}
 
-		k_mutex_unlock(&epf->lock);
+		switch (event) {
+		case PCIE_EPC_EVENT_LINK_UP:
+			cb = ops->link_up;
+			break;
+		case PCIE_EPC_EVENT_LINK_DOWN:
+			cb = ops->link_down;
+			break;
+		case PCIE_EPC_EVENT_CORE_INIT:
+			cb = ops->core_init;
+			break;
+		case PCIE_EPC_EVENT_BME:
+			cb = ops->bme;
+			break;
+		default:
+			break;
+		}
+
+		if (cb != NULL) {
+			cb(epf);
+		}
 	}
 
-	k_mutex_unlock(&epc->lock);
+	k_spin_unlock(&epc->epf_lock, key);
+}
+
+void pcie_epc_linkup(const struct device *dev)
+{
+	pcie_epc_notify_all(dev, PCIE_EPC_EVENT_LINK_UP);
 }
 
 void pcie_epc_linkdown(const struct device *dev)
 {
-	struct pcie_epf_device_s *epf;
-	struct pcie_epc_ctrl_s *epc;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	epc = dev->data;
-	k_mutex_lock(&epc->lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
-		k_mutex_lock(&epf->lock, K_FOREVER);
-		if (epf->event_ops != NULL &&
-		    epf->event_ops->link_down != NULL) {
-			epf->event_ops->link_down(epf);
-		}
-
-		k_mutex_unlock(&epf->lock);
-	}
-
-	k_mutex_unlock(&epc->lock);
+	pcie_epc_notify_all(dev, PCIE_EPC_EVENT_LINK_DOWN);
 }
 
 void pcie_epc_init_notify(const struct device *dev)
 {
-	struct pcie_epf_device_s *epf;
-	struct pcie_epc_ctrl_s *epc;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	epc = dev->data;
-	k_mutex_lock(&epc->lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
-		k_mutex_lock(&epf->lock, K_FOREVER);
-		if (epf->event_ops != NULL &&
-		    epf->event_ops->core_init != NULL) {
-			epf->event_ops->core_init(epf);
-		}
-
-		k_mutex_unlock(&epf->lock);
-	}
-
-	k_mutex_unlock(&epc->lock);
+	pcie_epc_notify_all(dev, PCIE_EPC_EVENT_CORE_INIT);
 }
 
 void pcie_epc_bme_notify(const struct device *dev)
 {
-	struct pcie_epf_device_s *epf;
-	struct pcie_epc_ctrl_s *epc;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	epc = dev->data;
-	k_mutex_lock(&epc->lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
-		k_mutex_lock(&epf->lock, K_FOREVER);
-		if (epf->event_ops != NULL && epf->event_ops->bme != NULL) {
-			epf->event_ops->bme(epf);
-		}
-
-		k_mutex_unlock(&epf->lock);
-	}
-
-	k_mutex_unlock(&epc->lock);
+	pcie_epc_notify_all(dev, PCIE_EPC_EVENT_BME);
 }
 
 /* Called with the EPF list spinlock held */
@@ -740,7 +718,6 @@ void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
 
 	epc = dev->data;
 
-	/* The mutexes of the other notifications cannot be taken in an ISR */
 	key = k_spin_lock(&epc->epf_lock);
 	epf = pcie_epc_find_epf(epc, funcno);
 

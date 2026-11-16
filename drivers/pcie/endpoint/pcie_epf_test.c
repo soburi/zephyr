@@ -63,14 +63,16 @@ struct pcie_epf_test_s {
 	int test_reg_bar;
 	size_t msix_table_offset;
 	struct k_work_delayable work;
+	/* Programs the function when the EPC reports its core initialization */
+	struct k_work core_init_work;
 	struct pcie_epf_header_s header;
 	int bar_size[PCI_STD_NUM_BARS];
 };
 
 static void pcie_epf_test_unbind(struct pcie_epf_device_s *epf);
 static int pcie_epf_test_bind(struct pcie_epf_device_s *epf);
-static int pcie_epf_test_core_init(struct pcie_epf_device_s *epf);
-static int pcie_epf_test_link_up(struct pcie_epf_device_s *epf);
+static void pcie_epf_test_core_init(struct pcie_epf_device_s *epf);
+static void pcie_epf_test_link_up(struct pcie_epf_device_s *epf);
 
 static const struct pcie_epf_ops_s g_pcie_epf_test_ops = {
 	.unbind = pcie_epf_test_unbind,
@@ -370,6 +372,7 @@ static void pcie_epf_test_unbind(struct pcie_epf_device_s *epf)
 	struct k_work_sync sync;
 	int bar;
 
+	k_work_cancel_sync(&test->core_init_work, &sync);
 	k_work_cancel_delayable_sync(&test->work, &sync);
 	for (bar = 0; bar < PCI_STD_NUM_BARS; bar++) {
 		if (test->reg[bar] != NULL) {
@@ -414,7 +417,8 @@ static int pcie_epf_test_set_bar(struct pcie_epf_device_s *epf)
 	return 0;
 }
 
-static int pcie_epf_test_core_init(struct pcie_epf_device_s *epf)
+/* Program the configuration header, the BARs and the interrupts */
+static int pcie_epf_test_setup(struct pcie_epf_device_s *epf)
 {
 	struct pcie_epf_header_s *header = epf->header;
 	const struct pcie_epc_features_s *features;
@@ -462,12 +466,27 @@ static int pcie_epf_test_core_init(struct pcie_epf_device_s *epf)
 	return 0;
 }
 
-static int pcie_epf_test_link_up(struct pcie_epf_device_s *epf)
+static void pcie_epf_test_core_init_handler(struct k_work *work)
+{
+	struct pcie_epf_test_s *test = CONTAINER_OF(work, struct pcie_epf_test_s, core_init_work);
+
+	if (pcie_epf_test_setup(&test->epf) == 0) {
+		k_work_schedule(&test->work, PCIE_EPF_TEST_WORK_PERIOD);
+	}
+}
+
+static void pcie_epf_test_core_init(struct pcie_epf_device_s *epf)
 {
 	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
 
-	k_work_schedule(&test->work, PCIE_EPF_TEST_WORK_PERIOD);
-	return 0;
+	(void)k_work_submit(&test->core_init_work);
+}
+
+static void pcie_epf_test_link_up(struct pcie_epf_device_s *epf)
+{
+	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
+
+	(void)k_work_schedule(&test->work, PCIE_EPF_TEST_WORK_PERIOD);
 }
 
 static int pcie_epf_test_alloc_space(struct pcie_epf_device_s *epf)
@@ -552,7 +571,7 @@ static int pcie_epf_test_bind(struct pcie_epf_device_s *epf)
 	}
 
 	if (!features->core_init_notifier) {
-		ret = pcie_epf_test_core_init(epf);
+		ret = pcie_epf_test_setup(epf);
 		if (ret < 0) {
 			return ret;
 		}
@@ -582,6 +601,7 @@ static void pcie_epf_test_init(struct pcie_epf_test_s *test)
 	test->bar_size[5] = 1048576;
 
 	k_work_init_delayable(&test->work, pcie_epf_test_cmd_handler);
+	k_work_init(&test->core_init_work, pcie_epf_test_core_init_handler);
 
 	epf->header = &test->header;
 	epf->msi_interrupts = 1;

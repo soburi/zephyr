@@ -103,6 +103,8 @@ struct vhost_pci_epf_data {
 	struct pcie_epf_header_s header;
 	struct k_work_q workq;
 	struct k_work_delayable poll_work;
+	/* Programs the function when the EPC reports its core initialization */
+	struct k_work core_init_work;
 	/* Set by the doorbell of the queue notify register */
 	atomic_t kicked;
 	/* Protects the fields below and the register window */
@@ -917,7 +919,8 @@ static void vhost_pci_epf_bar_access(struct pcie_epf_device_s *epf)
 	(void)k_work_reschedule_for_queue(&data->workq, &data->poll_work, K_NO_WAIT);
 }
 
-static int vhost_pci_epf_core_init(struct pcie_epf_device_s *epf)
+/* Program the configuration header and the register BAR of the function */
+static int vhost_pci_epf_setup(struct pcie_epf_device_s *epf)
 {
 	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
 	int ret;
@@ -934,6 +937,21 @@ static int vhost_pci_epf_core_init(struct pcie_epf_device_s *epf)
 	}
 
 	return ret;
+}
+
+static void core_init_handler(struct k_work *work)
+{
+	struct vhost_pci_epf_data *data =
+		CONTAINER_OF(work, struct vhost_pci_epf_data, core_init_work);
+
+	(void)vhost_pci_epf_setup(&data->epf);
+}
+
+static void vhost_pci_epf_core_init(struct pcie_epf_device_s *epf)
+{
+	struct vhost_pci_epf_data *data = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf);
+
+	(void)k_work_submit_to_queue(&data->workq, &data->core_init_work);
 }
 
 static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
@@ -978,7 +996,7 @@ static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
 	init_regs(dev);
 
 	if (!features->core_init_notifier) {
-		ret = vhost_pci_epf_core_init(epf);
+		ret = vhost_pci_epf_setup(epf);
 		if (ret < 0) {
 			pcie_epf_free_space(epf, VIRTIO_PCI_LEGACY_BAR, data->regs);
 			data->regs = NULL;
@@ -1007,6 +1025,7 @@ static void vhost_pci_epf_unbind(struct pcie_epf_device_s *epf)
 	struct vhost_pci_epf_data *data = dev->data;
 	struct k_work_sync sync;
 
+	k_work_cancel_sync(&data->core_init_work, &sync);
 	k_work_cancel_delayable_sync(&data->poll_work, &sync);
 	if (data->trapped) {
 		int ret = pcie_epc_bar_access_enable(epf->epc, epf->funcno,
@@ -1094,6 +1113,7 @@ static int vhost_pci_epf_init(const struct device *dev)
 
 	k_mutex_init(&data->lock);
 	k_work_init_delayable(&data->poll_work, poll_handler);
+	k_work_init(&data->core_init_work, core_init_handler);
 	k_work_queue_init(&data->workq);
 	k_work_queue_start(&data->workq, config->workq_stack, config->workq_stack_size,
 			   config->workq_priority, &qcfg);

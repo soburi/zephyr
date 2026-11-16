@@ -14,6 +14,7 @@ struct test_function {
 	int lock_result;
 	uint32_t doorbells;
 	uint32_t accesses;
+	uint32_t link_ups;
 	uint32_t unbinds;
 };
 
@@ -97,6 +98,19 @@ static void function_doorbell(struct pcie_epf_device_s *epf, uint8_t index)
 	function->doorbells++;
 }
 
+static void function_link_up(struct pcie_epf_device_s *epf)
+{
+	struct test_function *function = CONTAINER_OF(epf, struct test_function, epf);
+
+	function->link_ups++;
+}
+
+/* Raise the link up event from an ISR, as an EPC driver would. */
+static void link_up_isr(struct k_timer *timer)
+{
+	pcie_epc_linkup(k_timer_user_data_get(timer));
+}
+
 static void function_bar_access(struct pcie_epf_device_s *epf)
 {
 	struct test_function *function = CONTAINER_OF(epf, struct test_function, epf);
@@ -113,9 +127,11 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 	static const struct pcie_epc_event_ops_s events = {
 		.doorbell = function_doorbell,
 		.bar_access = function_bar_access,
+		.link_up = function_link_up,
 	};
 	struct test_function function = {.epf = {.ops = &ops, .event_ops = &events}};
 	const struct device *dev = DEVICE_GET(test_epc);
+	struct k_timer timer;
 
 	zassert_true(device_is_ready(dev));
 	for (uint32_t i = 0U; i < 2U; i++) {
@@ -131,6 +147,11 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 		pcie_epc_bar_access_notify(dev, 1U);
 		zassert_equal(function.accesses, i + 1U);
 		zassert_ok(pcie_epc_start(dev));
+		k_timer_init(&timer, link_up_isr, NULL);
+		k_timer_user_data_set(&timer, (void *)dev);
+		k_timer_start(&timer, K_NO_WAIT, K_NO_WAIT);
+		zassert_equal(k_timer_status_sync(&timer), 1U);
+		zassert_equal(function.link_ups, i + 1U);
 		zassert_equal(pcie_epc_remove_epf(dev, &function.epf), -EBUSY);
 		zassert_equal(function.unbinds, i);
 		zassert_equal(function.epf.epc, dev);
@@ -146,6 +167,8 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 		zassert_equal(function.doorbells, i + 1U);
 		pcie_epc_bar_access_notify(dev, 0U);
 		zassert_equal(function.accesses, i + 1U);
+		pcie_epc_linkup(dev);
+		zassert_equal(function.link_ups, i + 1U);
 		zassert_ok(function.lock_result);
 		zassert_equal(k_work_delayable_busy_get(&function.work), 0);
 		zassert_is_null(function.epf.epc);

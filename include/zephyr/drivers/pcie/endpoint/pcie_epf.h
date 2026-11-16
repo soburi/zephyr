@@ -92,23 +92,25 @@ struct pcie_epf_ops_s {
 
 /**
  * @brief Callbacks for capturing the EPC events
+ *
+ * The EPC device raises the events in the context it detects them in, which
+ * can be an ISR. The callbacks run in that context with the EPF list
+ * spinlock of the EPC device held: they must not block or call EPC APIs, and
+ * defer the processing to a thread. The function driver guards its own state
+ * against the callbacks.
  */
 struct pcie_epc_event_ops_s {
 	/** Callback for the EPC initialization complete event */
-	int (*core_init)(struct pcie_epf_device_s *epf);
+	void (*core_init)(struct pcie_epf_device_s *epf);
 	/** Callback for the EPC link up event */
-	int (*link_up)(struct pcie_epf_device_s *epf);
+	void (*link_up)(struct pcie_epf_device_s *epf);
 	/** Callback for the EPC link down event */
-	int (*link_down)(struct pcie_epf_device_s *epf);
+	void (*link_down)(struct pcie_epf_device_s *epf);
 	/** Callback for the EPC BME (Bus Master Enable) event */
-	int (*bme)(struct pcie_epf_device_s *epf);
-	/** Callback for a doorbell rung by the host. It can run in an ISR;
-	 *  defer the processing to a thread. It runs with the EPF list spinlock
-	 *  held and must not block or call EPC APIs.
-	 */
+	void (*bme)(struct pcie_epf_device_s *epf);
+	/** Callback for a doorbell rung by the host */
 	void (*doorbell)(struct pcie_epf_device_s *epf, uint8_t index);
-	/** Callback for a host access waiting on a software-serviced BAR. It
-	 *  runs in the same context and under the same rules as doorbell;
+	/** Callback for a host access waiting on a software-serviced BAR;
 	 *  retrieve the access with pcie_epc_bar_access_get() in a thread.
 	 */
 	void (*bar_access)(struct pcie_epf_device_s *epf);
@@ -134,8 +136,6 @@ struct pcie_epf_device_s {
 	/** Node in the list of EPF devices bound to a pcie_epc_ctrl_s */
 	sys_dnode_t epc_node;
 
-	/** Mutex to protect against concurrent access of pcie_epf_ops_s */
-	struct k_mutex lock;
 	/** Indicates if bind notification to function driver has been invoked */
 	bool is_bound;
 	/** Set of function pointers for performing EPF operations */

@@ -631,7 +631,8 @@ int pcie_epc_remove_epf(const struct device *dev,
  * @brief Notify the EPF devices that the EPC device has established a
  *        connection with the Root Complex
  *
- * Must be called from thread context.
+ * Invokes the link_up callback of every EPF device, in the context of the
+ * caller with the EPF list spinlock held. Can be called from an ISR.
  *
  * @param dev The EPC device which has established link with the host
  */
@@ -641,7 +642,8 @@ void pcie_epc_linkup(const struct device *dev);
  * @brief Notify the EPF devices that the EPC device has dropped the
  *        connection with the Root Complex
  *
- * Must be called from thread context.
+ * Invokes the link_down callback of every EPF device, in the same context
+ * and under the same rules as pcie_epc_linkup(). Can be called from an ISR.
  *
  * @param dev The EPC device which has dropped the link with the host
  */
@@ -651,7 +653,8 @@ void pcie_epc_linkdown(const struct device *dev);
  * @brief Notify the EPF devices that the EPC device's core initialization
  *        is completed
  *
- * Must be called from thread context.
+ * Invokes the core_init callback of every EPF device, in the same context
+ * and under the same rules as pcie_epc_linkup(). Can be called from an ISR.
  *
  * @param dev The EPC device whose core initialization is completed
  */
@@ -662,8 +665,8 @@ void pcie_epc_init_notify(const struct device *dev);
  *        event from the Root complex
  *
  * Invoke to notify the EPF devices that the EPC device has received the Bus
- * Master Enable (BME) event from the Root complex. Must be called from
- * thread context.
+ * Master Enable (BME) event from the Root complex, in the same context and
+ * under the same rules as pcie_epc_linkup(). Can be called from an ISR.
  *
  * @param dev The EPC device that received the BME event
  */
