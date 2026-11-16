@@ -392,7 +392,7 @@ static void qemu_epc_unmap_addr(const struct device *dev, uint8_t funcno,
 static void *qemu_epc_get_bar_addr_from_funcno(const struct device *dev,
 					       uint8_t funcno, uint8_t bar)
 {
-	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
+	struct pcie_epc_ctrl_s *epc = dev->data;
 	struct pcie_epf_device_s *epf;
 
 	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {

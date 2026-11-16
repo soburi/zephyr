@@ -226,34 +226,6 @@ struct pcie_epc_ctrl_s {
 };
 
 /**
- * @brief Get the EPC control structure of an EPC device
- *
- * @param dev The EPC device
- *
- * @return The EPC control structure stored at the beginning of the device
- *         data
- */
-static inline struct pcie_epc_ctrl_s *
-pcie_epc_get_ctrl(const struct device *dev)
-{
-	return (struct pcie_epc_ctrl_s *)dev->data;
-}
-
-/**
- * @brief Get the EPC configuration of an EPC device
- *
- * @param dev The EPC device
- *
- * @return The EPC configuration stored at the beginning of the device
- *         config
- */
-static inline const struct pcie_epc_config *
-pcie_epc_get_config(const struct device *dev)
-{
-	return (const struct pcie_epc_config *)dev->config;
-}
-
-/**
  * @brief Get unreserved BAR starting from @p barno
  *
  * Invoke to get the next unreserved BAR starting from @p barno that can be
