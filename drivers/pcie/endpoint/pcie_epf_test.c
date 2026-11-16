@@ -13,9 +13,9 @@
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf_test.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf_test.h>
 
 LOG_MODULE_REGISTER(pcie_epf_test, CONFIG_PCIE_EPC_LOG_LEVEL);
 
@@ -367,9 +367,10 @@ static void pcie_epf_test_unbind(struct pcie_epf_device_s *epf)
 {
 	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
 	const struct device *epc = epf->epc;
+	struct k_work_sync sync;
 	int bar;
 
-	k_work_cancel_delayable(&test->work);
+	k_work_cancel_delayable_sync(&test->work, &sync);
 	for (bar = 0; bar < PCI_STD_NUM_BARS; bar++) {
 		if (test->reg[bar] != NULL) {
 			pcie_epc_clear_bar(epc, epf->funcno, &epf->bar[bar]);
@@ -612,7 +613,11 @@ int pcie_epf_test_add(const struct device *epc)
 
 err:
 	while (i-- > 0) {
-		pcie_epc_remove_epf(epc, &g_pcie_epf_test[i].epf);
+		int err = pcie_epc_remove_epf(epc, &g_pcie_epf_test[i].epf);
+
+		if (err != 0) {
+			LOG_ERR("func %d removal failed: %d", i, err);
+		}
 	}
 
 	return ret;
@@ -623,6 +628,10 @@ void pcie_epf_test_remove(const struct device *epc)
 	int i;
 
 	for (i = 0; i < CONFIG_PCIE_EPF_TEST_FUNC_COUNT; i++) {
-		pcie_epc_remove_epf(epc, &g_pcie_epf_test[i].epf);
+		int err = pcie_epc_remove_epf(epc, &g_pcie_epf_test[i].epf);
+
+		if (err != 0) {
+			LOG_ERR("func %d removal failed: %d", i, err);
+		}
 	}
 }

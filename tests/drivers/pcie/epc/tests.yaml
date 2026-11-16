@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+tests:
+  drivers.pcie.epc.lifecycle:
+    tags:
+      - drivers
+      - pcie
+    integration_platforms:
+      - native_sim/native/64
+    platform_allow:
+      - native_sim/native/64

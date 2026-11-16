@@ -5,8 +5,8 @@
  */
 
 #include <zephyr/kernel.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf_test.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf_test.h>
 
 int main(void)
 {

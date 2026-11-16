@@ -15,8 +15,8 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/sys_io.h>
 #include <zephyr/sys/util.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf.h>
 #include <zephyr/drivers/virtio/virtio_config.h>
 #include <zephyr/drivers/virtio/virtqueue.h>
 #include <zephyr/drivers/vhost.h>

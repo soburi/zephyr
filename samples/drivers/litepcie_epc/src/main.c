@@ -4,7 +4,7 @@
  */
 
 #include <zephyr/cache.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
 #include <zephyr/sys/sys_io.h>
 
 #define BAR_SIZE DT_PROP(DT_NODELABEL(pcie_epc), bar0_size)
@@ -60,7 +60,11 @@ int main(void)
 	}
 	ret = pcie_epc_start(epc);
 	if (ret != 0) {
-		pcie_epc_remove_epf(epc, &epf);
+		int err = pcie_epc_remove_epf(epc, &epf);
+
+		if (err != 0) {
+			printk("Cannot remove the endpoint function: %d\n", err);
+		}
 		printk("Cannot start the endpoint: %d\n", ret);
 		return ret;
 	}

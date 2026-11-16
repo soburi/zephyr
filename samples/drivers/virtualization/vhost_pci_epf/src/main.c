@@ -6,7 +6,7 @@
 
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
 #include <zephyr/drivers/vhost.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>

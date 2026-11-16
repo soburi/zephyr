@@ -15,7 +15,7 @@
 #include <zephyr/sys/sys_io.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/drivers/pcie/pcie.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(pcie_qemu_epc, CONFIG_PCIE_EPC_LOG_LEVEL);

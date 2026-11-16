@@ -9,8 +9,8 @@
  * @brief PCI endpoint test function driver API
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_TEST_H_
-#define ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_TEST_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_TEST_H_
+#define ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_TEST_H_
 
 #include <zephyr/device.h>
 
@@ -44,4 +44,4 @@ void pcie_epf_test_remove(const struct device *epc);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_TEST_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_TEST_H_ */

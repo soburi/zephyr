@@ -12,8 +12,8 @@
  * @brief PCIe Endpoint Controller (EPC) framework API
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPC_H_
-#define ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPC_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPC_H_
+#define ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPC_H_
 
 #include <stdbool.h>
 
@@ -21,8 +21,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/bitarray.h>
 #include <zephyr/sys/dlist.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf.h>
-#include <zephyr/drivers/pcie/epc/pci_regs.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf.h>
+#include <zephyr/drivers/pcie/endpoint/pci_regs.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -498,14 +498,24 @@ int pcie_epc_add_epf(const struct device *dev,
  *
  * Invoke to remove PCI endpoint function from the endpoint controller. The
  * unbind operation of the endpoint function is invoked. The link should be
- * stopped with pcie_epc_stop() beforehand.
+ * stopped with pcie_epc_stop() beforehand. Removal is rejected while the
+ * controller is started, even if the physical link is down.
+ *
+ * The caller must serialize add, remove, start and stop operations for the
+ * controller. Call from thread context, outside EPF callbacks and workers
+ * that unbind waits for. The EPF object must remain valid until this returns.
+ * The unbind callback must stop all function work before releasing resources.
  *
  * @param dev The EPC device from which the endpoint function should be
  *            removed
  * @param epf The endpoint function to be removed
+ *
+ * @retval 0 Success
+ * @retval -EINVAL Invalid device or function binding
+ * @retval -EBUSY The controller is started
  */
-void pcie_epc_remove_epf(const struct device *dev,
-			 struct pcie_epf_device_s *epf);
+int pcie_epc_remove_epf(const struct device *dev,
+			struct pcie_epf_device_s *epf);
 
 /**
  * @brief Notify the EPF devices that the EPC device has established a
@@ -578,7 +588,9 @@ int pcie_epc_add_capability(const struct device *dev, uint8_t funcno,
  * @brief Notify an EPF device that the host rang one of its doorbells
  *
  * Invokes the doorbell callback of the EPF device bound to the function
- * in the context of the caller. Can be called from an ISR.
+ * in the context of the caller, with the EPF list spinlock held. Can be
+ * called from an ISR. The callback must not block or call EPC APIs; defer
+ * processing to a thread. Removal waits for this callback to return.
  *
  * A doorbell is an interrupt the EPC device raises when the host writes a
  * register of a BAR. Where that register lies, and what the write means, is
@@ -719,4 +731,4 @@ void pcie_epc_dma_free(const struct device *dev, void *mem);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPC_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPC_H_ */

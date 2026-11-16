@@ -5,7 +5,7 @@
 
 #define DT_DRV_COMPAT litex_pcie_epc
 
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
 #include <zephyr/sys/sys_io.h>
 #include <zephyr/sys/util.h>
 #include <errno.h>

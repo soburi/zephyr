@@ -10,7 +10,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
 
 LOG_MODULE_DECLARE(pcie_epc, CONFIG_PCIE_EPC_LOG_LEVEL);
 

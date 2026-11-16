@@ -12,8 +12,8 @@
  * @brief PCI Endpoint Function (EPF) framework API
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_H_
-#define ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_H_
+#define ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,7 +22,7 @@
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/dlist.h>
-#include <zephyr/drivers/pcie/epc/pci_regs.h>
+#include <zephyr/drivers/pcie/endpoint/pci_regs.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,7 +103,8 @@ struct pcie_epc_event_ops_s {
 	/** Callback for the EPC BME (Bus Master Enable) event */
 	int (*bme)(struct pcie_epf_device_s *epf);
 	/** Callback for a doorbell rung by the host. It can run in an ISR;
-	 *  defer the processing to a thread.
+	 *  defer the processing to a thread. It runs with the EPF list spinlock
+	 *  held and must not block or call EPC APIs.
 	 */
 	void (*doorbell)(struct pcie_epf_device_s *epf, uint8_t index);
 };
@@ -185,4 +186,4 @@ void pcie_epf_free_space(struct pcie_epf_device_s *epf, int barno, void *addr);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_H_ */

@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/zephyr/drivers/pcie/epc/pci_regs.h
+ * include/zephyr/drivers/pcie/endpoint/pci_regs.h
  *
  * Imported from NuttX include/nuttx/pci/pci_regs.h
  * (commit 43d9de6f97055eec11234a69cf5641a811f7847c).
@@ -24,8 +24,8 @@
  *
  ****************************************************************************/
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCI_REGS_H_
-#define ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCI_REGS_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCI_REGS_H_
+#define ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCI_REGS_H_
 
 /* Under PCI, each device has 256 bytes of configuration address space,
  * of which the first 64 bytes are standardized as follows:
@@ -1023,4 +1023,4 @@
 #define  PCI_TPH_CAP_ST_SHIFT             16         /* St table shift */
 #define  PCI_TPH_BASE_SIZEOF              12         /* Size with no st table */
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCI_REGS_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCI_REGS_H_ */

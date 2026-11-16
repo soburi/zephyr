@@ -1,4 +1,5 @@
 add_subdirectory_ifdef(CONFIG_PCIE host)
-add_subdirectory_ifdef(CONFIG_PCIE_ENDPOINT endpoint)
+if(CONFIG_PCIE_ENDPOINT OR CONFIG_PCIE_EPC)
+  add_subdirectory(endpoint)
+endif()
 add_subdirectory_ifdef(CONFIG_PCIE_CONTROLLER controller)
-add_subdirectory_ifdef(CONFIG_PCIE_EPC epc)

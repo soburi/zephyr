@@ -12,7 +12,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
 
 LOG_MODULE_REGISTER(pcie_epc, CONFIG_PCIE_EPC_LOG_LEVEL);
 
@@ -449,9 +449,6 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 	epc->funcno_map |= BIT(funcno);
 	epf->funcno = funcno;
 	epf->epc = dev;
-	key = k_spin_lock(&epc->epf_lock);
-	sys_dlist_append(&epc->epf, &epf->epc_node);
-	k_spin_unlock(&epc->epf_lock, key);
 
 	/* Notify the function that it has been bound to the EPC device */
 	k_mutex_lock(&epf->lock, K_FOREVER);
@@ -465,11 +462,11 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 		}
 
 		epc->funcno_map &= ~BIT(funcno);
-		key = k_spin_lock(&epc->epf_lock);
-		sys_dlist_remove(&epf->epc_node);
-		k_spin_unlock(&epc->epf_lock, key);
 		epf->epc = NULL;
 	} else {
+		key = k_spin_lock(&epc->epf_lock);
+		sys_dlist_append(&epc->epf, &epf->epc_node);
+		k_spin_unlock(&epc->epf_lock, key);
 		ret = 0;
 	}
 
@@ -478,21 +475,30 @@ out:
 	return ret;
 }
 
-void pcie_epc_remove_epf(const struct device *dev,
-			 struct pcie_epf_device_s *epf)
+int pcie_epc_remove_epf(const struct device *dev,
+			struct pcie_epf_device_s *epf)
 {
 	struct pcie_epc_ctrl_s *epc;
 	k_spinlock_key_t key;
 
 	if (dev == NULL || epf == NULL || epf->epc != dev) {
-		return;
+		return -EINVAL;
 	}
 
 	epc = dev->data;
 	k_mutex_lock(&epc->lock, K_FOREVER);
+	if (epc->started) {
+		k_mutex_unlock(&epc->lock);
+		return -EBUSY;
+	}
 
-	/* Notify the function that the binding is about to be lost */
-	k_mutex_lock(&epf->lock, K_FOREVER);
+	/* Remove the notification target before draining the function's work. */
+	key = k_spin_lock(&epc->epf_lock);
+	sys_dlist_remove(&epf->epc_node);
+	k_spin_unlock(&epc->epf_lock, key);
+	k_mutex_unlock(&epc->lock);
+
+	/* Workers may use EPC operations while unbind waits for their exit. */
 	if (epf->is_bound) {
 		if (epf->ops->unbind != NULL) {
 			epf->ops->unbind(epf);
@@ -501,18 +507,15 @@ void pcie_epc_remove_epf(const struct device *dev,
 		epf->is_bound = false;
 	}
 
-	k_mutex_unlock(&epf->lock);
-
+	k_mutex_lock(&epc->lock, K_FOREVER);
 	if (pcie_epc_api(dev)->clear_capabilities != NULL) {
 		pcie_epc_api(dev)->clear_capabilities(dev, epf->funcno);
 	}
 
 	epc->funcno_map &= ~BIT(epf->funcno);
-	key = k_spin_lock(&epc->epf_lock);
-	sys_dlist_remove(&epf->epc_node);
-	k_spin_unlock(&epc->epf_lock, key);
 	epf->epc = NULL;
 	k_mutex_unlock(&epc->lock);
+	return 0;
 }
 
 void pcie_epc_linkup(const struct device *dev)
@@ -632,12 +635,13 @@ void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
 		}
 	}
 
-	k_spin_unlock(&epc->epf_lock, key);
-
+	/* Keep the target alive until its ISR-safe callback returns. */
 	if (epf != NULL && epf->event_ops != NULL &&
 	    epf->event_ops->doorbell != NULL) {
 		epf->event_ops->doorbell(epf, index);
 	}
+
+	k_spin_unlock(&epc->epf_lock, key);
 }
 
 int pcie_epc_init(const struct device *dev, struct k_heap *dmaheap)
