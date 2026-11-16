@@ -33,7 +33,7 @@ The setup uses two QEMU instances: the endpoint instance runs this sample with t
 device on its PCI bus, and the host instance runs Linux with the ``epf-bridge`` device, which
 forwards the endpoint function configured by this sample to the Linux PCI bus.
 
-The function implements the modern VIRTIO PCI interface, so a Linux host needs
+The function implements the VIRTIO PCI interface, so a Linux host needs
 ``CONFIG_VIRTIO_PCI``, and ``CONFIG_HW_RANDOM_VIRTIO`` for the virtio-rng driver.
 
 Building
@@ -144,16 +144,15 @@ uses it when the devicetree node of the controller has an ``interrupts`` propert
 ``qemu_x86_64`` overlay of this sample does, and notifies the EPF of each request; otherwise the
 EPF polls the mailbox.
 
-The Zephyr driver probes the ABI signature. Older emulators retain the memory BAR polling
-fallback, which cannot implement ISR read-to-clear or reliably observe reset writes, and report
-``-ENOTSUP`` on stop. Applications must check stop before attempting to remove an EPF.
+The Zephyr driver probes the ABI signature. On older emulators, which lack it, the VHost
+controller cannot bind, and the EPC reports ``-ENOTSUP`` on stop. Applications must check stop
+before attempting to remove an EPF.
 
 Limitations
 ***********
 
 The software-serviced path supports one PCI function, split virtqueues, static read-only device
 configuration and INTx. MSI/MSI-X, host hot-unplug/reconnect, and propagation of host PCI
-function resets are not implemented. With the ``legacy`` property of the controller node, the
-function implements the legacy interface instead, with one virtqueue behind an I/O BAR. The QEMU pair must be restarted
+function resets are not implemented. The QEMU pair must be restarted
 when changing the function's PCI identity or BAR layout. The mailbox
 provides register semantics for functional testing, not representative PCIe performance.
