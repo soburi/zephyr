@@ -32,9 +32,10 @@ config VHOST_PCI_EPF
 	help
 	  Enable the VHost controller that exposes a VIRTIO PCI device to the
 	  PCI host through a function of a PCI endpoint controller. The
-	  function implements the legacy VIRTIO PCI register layout, polls it
-	  for driver activity, and accesses the driver buffers through the
-	  outbound address windows of the endpoint controller.
+	  function implements the modern or the legacy VIRTIO PCI interface,
+	  serves the register accesses of the driver, and accesses the driver
+	  buffers through the outbound address windows of the endpoint
+	  controller.
 
 config VHOST_PCI_EPF_INIT_PRIORITY
 	int "VIRTIO PCI endpoint function controller init priority"

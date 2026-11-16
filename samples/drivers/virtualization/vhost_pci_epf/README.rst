@@ -33,8 +33,8 @@ The setup uses two QEMU instances: the endpoint instance runs this sample with t
 device on its PCI bus, and the host instance runs Linux with the ``epf-bridge`` device, which
 forwards the endpoint function configured by this sample to the Linux PCI bus.
 
-The function implements the legacy VIRTIO PCI interface, so a Linux host needs
-``CONFIG_VIRTIO_PCI_LEGACY``, and ``CONFIG_HW_RANDOM_VIRTIO`` for the virtio-rng driver.
+The function implements the modern VIRTIO PCI interface, so a Linux host needs
+``CONFIG_VIRTIO_PCI``, and ``CONFIG_HW_RANDOM_VIRTIO`` for the virtio-rng driver.
 
 Building
 ********
@@ -55,10 +55,11 @@ with ``-device qemu-epc``. The sample prints::
    [00:00:00.010,000] <inf> vhost_pci_epf_sample: PCI link started, waiting for the host
 
 Then start the Linux host instance. Its virtio-pci driver binds to the function, which shows up
-with vendor ID ``0x1af4`` and device ID ``0x1005``.
+with vendor ID ``0x1af4`` and device ID ``0x1044``.
 
-The QEMU pair must provide the EPC1 software BAR access extension described below, I/O BAR
-forwarding, subsystem ID and Interrupt Pin forwarding, and level-controlled INTx. The original
+The QEMU pair must provide the EPC1 software BAR access extension described below, forwarding
+of the vendor-specific capabilities, subsystem ID and Interrupt Pin forwarding, and
+level-controlled INTx. The original
 ``epf-bridge/v1`` implementation alone is insufficient. With these extensions, read from the
 hardware random number generator of the host:
 
@@ -150,8 +151,9 @@ fallback, which cannot implement ISR read-to-clear or reliably observe reset wri
 Limitations
 ***********
 
-The software-serviced path supports one PCI function, one legacy split virtqueue, static
-read-only device configuration and INTx. MSI/MSI-X, modern VIRTIO, host hot-unplug/reconnect,
-and propagation of host PCI function resets are not implemented. The QEMU pair must be restarted
+The software-serviced path supports one PCI function, split virtqueues, static read-only device
+configuration and INTx. MSI/MSI-X, host hot-unplug/reconnect, and propagation of host PCI
+function resets are not implemented. With the ``legacy`` property of the controller node, the
+function implements the legacy interface instead, with one virtqueue behind an I/O BAR. The QEMU pair must be restarted
 when changing the function's PCI identity or BAR layout. The mailbox
 provides register semantics for functional testing, not representative PCIe performance.

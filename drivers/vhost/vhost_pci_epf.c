@@ -24,10 +24,14 @@
 
 LOG_MODULE_REGISTER(vhost_pci_epf, CONFIG_VHOST_LOG_LEVEL);
 
+/* Both interfaces place their registers in BAR 0 */
+#define VIRTIO_PCI_BAR              0
+#define VIRTIO_PCI_VENDOR_ID        0x1af4
+#define VIRTIO_PCI_BASECLASS_OTHERS 0xff
+
 /*
  * Legacy VIRTIO PCI register layout ("Legacy Interfaces: A Note on PCI
- * Device Layout" in the VIRTIO specification), without MSI-X. The layout
- * needs no vendor-specific PCI capability.
+ * Device Layout" in the VIRTIO specification), without MSI-X.
  */
 #define VIRTIO_PCI_LEGACY_DEVICE_FEATURES 0x00
 #define VIRTIO_PCI_LEGACY_DRIVER_FEATURES 0x04
@@ -42,28 +46,109 @@ LOG_MODULE_REGISTER(vhost_pci_epf, CONFIG_VHOST_LOG_LEVEL);
 #define VIRTIO_PCI_LEGACY_QUEUE_PFN_SHIFT 12
 #define VIRTIO_PCI_LEGACY_VRING_ALIGN     4096U
 
-#define VIRTIO_PCI_VENDOR_ID        0x1af4
-#define VIRTIO_PCI_BASECLASS_OTHERS 0xff
-#define VIRTIO_PCI_LEGACY_BAR       0
+/*
+ * Modern VIRTIO PCI interface ("Virtio Over PCI Bus" in the VIRTIO
+ * specification), without MSI-X. The structures the capabilities point at
+ * lie in BAR 0.
+ */
+#define VIRTIO_PCI_MODERN_DEVICE_ID_BASE 0x1040
+#define VIRTIO_PCI_MODERN_REVISION       1
+
+#define VIRTIO_PCI_CAP_COMMON_CFG 1
+#define VIRTIO_PCI_CAP_NOTIFY_CFG 2
+#define VIRTIO_PCI_CAP_ISR_CFG    3
+#define VIRTIO_PCI_CAP_DEVICE_CFG 4
+
+#define MODERN_COMMON_OFF 0x000U
+#define MODERN_COMMON_LEN 0x038U
+#define MODERN_ISR_OFF    0x040U
+#define MODERN_ISR_LEN    0x001U
+#define MODERN_NOTIFY_OFF 0x080U
+#define MODERN_NOTIFY_LEN 0x002U
+#define MODERN_DEVICE_OFF 0x100U
+
+/* Fields of the common configuration structure */
+#define COMMON_DEVICE_FEATURE_SELECT 0x00U
+#define COMMON_DEVICE_FEATURE        0x04U
+#define COMMON_DRIVER_FEATURE_SELECT 0x08U
+#define COMMON_DRIVER_FEATURE        0x0cU
+#define COMMON_CONFIG_MSIX_VECTOR    0x10U
+#define COMMON_NUM_QUEUES            0x12U
+#define COMMON_DEVICE_STATUS         0x14U
+#define COMMON_CONFIG_GENERATION     0x15U
+#define COMMON_QUEUE_SELECT          0x16U
+#define COMMON_QUEUE_SIZE            0x18U
+#define COMMON_QUEUE_MSIX_VECTOR     0x1aU
+#define COMMON_QUEUE_ENABLE          0x1cU
+#define COMMON_QUEUE_NOTIFY_OFF      0x1eU
+#define COMMON_QUEUE_DESC            0x20U
+#define COMMON_QUEUE_DRIVER          0x28U
+#define COMMON_QUEUE_DEVICE          0x30U
+
+/* The function has no MSI-X capability */
+#define VIRTIO_MSI_NO_VECTOR 0xffffU
 
 /*
  * For controllers without software BAR access, a value the driver never
  * writes makes the next register write visible to the polling fallback.
  */
 #define DRIVER_FEATURES_IDLE UINT32_MAX
+#define QUEUE_NOTIFY_IDLE    UINT16_MAX
 
 /*
- * The device features register has 32 bits. Bit 31 stays clear, so that the
- * idle pattern of the driver features register is never a valid selection.
+ * The legacy device features register has 32 bits. Bit 31 stays clear, so
+ * that the idle pattern of the driver features register is never a valid
+ * selection.
  */
-#define SUPPORTED_FEATURES (UINT32_MAX & ~BIT(31))
-#define QUEUE_NOTIFY_IDLE    UINT16_MAX
+#define LEGACY_SUPPORTED_FEATURES ((uint64_t)UINT32_MAX & ~BIT64(31))
+
+/* Transport features of the modern interface the controller does not implement */
+#define VIRTIO_F_SR_IOV            37
+#define VIRTIO_F_NOTIFICATION_DATA 38
+#define VIRTIO_F_NOTIF_CONFIG_DATA 39
+#define VIRTIO_F_RING_RESET        40
+#define VIRTIO_F_ADMIN_VQ          41
+
+#define MODERN_SUPPORTED_FEATURES                                                                  \
+	(UINT64_MAX & ~(BIT64(VIRTIO_F_SR_IOV) | BIT64(VIRTIO_F_NOTIFICATION_DATA) |               \
+			BIT64(VIRTIO_F_NOTIF_CONFIG_DATA) | BIT64(VIRTIO_F_RING_RESET) |           \
+			BIT64(VIRTIO_F_ADMIN_VQ)))
+#define MODERN_MANDATORY_FEATURES BIT64(VIRTIO_F_VERSION_1)
 
 /* Granularity of the outbound address windows */
 #define MAP_ALIGN 4096U
 
-/* The single virtqueue of the device */
-#define QUEUE_ID 0U
+/* A range of PCI bus addresses mapped through an outbound window */
+struct vhost_pci_epf_map {
+	void *virt;
+	uintptr_t phys;
+	size_t size;
+	uint16_t queue_id;
+	uint16_t head;
+	bool used;
+};
+
+struct virtq_callback {
+	void (*cb)(const struct device *dev, uint16_t queue_id, void *user_data);
+	void *data;
+};
+
+struct vhost_pci_epf_queue {
+	/* Rings set up by the driver, in PCI bus addresses */
+	uint64_t desc;
+	uint64_t driver;
+	uint64_t device;
+	uint16_t size;
+	/* The driver has enabled the queue */
+	bool enabled;
+	/* The rings are mapped and the backend may use them */
+	bool valid;
+	bool ready_notified;
+	struct vhost_pci_epf_map desc_map;
+	struct vhost_pci_epf_map driver_map;
+	struct vhost_pci_epf_map device_map;
+	struct virtq_callback notify_cb;
+};
 
 struct vhost_pci_epf_config {
 	const struct device *epc;
@@ -72,29 +157,18 @@ struct vhost_pci_epf_config {
 	int workq_priority;
 	uint32_t poll_period_ms;
 	uint32_t doorbell_poll_period_ms;
-	/* The EPC doorbell wired to the queue notify register, if any */
+	/* The EPC doorbell wired to the legacy queue notify register, if any */
 	bool has_doorbell;
 	uint8_t doorbell_index;
+	bool legacy;
 	uint16_t device_id;
+	uint16_t num_queues;
 	uint16_t queue_size;
 	const uint8_t *config_data;
 	size_t config_data_len;
+	struct vhost_pci_epf_queue *queues;
 	struct vhost_pci_epf_map *maps;
 	size_t maps_count;
-};
-
-/* A range of PCI bus addresses mapped through an outbound window */
-struct vhost_pci_epf_map {
-	void *virt;
-	uintptr_t phys;
-	size_t size;
-	uint16_t head;
-	bool used;
-};
-
-struct virtq_callback {
-	void (*cb)(const struct device *dev, uint16_t queue_id, void *user_data);
-	void *data;
 };
 
 struct vhost_pci_epf_data {
@@ -105,27 +179,31 @@ struct vhost_pci_epf_data {
 	struct k_work_delayable poll_work;
 	/* Programs the function when the EPC reports its core initialization */
 	struct k_work core_init_work;
-	/* Set by the doorbell of the queue notify register */
+	/* One bit per queue the driver notified */
 	atomic_t kicked;
-	/* Protects the fields below and the register window */
+	/* Protects the fields below, the queues and the register window */
 	struct k_mutex lock;
 	uint8_t *regs;
 	bool trapped;
 	/* The EPC notifies the host accesses to the trapped register window */
 	bool access_notified;
 	uint16_t queue_select;
+	uint32_t device_feature_select;
+	uint32_t driver_feature_select;
 	/* Feature bits offered to the driver, set by the backend */
-	uint32_t offered_features;
-	uint32_t driver_features;
+	uint64_t offered_features;
+	uint64_t driver_features;
+	/* Page frame number of the legacy queue */
 	uint32_t pfn;
+	/*
+	 * Device status: the register of the modern interface, the value last
+	 * seen by polling the legacy one
+	 */
 	uint8_t status;
-	/* The driver has set up the virtqueue and the backend may use it */
-	bool queue_valid;
-	bool ready_notified;
-	struct vhost_pci_epf_map ring;
+	/* Interrupt status of the modern interface */
+	uint8_t isr;
 	struct virtq_callback ready_cb;
 	struct virtq_callback reset_cb;
-	struct virtq_callback notify_cb;
 };
 
 static uint8_t reg_read8(const struct vhost_pci_epf_data *data, size_t offset)
@@ -158,17 +236,34 @@ static void reg_write32(const struct vhost_pci_epf_data *data, size_t offset, ui
 	sys_write32(sys_cpu_to_le32(value), (mem_addr_t)&data->regs[offset]);
 }
 
-/* Offset of the used ring in the legacy split virtqueue layout */
-static size_t vring_used_offset(uint16_t num)
+static struct vhost_pci_epf_queue *get_queue(const struct device *dev, uint16_t queue_id)
 {
-	return ROUND_UP(sizeof(struct virtq_desc) * num + sizeof(uint16_t) * (3U + num),
-			VIRTIO_PCI_LEGACY_VRING_ALIGN);
+	const struct vhost_pci_epf_config *config = dev->config;
+
+	return (queue_id < config->num_queues) ? &config->queues[queue_id] : NULL;
 }
 
-static size_t vring_size(uint16_t num)
+/* Sizes of the parts of a split virtqueue, without the event index fields */
+static size_t vring_desc_size(uint16_t num)
 {
-	return vring_used_offset(num) + sizeof(uint16_t) * 3U +
-	       sizeof(struct virtq_used_elem) * num;
+	return sizeof(struct virtq_desc) * num;
+}
+
+static size_t vring_driver_size(uint16_t num)
+{
+	return sizeof(uint16_t) * (2U + num);
+}
+
+static size_t vring_device_size(uint16_t num)
+{
+	return sizeof(uint16_t) * 2U + sizeof(struct virtq_used_elem) * num;
+}
+
+/* Offset of the used ring in the legacy split virtqueue layout */
+static size_t vring_legacy_used_offset(uint16_t num)
+{
+	return ROUND_UP(vring_desc_size(num) + vring_driver_size(num) + sizeof(uint16_t),
+			VIRTIO_PCI_LEGACY_VRING_ALIGN);
 }
 
 static int map_bus_addr(const struct device *dev, uint64_t bus_addr, size_t len,
@@ -221,15 +316,45 @@ static void unmap_bus_addr(const struct device *dev, struct vhost_pci_epf_map *m
 	map->virt = NULL;
 }
 
-static void release_head(const struct device *dev, uint16_t head)
+static void release_head(const struct device *dev, uint16_t queue_id, uint16_t head)
 {
 	const struct vhost_pci_epf_config *config = dev->config;
 
 	for (size_t i = 0; i < config->maps_count; i++) {
-		if (config->maps[i].used && (config->maps[i].head == head)) {
-			unmap_bus_addr(dev, &config->maps[i]);
+		struct vhost_pci_epf_map *map = &config->maps[i];
+
+		if (map->used && (map->queue_id == queue_id) && (map->head == head)) {
+			unmap_bus_addr(dev, map);
 		}
 	}
+}
+
+/* Map the rings the driver has set up; the caller holds the lock */
+static int setup_queue(const struct device *dev, struct vhost_pci_epf_queue *queue)
+{
+	int ret;
+
+	ret = map_bus_addr(dev, queue->desc, vring_desc_size(queue->size), &queue->desc_map);
+	if (ret == 0) {
+		ret = map_bus_addr(dev, queue->driver, vring_driver_size(queue->size),
+				   &queue->driver_map);
+	}
+
+	if (ret == 0) {
+		ret = map_bus_addr(dev, queue->device, vring_device_size(queue->size),
+				   &queue->device_map);
+	}
+
+	if (ret < 0) {
+		unmap_bus_addr(dev, &queue->desc_map);
+		unmap_bus_addr(dev, &queue->driver_map);
+		unmap_bus_addr(dev, &queue->device_map);
+		return ret;
+	}
+
+	queue->valid = true;
+
+	return 0;
 }
 
 /*
@@ -237,47 +362,101 @@ static void release_head(const struct device *dev, uint16_t head)
  * at once and the controller does not wait for it. The guest memory stays
  * mapped, so that a backend that has not stopped yet accesses stale but
  * accessible memory. reclaim_queue() lets it go.
+ *
+ * The caller holds the lock once; it is released across the reset callback.
  */
-static void invalidate_queue(const struct device *dev)
+static void invalidate_queue(const struct device *dev, uint16_t queue_id)
 {
 	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, queue_id);
 	const struct virtq_callback reset_cb = data->reset_cb;
-	const bool was_ready = data->ready_notified;
+	const bool was_ready = queue->ready_notified;
 
-	data->queue_valid = false;
-	data->ready_notified = false;
-	data->notify_cb.cb = NULL;
-	data->notify_cb.data = NULL;
-	data->pfn = 0;
-	(void)atomic_clear(&data->kicked);
+	queue->valid = false;
+	queue->ready_notified = false;
+	queue->notify_cb.cb = NULL;
+	queue->notify_cb.data = NULL;
+	(void)atomic_clear_bit(&data->kicked, queue_id);
 
 	if (was_ready && (reset_cb.cb != NULL)) {
-		/* The caller holds the lock once. Do not hold it across the callback */
 		k_mutex_unlock(&data->lock);
-		reset_cb.cb(dev, QUEUE_ID, reset_cb.data);
+		reset_cb.cb(dev, queue_id, reset_cb.data);
 		k_mutex_lock(&data->lock, K_FOREVER);
 	}
 }
 
-/* Unmap the guest memory of the queue that was invalidated */
-static void reclaim_queue(const struct device *dev)
+static void invalidate_queues(const struct device *dev)
 {
 	const struct vhost_pci_epf_config *config = dev->config;
-	struct vhost_pci_epf_data *data = dev->data;
 
-	for (size_t i = 0; i < config->maps_count; i++) {
-		unmap_bus_addr(dev, &config->maps[i]);
+	for (uint16_t i = 0; i < config->num_queues; i++) {
+		invalidate_queue(dev, i);
 	}
-
-	unmap_bus_addr(dev, &data->ring);
 }
 
-static void init_regs(const struct device *dev)
+/* Unmap the guest memory of a queue that was invalidated */
+static void reclaim_queue(const struct device *dev, uint16_t queue_id)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, queue_id);
+
+	for (size_t i = 0; i < config->maps_count; i++) {
+		if (config->maps[i].queue_id == queue_id) {
+			unmap_bus_addr(dev, &config->maps[i]);
+		}
+	}
+
+	unmap_bus_addr(dev, &queue->desc_map);
+	unmap_bus_addr(dev, &queue->driver_map);
+	unmap_bus_addr(dev, &queue->device_map);
+}
+
+/* Return the queues to their state after a device reset; the caller holds the lock */
+static void reset_queues(const struct device *dev)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+
+	invalidate_queues(dev);
+
+	for (uint16_t i = 0; i < config->num_queues; i++) {
+		struct vhost_pci_epf_queue *queue = &config->queues[i];
+
+		queue->enabled = false;
+		queue->desc = 0;
+		queue->driver = 0;
+		queue->device = 0;
+		queue->size = config->queue_size;
+	}
+}
+
+static uint64_t supported_features(const struct device *dev)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+
+	return config->legacy ? LEGACY_SUPPORTED_FEATURES : MODERN_SUPPORTED_FEATURES;
+}
+
+static uint64_t mandatory_features(const struct device *dev)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+
+	return config->legacy ? 0U : MODERN_MANDATORY_FEATURES;
+}
+
+static uint8_t device_status(const struct device *dev)
 {
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 
-	reg_write32(data, VIRTIO_PCI_LEGACY_DEVICE_FEATURES, data->offered_features);
+	return config->legacy ? reg_read8(data, VIRTIO_PCI_LEGACY_STATUS) : data->status;
+}
+
+static void legacy_init_regs(const struct device *dev)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+	struct vhost_pci_epf_data *data = dev->data;
+
+	reg_write32(data, VIRTIO_PCI_LEGACY_DEVICE_FEATURES, (uint32_t)data->offered_features);
 	reg_write32(data, VIRTIO_PCI_LEGACY_DRIVER_FEATURES, DRIVER_FEATURES_IDLE);
 	reg_write32(data, VIRTIO_PCI_LEGACY_QUEUE_PFN, 0);
 	reg_write16(data, VIRTIO_PCI_LEGACY_QUEUE_SIZE, config->queue_size);
@@ -299,13 +478,21 @@ static int raise_irq(const struct device *dev, uint8_t isr)
 	int ret;
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	reg_write8(data, VIRTIO_PCI_LEGACY_ISR, reg_read8(data, VIRTIO_PCI_LEGACY_ISR) | isr);
+	if (config->legacy) {
+		reg_write8(data, VIRTIO_PCI_LEGACY_ISR,
+			   reg_read8(data, VIRTIO_PCI_LEGACY_ISR) | isr);
+	} else {
+		data->isr |= isr;
+	}
+
+	/* The level stays asserted until the driver reads the ISR status */
 	if (data->trapped) {
 		ret = pcie_epc_set_legacy_irq(config->epc, data->epf.funcno, true);
 	} else {
 		ret = pcie_epc_raise_irq(config->epc, data->epf.funcno, PCIE_EPC_IRQ_LEGACY, 0);
 	}
 	k_mutex_unlock(&data->lock);
+
 	if (ret < 0) {
 		LOG_ERR("%s: failed to raise interrupt: %d", dev->name, ret);
 		return -EIO;
@@ -314,8 +501,49 @@ static int raise_irq(const struct device *dev, uint8_t isr)
 	return 0;
 }
 
+/* The legacy driver reset the device: forget the state it had set up */
+static void legacy_reset(const struct device *dev)
+{
+	struct vhost_pci_epf_data *data = dev->data;
+
+	reset_queues(dev);
+	data->pfn = 0;
+	data->driver_features = 0;
+	data->queue_select = 0;
+}
+
+/* Map the queue at a new legacy page frame number, 0 to tear it down */
+static void legacy_set_pfn(const struct device *dev, uint32_t pfn)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, 0);
+	int ret;
+
+	invalidate_queue(dev, 0);
+	reclaim_queue(dev, 0);
+	queue->enabled = false;
+	data->pfn = pfn;
+	if (pfn == 0U) {
+		return;
+	}
+
+	queue->size = config->queue_size;
+	queue->desc = (uint64_t)pfn << VIRTIO_PCI_LEGACY_QUEUE_PFN_SHIFT;
+	queue->driver = queue->desc + vring_desc_size(queue->size);
+	queue->device = queue->desc + vring_legacy_used_offset(queue->size);
+	queue->enabled = true;
+
+	ret = setup_queue(dev, queue);
+	if (ret < 0) {
+		LOG_ERR("%s: failed to map the virtqueue: %d", dev->name, ret);
+		reg_write8(data, VIRTIO_PCI_LEGACY_STATUS,
+			   reg_read8(data, VIRTIO_PCI_LEGACY_STATUS) | BIT(DEVICE_STATUS_FAILED));
+	}
+}
+
 /* Detect a driver that (re)starts the device initialization */
-static void poll_features(const struct device *dev)
+static void legacy_poll_features(const struct device *dev)
 {
 	struct vhost_pci_epf_data *data = dev->data;
 	const uint32_t features = reg_read32(data, VIRTIO_PCI_LEGACY_DRIVER_FEATURES);
@@ -327,15 +555,16 @@ static void poll_features(const struct device *dev)
 	reg_write32(data, VIRTIO_PCI_LEGACY_DRIVER_FEATURES, DRIVER_FEATURES_IDLE);
 
 	/* A reset shorter than the poll period goes unnoticed otherwise */
-	invalidate_queue(dev);
+	invalidate_queues(dev);
+	data->pfn = 0;
 	/* The legacy interface cannot reject a selection, mask it */
 	data->driver_features = features & data->offered_features;
 
 	LOG_DBG("%s: driver features 0x%08x, accepted 0x%08x", dev->name, features,
-		data->driver_features);
+		(uint32_t)data->driver_features);
 }
 
-static void poll_reset(const struct device *dev, uint8_t status)
+static void legacy_poll_reset(const struct device *dev, uint8_t status)
 {
 	struct vhost_pci_epf_data *data = dev->data;
 
@@ -345,43 +574,22 @@ static void poll_reset(const struct device *dev, uint8_t status)
 
 	LOG_DBG("%s: device reset", dev->name);
 
-	invalidate_queue(dev);
-	data->driver_features = 0;
+	legacy_reset(dev);
 	reg_write32(data, VIRTIO_PCI_LEGACY_QUEUE_PFN, 0);
 	reg_write8(data, VIRTIO_PCI_LEGACY_ISR, 0);
 }
 
-static void poll_queue(const struct device *dev)
+static void legacy_poll_queue(const struct device *dev)
 {
-	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 	const uint32_t pfn = reg_read32(data, VIRTIO_PCI_LEGACY_QUEUE_PFN);
-	int ret;
 
-	if (pfn == data->pfn) {
-		return;
+	if (pfn != data->pfn) {
+		legacy_set_pfn(dev, pfn);
 	}
-
-	invalidate_queue(dev);
-	reclaim_queue(dev);
-	data->pfn = pfn;
-	if (pfn == 0U) {
-		return;
-	}
-
-	ret = map_bus_addr(dev, (uint64_t)pfn << VIRTIO_PCI_LEGACY_QUEUE_PFN_SHIFT,
-			   vring_size(config->queue_size), &data->ring);
-	if (ret < 0) {
-		LOG_ERR("%s: failed to map the virtqueue: %d", dev->name, ret);
-		reg_write8(data, VIRTIO_PCI_LEGACY_STATUS,
-			   reg_read8(data, VIRTIO_PCI_LEGACY_STATUS) | BIT(DEVICE_STATUS_FAILED));
-		return;
-	}
-
-	data->queue_valid = true;
 }
 
-static bool poll_notify(const struct device *dev)
+static bool legacy_poll_notify(const struct device *dev)
 {
 	struct vhost_pci_epf_data *data = dev->data;
 	const uint16_t queue_id = reg_read16(data, VIRTIO_PCI_LEGACY_QUEUE_NOTIFY);
@@ -397,35 +605,42 @@ static bool poll_notify(const struct device *dev)
 	 */
 	reg_write16(data, VIRTIO_PCI_LEGACY_QUEUE_NOTIFY, QUEUE_NOTIFY_IDLE);
 
-	return queue_id == QUEUE_ID;
+	return queue_id == 0U;
+}
+
+/* Access the static device configuration */
+static int access_device_config(const struct device *dev, size_t pos,
+				struct pcie_epc_bar_access *access)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+
+	if ((pos > config->config_data_len) || (access->size > config->config_data_len - pos)) {
+		return -EINVAL;
+	}
+
+	/* The driver cannot change the static configuration */
+	if (access->write) {
+		return 0;
+	}
+
+	access->value = 0U;
+	for (uint8_t i = 0U; i < access->size; i++) {
+		access->value |= (uint64_t)config->config_data[pos + i] << (8U * i);
+	}
+
+	return 0;
 }
 
 /* Called under the register lock; each host access is completed exactly once. */
-static int service_access(const struct device *dev, struct pcie_epc_bar_access *access)
+static int legacy_service_access(const struct device *dev, struct pcie_epc_bar_access *access)
 {
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 	uint32_t off = access->offset;
 	uint32_t value = access->value;
 
-	if (access->bar != VIRTIO_PCI_LEGACY_BAR ||
-	    (access->size != 1U && access->size != 2U && access->size != 4U) ||
-	    off % access->size != 0U) {
-		return -EINVAL;
-	}
 	if (off >= VIRTIO_PCI_LEGACY_CONFIG) {
-		size_t pos = off - VIRTIO_PCI_LEGACY_CONFIG;
-
-		if (pos > config->config_data_len || access->size > config->config_data_len - pos) {
-			return -EINVAL;
-		}
-		if (!access->write) {
-			access->value = 0U;
-			for (uint8_t i = 0U; i < access->size; i++) {
-				access->value |= (uint64_t)data->regs[off + i] << (8U * i);
-			}
-		}
-		return 0;
+		return access_device_config(dev, off - VIRTIO_PCI_LEGACY_CONFIG, access);
 	}
 
 	if (access->write) {
@@ -446,17 +661,16 @@ static int service_access(const struct device *dev, struct pcie_epc_bar_access *
 			if (access->size != 4U) {
 				return -EINVAL;
 			}
-			if (data->queue_select == QUEUE_ID) {
-				reg_write32(data, off, value);
-				poll_queue(dev);
+			if (data->queue_select == 0U) {
+				legacy_set_pfn(dev, value);
 			}
 			break;
 		case VIRTIO_PCI_LEGACY_QUEUE_NOTIFY:
 			if (access->size != 2U) {
 				return -EINVAL;
 			}
-			if (value == QUEUE_ID) {
-				atomic_set(&data->kicked, 1);
+			if (value == 0U) {
+				(void)atomic_set_bit(&data->kicked, 0);
 			}
 			break;
 		case VIRTIO_PCI_LEGACY_STATUS:
@@ -466,10 +680,8 @@ static int service_access(const struct device *dev, struct pcie_epc_bar_access *
 			if (value == 0U) {
 				int ret;
 
-				invalidate_queue(dev);
-				data->driver_features = 0U;
-				data->queue_select = 0U;
-				init_regs(dev);
+				legacy_reset(dev);
+				legacy_init_regs(dev);
 				ret = pcie_epc_set_legacy_irq(config->epc, data->epf.funcno, false);
 				if (ret != 0) {
 					return ret;
@@ -485,16 +697,16 @@ static int service_access(const struct device *dev, struct pcie_epc_bar_access *
 
 	switch (off) {
 	case VIRTIO_PCI_LEGACY_DEVICE_FEATURES:
-		access->value = data->offered_features;
+		access->value = (uint32_t)data->offered_features;
 		return access->size == 4U ? 0 : -EINVAL;
 	case VIRTIO_PCI_LEGACY_DRIVER_FEATURES:
-		access->value = data->driver_features;
+		access->value = (uint32_t)data->driver_features;
 		return access->size == 4U ? 0 : -EINVAL;
 	case VIRTIO_PCI_LEGACY_QUEUE_PFN:
-		access->value = data->queue_select == QUEUE_ID ? data->pfn : 0U;
+		access->value = data->queue_select == 0U ? data->pfn : 0U;
 		return access->size == 4U ? 0 : -EINVAL;
 	case VIRTIO_PCI_LEGACY_QUEUE_SIZE:
-		access->value = data->queue_select == QUEUE_ID ? config->queue_size : 0U;
+		access->value = data->queue_select == 0U ? config->queue_size : 0U;
 		return access->size == 2U ? 0 : -EINVAL;
 	case VIRTIO_PCI_LEGACY_QUEUE_SELECT:
 		access->value = data->queue_select;
@@ -514,17 +726,315 @@ static int service_access(const struct device *dev, struct pcie_epc_bar_access *
 	}
 }
 
+/* Access a 64-bit field of the common configuration, as a whole or by halves */
+static int modern_access64(uint64_t *field, uint32_t pos, struct pcie_epc_bar_access *access)
+{
+	const uint32_t shift = 8U * pos;
+	uint64_t mask;
+
+	if (!(((access->size == 4U) && ((pos == 0U) || (pos == 4U))) ||
+	      ((access->size == 8U) && (pos == 0U)))) {
+		return -EINVAL;
+	}
+
+	if (!access->write) {
+		access->value = (access->size == 8U) ? *field : (uint32_t)(*field >> shift);
+		return 0;
+	}
+
+	mask = (access->size == 8U) ? UINT64_MAX : ((uint64_t)UINT32_MAX << shift);
+	*field = (*field & ~mask) | ((access->value << shift) & mask);
+
+	return 0;
+}
+
+/* The 64-bit queue field at an offset of the common configuration */
+static uint64_t *queue_field(struct vhost_pci_epf_queue *queue, uint32_t off)
+{
+	if (off < COMMON_QUEUE_DRIVER) {
+		return &queue->desc;
+	}
+
+	return (off < COMMON_QUEUE_DEVICE) ? &queue->driver : &queue->device;
+}
+
+static void modern_write_status(const struct device *dev, uint8_t status)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+	struct vhost_pci_epf_data *data = dev->data;
+
+	if (status == 0U) {
+		LOG_DBG("%s: device reset", dev->name);
+
+		reset_queues(dev);
+		data->driver_features = 0;
+		data->device_feature_select = 0;
+		data->driver_feature_select = 0;
+		data->queue_select = 0;
+		data->status = 0;
+		data->isr = 0;
+		(void)pcie_epc_set_legacy_irq(config->epc, data->epf.funcno, false);
+		return;
+	}
+
+	/* Refuse a selection outside the offered bits; the driver checks the bit */
+	if (((status & BIT(DEVICE_STATUS_FEATURES_OK)) != 0U) &&
+	    ((data->status & BIT(DEVICE_STATUS_FEATURES_OK)) == 0U) &&
+	    (((data->driver_features & ~data->offered_features) != 0U) ||
+	     ((data->driver_features & MODERN_MANDATORY_FEATURES) !=
+	      MODERN_MANDATORY_FEATURES))) {
+		LOG_WRN("%s: driver features 0x%08x%08x refused", dev->name,
+			(uint32_t)(data->driver_features >> 32),
+			(uint32_t)data->driver_features);
+		status &= ~BIT(DEVICE_STATUS_FEATURES_OK);
+	}
+
+	data->status = status;
+}
+
+static void modern_enable_queue(const struct device *dev, uint16_t queue_id)
+{
+	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, queue_id);
+	int ret;
+
+	/* Let the memory of an earlier setup go */
+	reclaim_queue(dev, queue_id);
+
+	ret = setup_queue(dev, queue);
+	if (ret < 0) {
+		LOG_ERR("%s: failed to map virtqueue %u: %d", dev->name, queue_id, ret);
+		data->status |= BIT(DEVICE_STATUS_NEEDS_RESET);
+		return;
+	}
+
+	queue->enabled = true;
+}
+
+static int modern_common_write(const struct device *dev, struct pcie_epc_bar_access *access)
+{
+	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, data->queue_select);
+	const uint32_t off = access->offset - MODERN_COMMON_OFF;
+	const uint32_t value = access->value;
+
+	switch (off) {
+	case COMMON_DEVICE_FEATURE_SELECT:
+		data->device_feature_select = value;
+		return access->size == 4U ? 0 : -EINVAL;
+	case COMMON_DRIVER_FEATURE_SELECT:
+		data->driver_feature_select = value;
+		return access->size == 4U ? 0 : -EINVAL;
+	case COMMON_DRIVER_FEATURE:
+		if (access->size != 4U) {
+			return -EINVAL;
+		}
+		if (data->driver_feature_select < 2U) {
+			const uint32_t shift = 32U * data->driver_feature_select;
+
+			data->driver_features &= ~((uint64_t)UINT32_MAX << shift);
+			data->driver_features |= (uint64_t)value << shift;
+		}
+		return 0;
+	case COMMON_DEVICE_STATUS:
+		if (access->size != 1U) {
+			return -EINVAL;
+		}
+		modern_write_status(dev, value);
+		return 0;
+	case COMMON_QUEUE_SELECT:
+		data->queue_select = value;
+		return access->size == 2U ? 0 : -EINVAL;
+	case COMMON_QUEUE_SIZE:
+		if (access->size != 2U) {
+			return -EINVAL;
+		}
+		/* A split virtqueue has a power of two entries, at most the maximum */
+		if ((queue != NULL) && !queue->enabled && (value != 0U) &&
+		    IS_POWER_OF_TWO(value) && (value <= queue->size)) {
+			queue->size = value;
+		}
+		return 0;
+	case COMMON_QUEUE_ENABLE:
+		if (access->size != 2U) {
+			return -EINVAL;
+		}
+		/* Only a device reset disables a queue */
+		if ((queue != NULL) && !queue->enabled && (value == 1U)) {
+			modern_enable_queue(dev, data->queue_select);
+		}
+		return 0;
+	case COMMON_CONFIG_MSIX_VECTOR:
+	case COMMON_QUEUE_MSIX_VECTOR:
+		/* Without MSI-X the vectors stay VIRTIO_MSI_NO_VECTOR */
+		return access->size == 2U ? 0 : -EINVAL;
+	default:
+		break;
+	}
+
+	if (off >= COMMON_QUEUE_DESC) {
+		uint64_t ignored = 0U;
+		uint64_t *field = &ignored;
+
+		/* The rings of an enabled queue cannot move */
+		if ((queue != NULL) && !queue->enabled) {
+			field = queue_field(queue, off);
+		}
+
+		return modern_access64(field, off % 8U, access);
+	}
+
+	/* The remaining fields are read-only for the driver */
+	return 0;
+}
+
+static int modern_common_read(const struct device *dev, struct pcie_epc_bar_access *access)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, data->queue_select);
+	const uint32_t off = access->offset - MODERN_COMMON_OFF;
+	uint32_t select;
+	uint8_t size;
+
+	switch (off) {
+	case COMMON_DEVICE_FEATURE_SELECT:
+		access->value = data->device_feature_select;
+		size = 4U;
+		break;
+	case COMMON_DEVICE_FEATURE:
+		select = data->device_feature_select;
+		access->value =
+			(select < 2U) ? (uint32_t)(data->offered_features >> (32U * select)) : 0U;
+		size = 4U;
+		break;
+	case COMMON_DRIVER_FEATURE_SELECT:
+		access->value = data->driver_feature_select;
+		size = 4U;
+		break;
+	case COMMON_DRIVER_FEATURE:
+		select = data->driver_feature_select;
+		access->value =
+			(select < 2U) ? (uint32_t)(data->driver_features >> (32U * select)) : 0U;
+		size = 4U;
+		break;
+	case COMMON_CONFIG_MSIX_VECTOR:
+	case COMMON_QUEUE_MSIX_VECTOR:
+		access->value = VIRTIO_MSI_NO_VECTOR;
+		size = 2U;
+		break;
+	case COMMON_NUM_QUEUES:
+		access->value = config->num_queues;
+		size = 2U;
+		break;
+	case COMMON_DEVICE_STATUS:
+		access->value = data->status;
+		size = 1U;
+		break;
+	case COMMON_CONFIG_GENERATION:
+		/* The device configuration is static */
+		access->value = 0U;
+		size = 1U;
+		break;
+	case COMMON_QUEUE_SELECT:
+		access->value = data->queue_select;
+		size = 2U;
+		break;
+	case COMMON_QUEUE_SIZE:
+		/* A size of 0 tells the driver the queue does not exist */
+		access->value = (queue != NULL) ? queue->size : 0U;
+		size = 2U;
+		break;
+	case COMMON_QUEUE_ENABLE:
+		access->value = ((queue != NULL) && queue->enabled) ? 1U : 0U;
+		size = 2U;
+		break;
+	case COMMON_QUEUE_NOTIFY_OFF:
+		/* All queues share the notification register */
+		access->value = 0U;
+		size = 2U;
+		break;
+	default:
+		if (off >= COMMON_QUEUE_DESC) {
+			uint64_t zero = 0U;
+
+			return modern_access64((queue != NULL) ? queue_field(queue, off) : &zero,
+					       off % 8U, access);
+		}
+		return -EINVAL;
+	}
+
+	return access->size == size ? 0 : -EINVAL;
+}
+
+/* Called under the register lock; each host access is completed exactly once. */
+static int modern_service_access(const struct device *dev, struct pcie_epc_bar_access *access)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+	struct vhost_pci_epf_data *data = dev->data;
+	const uint32_t off = access->offset;
+
+	if (off < MODERN_COMMON_OFF + MODERN_COMMON_LEN) {
+		if (off + access->size > MODERN_COMMON_OFF + MODERN_COMMON_LEN) {
+			return -EINVAL;
+		}
+		return access->write ? modern_common_write(dev, access)
+				     : modern_common_read(dev, access);
+	}
+
+	if (off == MODERN_ISR_OFF) {
+		if ((access->size != 1U) || access->write) {
+			return -EINVAL;
+		}
+		/* Reading the ISR status acknowledges the interrupt */
+		access->value = data->isr;
+		data->isr = 0U;
+		return pcie_epc_set_legacy_irq(config->epc, data->epf.funcno, false);
+	}
+
+	if (off == MODERN_NOTIFY_OFF) {
+		if (!access->write || (access->size != 2U)) {
+			return -EINVAL;
+		}
+		/* Without VIRTIO_F_NOTIFICATION_DATA the value is the queue index */
+		if (access->value < config->num_queues) {
+			(void)atomic_set_bit(&data->kicked, (int)access->value);
+		}
+		return 0;
+	}
+
+	if (off >= MODERN_DEVICE_OFF) {
+		return access_device_config(dev, off - MODERN_DEVICE_OFF, access);
+	}
+
+	return -EINVAL;
+}
+
+static int service_access(const struct device *dev, struct pcie_epc_bar_access *access)
+{
+	const struct vhost_pci_epf_config *config = dev->config;
+
+	if ((access->bar != VIRTIO_PCI_BAR) ||
+	    ((access->size != 1U) && (access->size != 2U) && (access->size != 4U) &&
+	     (access->size != 8U)) ||
+	    ((access->offset % access->size) != 0U)) {
+		return -EINVAL;
+	}
+
+	return config->legacy ? legacy_service_access(dev, access)
+			      : modern_service_access(dev, access);
+}
+
 static void poll_handler(struct k_work *work)
 {
 	struct k_work_delayable *dwork = k_work_delayable_from_work(work);
 	struct vhost_pci_epf_data *data = CONTAINER_OF(dwork, struct vhost_pci_epf_data, poll_work);
 	const struct device *dev = data->dev;
 	const struct vhost_pci_epf_config *config = dev->config;
-	struct virtq_callback ready_cb = {0};
-	struct virtq_callback notify_cb = {0};
+	struct virtq_callback ready_cb;
 	uint32_t period_ms = config->poll_period_ms;
-	bool notified;
-	uint8_t status;
+	uint32_t ready = 0U;
+	uint32_t notified = 0U;
 
 	k_mutex_lock(&data->lock, K_FOREVER);
 
@@ -535,8 +1045,8 @@ static void poll_handler(struct k_work *work)
 		if (ret == 0) {
 			ret = service_access(dev, &access);
 			ret = pcie_epc_bar_access_complete(config->epc, data->epf.funcno,
-						   &access, ret);
-			if (ret != 0 && ret != -ESTALE) {
+							   &access, ret);
+			if ((ret != 0) && (ret != -ESTALE)) {
 				LOG_ERR("BAR response failed: %d", ret);
 			}
 
@@ -549,28 +1059,33 @@ static void poll_handler(struct k_work *work)
 			period_ms = 1U;
 		}
 	} else {
-		status = reg_read8(data, VIRTIO_PCI_LEGACY_STATUS);
-		poll_reset(dev, status);
-		poll_features(dev);
-		poll_queue(dev);
+		legacy_poll_reset(dev, reg_read8(data, VIRTIO_PCI_LEGACY_STATUS));
+		legacy_poll_features(dev);
+		legacy_poll_queue(dev);
+		data->status = reg_read8(data, VIRTIO_PCI_LEGACY_STATUS);
 	}
-	status = reg_read8(data, VIRTIO_PCI_LEGACY_STATUS);
-	data->status = status;
 
-	if (data->queue_valid && ((status & BIT(DEVICE_STATUS_DRIVER_OK)) != 0U)) {
-		if (!data->ready_notified && (data->ready_cb.cb != NULL)) {
-			data->ready_notified = true;
-			ready_cb = data->ready_cb;
-		}
-
+	if ((device_status(dev) & BIT(DEVICE_STATUS_DRIVER_OK)) != 0U) {
 		/* A doorbell write may or may not reach the register as well */
-		notified = data->trapped ? false : poll_notify(dev);
-		if (atomic_clear(&data->kicked) != 0) {
-			notified = true;
+		if (!data->trapped && legacy_poll_notify(dev)) {
+			(void)atomic_set_bit(&data->kicked, 0);
 		}
 
-		if (notified) {
-			notify_cb = data->notify_cb;
+		for (uint16_t i = 0; i < config->num_queues; i++) {
+			struct vhost_pci_epf_queue *queue = &config->queues[i];
+
+			if (!queue->valid) {
+				continue;
+			}
+
+			if (!queue->ready_notified && (data->ready_cb.cb != NULL)) {
+				queue->ready_notified = true;
+				ready |= BIT(i);
+			}
+
+			if (atomic_test_and_clear_bit(&data->kicked, i)) {
+				notified |= BIT(i);
+			}
 		}
 
 		/* Only a device reset is left to be found by polling */
@@ -579,26 +1094,37 @@ static void poll_handler(struct k_work *work)
 		}
 	}
 
+	ready_cb = data->ready_cb;
 	k_mutex_unlock(&data->lock);
 
 	/* The callbacks call back into the controller, run them unlocked */
-	if (ready_cb.cb != NULL) {
-		ready_cb.cb(dev, QUEUE_ID, ready_cb.data);
+	for (uint16_t i = 0; i < config->num_queues; i++) {
+		if ((ready & BIT(i)) != 0U) {
+			ready_cb.cb(dev, i, ready_cb.data);
+		}
+	}
 
-		/*
-		 * A notification that preceded the registration of the
-		 * callback is lost, so process the queue once in any case.
-		 */
+	/*
+	 * A notification that preceded the registration of the notify callback
+	 * is lost, so process a queue that became ready once in any case.
+	 */
+	for (uint16_t i = 0; i < config->num_queues; i++) {
+		struct virtq_callback notify_cb;
+
+		if (((ready | notified) & BIT(i)) == 0U) {
+			continue;
+		}
+
 		k_mutex_lock(&data->lock, K_FOREVER);
-		notify_cb = data->notify_cb;
+		notify_cb = config->queues[i].notify_cb;
 		k_mutex_unlock(&data->lock);
+
+		if (notify_cb.cb != NULL) {
+			notify_cb.cb(dev, i, notify_cb.data);
+		}
 	}
 
-	if (notify_cb.cb != NULL) {
-		notify_cb.cb(dev, QUEUE_ID, notify_cb.data);
-	}
-
-	/* No-op when a doorbell has already queued the next run */
+	/* No-op when a notification has already queued the next run */
 	k_work_schedule_for_queue(&data->workq, &data->poll_work, K_MSEC(period_ms));
 }
 
@@ -610,6 +1136,7 @@ static int vhost_pci_epf_prepare_iovec(const struct device *dev, uint16_t queue_
 {
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, queue_id);
 	size_t read_num = 0;
 	size_t write_num = 0;
 	int ret = 0;
@@ -617,14 +1144,16 @@ static int vhost_pci_epf_prepare_iovec(const struct device *dev, uint16_t queue_
 	*read_count = 0;
 	*write_count = 0;
 
-	if ((queue_id != QUEUE_ID) || (head >= config->queue_size)) {
+	if (queue == NULL) {
 		return -EINVAL;
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
 
-	if (!data->queue_valid) {
+	if (!queue->valid) {
 		ret = -ENODEV;
+	} else if (head >= queue->size) {
+		ret = -EINVAL;
 	}
 
 	for (size_t i = 0; (i < bufs_count) && (ret == 0); i++) {
@@ -660,6 +1189,7 @@ static int vhost_pci_epf_prepare_iovec(const struct device *dev, uint16_t queue_
 			break;
 		}
 
+		map->queue_id = queue_id;
 		map->head = head;
 		iovec->iov_base = map->virt;
 		iovec->iov_len = bufs[i].len;
@@ -687,18 +1217,17 @@ static int vhost_pci_epf_prepare_iovec(const struct device *dev, uint16_t queue_
 static int vhost_pci_epf_release_iovec(const struct device *dev, uint16_t queue_id, uint16_t head,
 				       uint32_t written)
 {
-	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 
 	/* The buffers are mapped, not copied; no write-back is needed. */
 	ARG_UNUSED(written);
 
-	if ((queue_id != QUEUE_ID) || (head >= config->queue_size)) {
+	if (get_queue(dev, queue_id) == NULL) {
 		return -EINVAL;
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	release_head(dev, head);
+	release_head(dev, queue_id, head);
 	k_mutex_unlock(&data->lock);
 
 	return 0;
@@ -707,14 +1236,15 @@ static int vhost_pci_epf_release_iovec(const struct device *dev, uint16_t queue_
 static bool vhost_pci_epf_virtq_is_ready(const struct device *dev, uint16_t queue_id)
 {
 	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, queue_id);
 	bool ready;
 
-	if (queue_id != QUEUE_ID) {
+	if (queue == NULL) {
 		return false;
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	ready = data->queue_valid;
+	ready = queue->valid;
 	k_mutex_unlock(&data->lock);
 
 	return ready;
@@ -723,24 +1253,21 @@ static bool vhost_pci_epf_virtq_is_ready(const struct device *dev, uint16_t queu
 static int vhost_pci_epf_get_virtq(const struct device *dev, uint16_t queue_id,
 				   struct vhost_vring *vring)
 {
-	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, queue_id);
 	int ret = 0;
 
-	if (queue_id != QUEUE_ID) {
+	if (queue == NULL) {
 		return -EINVAL;
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
 
-	if (data->queue_valid) {
-		uint8_t *base = data->ring.virt;
-
-		vring->num = config->queue_size;
-		vring->desc = (struct virtq_desc *)base;
-		vring->avail = (struct virtq_avail *)(base + sizeof(struct virtq_desc) *
-								     config->queue_size);
-		vring->used = (struct virtq_used *)(base + vring_used_offset(config->queue_size));
+	if (queue->valid) {
+		vring->num = queue->size;
+		vring->desc = queue->desc_map.virt;
+		vring->avail = queue->driver_map.virt;
+		vring->used = queue->device_map.virt;
 	} else {
 		ret = -ENODEV;
 	}
@@ -763,13 +1290,11 @@ static int vhost_pci_epf_get_driver_features(const struct device *dev, uint64_t 
 
 static int vhost_pci_epf_get_supported_features(const struct device *dev, uint64_t *supported)
 {
-	ARG_UNUSED(dev);
-
 	if (supported == NULL) {
 		return -EINVAL;
 	}
 
-	*supported = SUPPORTED_FEATURES;
+	*supported = supported_features(dev);
 
 	return 0;
 }
@@ -777,6 +1302,7 @@ static int vhost_pci_epf_get_supported_features(const struct device *dev, uint64
 static int vhost_pci_epf_set_device_features(const struct device *dev, uint64_t wanted,
 					     uint64_t *offered)
 {
+	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 	int ret = 0;
 
@@ -784,12 +1310,16 @@ static int vhost_pci_epf_set_device_features(const struct device *dev, uint64_t 
 
 	if (data->regs == NULL) {
 		ret = -ENODEV;
-	} else if (reg_read8(data, VIRTIO_PCI_LEGACY_STATUS) != 0U) {
+	} else if (device_status(dev) != 0U) {
 		/* The driver may have read the features already */
 		ret = -EBUSY;
 	} else {
-		data->offered_features = (uint32_t)(wanted & SUPPORTED_FEATURES);
-		reg_write32(data, VIRTIO_PCI_LEGACY_DEVICE_FEATURES, data->offered_features);
+		data->offered_features =
+			(wanted & supported_features(dev)) | mandatory_features(dev);
+		if (config->legacy) {
+			reg_write32(data, VIRTIO_PCI_LEGACY_DEVICE_FEATURES,
+				    (uint32_t)data->offered_features);
+		}
 
 		if (offered != NULL) {
 			*offered = data->offered_features;
@@ -807,12 +1337,15 @@ static int vhost_pci_epf_register_virtq_ready_cb(const struct device *dev,
 								  void *user_data),
 						 void *user_data)
 {
+	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 
 	k_mutex_lock(&data->lock, K_FOREVER);
 	data->ready_cb.cb = callback;
 	data->ready_cb.data = user_data;
-	data->ready_notified = false;
+	for (uint16_t i = 0; i < config->num_queues; i++) {
+		config->queues[i].ready_notified = false;
+	}
 	k_mutex_unlock(&data->lock);
 
 	return 0;
@@ -841,14 +1374,15 @@ static int vhost_pci_epf_register_virtq_notify_cb(const struct device *dev, uint
 						  void *user_data)
 {
 	struct vhost_pci_epf_data *data = dev->data;
+	struct vhost_pci_epf_queue *queue = get_queue(dev, queue_id);
 
-	if (queue_id != QUEUE_ID) {
+	if (queue == NULL) {
 		return -EINVAL;
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	data->notify_cb.cb = callback;
-	data->notify_cb.data = user_data;
+	queue->notify_cb.cb = callback;
+	queue->notify_cb.data = user_data;
 	k_mutex_unlock(&data->lock);
 
 	return 0;
@@ -856,7 +1390,7 @@ static int vhost_pci_epf_register_virtq_notify_cb(const struct device *dev, uint
 
 static int vhost_pci_epf_notify_virtq(const struct device *dev, uint16_t queue_id)
 {
-	if (queue_id != QUEUE_ID) {
+	if (get_queue(dev, queue_id) == NULL) {
 		return -EINVAL;
 	}
 
@@ -869,6 +1403,7 @@ static int vhost_pci_epf_notify_virtq(const struct device *dev, uint16_t queue_i
 
 static int vhost_pci_epf_set_device_status(const struct device *dev, uint32_t status)
 {
+	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 
 	if (status > UINT8_MAX) {
@@ -876,8 +1411,12 @@ static int vhost_pci_epf_set_device_status(const struct device *dev, uint32_t st
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	reg_write8(data, VIRTIO_PCI_LEGACY_STATUS,
-		   reg_read8(data, VIRTIO_PCI_LEGACY_STATUS) | (uint8_t)status);
+	if (config->legacy) {
+		reg_write8(data, VIRTIO_PCI_LEGACY_STATUS,
+			   reg_read8(data, VIRTIO_PCI_LEGACY_STATUS) | (uint8_t)status);
+	} else {
+		data->status |= (uint8_t)status;
+	}
 	k_mutex_unlock(&data->lock);
 
 	return raise_irq(dev, VIRTIO_DEVICE_CONFIGURATION_INTERRUPT);
@@ -908,7 +1447,7 @@ static void vhost_pci_epf_doorbell(struct pcie_epf_device_s *epf, uint8_t index)
 		return;
 	}
 
-	(void)atomic_set(&data->kicked, 1);
+	(void)atomic_set_bit(&data->kicked, 0);
 	(void)k_work_reschedule_for_queue(&data->workq, &data->poll_work, K_NO_WAIT);
 }
 
@@ -931,9 +1470,9 @@ static int vhost_pci_epf_setup(struct pcie_epf_device_s *epf)
 		return ret;
 	}
 
-	ret = pcie_epc_set_bar(epf->epc, epf->funcno, &epf->bar[VIRTIO_PCI_LEGACY_BAR]);
+	ret = pcie_epc_set_bar(epf->epc, epf->funcno, &epf->bar[VIRTIO_PCI_BAR]);
 	if (ret < 0) {
-		LOG_ERR("%s: failed to set BAR%d: %d", dev->name, VIRTIO_PCI_LEGACY_BAR, ret);
+		LOG_ERR("%s: failed to set BAR%d: %d", dev->name, VIRTIO_PCI_BAR, ret);
 	}
 
 	return ret;
@@ -954,12 +1493,65 @@ static void vhost_pci_epf_core_init(struct pcie_epf_device_s *epf)
 	(void)k_work_submit_to_queue(&data->workq, &data->core_init_work);
 }
 
+/* Add a VIRTIO vendor-specific capability pointing at a range of BAR 0 */
+static int add_virtio_cap(struct pcie_epf_device_s *epf, uint8_t cfg_type, uint32_t offset,
+			  uint32_t length, bool notify)
+{
+	/*
+	 * struct virtio_pci_cap, or struct virtio_pci_notify_cap, without the
+	 * capability ID and next pointer, which the EPC fills in
+	 */
+	uint8_t body[18] = {0};
+	const uint8_t cap_len = notify ? 20U : 16U;
+
+	body[0] = cap_len;
+	body[1] = cfg_type;
+	body[2] = VIRTIO_PCI_BAR;
+	sys_put_le32(offset, &body[6]);
+	sys_put_le32(length, &body[10]);
+	/* notify_off_multiplier stays 0: every queue uses the same register */
+
+	return pcie_epc_add_capability(epf->epc, epf->funcno, PCI_CAP_ID_VNDR, body,
+				       cap_len - 2U);
+}
+
+static int modern_add_caps(struct pcie_epf_device_s *epf)
+{
+	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
+	const struct vhost_pci_epf_config *config = dev->config;
+	int ret;
+
+	ret = add_virtio_cap(epf, VIRTIO_PCI_CAP_COMMON_CFG, MODERN_COMMON_OFF, MODERN_COMMON_LEN,
+			     false);
+	if (ret == 0) {
+		ret = add_virtio_cap(epf, VIRTIO_PCI_CAP_NOTIFY_CFG, MODERN_NOTIFY_OFF,
+				     MODERN_NOTIFY_LEN, true);
+	}
+
+	if (ret == 0) {
+		ret = add_virtio_cap(epf, VIRTIO_PCI_CAP_ISR_CFG, MODERN_ISR_OFF, MODERN_ISR_LEN,
+				     false);
+	}
+
+	if ((ret == 0) && (config->config_data_len > 0U)) {
+		ret = add_virtio_cap(epf, VIRTIO_PCI_CAP_DEVICE_CFG, MODERN_DEVICE_OFF,
+				     config->config_data_len, false);
+	}
+
+	if (ret < 0) {
+		LOG_ERR("%s: failed to add the VIRTIO capabilities: %d", dev->name, ret);
+	}
+
+	return ret;
+}
+
 static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
 {
 	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
 	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 	const struct pcie_epc_features_s *features;
+	size_t size;
 	int ret;
 
 	features = pcie_epc_get_features(epf->epc, epf->funcno);
@@ -967,69 +1559,95 @@ static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
 		return -ENOTSUP;
 	}
 
-	/* The legacy driver looks for the registers in BAR 0 only */
-	if ((features->bar_reserved & BIT(VIRTIO_PCI_LEGACY_BAR)) != 0U) {
-		LOG_ERR("%s: BAR%d is not available", dev->name, VIRTIO_PCI_LEGACY_BAR);
+	if ((features->bar_reserved & BIT(VIRTIO_PCI_BAR)) != 0U) {
+		LOG_ERR("%s: BAR%d is not available", dev->name, VIRTIO_PCI_BAR);
 		return -ENOTSUP;
 	}
 
-	if ((features->bar_fixed_64bit & BIT(VIRTIO_PCI_LEGACY_BAR)) != 0U) {
-		epf->bar[VIRTIO_PCI_LEGACY_BAR].flags |= PCI_BASE_ADDRESS_MEM_TYPE_64;
+	/* Polling cannot follow the registers the modern interface banks by selectors */
+	if (!config->legacy && (!features->bar_access || !features->capability_writable)) {
+		LOG_ERR("%s: the modern interface needs software BAR access and capabilities",
+			dev->name);
+		return -ENOTSUP;
 	}
 
-	data->regs = pcie_epf_alloc_space(epf, VIRTIO_PCI_LEGACY_BAR,
-					  VIRTIO_PCI_LEGACY_CONFIG + config->config_data_len,
-					  features->align);
+	if ((features->bar_fixed_64bit & BIT(VIRTIO_PCI_BAR)) != 0U) {
+		epf->bar[VIRTIO_PCI_BAR].flags |= PCI_BASE_ADDRESS_MEM_TYPE_64;
+	}
+
+	size = (config->legacy ? VIRTIO_PCI_LEGACY_CONFIG : MODERN_DEVICE_OFF) +
+	       config->config_data_len;
+	data->regs = pcie_epf_alloc_space(epf, VIRTIO_PCI_BAR, size, features->align);
 	if (data->regs == NULL) {
 		return -ENOMEM;
 	}
 
 	data->trapped = features->bar_access;
 	data->access_notified = data->trapped && features->bar_access_notifier;
-	LOG_DBG("%s: register window %s", dev->name,
+	LOG_DBG("%s: %s register window %s", dev->name, config->legacy ? "legacy" : "modern",
 		data->access_notified ? "trapped, notified" :
 		data->trapped ? "trapped, polled" : "polled");
-	if (data->trapped) {
-		epf->bar[VIRTIO_PCI_LEGACY_BAR].flags = PCI_BASE_ADDRESS_SPACE_IO;
+
+	/* The legacy driver expects an I/O BAR when the registers are emulated */
+	if (config->legacy && data->trapped) {
+		epf->bar[VIRTIO_PCI_BAR].flags = PCI_BASE_ADDRESS_SPACE_IO;
 	}
-	memset(data->regs, 0, epf->bar[VIRTIO_PCI_LEGACY_BAR].size);
-	init_regs(dev);
+
+	memset(data->regs, 0, epf->bar[VIRTIO_PCI_BAR].size);
+
+	k_mutex_lock(&data->lock, K_FOREVER);
+	reset_queues(dev);
+	data->status = 0;
+	data->isr = 0;
+	data->pfn = 0;
+	k_mutex_unlock(&data->lock);
+
+	if (config->legacy) {
+		legacy_init_regs(dev);
+	} else {
+		ret = modern_add_caps(epf);
+		if (ret < 0) {
+			goto err_free;
+		}
+	}
 
 	if (!features->core_init_notifier) {
 		ret = vhost_pci_epf_setup(epf);
 		if (ret < 0) {
-			pcie_epf_free_space(epf, VIRTIO_PCI_LEGACY_BAR, data->regs);
-			data->regs = NULL;
-			return ret;
+			goto err_free;
 		}
 	}
 
 	if (data->trapped) {
-		ret = pcie_epc_bar_access_enable(epf->epc, epf->funcno,
-						VIRTIO_PCI_LEGACY_BAR, true);
+		ret = pcie_epc_bar_access_enable(epf->epc, epf->funcno, VIRTIO_PCI_BAR, true);
 		if (ret != 0) {
-			pcie_epc_clear_bar(epf->epc, epf->funcno, &epf->bar[VIRTIO_PCI_LEGACY_BAR]);
-			pcie_epf_free_space(epf, VIRTIO_PCI_LEGACY_BAR, data->regs);
-			data->regs = NULL;
-			return ret;
+			pcie_epc_clear_bar(epf->epc, epf->funcno, &epf->bar[VIRTIO_PCI_BAR]);
+			goto err_free;
 		}
 	}
+
 	k_work_schedule_for_queue(&data->workq, &data->poll_work, K_NO_WAIT);
 
 	return 0;
+
+err_free:
+	/* The framework removes the capabilities of a function that fails to bind */
+	pcie_epf_free_space(epf, VIRTIO_PCI_BAR, data->regs);
+	data->regs = NULL;
+	return ret;
 }
 
 static void vhost_pci_epf_unbind(struct pcie_epf_device_s *epf)
 {
 	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
+	const struct vhost_pci_epf_config *config = dev->config;
 	struct vhost_pci_epf_data *data = dev->data;
 	struct k_work_sync sync;
 
 	k_work_cancel_sync(&data->core_init_work, &sync);
 	k_work_cancel_delayable_sync(&data->poll_work, &sync);
 	if (data->trapped) {
-		int ret = pcie_epc_bar_access_enable(epf->epc, epf->funcno,
-						   VIRTIO_PCI_LEGACY_BAR, false);
+		int ret = pcie_epc_bar_access_enable(epf->epc, epf->funcno, VIRTIO_PCI_BAR, false);
 
 		if (ret != 0) {
 			LOG_ERR("Cannot disable BAR servicing: %d", ret);
@@ -1037,12 +1655,14 @@ static void vhost_pci_epf_unbind(struct pcie_epf_device_s *epf)
 	}
 
 	k_mutex_lock(&data->lock, K_FOREVER);
-	invalidate_queue(dev);
-	reclaim_queue(dev);
+	invalidate_queues(dev);
+	for (uint16_t i = 0; i < config->num_queues; i++) {
+		reclaim_queue(dev, i);
+	}
 	k_mutex_unlock(&data->lock);
 
-	pcie_epc_clear_bar(epf->epc, epf->funcno, &epf->bar[VIRTIO_PCI_LEGACY_BAR]);
-	pcie_epf_free_space(epf, VIRTIO_PCI_LEGACY_BAR, data->regs);
+	pcie_epc_clear_bar(epf->epc, epf->funcno, &epf->bar[VIRTIO_PCI_BAR]);
+	pcie_epf_free_space(epf, VIRTIO_PCI_BAR, data->regs);
 	data->regs = NULL;
 }
 
@@ -1092,11 +1712,16 @@ static int vhost_pci_epf_init(const struct device *dev)
 		return -ENODEV;
 	}
 
-	data->header.deviceid = transitional_pci_device_id(config->device_id);
-	if (data->header.deviceid == 0U) {
-		LOG_ERR("%s: VIRTIO device ID %u has no transitional PCI device ID", dev->name,
-			config->device_id);
-		return -ENOTSUP;
+	if (config->legacy) {
+		data->header.deviceid = transitional_pci_device_id(config->device_id);
+		if (data->header.deviceid == 0U) {
+			LOG_ERR("%s: VIRTIO device ID %u has no transitional PCI device ID",
+				dev->name, config->device_id);
+			return -ENOTSUP;
+		}
+	} else {
+		data->header.deviceid = VIRTIO_PCI_MODERN_DEVICE_ID_BASE + config->device_id;
+		data->header.revid = VIRTIO_PCI_MODERN_REVISION;
 	}
 
 	/* The legacy driver takes the device type from the subsystem ID */
@@ -1110,6 +1735,8 @@ static int vhost_pci_epf_init(const struct device *dev)
 	data->epf.header = &data->header;
 	data->epf.ops = &epf_ops;
 	data->epf.event_ops = &epf_event_ops;
+	/* Until the backend sets them, only the bits the transport requires */
+	data->offered_features = mandatory_features(dev);
 
 	k_mutex_init(&data->lock);
 	k_work_init_delayable(&data->poll_work, poll_handler);
@@ -1130,9 +1757,14 @@ static int vhost_pci_epf_init(const struct device *dev)
 #define VHOST_PCI_EPF_INST(idx)                                                                    \
 	BUILD_ASSERT(IS_POWER_OF_TWO(DT_INST_PROP(idx, queue_size_max)),                           \
 		     "queue-size-max must be a power of two");                                     \
+	BUILD_ASSERT(DT_INST_PROP(idx, num_queues) <= 32, "num-queues must not exceed 32");        \
+	BUILD_ASSERT(!DT_INST_PROP(idx, legacy) || (DT_INST_PROP(idx, num_queues) == 1),           \
+		     "the legacy interface has a single virtqueue");                               \
 	static K_THREAD_STACK_DEFINE(vhost_pci_epf_stack_##idx, DT_INST_PROP(idx, stack_size));    \
 	static const uint8_t vhost_pci_epf_config_data_##idx[] =                                   \
 		DT_INST_PROP_OR(idx, config_data, {});                                             \
+	static struct vhost_pci_epf_queue                                                          \
+		vhost_pci_epf_queues_##idx[DT_INST_PROP(idx, num_queues)];                         \
 	static struct vhost_pci_epf_map vhost_pci_epf_maps_##idx[DT_INST_PROP(idx, max_buffers)];  \
 	static const struct vhost_pci_epf_config vhost_pci_epf_config_##idx = {                    \
 		.epc = DEVICE_DT_GET(DT_INST_PHANDLE(idx, epc)),                                   \
@@ -1143,10 +1775,13 @@ static int vhost_pci_epf_init(const struct device *dev)
 		.doorbell_poll_period_ms = DT_INST_PROP(idx, doorbell_poll_period_ms),             \
 		.has_doorbell = DT_INST_NODE_HAS_PROP(idx, queue_notify_doorbell),                 \
 		.doorbell_index = DT_INST_PROP_OR(idx, queue_notify_doorbell, 0),                  \
+		.legacy = DT_INST_PROP(idx, legacy),                                               \
 		.device_id = DT_INST_PROP(idx, device_id),                                         \
+		.num_queues = DT_INST_PROP(idx, num_queues),                                       \
 		.queue_size = DT_INST_PROP(idx, queue_size_max),                                   \
 		.config_data = vhost_pci_epf_config_data_##idx,                                    \
 		.config_data_len = DT_INST_PROP_LEN_OR(idx, config_data, 0),                       \
+		.queues = vhost_pci_epf_queues_##idx,                                              \
 		.maps = vhost_pci_epf_maps_##idx,                                                  \
 		.maps_count = ARRAY_SIZE(vhost_pci_epf_maps_##idx),                                \
 	};                                                                                         \
