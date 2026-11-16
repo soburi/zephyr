@@ -109,6 +109,8 @@ struct vhost_pci_epf_data {
 	struct k_mutex lock;
 	uint8_t *regs;
 	bool trapped;
+	/* The EPC notifies the host accesses to the trapped register window */
+	bool access_notified;
 	uint16_t queue_select;
 	/* Feature bits offered to the driver, set by the backend */
 	uint32_t offered_features;
@@ -535,8 +537,15 @@ static void poll_handler(struct k_work *work)
 			if (ret != 0 && ret != -ESTALE) {
 				LOG_ERR("BAR response failed: %d", ret);
 			}
+
+			/* Look for the next access right away */
+			period_ms = 0U;
+		} else if (data->access_notified) {
+			/* The EPC reschedules the work on the next access */
+			period_ms = config->doorbell_poll_period_ms;
+		} else {
+			period_ms = 1U;
 		}
-		period_ms = 1U;
 	} else {
 		status = reg_read8(data, VIRTIO_PCI_LEGACY_STATUS);
 		poll_reset(dev, status);
@@ -901,6 +910,13 @@ static void vhost_pci_epf_doorbell(struct pcie_epf_device_s *epf, uint8_t index)
 	(void)k_work_reschedule_for_queue(&data->workq, &data->poll_work, K_NO_WAIT);
 }
 
+static void vhost_pci_epf_bar_access(struct pcie_epf_device_s *epf)
+{
+	struct vhost_pci_epf_data *data = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf);
+
+	(void)k_work_reschedule_for_queue(&data->workq, &data->poll_work, K_NO_WAIT);
+}
+
 static int vhost_pci_epf_core_init(struct pcie_epf_device_s *epf)
 {
 	const struct device *dev = CONTAINER_OF(epf, struct vhost_pci_epf_data, epf)->dev;
@@ -951,6 +967,10 @@ static int vhost_pci_epf_bind(struct pcie_epf_device_s *epf)
 	}
 
 	data->trapped = features->bar_access;
+	data->access_notified = data->trapped && features->bar_access_notifier;
+	LOG_DBG("%s: register window %s", dev->name,
+		data->access_notified ? "trapped, notified" :
+		data->trapped ? "trapped, polled" : "polled");
 	if (data->trapped) {
 		epf->bar[VIRTIO_PCI_LEGACY_BAR].flags = PCI_BASE_ADDRESS_SPACE_IO;
 	}
@@ -1041,6 +1061,7 @@ static int vhost_pci_epf_init(const struct device *dev)
 	static const struct pcie_epc_event_ops_s epf_event_ops = {
 		.core_init = vhost_pci_epf_core_init,
 		.doorbell = vhost_pci_epf_doorbell,
+		.bar_access = vhost_pci_epf_bar_access,
 	};
 	const struct k_work_queue_config qcfg = {.name = "vhost-pci-epf"};
 	const struct vhost_pci_epf_config *config = dev->config;

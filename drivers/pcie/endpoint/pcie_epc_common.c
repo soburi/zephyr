@@ -713,11 +713,24 @@ void pcie_epc_bme_notify(const struct device *dev)
 	k_mutex_unlock(&epc->lock);
 }
 
+/* Called with the EPF list spinlock held */
+static struct pcie_epf_device_s *pcie_epc_find_epf(struct pcie_epc_ctrl_s *epc, uint8_t funcno)
+{
+	struct pcie_epf_device_s *epf;
+
+	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
+		if (epf->funcno == funcno && epf->event_ops != NULL) {
+			return epf;
+		}
+	}
+
+	return NULL;
+}
+
 void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
 			      uint8_t index)
 {
-	struct pcie_epf_device_s *epf = NULL;
-	struct pcie_epf_device_s *it;
+	struct pcie_epf_device_s *epf;
 	struct pcie_epc_ctrl_s *epc;
 	k_spinlock_key_t key;
 
@@ -729,17 +742,34 @@ void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
 
 	/* The mutexes of the other notifications cannot be taken in an ISR */
 	key = k_spin_lock(&epc->epf_lock);
-	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, it, epc_node) {
-		if (it->funcno == funcno) {
-			epf = it;
-			break;
-		}
-	}
+	epf = pcie_epc_find_epf(epc, funcno);
 
 	/* Keep the target alive until its ISR-safe callback returns. */
-	if (epf != NULL && epf->event_ops != NULL &&
-	    epf->event_ops->doorbell != NULL) {
+	if (epf != NULL && epf->event_ops->doorbell != NULL) {
 		epf->event_ops->doorbell(epf, index);
+	}
+
+	k_spin_unlock(&epc->epf_lock, key);
+}
+
+void pcie_epc_bar_access_notify(const struct device *dev, uint8_t funcno)
+{
+	struct pcie_epf_device_s *epf;
+	struct pcie_epc_ctrl_s *epc;
+	k_spinlock_key_t key;
+
+	if (dev == NULL) {
+		return;
+	}
+
+	epc = dev->data;
+
+	key = k_spin_lock(&epc->epf_lock);
+	epf = pcie_epc_find_epf(epc, funcno);
+
+	/* Keep the target alive until its ISR-safe callback returns. */
+	if (epf != NULL && epf->event_ops->bar_access != NULL) {
+		epf->event_ops->bar_access(epf);
 	}
 
 	k_spin_unlock(&epc->epf_lock, key);

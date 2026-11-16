@@ -9,6 +9,10 @@ description: |
   device ID 0x0013. It forwards endpoint operations performed by the guest
   to a PCI endpoint device model on another QEMU instance.
 
+  With an interrupts property, the device model interrupts the endpoint on
+  the doorbell and, when it provides them, on the host accesses to the BARs
+  serviced in software.
+
 compatible: "qemu,pci-epc"
 
 include: [pcie-epc.yaml, pcie-device.yaml]

@@ -107,6 +107,11 @@ struct pcie_epc_event_ops_s {
 	 *  held and must not block or call EPC APIs.
 	 */
 	void (*doorbell)(struct pcie_epf_device_s *epf, uint8_t index);
+	/** Callback for a host access waiting on a software-serviced BAR. It
+	 *  runs in the same context and under the same rules as doorbell;
+	 *  retrieve the access with pcie_epc_bar_access_get() in a thread.
+	 */
+	void (*bar_access)(struct pcie_epf_device_s *epf);
 };
 
 /**

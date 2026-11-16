@@ -60,6 +60,11 @@ struct pcie_epc_features_s {
 	unsigned int capability_writable : 1;
 	/** Supports ordered BAR requests and level-controlled legacy interrupts */
 	unsigned int bar_access : 1;
+	/** Indicate if the EPC device notifies the EPF driver of a host access
+	 *  to a software-serviced BAR. Without it the EPF driver polls
+	 *  pcie_epc_bar_access_get().
+	 */
+	unsigned int bar_access_notifier : 1;
 	/** Bitmap to indicate reserved BAR unavailable to function driver */
 	uint8_t bar_reserved;
 	/** Bitmap to indicate fixed 64bit BARs */
@@ -712,6 +717,20 @@ int pcie_epc_add_capability(const struct device *dev, uint8_t funcno,
  */
 void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
 			      uint8_t index);
+
+/**
+ * @brief Notify the EPF device of a host access to a software-serviced BAR
+ *
+ * Invokes the bar_access callback of the EPF device bound to the function,
+ * in the same context and under the same rules as
+ * pcie_epc_doorbell_notify(). Can be called from an ISR. Notifications can
+ * coalesce: after one, the function retrieves accesses with
+ * pcie_epc_bar_access_get() until none is left.
+ *
+ * @param dev    The EPC device that received the access
+ * @param funcno The function the BAR belongs to
+ */
+void pcie_epc_bar_access_notify(const struct device *dev, uint8_t funcno);
 
 /**
  * @brief Initialize the EPC control structure of an EPC device

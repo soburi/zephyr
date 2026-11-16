@@ -47,16 +47,18 @@ if PCIE_EPC_QEMU
 
 DT_COMPAT_QEMU_PCI_EPC := qemu,pci-epc
 
-config PCIE_EPC_QEMU_DOORBELL
-	bool "Doorbell of the QEMU EPC device"
+config PCIE_EPC_QEMU_INTERRUPT
+	bool "Interrupt of the QEMU EPC device"
 	default y
-	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_QEMU_PCI_EPC),doorbell-offset)
+	depends on $(dt_compat_any_has_prop,$(DT_COMPAT_QEMU_PCI_EPC),interrupts)
 	depends on !PCIE_CONTROLLER
 	select DYNAMIC_INTERRUPTS
 	help
-	  Report the writes of the PCI host to the doorbell range selected in
-	  the devicetree node to the endpoint function, through the interrupt
-	  of the QEMU EPC device.
+	  Use the interrupt of the QEMU EPC device to report to the endpoint
+	  function the writes of the PCI host to the doorbell range selected
+	  in the devicetree node, and the host accesses to the BARs serviced
+	  in software. Without it the device has no doorbell and the endpoint
+	  function polls for BAR accesses.
 
 config PCIE_EPC_QEMU_WINDOW_PAGES
 	int "Number of outbound window pages"

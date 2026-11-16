@@ -10,12 +10,18 @@ description: |
   VIRTIO PCI register layout in BAR 0, so the PCI host on the other side of
   the link drives it with its regular virtio-pci driver.
 
-  The register window is plain memory to the host: accesses are not trapped,
-  so the controller polls it. Registers that are banked by the queue
-  selector cannot be emulated this way, which limits the device to a single
-  virtqueue. When the platform wires a doorbell of the endpoint controller
-  to the queue notify register, queue notifications are taken from it
-  instead.
+  When the endpoint controller services BARs in software, the controller
+  handles each host access to the register window as it is made, on a
+  notification of the endpoint controller or, without one, by polling for
+  accesses.
+
+  Otherwise the register window is plain memory to the host: accesses are
+  not trapped, so the controller polls it. Registers that are banked by the
+  queue selector cannot be emulated this way. When the platform wires a
+  doorbell of the endpoint controller to the queue notify register, queue
+  notifications are taken from it instead.
+
+  The device has a single virtqueue.
 
 compatible: "zephyr,vhost-pci-epf"
 
@@ -75,10 +81,13 @@ properties:
     type: int
     default: 500
     description: |
-      Period, in milliseconds, at which the register window is polled once
-      the driver runs the device and queue notifications arrive through the
-      doorbell given by queue-notify-doorbell. Only a device reset is left to be
-      detected by then, so the default favors a low idle load.
+      Period, in milliseconds, at which the controller runs while the
+      endpoint controller notifies it of the driver activity: once the
+      driver runs the device and queue notifications arrive through the
+      doorbell given by queue-notify-doorbell, or whenever the endpoint
+      controller notifies the host accesses to the register window. Little
+      or nothing is left to be detected by polling then, so the default
+      favors a low idle load.
 
   stack-size:
     type: int

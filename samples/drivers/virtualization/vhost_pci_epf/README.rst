@@ -118,6 +118,8 @@ data independently of the request.
      - Request offset within the BAR.
    * - ``0x60``, ``0x64``
      - Request data on read; staged response data on write, low half first.
+   * - ``0x68``
+     - Read-only features: bit 0 set when a posted request can interrupt the endpoint.
    * - ``0x6c``
      - Write zero to deassert INTA, nonzero to assert it.
    * - ``0x70``
@@ -134,6 +136,13 @@ with subsequent reads and writes on the same connection, although the host write
 Writing zero to the existing START register at ``0x00`` disables inbound BAR accesses and aborts
 an outstanding request. Starting again resumes accesses on the same connection.
 
+With bit 0 of the features register set, setting bit 30 of the doorbell control register at
+``0x40`` makes a posted request set bit 1 of the doorbell status register at ``0x4c`` and assert
+the interrupt of the QEMU EPC device, until the endpoint writes the bit back. The Zephyr driver
+uses it when the devicetree node of the controller has an ``interrupts`` property, as the
+``qemu_x86_64`` overlay of this sample does, and notifies the EPF of each request; otherwise the
+EPF polls the mailbox.
+
 The Zephyr driver probes the ABI signature. Older emulators retain the memory BAR polling
 fallback, which cannot implement ISR read-to-clear or reliably observe reset writes, and report
 ``-ENOTSUP`` on stop. Applications must check stop before attempting to remove an EPF.
@@ -144,5 +153,5 @@ Limitations
 The software-serviced path supports one PCI function, one legacy split virtqueue, static
 read-only device configuration and INTx. MSI/MSI-X, modern VIRTIO, host hot-unplug/reconnect,
 and propagation of host PCI function resets are not implemented. The QEMU pair must be restarted
-when changing the function's PCI identity or BAR layout. The current mailbox is polled by the EPF;
-it provides register semantics for functional testing, not representative PCIe performance.
+when changing the function's PCI identity or BAR layout. The mailbox
+provides register semantics for functional testing, not representative PCIe performance.

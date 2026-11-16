@@ -13,6 +13,7 @@ struct test_function {
 	struct k_sem release;
 	int lock_result;
 	uint32_t doorbells;
+	uint32_t accesses;
 	uint32_t unbinds;
 };
 
@@ -96,6 +97,13 @@ static void function_doorbell(struct pcie_epf_device_s *epf, uint8_t index)
 	function->doorbells++;
 }
 
+static void function_bar_access(struct pcie_epf_device_s *epf)
+{
+	struct test_function *function = CONTAINER_OF(epf, struct test_function, epf);
+
+	function->accesses++;
+}
+
 ZTEST(pcie_epc, test_remove_lifecycle)
 {
 	static const struct pcie_epf_ops_s ops = {
@@ -104,6 +112,7 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 	};
 	static const struct pcie_epc_event_ops_s events = {
 		.doorbell = function_doorbell,
+		.bar_access = function_bar_access,
 	};
 	struct test_function function = {.epf = {.ops = &ops, .event_ops = &events}};
 	const struct device *dev = DEVICE_GET(test_epc);
@@ -116,6 +125,11 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 		zassert_ok(k_sem_take(&function.running, K_SECONDS(1)));
 		pcie_epc_doorbell_notify(dev, 0U, 0U);
 		zassert_equal(function.doorbells, i + 1U);
+		pcie_epc_bar_access_notify(dev, 0U);
+		zassert_equal(function.accesses, i + 1U);
+		/* Other functions have no target. */
+		pcie_epc_bar_access_notify(dev, 1U);
+		zassert_equal(function.accesses, i + 1U);
 		zassert_ok(pcie_epc_start(dev));
 		zassert_equal(pcie_epc_remove_epf(dev, &function.epf), -EBUSY);
 		zassert_equal(function.unbinds, i);
@@ -130,6 +144,8 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 		zassert_ok(pcie_epc_remove_epf(dev, &function.epf));
 		zassert_equal(function.unbinds, i + 1U);
 		zassert_equal(function.doorbells, i + 1U);
+		pcie_epc_bar_access_notify(dev, 0U);
+		zassert_equal(function.accesses, i + 1U);
 		zassert_ok(function.lock_result);
 		zassert_equal(k_work_delayable_busy_get(&function.work), 0);
 		zassert_is_null(function.epf.epc);
