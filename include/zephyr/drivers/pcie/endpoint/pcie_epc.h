@@ -556,6 +556,11 @@ int pcie_epc_set_bar(const struct device *dev, uint8_t funcno,
  * configuration header would be written. The callback function should write
  * the header fields to this dedicated location.
  *
+ * An EPC device whose configuration header is fixed in the hardware does not
+ * implement the operation, and the call succeeds without writing anything.
+ * The integration then makes the hardware match the header the endpoint
+ * function expects.
+ *
  * @param dev    The EPC device to which the configuration header should be
  *               written
  * @param funcno The physical endpoint function number in the EPC device

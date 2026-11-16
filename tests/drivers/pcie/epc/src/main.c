@@ -137,6 +137,16 @@ ZTEST(pcie_epc, test_remove_lifecycle)
 	}
 }
 
+ZTEST(pcie_epc, test_fixed_header)
+{
+	struct pcie_epf_header_s header = {.vendorid = 0x1234U};
+	const struct device *dev = DEVICE_GET(test_epc);
+
+	/* A controller without the operation has a header fixed in hardware. */
+	zassert_ok(pcie_epc_write_header(dev, 0U, &header));
+	zassert_equal(pcie_epc_write_header(dev, 1U, &header), -EINVAL);
+}
+
 ZTEST(pcie_epc, test_window_bitmap_bounds)
 {
 	SYS_BITARRAY_DEFINE_STATIC(bitmap, 32);

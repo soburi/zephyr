@@ -494,8 +494,13 @@ int pcie_epc_write_header(const struct device *dev, uint8_t funcno,
 	}
 
 	epc = dev->data;
-	if (pcie_epc_api(dev)->write_header == NULL || !pcie_epc_funcno_valid(dev, funcno)) {
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
+	}
+
+	/* The configuration header is fixed in the hardware */
+	if (pcie_epc_api(dev)->write_header == NULL) {
+		return 0;
 	}
 
 	k_mutex_lock(&epc->lock, K_FOREVER);

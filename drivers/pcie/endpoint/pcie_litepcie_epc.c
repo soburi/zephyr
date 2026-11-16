@@ -67,16 +67,6 @@ static void litepcie_clear_bar(const struct device *dev, uint8_t funcno,
 	}
 }
 
-static int litepcie_write_header(const struct device *dev, uint8_t funcno,
-				struct pcie_epf_header_s *header)
-{
-	ARG_UNUSED(dev);
-	ARG_UNUSED(funcno);
-	ARG_UNUSED(header);
-	/* The Gowin hard IP configuration is fixed in the generated IP. */
-	return -ENOTSUP;
-}
-
 static int litepcie_start(const struct device *dev)
 {
 	const struct litepcie_config *cfg = dev->config;
@@ -105,8 +95,8 @@ static const struct pcie_epc_features_s *litepcie_features(const struct device *
 	return funcno == 0U ? &cfg->features : NULL;
 }
 
+/* No write_header: the configuration header is fixed in the generated Gowin IP */
 static DEVICE_API(pcie_epc, litepcie_api) = {
-	.write_header = litepcie_write_header,
 	.set_bar = litepcie_set_bar,
 	.clear_bar = litepcie_clear_bar,
 	.start = litepcie_start,

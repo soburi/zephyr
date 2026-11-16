@@ -15,7 +15,8 @@ Configure the BAR before starting the controller. Stop the controller before
 changing or releasing the buffer.
 
 The configuration header is fixed in the Gowin IP: vendor 0x22c2, device
-0x1100, class 0x058000. Header programming returns ``-ENOTSUP``. Outbound
+0x1100, class 0x058000. The driver accepts the header an endpoint
+function writes without programming it. Outbound
 windows, DMA, interrupts and link notifications are not implemented. The
 standard endpoint test function cannot bind to this controller yet.
 
