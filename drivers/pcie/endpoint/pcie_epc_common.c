@@ -12,31 +12,112 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
 
 LOG_MODULE_REGISTER(pcie_epc, CONFIG_PCIE_EPC_LOG_LEVEL);
 
-static K_MUTEX_DEFINE(g_pcie_epc_lock);
-static sys_dlist_t g_pcie_epc_device_list =
-	SYS_DLIST_STATIC_INIT(&g_pcie_epc_device_list);
-
-const struct device *pcie_get_epc(const char *epc_name)
+static inline bool pcie_epc_funcno_valid(const struct device *dev, uint8_t funcno)
 {
-	const struct device *res = NULL;
+	const struct pcie_epc_config *cfg = dev->config;
+
+	return funcno < cfg->max_functions;
+}
+
+static inline const struct pcie_epc_driver_api *pcie_epc_api(const struct device *dev)
+{
+	return DEVICE_API_GET(pcie_epc, dev);
+}
+
+int pcie_epc_bar_access_enable(const struct device *dev, uint8_t funcno,
+			uint8_t bar, bool enable)
+{
 	struct pcie_epc_ctrl_s *epc;
+	int ret;
 
-	__ASSERT_NO_MSG(epc_name != NULL);
-
-	k_mutex_lock(&g_pcie_epc_lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&g_pcie_epc_device_list, epc, node) {
-		if (strcmp(epc_name, epc->name) == 0) {
-			res = epc->dev;
-			break;
-		}
+	if (dev == NULL || bar >= PCI_STD_NUM_BARS) {
+		return -EINVAL;
 	}
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+	if (pcie_epc_api(dev)->bar_access_enable == NULL) {
+		return -ENOTSUP;
+	}
+	epc = dev->data;
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	if (epc->started) {
+		k_mutex_unlock(&epc->lock);
+		return -EBUSY;
+	}
+	ret = pcie_epc_api(dev)->bar_access_enable(dev, funcno, bar, enable);
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
 
-	k_mutex_unlock(&g_pcie_epc_lock);
-	return res;
+int pcie_epc_bar_access_get(const struct device *dev, uint8_t funcno,
+			struct pcie_epc_bar_access *access)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL || access == NULL) {
+		return -EINVAL;
+	}
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+	if (pcie_epc_api(dev)->bar_access_get == NULL) {
+		return -ENOTSUP;
+	}
+	epc = dev->data;
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	ret = pcie_epc_api(dev)->bar_access_get(dev, funcno, access);
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
+
+int pcie_epc_bar_access_complete(const struct device *dev, uint8_t funcno,
+			const struct pcie_epc_bar_access *access, int status)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL || access == NULL) {
+		return -EINVAL;
+	}
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+	if (pcie_epc_api(dev)->bar_access_complete == NULL) {
+		return -ENOTSUP;
+	}
+	epc = dev->data;
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	ret = pcie_epc_api(dev)->bar_access_complete(dev, funcno, access, status);
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
+
+int pcie_epc_set_legacy_irq(const struct device *dev, uint8_t funcno,
+			bool asserted)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL) {
+		return -EINVAL;
+	}
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+	if (pcie_epc_api(dev)->set_legacy_irq == NULL) {
+		return -ENOTSUP;
+	}
+	epc = dev->data;
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	ret = pcie_epc_api(dev)->set_legacy_irq(dev, funcno, asserted);
+	k_mutex_unlock(&epc->lock);
+	return ret;
 }
 
 int pcie_epc_get_next_free_bar(const struct pcie_epc_features_s *epc_features,
@@ -81,34 +162,38 @@ pcie_epc_get_features(const struct device *dev, uint8_t funcno)
 		return NULL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (epc->ops->get_features == NULL || funcno >= epc->max_functions) {
+	epc = dev->data;
+	if (pcie_epc_api(dev)->get_features == NULL || !pcie_epc_funcno_valid(dev, funcno)) {
 		return NULL;
 	}
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	epc_features = epc->ops->get_features(dev, funcno);
+	epc_features = pcie_epc_api(dev)->get_features(dev, funcno);
 	k_mutex_unlock(&epc->lock);
 	return epc_features;
 }
 
-void pcie_epc_stop(const struct device *dev)
+int pcie_epc_stop(const struct device *dev)
 {
 	struct pcie_epc_ctrl_s *epc;
+	int ret;
 
 	if (dev == NULL) {
-		return;
+		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (epc->ops->stop == NULL) {
-		return;
+	epc = dev->data;
+	if (pcie_epc_api(dev)->stop == NULL) {
+		return -ENOTSUP;
 	}
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	epc->ops->stop(dev);
-	epc->started = false;
+	ret = pcie_epc_api(dev)->stop(dev);
+	if (ret == 0) {
+		epc->started = false;
+	}
 	k_mutex_unlock(&epc->lock);
+	return ret;
 }
 
 int pcie_epc_start(const struct device *dev)
@@ -120,13 +205,13 @@ int pcie_epc_start(const struct device *dev)
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (epc->ops->start == NULL) {
-		return -EINVAL;
+	epc = dev->data;
+	if (pcie_epc_api(dev)->start == NULL) {
+		return -ENOTSUP;
 	}
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	ret = epc->ops->start(dev);
+	ret = pcie_epc_api(dev)->start(dev);
 	if (ret >= 0) {
 		epc->started = true;
 	}
@@ -136,7 +221,7 @@ int pcie_epc_start(const struct device *dev)
 }
 
 int pcie_epc_raise_irq(const struct device *dev, uint8_t funcno,
-		       enum pcie_epc_irq_type_e type, uint16_t interrupt_num)
+		       enum pcie_epc_irq_type type, uint16_t interrupt_num)
 {
 	struct pcie_epc_ctrl_s *epc;
 	int ret;
@@ -145,13 +230,17 @@ int pcie_epc_raise_irq(const struct device *dev, uint8_t funcno,
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (epc->ops->raise_irq == NULL || funcno >= epc->max_functions) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
+	if (pcie_epc_api(dev)->raise_irq == NULL) {
+		return -ENOTSUP;
+	}
+
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	ret = epc->ops->raise_irq(dev, funcno, type, interrupt_num);
+	ret = pcie_epc_api(dev)->raise_irq(dev, funcno, type, interrupt_num);
 	k_mutex_unlock(&epc->lock);
 	return ret;
 }
@@ -168,13 +257,17 @@ int pcie_epc_map_msi_irq(const struct device *dev, uint8_t funcno,
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || epc->ops->map_msi_irq == NULL) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
+	if (pcie_epc_api(dev)->map_msi_irq == NULL) {
+		return -ENOTSUP;
+	}
+
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	ret = epc->ops->map_msi_irq(dev, funcno, phys_addr, interrupt_num,
+	ret = pcie_epc_api(dev)->map_msi_irq(dev, funcno, phys_addr, interrupt_num,
 				    entry_size, msi_data, msi_addr_offset);
 	k_mutex_unlock(&epc->lock);
 	return ret;
@@ -189,13 +282,17 @@ int pcie_epc_get_msi(const struct device *dev, uint8_t funcno)
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || epc->ops->get_msi == NULL) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
+	if (pcie_epc_api(dev)->get_msi == NULL) {
+		return -ENOTSUP;
+	}
+
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	interrupt = epc->ops->get_msi(dev, funcno);
+	interrupt = pcie_epc_api(dev)->get_msi(dev, funcno);
 	k_mutex_unlock(&epc->lock);
 
 	if (interrupt >= 0) {
@@ -215,10 +312,13 @@ int pcie_epc_set_msi(const struct device *dev, uint8_t funcno,
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || interrupts < 1U ||
-	    interrupts > 32U || epc->ops->set_msi == NULL) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno) || interrupts < 1U || interrupts > 32U) {
 		return -EINVAL;
+	}
+
+	if (pcie_epc_api(dev)->set_msi == NULL) {
+		return -ENOTSUP;
 	}
 
 	/* Encode the number of vectors as log2, as used by the Multiple
@@ -227,7 +327,7 @@ int pcie_epc_set_msi(const struct device *dev, uint8_t funcno,
 	interrupts = find_msb_set(interrupts - 1U);
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	ret = epc->ops->set_msi(dev, funcno, interrupts);
+	ret = pcie_epc_api(dev)->set_msi(dev, funcno, interrupts);
 	k_mutex_unlock(&epc->lock);
 	return ret;
 }
@@ -241,13 +341,17 @@ int pcie_epc_get_msix(const struct device *dev, uint8_t funcno)
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || epc->ops->get_msix == NULL) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
+	if (pcie_epc_api(dev)->get_msix == NULL) {
+		return -ENOTSUP;
+	}
+
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	interrupt = epc->ops->get_msix(dev, funcno);
+	interrupt = pcie_epc_api(dev)->get_msix(dev, funcno);
 	k_mutex_unlock(&epc->lock);
 
 	if (interrupt >= 0) {
@@ -267,14 +371,17 @@ int pcie_epc_set_msix(const struct device *dev, uint8_t funcno,
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || interrupts < 1U ||
-	    interrupts > 2048U || epc->ops->set_msix == NULL) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno) || interrupts < 1U || interrupts > 2048U) {
 		return -EINVAL;
 	}
 
+	if (pcie_epc_api(dev)->set_msix == NULL) {
+		return -ENOTSUP;
+	}
+
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	ret = epc->ops->set_msix(dev, funcno, interrupts - 1U, barno, offset);
+	ret = pcie_epc_api(dev)->set_msix(dev, funcno, interrupts - 1U, barno, offset);
 	k_mutex_unlock(&epc->lock);
 	return ret;
 }
@@ -288,13 +395,13 @@ void pcie_epc_unmap_addr(const struct device *dev, uint8_t funcno,
 		return;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || epc->ops->unmap_addr == NULL) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno) || pcie_epc_api(dev)->unmap_addr == NULL) {
 		return;
 	}
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	epc->ops->unmap_addr(dev, funcno, phys_addr);
+	pcie_epc_api(dev)->unmap_addr(dev, funcno, phys_addr);
 	k_mutex_unlock(&epc->lock);
 }
 
@@ -308,13 +415,17 @@ int pcie_epc_map_addr(const struct device *dev, uint8_t funcno,
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || epc->ops->map_addr == NULL) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
+	if (pcie_epc_api(dev)->map_addr == NULL) {
+		return -ENOTSUP;
+	}
+
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	ret = epc->ops->map_addr(dev, funcno, phys_addr, pci_addr, size);
+	ret = pcie_epc_api(dev)->map_addr(dev, funcno, phys_addr, pci_addr, size);
 	k_mutex_unlock(&epc->lock);
 	return ret;
 }
@@ -324,19 +435,19 @@ void pcie_epc_clear_bar(const struct device *dev, uint8_t funcno,
 {
 	struct pcie_epc_ctrl_s *epc;
 
-	if (dev == NULL) {
+	if (dev == NULL || bar == NULL) {
 		return;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions || epc->ops->clear_bar == NULL ||
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno) || pcie_epc_api(dev)->clear_bar == NULL ||
 	    (bar->barno == PCI_STD_NUM_BARS - 1 &&
 	     (bar->flags & PCI_BASE_ADDRESS_MEM_TYPE_64) != 0)) {
 		return;
 	}
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	epc->ops->clear_bar(dev, funcno, bar);
+	pcie_epc_api(dev)->clear_bar(dev, funcno, bar);
 	k_mutex_unlock(&epc->lock);
 }
 
@@ -344,25 +455,58 @@ int pcie_epc_set_bar(const struct device *dev, uint8_t funcno,
 		     struct pcie_epf_bar_s *bar)
 {
 	struct pcie_epc_ctrl_s *epc;
-	int flags = bar->flags;
 	int ret;
 
-	if (dev == NULL) {
+	if (dev == NULL || bar == NULL) {
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (funcno >= epc->max_functions ||
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno) ||
 	    (bar->barno == PCI_STD_NUM_BARS - 1 &&
-	     (flags & PCI_BASE_ADDRESS_MEM_TYPE_64) != 0) ||
+	     (bar->flags & PCI_BASE_ADDRESS_MEM_TYPE_64) != 0) ||
 	    (bar->size > UINT32_MAX &&
-	     (flags & PCI_BASE_ADDRESS_MEM_TYPE_64) == 0) ||
-	    epc->ops->set_bar == NULL) {
+	     (bar->flags & PCI_BASE_ADDRESS_MEM_TYPE_64) == 0)) {
 		return -EINVAL;
+	}
+
+	if (pcie_epc_api(dev)->set_bar == NULL) {
+		return -ENOTSUP;
 	}
 
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	ret = epc->ops->set_bar(dev, funcno, bar);
+	ret = pcie_epc_api(dev)->set_bar(dev, funcno, bar);
+	k_mutex_unlock(&epc->lock);
+	return ret;
+}
+
+int pcie_epc_add_capability(const struct device *dev, uint8_t funcno,
+			    uint8_t id, const void *body, size_t len)
+{
+	struct pcie_epc_ctrl_s *epc;
+	int ret;
+
+	if (dev == NULL || body == NULL || len == 0U) {
+		return -EINVAL;
+	}
+
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
+		return -EINVAL;
+	}
+
+	if (pcie_epc_api(dev)->add_capability == NULL) {
+		return -ENOTSUP;
+	}
+
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	/* The host reads the capabilities once it enumerates the function */
+	if (epc->started) {
+		ret = -EBUSY;
+	} else {
+		ret = pcie_epc_api(dev)->add_capability(dev, funcno, id, body, len);
+	}
+
 	k_mutex_unlock(&epc->lock);
 	return ret;
 }
@@ -377,13 +521,18 @@ int pcie_epc_write_header(const struct device *dev, uint8_t funcno,
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	if (epc->ops->write_header == NULL || funcno >= epc->max_functions) {
+	epc = dev->data;
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		return -EINVAL;
 	}
 
+	/* The configuration header is fixed in the hardware */
+	if (pcie_epc_api(dev)->write_header == NULL) {
+		return 0;
+	}
+
 	k_mutex_lock(&epc->lock, K_FOREVER);
-	ret = epc->ops->write_header(dev, funcno, header);
+	ret = pcie_epc_api(dev)->write_header(dev, funcno, header);
 	k_mutex_unlock(&epc->lock);
 	return ret;
 }
@@ -392,6 +541,7 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 {
 	struct pcie_epc_ctrl_s *epc;
 	uint32_t funcno;
+	k_spinlock_key_t key;
 	int ret;
 
 	if (dev == NULL || epf == NULL || epf->ops == NULL ||
@@ -403,7 +553,7 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 		return -EBUSY;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
+	epc = dev->data;
 	k_mutex_lock(&epc->lock, K_FOREVER);
 
 	/* The functions cannot change once the host can enumerate them */
@@ -412,35 +562,37 @@ int pcie_epc_add_epf(const struct device *dev, struct pcie_epf_device_s *epf)
 		goto out;
 	}
 
-	for (funcno = 0; funcno < epc->max_functions; funcno++) {
+	for (funcno = 0; pcie_epc_funcno_valid(dev, funcno); funcno++) {
 		if ((epc->funcno_map & BIT(funcno)) == 0U) {
 			break;
 		}
 	}
 
-	if (funcno >= epc->max_functions) {
+	if (!pcie_epc_funcno_valid(dev, funcno)) {
 		LOG_ERR("Exceeding max supported Function Number");
 		ret = -ENOENT;
 		goto out;
 	}
 
-	k_mutex_init(&epf->lock);
 	epc->funcno_map |= BIT(funcno);
 	epf->funcno = funcno;
 	epf->epc = dev;
-	sys_dlist_append(&epc->epf, &epf->epc_node);
 
 	/* Notify the function that it has been bound to the EPC device */
-	k_mutex_lock(&epf->lock, K_FOREVER);
 	ret = epf->ops->bind(epf);
 	epf->is_bound = (ret >= 0);
-	k_mutex_unlock(&epf->lock);
 
 	if (ret < 0) {
+		if (pcie_epc_api(dev)->clear_capabilities != NULL) {
+			pcie_epc_api(dev)->clear_capabilities(dev, funcno);
+		}
+
 		epc->funcno_map &= ~BIT(funcno);
-		sys_dlist_remove(&epf->epc_node);
 		epf->epc = NULL;
 	} else {
+		key = k_spin_lock(&epc->epf_lock);
+		sys_dlist_append(&epc->epf, &epf->epc_node);
+		k_spin_unlock(&epc->epf_lock, key);
 		ret = 0;
 	}
 
@@ -449,20 +601,30 @@ out:
 	return ret;
 }
 
-void pcie_epc_remove_epf(const struct device *dev,
-			 struct pcie_epf_device_s *epf)
+int pcie_epc_remove_epf(const struct device *dev,
+			struct pcie_epf_device_s *epf)
 {
 	struct pcie_epc_ctrl_s *epc;
+	k_spinlock_key_t key;
 
 	if (dev == NULL || epf == NULL || epf->epc != dev) {
-		return;
+		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
+	epc = dev->data;
 	k_mutex_lock(&epc->lock, K_FOREVER);
+	if (epc->started) {
+		k_mutex_unlock(&epc->lock);
+		return -EBUSY;
+	}
 
-	/* Notify the function that the binding is about to be lost */
-	k_mutex_lock(&epf->lock, K_FOREVER);
+	/* Remove the notification target before draining the function's work. */
+	key = k_spin_lock(&epc->epf_lock);
+	sys_dlist_remove(&epf->epc_node);
+	k_spin_unlock(&epc->epf_lock, key);
+	k_mutex_unlock(&epc->lock);
+
+	/* Workers may use EPC operations while unbind waits for their exit. */
 	if (epf->is_bound) {
 		if (epf->ops->unbind != NULL) {
 			epf->ops->unbind(epf);
@@ -471,149 +633,173 @@ void pcie_epc_remove_epf(const struct device *dev,
 		epf->is_bound = false;
 	}
 
-	k_mutex_unlock(&epf->lock);
+	k_mutex_lock(&epc->lock, K_FOREVER);
+	if (pcie_epc_api(dev)->clear_capabilities != NULL) {
+		pcie_epc_api(dev)->clear_capabilities(dev, epf->funcno);
+	}
 
 	epc->funcno_map &= ~BIT(epf->funcno);
-	sys_dlist_remove(&epf->epc_node);
 	epf->epc = NULL;
 	k_mutex_unlock(&epc->lock);
+	return 0;
+}
+
+enum pcie_epc_event {
+	PCIE_EPC_EVENT_LINK_UP,
+	PCIE_EPC_EVENT_LINK_DOWN,
+	PCIE_EPC_EVENT_CORE_INIT,
+	PCIE_EPC_EVENT_BME,
+};
+
+/* Deliver an event to every function, in the context of the caller */
+static void pcie_epc_notify_all(const struct device *dev, enum pcie_epc_event event)
+{
+	struct pcie_epf_device_s *epf;
+	struct pcie_epc_ctrl_s *epc;
+	k_spinlock_key_t key;
+
+	if (dev == NULL) {
+		return;
+	}
+
+	epc = dev->data;
+
+	/* Keep the targets alive until their ISR-safe callbacks return. */
+	key = k_spin_lock(&epc->epf_lock);
+	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
+		const struct pcie_epc_event_ops_s *ops = epf->event_ops;
+		void (*cb)(struct pcie_epf_device_s *epf) = NULL;
+
+		if (ops == NULL) {
+			continue;
+		}
+
+		switch (event) {
+		case PCIE_EPC_EVENT_LINK_UP:
+			cb = ops->link_up;
+			break;
+		case PCIE_EPC_EVENT_LINK_DOWN:
+			cb = ops->link_down;
+			break;
+		case PCIE_EPC_EVENT_CORE_INIT:
+			cb = ops->core_init;
+			break;
+		case PCIE_EPC_EVENT_BME:
+			cb = ops->bme;
+			break;
+		default:
+			break;
+		}
+
+		if (cb != NULL) {
+			cb(epf);
+		}
+	}
+
+	k_spin_unlock(&epc->epf_lock, key);
 }
 
 void pcie_epc_linkup(const struct device *dev)
 {
-	struct pcie_epf_device_s *epf;
-	struct pcie_epc_ctrl_s *epc;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	epc = pcie_epc_get_ctrl(dev);
-	k_mutex_lock(&epc->lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
-		k_mutex_lock(&epf->lock, K_FOREVER);
-		if (epf->event_ops != NULL && epf->event_ops->link_up != NULL) {
-			epf->event_ops->link_up(epf);
-		}
-
-		k_mutex_unlock(&epf->lock);
-	}
-
-	k_mutex_unlock(&epc->lock);
+	pcie_epc_notify_all(dev, PCIE_EPC_EVENT_LINK_UP);
 }
 
 void pcie_epc_linkdown(const struct device *dev)
 {
-	struct pcie_epf_device_s *epf;
-	struct pcie_epc_ctrl_s *epc;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	epc = pcie_epc_get_ctrl(dev);
-	k_mutex_lock(&epc->lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
-		k_mutex_lock(&epf->lock, K_FOREVER);
-		if (epf->event_ops != NULL &&
-		    epf->event_ops->link_down != NULL) {
-			epf->event_ops->link_down(epf);
-		}
-
-		k_mutex_unlock(&epf->lock);
-	}
-
-	k_mutex_unlock(&epc->lock);
+	pcie_epc_notify_all(dev, PCIE_EPC_EVENT_LINK_DOWN);
 }
 
 void pcie_epc_init_notify(const struct device *dev)
 {
-	struct pcie_epf_device_s *epf;
-	struct pcie_epc_ctrl_s *epc;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	epc = pcie_epc_get_ctrl(dev);
-	k_mutex_lock(&epc->lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
-		k_mutex_lock(&epf->lock, K_FOREVER);
-		if (epf->event_ops != NULL &&
-		    epf->event_ops->core_init != NULL) {
-			epf->event_ops->core_init(epf);
-		}
-
-		k_mutex_unlock(&epf->lock);
-	}
-
-	k_mutex_unlock(&epc->lock);
+	pcie_epc_notify_all(dev, PCIE_EPC_EVENT_CORE_INIT);
 }
 
 void pcie_epc_bme_notify(const struct device *dev)
 {
+	pcie_epc_notify_all(dev, PCIE_EPC_EVENT_BME);
+}
+
+/* Called with the EPF list spinlock held */
+static struct pcie_epf_device_s *pcie_epc_find_epf(struct pcie_epc_ctrl_s *epc, uint8_t funcno)
+{
+	struct pcie_epf_device_s *epf;
+
+	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
+		if (epf->funcno == funcno && epf->event_ops != NULL) {
+			return epf;
+		}
+	}
+
+	return NULL;
+}
+
+void pcie_epc_doorbell_notify(const struct device *dev, uint8_t funcno,
+			      uint8_t index)
+{
 	struct pcie_epf_device_s *epf;
 	struct pcie_epc_ctrl_s *epc;
+	k_spinlock_key_t key;
 
 	if (dev == NULL) {
 		return;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
-	k_mutex_lock(&epc->lock, K_FOREVER);
-	SYS_DLIST_FOR_EACH_CONTAINER(&epc->epf, epf, epc_node) {
-		k_mutex_lock(&epf->lock, K_FOREVER);
-		if (epf->event_ops != NULL && epf->event_ops->bme != NULL) {
-			epf->event_ops->bme(epf);
-		}
+	epc = dev->data;
 
-		k_mutex_unlock(&epf->lock);
+	key = k_spin_lock(&epc->epf_lock);
+	epf = pcie_epc_find_epf(epc, funcno);
+
+	/* Keep the target alive until its ISR-safe callback returns. */
+	if (epf != NULL && epf->event_ops->doorbell != NULL) {
+		epf->event_ops->doorbell(epf, index);
 	}
 
-	k_mutex_unlock(&epc->lock);
+	k_spin_unlock(&epc->epf_lock, key);
 }
 
-int pcie_epc_create(const struct device *dev, const char *name,
-		    struct k_heap *dmaheap, const struct pcie_epc_ops_s *ops)
+void pcie_epc_bar_access_notify(const struct device *dev, uint8_t funcno)
+{
+	struct pcie_epf_device_s *epf;
+	struct pcie_epc_ctrl_s *epc;
+	k_spinlock_key_t key;
+
+	if (dev == NULL) {
+		return;
+	}
+
+	epc = dev->data;
+
+	key = k_spin_lock(&epc->epf_lock);
+	epf = pcie_epc_find_epf(epc, funcno);
+
+	/* Keep the target alive until its ISR-safe callback returns. */
+	if (epf != NULL && epf->event_ops->bar_access != NULL) {
+		epf->event_ops->bar_access(epf);
+	}
+
+	k_spin_unlock(&epc->epf_lock, key);
+}
+
+int pcie_epc_init(const struct device *dev, struct k_heap *dmaheap)
 {
 	struct pcie_epc_ctrl_s *epc;
 
-	if (dev == NULL || name == NULL || ops == NULL) {
+	if (dev == NULL) {
 		return -EINVAL;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
+	epc = dev->data;
 	epc->dev = dev;
-	epc->name = name;
 	epc->dmaheap = dmaheap;
 	k_mutex_init(&epc->lock);
 	sys_dlist_init(&epc->epf);
-	epc->ops = ops;
-
-	k_mutex_lock(&g_pcie_epc_lock, K_FOREVER);
-	sys_dlist_append(&g_pcie_epc_device_list, &epc->node);
-	k_mutex_unlock(&g_pcie_epc_lock);
 
 	return 0;
 }
 
-void pcie_epc_destroy(const struct device *dev)
-{
-	struct pcie_epc_ctrl_s *epc;
-
-	if (dev == NULL) {
-		return;
-	}
-
-	epc = pcie_epc_get_ctrl(dev);
-	k_mutex_lock(&g_pcie_epc_lock, K_FOREVER);
-	sys_dlist_remove(&epc->node);
-	k_mutex_unlock(&g_pcie_epc_lock);
-}
-
 void *pcie_epc_dma_alloc(const struct device *dev, size_t size)
 {
-	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
+	struct pcie_epc_ctrl_s *epc = dev->data;
 
 	if (epc->dmaheap == NULL) {
 		return NULL;
@@ -625,7 +811,7 @@ void *pcie_epc_dma_alloc(const struct device *dev, size_t size)
 void *pcie_epc_dma_memalign(const struct device *dev, size_t alignment,
 			    size_t size)
 {
-	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
+	struct pcie_epc_ctrl_s *epc = dev->data;
 
 	if (epc->dmaheap == NULL) {
 		return NULL;
@@ -640,7 +826,7 @@ void *pcie_epc_dma_memalign(const struct device *dev, size_t alignment,
 
 void pcie_epc_dma_free(const struct device *dev, void *mem)
 {
-	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
+	struct pcie_epc_ctrl_s *epc = dev->data;
 
 	if (epc->dmaheap == NULL) {
 		return;

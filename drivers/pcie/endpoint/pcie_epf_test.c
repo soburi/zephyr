@@ -13,9 +13,9 @@
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf_test.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf_test.h>
 
 LOG_MODULE_REGISTER(pcie_epf_test, CONFIG_PCIE_EPC_LOG_LEVEL);
 
@@ -59,18 +59,20 @@ struct pcie_epf_test_reg_s {
 
 struct pcie_epf_test_s {
 	void *reg[PCI_STD_NUM_BARS];
-	struct pcie_epf_device_s *epf;
+	struct pcie_epf_device_s epf;
 	int test_reg_bar;
 	size_t msix_table_offset;
 	struct k_work_delayable work;
+	/* Programs the function when the EPC reports its core initialization */
+	struct k_work core_init_work;
 	struct pcie_epf_header_s header;
 	int bar_size[PCI_STD_NUM_BARS];
 };
 
 static void pcie_epf_test_unbind(struct pcie_epf_device_s *epf);
 static int pcie_epf_test_bind(struct pcie_epf_device_s *epf);
-static int pcie_epf_test_core_init(struct pcie_epf_device_s *epf);
-static int pcie_epf_test_link_up(struct pcie_epf_device_s *epf);
+static void pcie_epf_test_core_init(struct pcie_epf_device_s *epf);
+static void pcie_epf_test_link_up(struct pcie_epf_device_s *epf);
 
 static const struct pcie_epf_ops_s g_pcie_epf_test_ops = {
 	.unbind = pcie_epf_test_unbind,
@@ -83,8 +85,6 @@ static const struct pcie_epc_event_ops_s g_pcie_epf_test_event_ops = {
 };
 
 static struct pcie_epf_test_s g_pcie_epf_test[CONFIG_PCIE_EPF_TEST_FUNC_COUNT];
-static struct pcie_epf_device_s g_pcie_epf_test_device[
-	CONFIG_PCIE_EPF_TEST_FUNC_COUNT];
 
 /* Equivalent of the Linux crc32_le(~0, buf, size) used by the host side
  * pci_endpoint_test driver.
@@ -117,7 +117,7 @@ static void pcie_epf_test_transfer(void *dst, const void *src, size_t size)
 
 static int pcie_epf_test_copy(struct pcie_epf_test_s *test)
 {
-	struct pcie_epf_device_s *epf = test->epf;
+	struct pcie_epf_device_s *epf = &test->epf;
 	const struct device *epc = epf->epc;
 	struct pcie_epf_test_reg_s *reg;
 	void *vsrc_addr;
@@ -172,7 +172,7 @@ err_src_addr:
 
 static int pcie_epf_test_read(struct pcie_epf_test_s *test)
 {
-	struct pcie_epf_device_s *epf = test->epf;
+	struct pcie_epf_device_s *epf = &test->epf;
 	const struct device *epc = epf->epc;
 	struct pcie_epf_test_reg_s *reg;
 	void *vsrc_addr;
@@ -218,7 +218,7 @@ err_addr:
 
 static int pcie_epf_test_write(struct pcie_epf_test_s *test)
 {
-	struct pcie_epf_device_s *epf = test->epf;
+	struct pcie_epf_device_s *epf = &test->epf;
 	const struct device *epc = epf->epc;
 	struct pcie_epf_test_reg_s *reg;
 	void *vdst_addr;
@@ -262,7 +262,7 @@ err_addr:
 static void pcie_epf_test_raise_irq(struct pcie_epf_test_s *test,
 				   uint8_t irq_type, uint16_t irq)
 {
-	struct pcie_epf_device_s *epf = test->epf;
+	struct pcie_epf_device_s *epf = &test->epf;
 	const struct device *epc = epf->epc;
 	struct pcie_epf_test_reg_s *reg;
 
@@ -290,7 +290,7 @@ static void pcie_epf_test_cmd_handler(struct k_work *work)
 	struct k_work_delayable *dwork = k_work_delayable_from_work(work);
 	struct pcie_epf_test_s *test =
 		CONTAINER_OF(dwork, struct pcie_epf_test_s, work);
-	struct pcie_epf_device_s *epf = test->epf;
+	struct pcie_epf_device_s *epf = &test->epf;
 	const struct device *epc = epf->epc;
 	struct pcie_epf_test_reg_s *reg;
 	uint32_t command;
@@ -367,11 +367,13 @@ reset_handler:
 
 static void pcie_epf_test_unbind(struct pcie_epf_device_s *epf)
 {
-	struct pcie_epf_test_s *test = epf->priv;
+	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
 	const struct device *epc = epf->epc;
+	struct k_work_sync sync;
 	int bar;
 
-	k_work_cancel_delayable(&test->work);
+	k_work_cancel_sync(&test->core_init_work, &sync);
+	k_work_cancel_delayable_sync(&test->work, &sync);
 	for (bar = 0; bar < PCI_STD_NUM_BARS; bar++) {
 		if (test->reg[bar] != NULL) {
 			pcie_epc_clear_bar(epc, epf->funcno, &epf->bar[bar]);
@@ -383,7 +385,7 @@ static void pcie_epf_test_unbind(struct pcie_epf_device_s *epf)
 static int pcie_epf_test_set_bar(struct pcie_epf_device_s *epf)
 {
 	const struct pcie_epc_features_s *features;
-	struct pcie_epf_test_s *test = epf->priv;
+	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
 	const struct device *epc = epf->epc;
 	int bar;
 	int add;
@@ -415,11 +417,12 @@ static int pcie_epf_test_set_bar(struct pcie_epf_device_s *epf)
 	return 0;
 }
 
-static int pcie_epf_test_core_init(struct pcie_epf_device_s *epf)
+/* Program the configuration header, the BARs and the interrupts */
+static int pcie_epf_test_setup(struct pcie_epf_device_s *epf)
 {
 	struct pcie_epf_header_s *header = epf->header;
 	const struct pcie_epc_features_s *features;
-	struct pcie_epf_test_s *test = epf->priv;
+	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
 	const struct device *epc = epf->epc;
 	bool msix_capable = false;
 	bool msi_capable = false;
@@ -463,18 +466,33 @@ static int pcie_epf_test_core_init(struct pcie_epf_device_s *epf)
 	return 0;
 }
 
-static int pcie_epf_test_link_up(struct pcie_epf_device_s *epf)
+static void pcie_epf_test_core_init_handler(struct k_work *work)
 {
-	struct pcie_epf_test_s *test = epf->priv;
+	struct pcie_epf_test_s *test = CONTAINER_OF(work, struct pcie_epf_test_s, core_init_work);
 
-	k_work_schedule(&test->work, PCIE_EPF_TEST_WORK_PERIOD);
-	return 0;
+	if (pcie_epf_test_setup(&test->epf) == 0) {
+		k_work_schedule(&test->work, PCIE_EPF_TEST_WORK_PERIOD);
+	}
+}
+
+static void pcie_epf_test_core_init(struct pcie_epf_device_s *epf)
+{
+	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
+
+	(void)k_work_submit(&test->core_init_work);
+}
+
+static void pcie_epf_test_link_up(struct pcie_epf_device_s *epf)
+{
+	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
+
+	(void)k_work_schedule(&test->work, PCIE_EPF_TEST_WORK_PERIOD);
 }
 
 static int pcie_epf_test_alloc_space(struct pcie_epf_device_s *epf)
 {
 	const struct pcie_epc_features_s *features;
-	struct pcie_epf_test_s *test = epf->priv;
+	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
 	const struct device *epc = epf->epc;
 	int test_reg_bar = test->test_reg_bar;
 	size_t msix_table_size = 0;
@@ -531,7 +549,7 @@ static int pcie_epf_test_alloc_space(struct pcie_epf_device_s *epf)
 static int pcie_epf_test_bind(struct pcie_epf_device_s *epf)
 {
 	const struct pcie_epc_features_s *features;
-	struct pcie_epf_test_s *test = epf->priv;
+	struct pcie_epf_test_s *test = CONTAINER_OF(epf, struct pcie_epf_test_s, epf);
 	const struct device *epc = epf->epc;
 	int ret;
 
@@ -553,7 +571,7 @@ static int pcie_epf_test_bind(struct pcie_epf_device_s *epf)
 	}
 
 	if (!features->core_init_notifier) {
-		ret = pcie_epf_test_core_init(epf);
+		ret = pcie_epf_test_setup(epf);
 		if (ret < 0) {
 			return ret;
 		}
@@ -566,10 +584,10 @@ static int pcie_epf_test_bind(struct pcie_epf_device_s *epf)
 	return 0;
 }
 
-static void pcie_epf_test_init(struct pcie_epf_device_s *epf,
-			       struct pcie_epf_test_s *test)
+static void pcie_epf_test_init(struct pcie_epf_test_s *test)
 {
-	memset(epf, 0, sizeof(*epf));
+	struct pcie_epf_device_s *epf = &test->epf;
+
 	memset(test, 0, sizeof(*test));
 
 	test->header.vendorid = 0x104c;
@@ -581,32 +599,30 @@ static void pcie_epf_test_init(struct pcie_epf_device_s *epf,
 	test->bar_size[3] = 16384;
 	test->bar_size[4] = 131072;
 	test->bar_size[5] = 1048576;
-	test->epf = epf;
 
 	k_work_init_delayable(&test->work, pcie_epf_test_cmd_handler);
+	k_work_init(&test->core_init_work, pcie_epf_test_core_init_handler);
 
 	epf->header = &test->header;
 	epf->msi_interrupts = 1;
 	epf->msix_interrupts = 32;
-	epf->priv = test;
 	epf->ops = &g_pcie_epf_test_ops;
 	epf->event_ops = &g_pcie_epf_test_event_ops;
 }
 
 int pcie_epf_test_add(const struct device *epc)
 {
-	struct pcie_epf_device_s *epf = g_pcie_epf_test_device;
 	int ret;
 	int i;
 
 	for (i = 0; i < CONFIG_PCIE_EPF_TEST_FUNC_COUNT; i++) {
-		if (epf[i].epc != NULL) {
+		if (g_pcie_epf_test[i].epf.epc != NULL) {
 			ret = -EBUSY;
 			goto err;
 		}
 
-		pcie_epf_test_init(&epf[i], &g_pcie_epf_test[i]);
-		ret = pcie_epc_add_epf(epc, &epf[i]);
+		pcie_epf_test_init(&g_pcie_epf_test[i]);
+		ret = pcie_epc_add_epf(epc, &g_pcie_epf_test[i].epf);
 		if (ret < 0) {
 			LOG_ERR("func %d bind error", i);
 			goto err;
@@ -617,7 +633,11 @@ int pcie_epf_test_add(const struct device *epc)
 
 err:
 	while (i-- > 0) {
-		pcie_epc_remove_epf(epc, &epf[i]);
+		int err = pcie_epc_remove_epf(epc, &g_pcie_epf_test[i].epf);
+
+		if (err != 0) {
+			LOG_ERR("func %d removal failed: %d", i, err);
+		}
 	}
 
 	return ret;
@@ -628,6 +648,10 @@ void pcie_epf_test_remove(const struct device *epc)
 	int i;
 
 	for (i = 0; i < CONFIG_PCIE_EPF_TEST_FUNC_COUNT; i++) {
-		pcie_epc_remove_epf(epc, &g_pcie_epf_test_device[i]);
+		int err = pcie_epc_remove_epf(epc, &g_pcie_epf_test[i].epf);
+
+		if (err != 0) {
+			LOG_ERR("func %d removal failed: %d", i, err);
+		}
 	}
 }

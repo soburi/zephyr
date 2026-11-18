@@ -12,8 +12,8 @@
  * @brief PCI Endpoint Function (EPF) framework API
  */
 
-#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_H_
-#define ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_H_
+#define ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,7 +22,7 @@
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/dlist.h>
-#include <zephyr/drivers/pcie/epc/pci_regs.h>
+#include <zephyr/drivers/pcie/endpoint/pci_regs.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,16 +92,28 @@ struct pcie_epf_ops_s {
 
 /**
  * @brief Callbacks for capturing the EPC events
+ *
+ * The EPC device raises the events in the context it detects them in, which
+ * can be an ISR. The callbacks run in that context with the EPF list
+ * spinlock of the EPC device held: they must not block or call EPC APIs, and
+ * defer the processing to a thread. The function driver guards its own state
+ * against the callbacks.
  */
 struct pcie_epc_event_ops_s {
 	/** Callback for the EPC initialization complete event */
-	int (*core_init)(struct pcie_epf_device_s *epf);
+	void (*core_init)(struct pcie_epf_device_s *epf);
 	/** Callback for the EPC link up event */
-	int (*link_up)(struct pcie_epf_device_s *epf);
+	void (*link_up)(struct pcie_epf_device_s *epf);
 	/** Callback for the EPC link down event */
-	int (*link_down)(struct pcie_epf_device_s *epf);
+	void (*link_down)(struct pcie_epf_device_s *epf);
 	/** Callback for the EPC BME (Bus Master Enable) event */
-	int (*bme)(struct pcie_epf_device_s *epf);
+	void (*bme)(struct pcie_epf_device_s *epf);
+	/** Callback for a doorbell rung by the host */
+	void (*doorbell)(struct pcie_epf_device_s *epf, uint8_t index);
+	/** Callback for a host access waiting on a software-serviced BAR;
+	 *  retrieve the access with pcie_epc_bar_access_get() in a thread.
+	 */
+	void (*bar_access)(struct pcie_epf_device_s *epf);
 };
 
 /**
@@ -124,16 +136,12 @@ struct pcie_epf_device_s {
 	/** Node in the list of EPF devices bound to a pcie_epc_ctrl_s */
 	sys_dnode_t epc_node;
 
-	/** Mutex to protect against concurrent access of pcie_epf_ops_s */
-	struct k_mutex lock;
 	/** Indicates if bind notification to function driver has been invoked */
 	bool is_bound;
 	/** Set of function pointers for performing EPF operations */
 	const struct pcie_epf_ops_s *ops;
 	/** Callbacks for capturing the EPC events */
 	const struct pcie_epc_event_ops_s *event_ops;
-	/** The private data */
-	void *priv;
 };
 
 /**
@@ -183,4 +191,4 @@ void pcie_epf_free_space(struct pcie_epf_device_s *epf, int barno, void *addr);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_EPC_PCIE_EPF_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_PCIE_ENDPOINT_PCIE_EPF_H_ */

@@ -10,13 +10,14 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
 
 LOG_MODULE_DECLARE(pcie_epc, CONFIG_PCIE_EPC_LOG_LEVEL);
 
-static struct pcie_epc_mem_s *pcie_epc_mem_find(struct pcie_epc_ctrl_s *epc,
+static struct pcie_epc_mem_s *pcie_epc_mem_find(const struct device *dev,
 						uintptr_t phys_addr)
 {
+	struct pcie_epc_ctrl_s *epc = dev->data;
 	unsigned int i;
 
 	for (i = 0; i < epc->num_windows; i++) {
@@ -52,10 +53,18 @@ int pcie_epc_mem_multi_init(const struct device *dev,
 			return -EINVAL;
 		}
 
+		if (pages < mem[i].bitmap->num_bits) {
+			int ret = sys_bitarray_set_region(mem[i].bitmap,
+						 mem[i].bitmap->num_bits - pages, pages);
+
+			if (ret != 0) {
+				return ret;
+			}
+		}
 		mem[i].pages = pages;
 	}
 
-	epc = pcie_epc_get_ctrl(dev);
+	epc = dev->data;
 	epc->mem = mem;
 	epc->num_windows = num_windows;
 	return 0;
@@ -78,7 +87,7 @@ int pcie_epc_mem_init(const struct device *dev, struct pcie_epc_mem_s *mem,
 
 void pcie_epc_mem_exit(const struct device *dev)
 {
-	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
+	struct pcie_epc_ctrl_s *epc = dev->data;
 
 	epc->mem = NULL;
 	epc->num_windows = 0;
@@ -87,7 +96,7 @@ void pcie_epc_mem_exit(const struct device *dev)
 void *pcie_epc_mem_alloc_addr(const struct device *dev, uintptr_t *phys,
 			      size_t size)
 {
-	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
+	struct pcie_epc_ctrl_s *epc = dev->data;
 	unsigned int i;
 
 	for (i = 0; i < epc->num_windows; i++) {
@@ -108,12 +117,11 @@ void *pcie_epc_mem_alloc_addr(const struct device *dev, uintptr_t *phys,
 void pcie_epc_mem_free_addr(const struct device *dev, uintptr_t phys_addr,
 			    size_t size)
 {
-	struct pcie_epc_ctrl_s *epc = pcie_epc_get_ctrl(dev);
 	struct pcie_epc_mem_s *mem;
 	size_t pageno;
 	size_t pages;
 
-	mem = pcie_epc_mem_find(epc, phys_addr);
+	mem = pcie_epc_mem_find(dev, phys_addr);
 	if (mem == NULL) {
 		LOG_ERR("Failed to get matching window");
 		return;

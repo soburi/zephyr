@@ -6,14 +6,20 @@ description: |
   function.
 
   The controller adds one endpoint function to the PCI endpoint controller
-  (EPC) referenced by the epc property. The function implements the legacy
-  VIRTIO PCI register layout in BAR 0, so the PCI host on the other side of
-  the link drives it with its regular virtio-pci driver.
+  (EPC) referenced by the epc property. The function implements the VIRTIO
+  PCI interface ("Virtio Over PCI Bus" in the VIRTIO specification): VIRTIO
+  capabilities that point at the configuration structures in BAR 0. The PCI
+  host on the other side of the link drives it with its regular virtio-pci
+  driver. The function has no MSI-X capability: it sends its MSI when the
+  endpoint controller has one and the host has enabled it, and raises the
+  INTx interrupt otherwise.
 
-  The register window is plain memory to the host: accesses are not trapped,
-  so the controller polls it. Registers that are banked by the queue
-  selector cannot be emulated this way, which limits the device to a single
-  virtqueue.
+  The common configuration banks registers by selectors, so the controller
+  serves each host access to BAR 0 in software. It needs an endpoint
+  controller that services BARs in software. A controller that cannot add
+  capabilities must hold the VIRTIO capabilities in its fixed configuration
+  space. The accesses are handled on a notification of the endpoint
+  controller or, without one, by polling for them.
 
 compatible: "zephyr,vhost-pci-epf"
 
@@ -31,22 +37,20 @@ properties:
     required: true
     description: |
       Virtio device ID value, as defined by the VIRTIO Specification, used to
-      identify the type of device implemented by this instance. It must have
-      a transitional PCI device ID.
+      identify the type of device implemented by this instance.
+
+  num-queues:
+    type: int
+    default: 1
+    description: |
+      Number of virtqueues of the device, at most 32.
 
   queue-size-max:
     type: int
     required: true
     description: |
-      Number of entries of the virtqueue. It must be a power of two. With
-      the legacy register layout the driver cannot select a smaller size.
-
-  device-features:
-    type: int
-    default: 0
-    description: |
-      Device feature bits 0 to 31 offered to the driver. The default offers
-      no feature, which every driver supports.
+      Maximum number of entries of a virtqueue. It must be a power of two.
+      The driver can select a smaller size.
 
   max-buffers:
     type: int
@@ -54,17 +58,17 @@ properties:
     description: |
       Maximum number of driver buffers mapped at the same time, summed over
       all outstanding requests. Each mapped buffer occupies one outbound
-      address window of the endpoint controller, and one more window is used
-      for the virtqueue itself. The default fits one request made of a full
+      address window of the endpoint controller, and each virtqueue uses
+      three more for its rings. The default fits one request made of a full
       16 entry descriptor chain.
 
   poll-period-ms:
     type: int
-    default: 10
+    default: 1
     description: |
-      Period, in milliseconds, at which the register window is polled for
-      driver activity. The default trades request latency against the load
-      of an idle device.
+      Period, in milliseconds, at which the controller polls for host
+      accesses to BAR 0 when the endpoint controller does not notify them.
+      Each access waits for the poll, so the default favors latency.
 
   stack-size:
     type: int

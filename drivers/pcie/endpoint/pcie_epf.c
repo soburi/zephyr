@@ -10,8 +10,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf.h>
 
 #ifdef CONFIG_MMU
 #include <zephyr/kernel/internal/mm.h>

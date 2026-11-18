@@ -5,17 +5,16 @@
  */
 
 #include <zephyr/kernel.h>
-#include <zephyr/drivers/pcie/epc/pcie_epc.h>
-#include <zephyr/drivers/pcie/epc/pcie_epf_test.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epc.h>
+#include <zephyr/drivers/pcie/endpoint/pcie_epf_test.h>
 
 int main(void)
 {
-	const struct device *epc;
+	const struct device *epc = DEVICE_DT_GET(DT_NODELABEL(qemu_epc));
 	int ret;
 
-	epc = pcie_get_epc("qemu_epc");
-	if (epc == NULL) {
-		printk("EPC device not found\n");
+	if (!device_is_ready(epc)) {
+		printk("EPC device is not ready\n");
 		return 0;
 	}
 
